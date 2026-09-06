@@ -349,6 +349,29 @@ describe("auth service", () => {
       expect(principal).toBeUndefined();
     });
 
+    it("returns undefined for a still-valid, unrevoked session whose member was disabled after login", async () => {
+      // The session itself is untouched (not revoked, not expired) — only
+      // the member's status changed after the session was issued. This is
+      // the "admin disables someone mid-session" scenario, distinct from
+      // revocation: nothing about the session row itself says to reject
+      // it, so this only works if resolveSession re-checks the member's
+      // current status on every call rather than trusting the session
+      // alone.
+      const cookie = await loginAndGetCookie();
+      const member = await membersRepo.getByEmail(db, "alex@example.com");
+      if (!member) throw new Error("member missing");
+
+      await membersRepo.setStatus(db, member.id, "disabled");
+
+      const principal = await resolveSession(deps, cookie);
+      expect(principal).toBeUndefined();
+
+      // And the session row itself is still there, unrevoked — this
+      // wasn't rejected because the session was invalidated.
+      const session = await getSessionRow("alex@example.com");
+      expect(session.revokedAt).toBeNull();
+    });
+
     it("does not extend lastSeenAt before the 24h refresh threshold", async () => {
       const cookie = await loginAndGetCookie();
       const loginAt = clock.now();

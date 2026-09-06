@@ -35,8 +35,12 @@ const { song, aliases, instrumentNotes, takes } = detail;
 const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined].filter(
   Boolean,
 );
-// One interleaved chart (chords above their matching lyric section) rather
-// than two stacked, unrelated `<pre>` blocks — see server/song-text.ts.
+// An interleaved chart (chords above their matching lyric section) when a
+// recognized section label exists on either side, or the original raw
+// two-block layout (chords, then lyrics, blank lines intact) when nothing
+// is recognized — see the `SongChart` union in server/song-text.ts for why
+// those are two different shapes rather than one that always tries to
+// interleave.
 const chart = buildSongChart(song.chordProgression, song.lyrics);
 ---
 
@@ -50,11 +54,11 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
 
     <div class="bl-song-detail-grid">
       <div class="bl-stack">
-        {chart.length > 0 && (
+        {chart.kind === "sections" && (
           <section>
             <h2 class="bl-section-title">Chords &amp; lyrics</h2>
             <div class="bl-song-chart">
-              {chart.map((section) => (
+              {chart.sections.map((section) => (
                 <div class="bl-song-chart-section">
                   {section.label && <p class="bl-song-chart-label">{section.label}</p>}
                   {section.chordLines.length > 0 && (
@@ -67,6 +71,29 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
               ))}
             </div>
           </section>
+        )}
+
+        {chart.kind === "raw" && (
+          <>
+            {/* Nothing on this song was recognized as a section label (a
+            language or convention SECTION_WORDS doesn't cover) — the
+            interleaved chart above has nothing to pair by, and would
+            otherwise drop blank lines and reorder chords after lyrics. Fall
+            back to the original two-block layout: raw text, chords above
+            lyrics, blank lines (stanza breaks) intact. */}
+            {chart.chordText && (
+              <section>
+                <h2 class="bl-section-title">Chords</h2>
+                <pre class="bl-chords">{chart.chordText}</pre>
+              </section>
+            )}
+            {chart.lyricsText && (
+              <section>
+                <h2 class="bl-section-title">Lyrics</h2>
+                <pre class="bl-lyrics">{chart.lyricsText}</pre>
+              </section>
+            )}
+          </>
         )}
 
         {instrumentNotes.length > 0 && (

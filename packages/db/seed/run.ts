@@ -199,6 +199,34 @@ async function main() {
     "Dust on the cables, coffee gone cold",
     "Same three chords but they never get old",
   ].join("\n");
+  // This band actually sings in Czech — most of the "demo content" above is
+  // English placeholder text, but the archive needs at least one real
+  // example of the section vocabulary `song-text.ts` has to recognize
+  // (Sloka/Refrén/Most/Předehra/Dohra, diacritics included) so it doesn't
+  // go untested against the built server the way it did the first time.
+  const CESTY_CHORDS = [
+    "Předehra: Dm - C - Bb - A",
+    "Sloka: Dm - C - Bb - A (x2)",
+    "Refrén: Bb - A - Dm",
+    "Most: Gm - A - Dm",
+    "Dohra: Dm (doznívá)",
+  ].join("\n");
+  const CESTY_LYRICS = [
+    "Sloka 1",
+    "Jedeme dál po cestě, co nikdy nekončí",
+    "Kolem nás míjí světla, co nikdo nespočítá",
+    "",
+    "Refrén",
+    "Zpátky se nedívej, jeď dál",
+    "Ať vítr fouká, jak chce",
+    "",
+    "Sloka 2",
+    "Za oknem mizí města, jedno jak druhé",
+    "My hrajeme dál, dokud nám bude chtít",
+    "",
+    "Most",
+    "Někde na půli cesty najdeme domov",
+  ].join("\n");
 
   const songSeeds = [
     {
@@ -217,6 +245,14 @@ async function main() {
       musicalKey: "E",
       chordProgression: BASEMENT_TAPES_CHORDS,
       lyrics: BASEMENT_TAPES_LYRICS,
+    },
+    {
+      slug: "pisen-o-cestach",
+      title: "Píseň o cestách",
+      tempoBpm: 84,
+      musicalKey: "Dm",
+      chordProgression: CESTY_CHORDS,
+      lyrics: CESTY_LYRICS,
     },
     { slug: "wildfire", title: "Wildfire", tempoBpm: 140, musicalKey: "G" },
     { slug: "slow-burn", title: "Slow Burn", tempoBpm: 72, musicalKey: "Dm" },

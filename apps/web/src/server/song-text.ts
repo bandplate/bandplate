@@ -1,6 +1,7 @@
 // Splits a song's chord progression and lyrics into labeled sections
-// (Verse/Chorus/Bridge/…) and interleaves them into one chart — the review's
-// main design finding on the song page: a `<pre>` with a bigger font gave
+// (Verse/Chorus/Bridge/… — and the band's own language, Czech: Sloka/
+// Refrén/Most/…) and interleaves them into one chart — the review's main
+// design finding on the song page: a `<pre>` with a bigger font gave
 // structural markers ("Verse 1", "Chorus") zero typographic distinction
 // from the lyric lines, and the two blocks (chords, lyrics) had no
 // relationship to each other despite being read together. This is the
@@ -14,8 +15,11 @@
 // This is a best-effort heuristic over free text, not a structured schema
 // (the schema stores `chordProgression`/`lyrics` as plain text columns) —
 // it degrades safely: a song whose text names no recognizable section
-// (verse/chorus/bridge/...) renders as a single unlabeled section, which
-// looks the same as the un-sectioned `<pre>` this replaces.
+// falls back to the ORIGINAL two-block layout (raw text, chords above
+// lyrics, blank lines intact) via `buildSongChart`'s `"raw"` result — see
+// there for why a re-run of the labeled/paired logic on unrecognized text
+// is actively worse, not just unhelpful.
+import { normalizeTitle } from "@bandlib/core";
 
 const SECTION_WORDS = new Set([
   "intro",
@@ -30,15 +34,33 @@ const SECTION_WORDS = new Set([
   "interlude",
   "tag",
   "breakdown",
+  // Czech — this band's actual language. Diacritics are handled by
+  // `normalizeLabel` reusing `normalizeTitle`'s NFKD stripping below, so
+  // e.g. "předehra" and "predehra" both normalize to this one ASCII entry
+  // ("ř" decomposes to "r" + a combining caron, which is then dropped) —
+  // no need to list an accented and unaccented form separately.
+  "sloka", // verse
+  "refren", // chorus ("refrén")
+  "most", // bridge
+  "bridz", // bridge, alt ("bridž")
+  "mezihra", // interlude
+  "predehra", // intro ("předehra")
+  "dohra", // outro
+  "solo", // solo ("sólo")
+  "coda",
 ]);
 
-/** Strips a trailing verse/chorus number ("Verse 2" -> "verse") and lowercases, for matching a lyric section to a chord section that covers every repeat of that part. */
+/** Strips a trailing verse/chorus number ("Verse 2" -> "verse") and normalizes for matching a lyric section to a chord section that covers every repeat of that part — lowercased AND diacritic-stripped via `normalizeTitle` (NFKD), reused rather than re-implemented, so "Sloka 1" and "Refrén" match the same way "Verse 1" and "Chorus" do. */
 function normalizeLabel(label: string | undefined): string | undefined {
   if (!label) {
     return undefined;
   }
   const stripped = label.replace(/\s*\d+\s*$/, "").trim();
-  return stripped.length > 0 ? stripped.toLowerCase() : undefined;
+  if (stripped.length === 0) {
+    return undefined;
+  }
+  const normalized = normalizeTitle(stripped);
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 function isSectionLabel(candidate: string): boolean {
@@ -121,30 +143,77 @@ export interface ChartSection {
 }
 
 /**
+ * `buildSongChart`'s result. Two shapes, deliberately NOT merged into one:
+ *
+ * - `"sections"` — at least one recognized section label on either side, so
+ *   pairing chords to lyrics by label means something. Rendered as the
+ *   interleaved chart (one heading, chords above their matching lyrics,
+ *   section by section).
+ * - `"raw"` — nothing was recognized on EITHER side (a song in a language,
+ *   or a convention, `SECTION_WORDS` doesn't cover). Pairing has nothing to
+ *   align by here, and the section splitters both treat a blank line as a
+ *   stanza separator to be dropped — exactly right for a real chart, but
+ *   destructive for plain text that was never meant to be split at all. A
+ *   song like this must degrade to the ORIGINAL two-block layout (raw text
+ *   verbatim, so blank lines survive; chords above lyrics; separate
+ *   "Chords"/"Lyrics" headings), not to something worse than what it
+ *   replaced — see task-5-report.md "Fix round 2" for the Czech input that
+ *   found this.
+ * - `"none"` — both fields empty; nothing to render.
+ */
+export type SongChart =
+  | { kind: "none" }
+  | { kind: "raw"; chordText: string | undefined; lyricsText: string | undefined }
+  | { kind: "sections"; sections: ChartSection[] };
+
+/**
  * The song page's actual chart: chord-only sections that precede the first
  * lyric section (an intro, typically), then each lyric section paired with
  * its matching chord section (by normalized label) when one exists, then
  * any chord sections left over (an outro with no lyrics, typically).
  *
  * Falls back to chord sections and lyric sections side by side, unpaired,
- * when either field is empty — nothing to interleave in that case.
+ * when only one field is empty (nothing to interleave against), and to the
+ * raw two-block layout when NEITHER field has a recognized section label at
+ * all (nothing to interleave BY) — see `SongChart` above.
  */
 export function buildSongChart(
   chordText: string | null | undefined,
   lyricsText: string | null | undefined,
-): ChartSection[] {
-  const chordSections = chordText ? splitChordsIntoSections(chordText) : [];
-  const lyricSections = lyricsText ? splitLyricsIntoSections(lyricsText) : [];
+): SongChart {
+  const hasChordText = Boolean(chordText);
+  const hasLyricsText = Boolean(lyricsText);
+
+  if (!hasChordText && !hasLyricsText) {
+    return { kind: "none" };
+  }
+
+  const chordSections = hasChordText ? splitChordsIntoSections(chordText as string) : [];
+  const lyricSections = hasLyricsText ? splitLyricsIntoSections(lyricsText as string) : [];
+
+  const chordsRecognized = chordSections.some((c) => c.label !== undefined);
+  const lyricsRecognized = lyricSections.some((l) => l.label !== undefined);
+
+  if (!chordsRecognized && !lyricsRecognized) {
+    return {
+      kind: "raw",
+      chordText: hasChordText ? (chordText as string) : undefined,
+      lyricsText: hasLyricsText ? (lyricsText as string) : undefined,
+    };
+  }
 
   if (chordSections.length === 0 || lyricSections.length === 0) {
-    return [
-      ...chordSections.map(
-        (c): ChartSection => ({ label: c.label, chordLines: c.lines, lyricLines: [] }),
-      ),
-      ...lyricSections.map(
-        (l): ChartSection => ({ label: l.label, chordLines: [], lyricLines: l.lines }),
-      ),
-    ];
+    return {
+      kind: "sections",
+      sections: [
+        ...chordSections.map(
+          (c): ChartSection => ({ label: c.label, chordLines: c.lines, lyricLines: [] }),
+        ),
+        ...lyricSections.map(
+          (l): ChartSection => ({ label: l.label, chordLines: [], lyricLines: l.lines }),
+        ),
+      ],
+    };
   }
 
   const chordByNormLabel = new Map<string, TextSection>();
@@ -183,5 +252,5 @@ export function buildSongChart(
     }
   }
 
-  return result;
+  return { kind: "sections", sections: result };
 }

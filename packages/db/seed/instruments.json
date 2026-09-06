@@ -1,0 +1,9 @@
+[
+  { "slug": "drums", "label": "Drums", "sortOrder": 0 },
+  { "slug": "bass", "label": "Bass", "sortOrder": 1 },
+  { "slug": "guitar", "label": "Guitar", "sortOrder": 2 },
+  { "slug": "keys", "label": "Keys", "sortOrder": 3 },
+  { "slug": "vocals", "label": "Vocals", "sortOrder": 4 },
+  { "slug": "trumpet", "label": "Trumpet", "sortOrder": 5 },
+  { "slug": "trombone", "label": "Trombone", "sortOrder": 6 }
+]

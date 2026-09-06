@@ -27,6 +27,23 @@
  *     light: #334f14 vs sand bg    -> 8.06:1 / vs surface -> 8.71:1
  *     dark:  #808f66 vs espresso bg -> 5.14:1 / vs surface -> 4.76:1
  *
+ *   --bl-component-accent-gold (Task 6: gold's first use — the favorite
+ *     marker on `/`, `/search`, `/me`, and `/takes/[id]`) has the OPPOSITE
+ *     problem from rust/olive: raw gold (#f6aa1c) is a light, high-luminance
+ *     color, so it reads fine against the dark espresso ground but nearly
+ *     vanishes against the light sand one:
+ *       gold #f6aa1c vs sand bg      -> 1.71:1 (fails, not derived from)
+ *       gold #f6aa1c vs espresso bg  -> 9.10:1 (already passes, unchanged)
+ *     So this token darkens gold FOR LIGHT MODE ONLY (mixed 65% gold / 35%
+ *     espresso, computed and verified with the same relative-luminance
+ *     formula as every other ratio in this file — see task-6-report.md for
+ *     the numbers), and leaves it as plain `--bl-color-accent-gold` in dark
+ *     mode, where the raw color already clears 3:1:
+ *       light: #b07313 vs sand bg    -> 3.45:1 / vs surface -> 3.73:1
+ *       dark:  #f6aa1c vs espresso bg -> 9.10:1 / vs surface -> 8.42:1
+ *     Fill/border use only, same as accent-strong/success — never running
+ *     text.
+ *
  * These are used ONLY for borders, dots and tinted-background fills — never
  * as text color, per the brief's rule that rust/olive/gold aren't for body
  * text. Every component below that needs a guaranteed-visible boundary
@@ -46,18 +63,21 @@
 :root {
   --bl-component-accent-strong: var(--bl-color-accent);
   --bl-component-accent-success: var(--bl-color-accent-alt);
+  --bl-component-accent-gold: #b07313; /* darkened gold — see file header */
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bl-component-accent-strong: #ab6f60;
     --bl-component-accent-success: #808f66;
+    --bl-component-accent-gold: var(--bl-color-accent-gold);
   }
 }
 
 :root[data-theme="dark"] {
   --bl-component-accent-strong: #ab6f60;
   --bl-component-accent-success: #808f66;
+  --bl-component-accent-gold: var(--bl-color-accent-gold);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -865,6 +885,50 @@ a.bl-btn {
   flex-wrap: wrap;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Search layout (Task 6) — a filter panel BESIDE results on desktop, the   */
+/* same collapsed `<details>` (`.bl-toolbar-details`) `/songs` uses on      */
+/* phones. Reuses that component rather than inventing a second collapse    */
+/* mechanism: `.bl-search-filters` IS a `.bl-toolbar-details`, so the       */
+/* generic "force open past `lg`" rule above already applies to it. The     */
+/* one thing specific to search is that its `<details>` wraps SEVERAL       */
+/* fieldsets (title search, instruments, dates, rating, state) instead of   */
+/* `/songs`' single checkbox group — grouping them all inside one          */
+/* `.bl-search-filters-body` child means the existing "re-declare this      */
+/* child's own display past `lg`" pattern only needs writing once, for      */
+/* that one wrapper, rather than once per fieldset.                        */
+/* ---------------------------------------------------------------------- */
+
+.bl-search-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .bl-search-layout {
+    display: grid;
+    grid-template-columns: 18rem minmax(0, 1fr);
+    align-items: start;
+    gap: 0 2.5rem;
+  }
+
+  .bl-search-filters:not([open]) > .bl-search-filters-body {
+    display: flex;
+  }
+}
+
+.bl-search-filters-body > .bl-field {
+  margin-bottom: 0;
+}
+
+.bl-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
 @media (min-width: 768px) {
   .bl-toolbar {
     flex-direction: row;
@@ -1229,12 +1293,14 @@ a.bl-btn {
   flex-direction: column;
 }
 
-/* Event detail's take list only (never the song page's — that one lives in
-   a narrow ~23rem aside next to the chords/lyrics grid, where two columns
-   would be cramped). The event page has no aside to fill that width with,
-   so its take list — "what was played", the page's own stated spine —
-   becomes a real two-column grid past `lg` instead of stretching one
-   narrow list across a wide viewport. */
+/* Event detail's take list, and (Task 6) every other take list that has no
+   narrow aside competing for width — home's three sections, `/search`'s
+   results. Never the song page's list, which lives in a narrow ~23rem
+   aside next to the chords/lyrics grid, where two columns would be
+   cramped. Anywhere this class is used, the page has no aside to fill that
+   width with, so the take list — the page's own actual point, in every one
+   of these cases — becomes a real two-column grid past `lg` instead of
+   stretching one narrow list across a wide viewport. */
 @media (min-width: 1024px) {
   .bl-take-list--wide {
     display: grid;
@@ -1295,8 +1361,19 @@ a.bl-btn {
 
 .bl-take-row-line {
   display: flex;
+  /* Task 6: unwrapped, this line's content (badge + "full" mode's extra
+     date span + the event-link) overflowed a take row's own box and
+     visually overlapped the trailing duration column whenever the row is
+     narrower than the sum of those three items — invisible on the
+     original single-column song/event lists (plenty of width there), but
+     real and reproducible in the two-column grids Task 6 adds
+     (`/search`, home) where a card can be under 250px wide. Verified live:
+     at that width, `align-items: center` alone left the badge/date/link
+     overlapping `.bl-take-row-duration`; `flex-wrap: wrap` (plus the
+     `row-gap` below) lets the line break onto its own lines instead. */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.25rem 0.625rem;
   margin-top: 0.25rem;
 }
 
@@ -1329,6 +1406,18 @@ a.bl-btn {
   border-radius: 999px;
   color: var(--bl-color-muted);
   white-space: nowrap;
+}
+
+/* Wraps the duration plus increment 5's (empty today) `trailing` slot — see
+   TakeRow.astro's header comment. A bare wrapper, not a new visual
+   treatment: `.bl-take-row-duration`'s own rules are unchanged, and an
+   empty `<slot>` contributes no box, so this renders identically to before
+   until increment 5 fills the slot. */
+.bl-take-row-trailing {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.625rem;
 }
 
 .bl-take-row-duration {
@@ -1485,4 +1574,155 @@ a.bl-btn {
 
 .bl-empty-state p {
   margin: 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Home (Task 6) — favorites (gold's first use — see this file's header    */
+/* for the derived, dark-mode-aware token and both ratios), recent events  */
+/* with their takes, and "needs your vote". Display only: no favorite      */
+/* toggle, no vote control (both land in increment 5) — this section adds  */
+/* no interactive-control CSS of its own, only the gold marker and the     */
+/* event-group spacing the layout needs.                                  */
+/* ---------------------------------------------------------------------- */
+
+.bl-section-title-favorite {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Fill/border use only, per the accent-token rule — this is a small
+   decorative icon reinforcing the "Your favorites" heading text that's
+   already there, never the sole way that section is identified. */
+.bl-favorite-mark {
+  color: var(--bl-component-accent-gold);
+  flex-shrink: 0;
+}
+
+.bl-home-event-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Take detail (Task 6) — no player yet (increment 4); see the page's own  */
+/* header comment for where that goes. `--bl-color-muted` for the link     */
+/* underline here is the same >=3:1-in-both-themes token every other link  */
+/* underline in this file uses (4.65:1 / 6.93:1 — see roost.css).          */
+/* ---------------------------------------------------------------------- */
+
+.bl-hero-title-link {
+  color: var(--bl-color-fg);
+  text-decoration: underline;
+  text-decoration-color: var(--bl-color-muted);
+  text-underline-offset: 0.2em;
+}
+
+.bl-hero-title-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.bl-take-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1.25rem 1.5rem;
+  margin: 0;
+}
+
+.bl-take-detail-meta dt {
+  font-family: var(--bl-font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bl-color-muted);
+  margin: 0 0 0.3125rem;
+}
+
+.bl-take-detail-meta dd {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.bl-take-detail-meta dd a {
+  color: var(--bl-color-fg);
+  text-decoration: underline;
+  text-decoration-color: var(--bl-color-muted);
+  text-underline-offset: 0.15em;
+}
+
+.bl-take-detail-meta dd a:hover {
+  text-decoration-color: currentColor;
+}
+
+.bl-asset-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--bl-color-border);
+}
+
+.bl-asset-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-height: 44px;
+  padding: 0.75rem 0.25rem;
+  border-bottom: 1px solid var(--bl-color-border);
+}
+
+.bl-asset-row-label {
+  font-weight: 600;
+}
+
+.bl-asset-row-meta {
+  color: var(--bl-color-muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* /me (Task 6) — sessions and vote history. Flat rows, same vocabulary as */
+/* the take/event rows above rather than a third list treatment.          */
+/* ---------------------------------------------------------------------- */
+
+.bl-session-list,
+.bl-vote-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--bl-color-border);
+}
+
+.bl-session-row,
+.bl-vote-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.875rem 0.25rem;
+  border-bottom: 1px solid var(--bl-color-border);
+}
+
+.bl-session-row-main,
+.bl-vote-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.bl-vote-row-song {
+  font-weight: 600;
+  color: var(--bl-color-fg);
+  text-decoration: underline;
+  text-decoration-color: var(--bl-color-muted);
+  text-underline-offset: 0.15em;
+}
+
+.bl-vote-row-song:hover {
+  text-decoration-color: currentColor;
 }

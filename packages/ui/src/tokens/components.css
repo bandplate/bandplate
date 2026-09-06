@@ -823,11 +823,24 @@ a.bl-btn {
 }
 
 @media (min-width: 1024px) {
-  /* Content stays reachable past `lg` regardless of the `open` attribute —
-     overrides the UA stylesheet's `details:not([open]) > *:not(summary) {
-     display: none }`, which has no more specificity than this rule and so
-     loses to it. The summary/toggle itself is hidden since there's nothing
-     left for it to disclose. */
+  /* Content stays reachable past `lg` regardless of the `open` attribute.
+     The `display: flex` override below is necessary but NOT sufficient in
+     modern engines: Chrome/Firefox/Safari render a closed <details>'
+     non-summary content through the `::details-content` pseudo-element,
+     which the UA stylesheet sets to `content-visibility: hidden` — that
+     skips rendering, hit-testing AND focus entirely, and no `display`
+     value on the content itself can override it (verified live at 1440px:
+     `details.open` false, computed height 0px, the checkbox group failed
+     `checkVisibility()`, and nothing under it was focusable or
+     hit-testable). Restoring `content-visibility: visible` on that
+     pseudo-element is the actual fix; `display: flex` on the checkbox
+     group just controls its layout once it's rendering again. The summary
+     /toggle itself is hidden since there's nothing left for it to
+     disclose. */
+  .bl-toolbar-details:not([open])::details-content {
+    content-visibility: visible;
+  }
+
   .bl-toolbar-details:not([open]) > .bl-checkbox-group {
     display: flex;
   }

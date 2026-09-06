@@ -32,3 +32,23 @@ export function normalizeTitle(s: string): string {
 
   return out;
 }
+
+const NON_SLUG_CHARS = /[^a-z0-9]+/g;
+const LEADING_TRAILING_HYPHENS = /^-+|-+$/g;
+
+/**
+ * Turn free text (e.g. a member's display name) into a URL-safe slug:
+ * lowercase, diacritics stripped, non-alphanumeric runs collapsed to a
+ * single hyphen, leading/trailing hyphens trimmed. Total and deterministic;
+ * falls back to "item" if nothing alphanumeric survives.
+ */
+export function slugify(s: string): string {
+  const base = s
+    .normalize("NFKD")
+    .replace(COMBINING_MARKS, "")
+    .toLowerCase()
+    .replace(NON_SLUG_CHARS, "-")
+    .replace(LEADING_TRAILING_HYPHENS, "");
+
+  return base || "item";
+}

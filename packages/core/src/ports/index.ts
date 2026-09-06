@@ -1,4 +1,4 @@
-// Placeholder barrel for domain ports.
-// Later increments will define port interfaces here (repositories, storage,
-// mail, etc.) that the domain depends on and infrastructure implements.
-export {};
+// Domain ports — interfaces the domain depends on, infrastructure implements.
+export * from "./mailer.js";
+export * from "./clock.js";
+export * from "./rate-limiter.js";

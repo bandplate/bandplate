@@ -66,7 +66,17 @@ describe("handleLoginPost", () => {
       createdAt: Date.now(),
     });
 
-    await handleLoginPost(deps, formData("alex@example.com"), headers());
+    const result = await handleLoginPost(deps, formData("alex@example.com"), headers());
+
+    // This is the enumeration-safety property, asserted where it matters:
+    // a REGISTERED address gets back the exact same `{ kind: "sent" }`
+    // this suite already proved an unknown address gets (see "accepts a
+    // plain form submission..." above). The previous version of this test
+    // discarded `handleLoginPost`'s return value entirely and only checked
+    // that mail was sent — so a hypothetical future branch that returned a
+    // different response for a known address (leaking whether an email is
+    // registered) would have survived unnoticed.
+    expect(result).toEqual({ kind: "sent" });
 
     expect(mailer.sent).toHaveLength(1);
     const sent = mailer.sent[0];

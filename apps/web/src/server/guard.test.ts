@@ -31,4 +31,18 @@ describe("guardAdminPath", () => {
     const service: Principal = { kind: "service", tokenId: "t1", scopes: ["members:admin"] };
     expect(guardAdminPath("/admin", service)).toEqual({ kind: "forbidden" });
   });
+
+  // Pins the specific scope the guard checks. The previous fixtures always
+  // gave the "allowed" principal BOTH members:admin and tokens:admin, so a
+  // guard that checked `tokens:admin` internally would have passed every
+  // existing test too. These two cases each carry exactly one of the two.
+  it("admits a member principal that carries ONLY members:admin (not tokens:admin)", () => {
+    const decision = guardAdminPath("/admin/members", member(["members:admin"]));
+    expect(decision).toEqual({ kind: "allow" });
+  });
+
+  it("forbids a member principal that carries ONLY tokens:admin (not members:admin)", () => {
+    const decision = guardAdminPath("/admin/members", member(["tokens:admin"]));
+    expect(decision).toEqual({ kind: "forbidden" });
+  });
 });

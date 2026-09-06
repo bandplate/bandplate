@@ -199,6 +199,40 @@ describe("songs repo", () => {
       expect(noMatch).toEqual([]);
     });
 
+    // SQLite's LIKE treats `%`/`_` as wildcards unless escaped — an
+    // unescaped search term turns a literal `%` or `_` into "match
+    // anything"/"match any one character", which is wrong (not an
+    // injection risk, since the value is parameterized either way).
+    it("a literal '%' in the search term does not match every song", async () => {
+      await songs.create(db, {
+        title: "Another Song",
+        slug: "another-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+
+      const results = await songs.listWithStats(db, { search: "%" });
+      expect(results).toEqual([]);
+    });
+
+    it("a literal '_' in the search term matches only a title that actually contains one, not every song", async () => {
+      await songs.create(db, {
+        title: "Under_score",
+        slug: "under-score",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await songs.create(db, {
+        title: "Another Song",
+        slug: "another-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+
+      const results = await songs.listWithStats(db, { search: "_" });
+      expect(results.map((s) => s.slug)).toEqual(["under-score"]);
+    });
+
     it("instrumentIds filter requires ALL instruments on the SAME take (AND semantics)", async () => {
       await takes.create(db, {
         songId,
@@ -257,6 +291,63 @@ describe("songs repo", () => {
       const statsIndex = results.findIndex((s) => s.slug === "stats-song");
       expect(quiet.slug).toBe("quiet-song");
       expect(statsIndex).toBeLessThan(quietIndex);
+    });
+
+    // Both non-title sorts have a primary key that ties constantly (several
+    // songs with the same take count, or several never-played songs sharing
+    // a null lastPlayedAt) — without a secondary key, tied rows come back in
+    // whatever order SQLite's GROUP BY happens to produce, which is not
+    // contractual. `titleNorm` ascending is the deterministic tie-break, so
+    // three songs tied on the primary key must still come back alphabetical.
+    it("sort: 'takes' breaks a tie between equal take counts by title", async () => {
+      await songs.create(db, {
+        title: "Zebra Song",
+        slug: "zebra-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await songs.create(db, {
+        title: "Apple Song",
+        slug: "apple-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await songs.create(db, {
+        title: "Mango Song",
+        slug: "mango-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      // "stats-song" (from beforeEach) also has zero takes, so all four songs
+      // tie at takeCount === 0.
+
+      const results = await songs.listWithStats(db, { sort: "takes" });
+      expect(results.map((s) => s.slug)).toEqual([
+        "apple-song",
+        "mango-song",
+        "stats-song",
+        "zebra-song",
+      ]);
+    });
+
+    it("sort: 'recent' breaks a tie between never-played songs by title", async () => {
+      await songs.create(db, {
+        title: "Zebra Song",
+        slug: "zebra-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await songs.create(db, {
+        title: "Apple Song",
+        slug: "apple-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      // "stats-song" (from beforeEach) is also never played — all three tie
+      // on a null lastPlayedAt.
+
+      const results = await songs.listWithStats(db, { sort: "recent" });
+      expect(results.map((s) => s.slug)).toEqual(["apple-song", "stats-song", "zebra-song"]);
     });
   });
 });

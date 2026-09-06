@@ -1,5 +1,5 @@
 import { normalizeTitle, uuidv7 } from "@bandlib/core";
-import { type SQL, and, eq, inArray, like, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
   instruments,
@@ -114,11 +114,25 @@ export interface ListWithStatsOptions {
 }
 
 /**
+ * SQLite LIKE's metacharacters (`%` any run, `_` any single char) are not
+ * escaped by default — a search for a literal `%` or `_` would otherwise
+ * match everything (or fail to match a title that actually contains one).
+ * Escaping them (and the escape character itself) and pairing that with an
+ * explicit `ESCAPE` clause makes `%`/`_` in the *search term* literal again;
+ * this is purely a correctness fix for what counts as a match — the query
+ * is already parameterized (drizzle's `sql` template binds interpolated
+ * values), so there was never an injection risk here.
+ */
+function escapeLikePattern(s: string): string {
+  return s.replace(/[\\%_]/g, "\\$&");
+}
+
+/**
  * The library view's backing query: every song plus its take count and last
  * time it was played, searchable by title and filterable by instrument.
- * Sorting happens in JS once the (small, per-band) result set is in memory —
- * simpler than expressing "order by an aggregate, nulls last" portably in
- * SQL, and easy to unit test as plain array behavior.
+ * Sorting (including the tie-break below) happens in SQL, not a post-fetch
+ * JS re-sort — the database already has to group and aggregate this data,
+ * so it does the one sort too rather than the result being re-walked in JS.
  */
 export async function listWithStats(
   db: Db,
@@ -135,7 +149,8 @@ export async function listWithStats(
 
   const conditions: SQL[] = [];
   if (options.search) {
-    conditions.push(like(songs.titleNorm, `%${normalizeTitle(options.search)}%`));
+    const pattern = `%${escapeLikePattern(normalizeTitle(options.search))}%`;
+    conditions.push(sql`${songs.titleNorm} LIKE ${pattern} ESCAPE '\\'`);
   }
   if (songIdFilter) {
     conditions.push(inArray(songs.id, [...songIdFilter]));
@@ -150,30 +165,35 @@ export async function listWithStats(
     .from(songs)
     .leftJoin(takes, eq(takes.songId, songs.id));
 
+  // `titleNorm` is always the secondary key: `recent`/`takes` tie constantly
+  // (several songs share a take count, or share "never played" — a null
+  // `lastPlayedAt`), and `Array.sort`'s stability doesn't help when the
+  // *input* order (SQLite's `GROUP BY` row order for tied rows) is itself
+  // not contractual — confirmed by re-running `sort=takes` against seeded
+  // data and observing the tied songs' order vary. SQLite treats NULL as
+  // the lowest value, so `ORDER BY max(...) DESC` already puts a
+  // never-played song last without a separate NULLS LAST clause.
+  const sort = options.sort ?? "title";
+  const orderBy =
+    sort === "recent"
+      ? [desc(sql`max(${takes.recordedAt})`), songs.titleNorm]
+      : sort === "takes"
+        ? [desc(sql`count(${takes.id})`), songs.titleNorm]
+        : [songs.titleNorm];
+
   const rows =
     conditions.length > 0
-      ? await base.where(and(...conditions)).groupBy(songs.id)
-      : await base.groupBy(songs.id);
+      ? await base
+          .where(and(...conditions))
+          .groupBy(songs.id)
+          .orderBy(...orderBy)
+      : await base.groupBy(songs.id).orderBy(...orderBy);
 
-  const results: SongWithStats[] = rows.map((row) => ({
+  return rows.map((row) => ({
     ...row.song,
     takeCount: row.takeCount,
     lastPlayedAt: row.lastPlayedAt,
   }));
-
-  const sort = options.sort ?? "title";
-  if (sort === "recent") {
-    results.sort(
-      (a, b) =>
-        (b.lastPlayedAt ?? Number.NEGATIVE_INFINITY) - (a.lastPlayedAt ?? Number.NEGATIVE_INFINITY),
-    );
-  } else if (sort === "takes") {
-    results.sort((a, b) => b.takeCount - a.takeCount);
-  } else {
-    results.sort((a, b) => a.titleNorm.localeCompare(b.titleNorm));
-  }
-
-  return results;
 }
 
 /** Every known alias of a song (manual or ingest-created), in no particular order. */

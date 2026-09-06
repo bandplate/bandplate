@@ -39,18 +39,24 @@ function parseScopes(formData: FormData): Scope[] | undefined {
 
 const labelSchema = z.string().trim().min(1, "Enter a label.").max(200);
 
+export type CreateTokenField = "label" | "scopes";
+
 export type CreateTokenResult =
   | { kind: "ok"; token: PublicServiceToken; rawToken: string }
-  | { kind: "invalid"; error: string };
+  | { kind: "invalid"; error: string; field: CreateTokenField };
 
 export async function createToken(auth: AuthDeps, formData: FormData): Promise<CreateTokenResult> {
   const labelParsed = labelSchema.safeParse(formData.get("label"));
   const scopes = parseScopes(formData);
   if (!labelParsed.success) {
-    return { kind: "invalid", error: labelParsed.error.issues[0]?.message ?? "Invalid input." };
+    return {
+      kind: "invalid",
+      error: labelParsed.error.issues[0]?.message ?? "Invalid input.",
+      field: "label",
+    };
   }
   if (!scopes) {
-    return { kind: "invalid", error: "Choose at least one scope." };
+    return { kind: "invalid", error: "Choose at least one scope.", field: "scopes" };
   }
 
   const created = await createServiceToken(auth, { label: labelParsed.data, scopes });

@@ -41,9 +41,20 @@ describe("admin tokens page logic", () => {
     expect(tokens[0]).not.toHaveProperty("rawToken");
   });
 
-  it("rejects a token created with zero scopes", async () => {
+  it("rejects a token created with zero scopes, tagging the scopes field", async () => {
     const result = await createToken(auth, formData({ label: "empty", scopes: [] }));
     expect(result.kind).toBe("invalid");
+    if (result.kind === "invalid") {
+      expect(result.field).toBe("scopes");
+    }
+  });
+
+  it("rejects a token created with an empty label, tagging the label field", async () => {
+    const result = await createToken(auth, formData({ label: "", scopes: ["ingest:write"] }));
+    expect(result.kind).toBe("invalid");
+    if (result.kind === "invalid") {
+      expect(result.field).toBe("label");
+    }
   });
 
   it("updates scopes for an existing token", async () => {

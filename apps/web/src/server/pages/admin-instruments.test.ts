@@ -29,6 +29,22 @@ describe("admin instruments page logic", () => {
     expect(await listInstruments(db)).toHaveLength(1);
   });
 
+  it("tags a missing slug's error to the slug field", async () => {
+    const result = await createInstrument(db, formData({ slug: "", label: "Bass" }));
+    expect(result.kind).toBe("invalid");
+    if (result.kind === "invalid") {
+      expect(result.field).toBe("slug");
+    }
+  });
+
+  it("tags a missing label's error to the label field", async () => {
+    const result = await createInstrument(db, formData({ slug: "bass", label: "" }));
+    expect(result.kind).toBe("invalid");
+    if (result.kind === "invalid") {
+      expect(result.field).toBe("label");
+    }
+  });
+
   it("archiving keeps the row (never deletes it) so past takes keep resolving it", async () => {
     await createInstrument(db, formData({ slug: "bass", label: "Bass" }));
     const [instrument] = await listInstruments(db);

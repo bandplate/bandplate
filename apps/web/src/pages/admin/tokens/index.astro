@@ -22,6 +22,7 @@ if (!principal) {
 const [appDeps, authDeps] = await Promise.all([getAppDeps(), getAuthDeps()]);
 
 let createError: string | undefined;
+let createErrorField: "label" | "scopes" | undefined;
 let formError: string | undefined;
 let created: Extract<CreateTokenResult, { kind: "ok" }> | undefined;
 
@@ -41,6 +42,7 @@ if (Astro.request.method === "POST") {
         created = result;
       } else {
         createError = result.error;
+        createErrorField = result.field;
       }
     } else if (intent === "update") {
       const id = String(formData.get("tokenId") ?? "");
@@ -77,8 +79,18 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
     <h2 style="margin-top:0;">Create a token</h2>
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
-      <Field label="Label" name="label" required hint="What this token is for — e.g. reaper-bridge" />
-      <fieldset class="bl-checkbox-group">
+      <Field
+        label="Label"
+        name="label"
+        required
+        hint="What this token is for — e.g. reaper-bridge"
+        error={createErrorField === "label" ? createError : undefined}
+      />
+      <fieldset
+        class="bl-checkbox-group"
+        aria-invalid={createErrorField === "scopes" ? "true" : undefined}
+        aria-describedby={createErrorField === "scopes" ? "scopes-error" : undefined}
+      >
         <legend>Scopes</legend>
         {SCOPES.map((scope) => (
           <span class="bl-checkbox-item">
@@ -86,8 +98,10 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
             <label for={`scope-new-${scope}`}>{scope}</label>
           </span>
         ))}
+        {createErrorField === "scopes" && (
+          <p class="bl-field-error" id="scopes-error" role="alert">{createError}</p>
+        )}
       </fieldset>
-      {createError && <p class="bl-field-error" role="alert">{createError}</p>}
       <button type="submit" class="bl-btn bl-btn-primary">Create token</button>
     </form>
   </section>

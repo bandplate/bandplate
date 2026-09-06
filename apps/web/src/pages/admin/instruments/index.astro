@@ -18,6 +18,7 @@ if (!principal) {
 const appDeps = await getAppDeps();
 
 let createError: string | undefined;
+let createErrorField: "slug" | "label" | undefined;
 let formError: string | undefined;
 
 if (Astro.request.method === "POST") {
@@ -33,6 +34,7 @@ if (Astro.request.method === "POST") {
         return Astro.redirect("/admin/instruments?created=1");
       }
       createError = result.error;
+      createErrorField = result.field;
     } else if (intent === "update") {
       const id = String(formData.get("instrumentId") ?? "");
       const result = await updateInstrument(appDeps.db, id, formData);
@@ -61,10 +63,21 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0 1.25rem;">
-        <Field label="Slug" name="slug" required hint="Lowercase, no spaces — e.g. rhythm-guitar" />
-        <Field label="Label" name="label" required hint="What members see — e.g. Rhythm guitar" />
+        <Field
+          label="Slug"
+          name="slug"
+          required
+          hint="Lowercase, no spaces — e.g. rhythm-guitar"
+          error={createErrorField === "slug" ? createError : undefined}
+        />
+        <Field
+          label="Label"
+          name="label"
+          required
+          hint="What members see — e.g. Rhythm guitar"
+          error={createErrorField === "label" ? createError : undefined}
+        />
       </div>
-      {createError && <p class="bl-field-error" role="alert">{createError}</p>}
       <button type="submit" class="bl-btn bl-btn-primary">Add instrument</button>
     </form>
   </section>
@@ -104,7 +117,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                       id={`label-${instrument.id}`}
                       name="label"
                       value={instrument.label}
-                      style="min-height:36px; padding:0.25rem 0.5rem; max-width: 12rem;"
+                      style="padding:0.25rem 0.5rem; max-width: 12rem;"
                     />
                     <label class="sr-only" for={`order-${instrument.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
                       Sort order for {instrument.slug}
@@ -115,7 +128,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                       name="sortOrder"
                       type="number"
                       value={instrument.sortOrder}
-                      style="min-height:36px; padding:0.25rem 0.5rem; max-width: 5rem;"
+                      style="padding:0.25rem 0.5rem; max-width: 5rem;"
                     />
                     <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
                   </form>

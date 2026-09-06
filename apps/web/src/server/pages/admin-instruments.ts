@@ -21,9 +21,11 @@ const createSchema = z.object({
   label: z.string().trim().min(1, "Enter a label.").max(200),
 });
 
+export type CreateInstrumentField = "slug" | "label";
+
 export type CreateInstrumentResult =
   | { kind: "ok"; instrument: Instrument }
-  | { kind: "invalid"; error: string };
+  | { kind: "invalid"; error: string; field: CreateInstrumentField };
 
 export async function createInstrument(
   db: Db,
@@ -34,7 +36,9 @@ export async function createInstrument(
     label: formData.get("label"),
   });
   if (!parsed.success) {
-    return { kind: "invalid", error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    const issue = parsed.error.issues[0];
+    const field = (issue?.path[0] as CreateInstrumentField | undefined) ?? "slug";
+    return { kind: "invalid", error: issue?.message ?? "Invalid input.", field };
   }
   const instrument = await instrumentsRepo.create(db, parsed.data);
   return { kind: "ok", instrument };

@@ -1,4 +1,4 @@
-import type { AuthDeps, Clock, Mailer, RateLimiter } from "@bandlib/core";
+import type { AuthDeps, Clock, Mailer, RateLimiter, Sleep } from "@bandlib/core";
 import type { Db } from "@bandlib/db";
 import { Hono } from "hono";
 import { originCheckMiddleware } from "./middleware/origin.js";
@@ -31,6 +31,14 @@ export interface AppDeps {
   clock: Clock;
   rateLimiter: RateLimiter;
   config: AppConfig;
+  /**
+   * Overrides for `requestLogin`'s timing-side-channel clamp (see
+   * `@bandlib/core`'s `DEFAULT_LOGIN_TIMING_FLOOR_MS`/`Sleep`). Tests
+   * inject a fast, non-blocking `sleep` here; production omits both and
+   * gets the real defaults (a real wait, floor 300ms).
+   */
+  loginTimingFloorMs?: number;
+  sleep?: Sleep;
 }
 
 /**
@@ -48,6 +56,8 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
     mailer: deps.mailer,
     clock: deps.clock,
     bootstrapToken: deps.config.bootstrapToken,
+    loginTimingFloorMs: deps.loginTimingFloorMs,
+    sleep: deps.sleep,
   };
 
   // Middleware order matters: principal resolution first (origin check and

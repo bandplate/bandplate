@@ -17,9 +17,34 @@ import { slugify } from "../text.js";
 export const DEFAULT_LOGIN_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export const DEFAULT_SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000; // 365 days
 export const DEFAULT_SESSION_REFRESH_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+/**
+ * Floor `requestLogin` clamps its total wall-clock time to, regardless of
+ * which branch ran. A real SMTP mailer costs a round trip (100ms-1000ms)
+ * for a whitelisted address, while an unknown/disabled address returns
+ * after one indexed SELECT — a difference on the order of milliseconds vs.
+ * hundreds of milliseconds, remotely measurable. 300ms comfortably covers a
+ * typical SMTP round trip without making every login request feel slow.
+ */
+export const DEFAULT_LOGIN_TIMING_FLOOR_MS = 300;
 
 const SERVICE_TOKEN_PREFIX = "blk_";
 const UUID_LENGTH = 36;
+
+/**
+ * A wait primitive, injected so `requestLogin`'s timing clamp can be
+ * exercised in tests without an actual wall-clock sleep: tests supply a
+ * fake that records the requested duration and resolves immediately,
+ * production uses `defaultSleep` (real `setTimeout`). Deliberately not
+ * `Clock`-based — `Clock.now()` is for reading time deterministically, not
+ * for suspending execution, and a fake clock that doesn't auto-advance
+ * would make a `Clock`-driven wait resolve instantly for the wrong reason.
+ */
+export type Sleep = (ms: number) => Promise<void>;
+
+const defaultSleep: Sleep = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 export interface AuthDeps {
   db: Db;
@@ -30,6 +55,10 @@ export interface AuthDeps {
   loginTokenTtlMs?: number;
   sessionTtlMs?: number;
   sessionRefreshThresholdMs?: number;
+  /** See `DEFAULT_LOGIN_TIMING_FLOOR_MS`. */
+  loginTimingFloorMs?: number;
+  /** See the `Sleep` doc comment. Defaults to a real `setTimeout`-based wait. */
+  sleep?: Sleep;
 }
 
 function sessionTtl(deps: AuthDeps): number {
@@ -57,35 +86,54 @@ export interface RequestLoginMeta {
  * turn this into an account-enumeration oracle. Callers (the HTTP route)
  * must respond identically regardless of what happened inside; returning
  * `void` makes that the only option rather than a discipline problem.
+ *
+ * Status and body alone aren't enough, though: a real SMTP mailer costs a
+ * round trip for a whitelisted address but not for an unknown/disabled one,
+ * and that gap is remotely measurable even with an identical response. This
+ * clamps total wall-clock time to `loginTimingFloorMs` (default
+ * `DEFAULT_LOGIN_TIMING_FLOOR_MS`) regardless of which branch ran, measured
+ * via the injected `Clock` (never `Date.now()`, so tests can control it) and
+ * enforced via the injected `sleep` primitive (never a bare `setTimeout`
+ * call inline, so tests can fake the wait without actually blocking).
  */
 export async function requestLogin(
   deps: AuthDeps,
   email: string,
   meta: RequestLoginMeta,
 ): Promise<void> {
-  const member = await membersRepo.getByEmail(deps.db, email);
+  const start = deps.clock.now();
+  try {
+    const member = await membersRepo.getByEmail(deps.db, email);
 
-  if (!member || member.status === "disabled") {
-    return;
+    if (!member || member.status === "disabled") {
+      return;
+    }
+
+    const now = deps.clock.now();
+    const rawToken = generateToken();
+    const tokenHash = await hashToken(rawToken);
+    const expiresAt = now + (deps.loginTokenTtlMs ?? DEFAULT_LOGIN_TOKEN_TTL_MS);
+
+    await loginTokensRepo.create(deps.db, {
+      memberId: member.id,
+      tokenHash,
+      expiresAt,
+      requestedIp: meta.requestedIp ?? null,
+      createdAt: now,
+    });
+
+    await deps.mailer.sendLoginLink(member.email, meta.buildLoginUrl(rawToken), {
+      displayName: member.displayName,
+      expiresAt,
+    });
+  } finally {
+    const floorMs = deps.loginTimingFloorMs ?? DEFAULT_LOGIN_TIMING_FLOOR_MS;
+    const elapsed = deps.clock.now() - start;
+    const remaining = floorMs - elapsed;
+    if (remaining > 0) {
+      await (deps.sleep ?? defaultSleep)(remaining);
+    }
   }
-
-  const now = deps.clock.now();
-  const rawToken = generateToken();
-  const tokenHash = await hashToken(rawToken);
-  const expiresAt = now + (deps.loginTokenTtlMs ?? DEFAULT_LOGIN_TOKEN_TTL_MS);
-
-  await loginTokensRepo.create(deps.db, {
-    memberId: member.id,
-    tokenHash,
-    expiresAt,
-    requestedIp: meta.requestedIp ?? null,
-    createdAt: now,
-  });
-
-  await deps.mailer.sendLoginLink(member.email, meta.buildLoginUrl(rawToken), {
-    displayName: member.displayName,
-    expiresAt,
-  });
 }
 
 // ---------------------------------------------------------------------------

@@ -71,7 +71,18 @@ describe("auth service", () => {
     db = await createTestDb();
     mailer = capturingMailer();
     clock = fakeClock();
-    deps = { db, mailer, clock, bootstrapToken: "correct-horse-battery-staple" };
+    // `sleep` is a no-op here so the many `requestLogin` calls throughout
+    // this file (most tests don't care about the timing clamp) don't each
+    // pay the real default floor. The clamp itself is covered by the
+    // dedicated "timing clamp" tests below, which inject their own
+    // recording `sleep` fake.
+    deps = {
+      db,
+      mailer,
+      clock,
+      bootstrapToken: "correct-horse-battery-staple",
+      sleep: async () => {},
+    };
   });
 
   describe("requestLogin", () => {
@@ -119,6 +130,98 @@ describe("auth service", () => {
 
       await requestLogin(deps, "  Alex@EXAMPLE.com  ", { buildLoginUrl });
       expect(mailer.sent).toHaveLength(1);
+    });
+  });
+
+  describe("requestLogin timing clamp", () => {
+    // `clock` here never auto-advances, so from `requestLogin`'s point of
+    // view zero time elapses inside the try block regardless of branch —
+    // which means a correct clamp must request the *entire* floor via
+    // `sleep` every time, for every branch. That's exactly what lets this
+    // test tell "clamped" apart from "not clamped" without a real wait: it
+    // asserts on the requested duration, not on wall-clock time actually
+    // passing.
+    function recordingSleep(): { sleep: (ms: number) => Promise<void>; calls: number[] } {
+      const calls: number[] = [];
+      return {
+        calls,
+        sleep: async (ms: number) => {
+          calls.push(ms);
+        },
+      };
+    }
+
+    it("clamps the whitelisted-member branch to at least the floor", async () => {
+      await membersRepo.create(db, {
+        displayName: "Alex",
+        slug: "alex",
+        email: "alex@example.com",
+        status: "active",
+        createdAt: clock.now(),
+      });
+      const { sleep, calls } = recordingSleep();
+
+      await requestLogin({ ...deps, sleep, loginTimingFloorMs: 300 }, "alex@example.com", {
+        buildLoginUrl,
+      });
+
+      expect(mailer.sent).toHaveLength(1);
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toBeGreaterThanOrEqual(300);
+    });
+
+    it("clamps the unknown-address branch to at least the same floor", async () => {
+      const { sleep, calls } = recordingSleep();
+
+      await requestLogin({ ...deps, sleep, loginTimingFloorMs: 300 }, "nobody@example.com", {
+        buildLoginUrl,
+      });
+
+      expect(mailer.sent).toHaveLength(0);
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toBeGreaterThanOrEqual(300);
+    });
+
+    it("clamps the disabled-member branch to at least the same floor", async () => {
+      await membersRepo.create(db, {
+        displayName: "Blocked",
+        slug: "blocked",
+        email: "blocked@example.com",
+        status: "disabled",
+        createdAt: clock.now(),
+      });
+      const { sleep, calls } = recordingSleep();
+
+      await requestLogin({ ...deps, sleep, loginTimingFloorMs: 300 }, "blocked@example.com", {
+        buildLoginUrl,
+      });
+
+      expect(mailer.sent).toHaveLength(0);
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toBeGreaterThanOrEqual(300);
+    });
+
+    it("does not wait again once elapsed time already exceeds the floor", async () => {
+      // A `clock` that advances past the floor inside `getByEmail` (the
+      // very first await), simulating a slow lookup or slow mailer that
+      // already consumed the whole budget — the clamp must not double it.
+      let now = clock.now();
+      const advancingClock: Clock = {
+        now: () => {
+          const value = now;
+          now += 1000;
+          return value;
+        },
+      };
+      const { sleep, calls } = recordingSleep();
+
+      await requestLogin(
+        { ...deps, clock: advancingClock, sleep, loginTimingFloorMs: 300 },
+        "nobody@example.com",
+        { buildLoginUrl },
+      );
+
+      expect(calls).toHaveLength(0);
     });
   });
 

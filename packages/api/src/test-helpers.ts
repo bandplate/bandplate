@@ -48,7 +48,20 @@ export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<
     ...overrides,
   };
 
-  const { app, router } = buildRoutedApp({ db, mailer, clock, rateLimiter, config });
+  // `requestLogin`'s timing-side-channel clamp defaults to a real wait
+  // (see `AppDeps.sleep`) — tests inject a no-op `sleep` so HTTP-level
+  // login tests stay fast. The clamp's actual behavior (that both branches
+  // request at least the floor) is unit-tested directly against
+  // `requestLogin` in `@bandlib/core`, with a `sleep` fake that records
+  // the requested duration.
+  const { app, router } = buildRoutedApp({
+    db,
+    mailer,
+    clock,
+    rateLimiter,
+    config,
+    sleep: async () => {},
+  });
   return { app, router, db, mailer, clock, config };
 }
 

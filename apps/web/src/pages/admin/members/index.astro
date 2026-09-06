@@ -1,0 +1,154 @@
+---
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Field from "@bandlib/ui/components/Field.astro";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getAppDeps } from "../../../server/app.js";
+import { isSameOrigin } from "../../../server/csrf.js";
+import { formatTimestamp } from "../../../server/format.js";
+import {
+  createMember,
+  listMembersWithLastSeen,
+  updateMember,
+} from "../../../server/pages/admin-members.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const appDeps = await getAppDeps();
+
+let createError: string | undefined;
+let formError: string | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = "Something about that request looked wrong. Reload the page and try again.";
+  } else {
+    const formData = await Astro.request.formData();
+    const intent = formData.get("intent");
+
+    if (intent === "create") {
+      const result = await createMember(appDeps.db, appDeps.clock.now(), formData);
+      if (result.kind === "ok") {
+        return Astro.redirect("/admin/members?created=1");
+      }
+      createError =
+        result.kind === "email_taken" ? "A member with this email already exists." : result.error;
+    } else if (intent === "update") {
+      const id = String(formData.get("memberId") ?? "");
+      const result = await updateMember(appDeps.db, id, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect("/admin/members?updated=1");
+      }
+      formError = "Couldn't update that member — reload and try again.";
+    }
+  }
+}
+
+const members = await listMembersWithLastSeen(appDeps.db);
+const justCreated = Astro.url.searchParams.get("created") === "1";
+const justUpdated = Astro.url.searchParams.get("updated") === "1";
+const justRevoked = Astro.url.searchParams.get("revoked") === "1";
+---
+
+<AdminLayout title="Members" principal={principal} current="members">
+  {justCreated && <Banner kind="success">Member added.</Banner>}
+  {justUpdated && <Banner kind="success">Member updated.</Banner>}
+  {justRevoked && <Banner kind="success">Sessions revoked. They'll need a new login link.</Banner>}
+  {formError && <Banner kind="error">{formError}</Banner>}
+
+  <section class="bl-card">
+    <h2 style="margin-top:0;">Add a member</h2>
+    <form method="post" novalidate>
+      <input type="hidden" name="intent" value="create" />
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 1.25rem;">
+        <Field label="Name" name="displayName" required autocomplete="name" />
+        <Field label="Email" name="email" type="email" required autocomplete="email" />
+      </div>
+      {createError && (
+        <p class="bl-field-error" role="alert">{createError}</p>
+      )}
+      <button type="submit" class="bl-btn bl-btn-primary">Add member</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Roster</h2>
+    {members.length === 0 ? (
+      <p>No members yet — add the first one above.</p>
+    ) : (
+      <div class="bl-table-wrap">
+        <table class="bl-table">
+          <caption class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">
+            Band members
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Email</th>
+              <th scope="col">Role</th>
+              <th scope="col">Status</th>
+              <th scope="col">Last seen</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((member) => (
+              <tr>
+                <td data-label="Name">{member.displayName}</td>
+                <td data-label="Email" class="bl-mono">{member.email}</td>
+                <td data-label="Role">
+                  <span class={`bl-badge ${member.role === "admin" ? "bl-badge-admin" : ""}`}>
+                    {member.role}
+                  </span>
+                </td>
+                <td data-label="Status">
+                  <span class={`bl-badge ${member.status === "active" ? "bl-badge-active" : ""}`}>
+                    {member.status}
+                  </span>
+                </td>
+                <td data-label="Last seen" class="bl-mono">{formatTimestamp(member.lastSeenAt)}</td>
+                <td data-label="Actions">
+                  <div class="bl-table-actions">
+                    <form method="post" style="display:flex; gap:0.375rem; flex-wrap:wrap; align-items:center;">
+                      <input type="hidden" name="intent" value="update" />
+                      <input type="hidden" name="memberId" value={member.id} />
+                      <label class="sr-only" for={`role-${member.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                        Role for {member.displayName}
+                      </label>
+                      <select class="bl-select" id={`role-${member.id}`} name="role" style="min-height:36px; padding:0.25rem 0.5rem;">
+                        <option value="member" selected={member.role === "member"}>member</option>
+                        <option value="admin" selected={member.role === "admin"}>admin</option>
+                      </select>
+                      <label class="sr-only" for={`status-${member.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                        Status for {member.displayName}
+                      </label>
+                      <select class="bl-select" id={`status-${member.id}`} name="status" style="min-height:36px; padding:0.25rem 0.5rem;">
+                        <option value="invited" selected={member.status === "invited"}>invited</option>
+                        <option value="active" selected={member.status === "active"}>active</option>
+                        <option value="disabled" selected={member.status === "disabled"}>disabled</option>
+                      </select>
+                      <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
+                    </form>
+                    <a
+                      href={`/admin/members/${member.id}/revoke-sessions`}
+                      class="bl-btn bl-btn-danger bl-btn-sm"
+                      data-confirm
+                      data-confirm-title={`Revoke sessions for ${member.displayName}?`}
+                      data-confirm-body={`${member.displayName} will be signed out everywhere and will need a new login link to get back in.`}
+                      data-confirm-action={`/admin/members/${member.id}/revoke-sessions`}
+                      data-confirm-cta="Revoke sessions"
+                    >
+                      Revoke sessions
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+</AdminLayout>

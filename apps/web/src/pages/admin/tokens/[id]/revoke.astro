@@ -1,0 +1,51 @@
+---
+// No-JS fallback confirm page for revoking a service token (see the
+// members revoke-sessions confirm page for the same pattern).
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { getToken, revokeToken } from "../../../../server/pages/admin-tokens.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/admin/tokens");
+}
+
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const { kind } = await revokeToken(appDeps.db, id, appDeps.clock.now());
+  if (isFetch) {
+    return new Response(kind === "ok" ? "ok" : "not found", { status: kind === "ok" ? 200 : 404 });
+  }
+  return Astro.redirect("/admin/tokens?revoked=1");
+}
+
+const token = await getToken(appDeps.db, id);
+if (!token) {
+  return new Response("Token not found.", { status: 404 });
+}
+---
+
+<Layout title="Revoke token">
+  <main id="main" class="bl-container" style="max-width: 30rem; margin-top: 3rem;">
+    <Banner kind="error" title={`Revoke the token ${token.label}?`}>
+      Anything using {token.label} will stop being able to authenticate immediately. This can't
+      be undone.
+    </Banner>
+    <form method="post" style="display:flex; gap:0.75rem;">
+      <button type="submit" class="bl-btn bl-btn-danger">Revoke token</button>
+      <a href="/admin/tokens" class="bl-btn bl-btn-secondary">Cancel</a>
+    </form>
+  </main>
+</Layout>

@@ -1,0 +1,56 @@
+---
+// The no-JS fallback destination for the "Revoke sessions" trigger on the
+// members list: GET renders a real confirmation page (names the member,
+// states the consequence), and this page's own `<form method="post">`
+// performs the action — no JavaScript required. When JS is available, the
+// `ConfirmDialog` island intercepts the trigger and POSTs here directly
+// with `Accept: text/plain` instead of navigating, which is how this page
+// tells the two callers apart below.
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps, getAuthDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { getMember, revokeMemberSessions } from "../../../../server/pages/admin-members.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/admin/members");
+}
+
+const [appDeps, authDeps] = await Promise.all([getAppDeps(), getAuthDeps()]);
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const { kind } = await revokeMemberSessions(appDeps.db, authDeps, id);
+  if (isFetch) {
+    return new Response(kind === "ok" ? "ok" : "not found", { status: kind === "ok" ? 200 : 404 });
+  }
+  return Astro.redirect("/admin/members?revoked=1");
+}
+
+const member = await getMember(appDeps.db, id);
+if (!member) {
+  return new Response("Member not found.", { status: 404 });
+}
+---
+
+<Layout title="Revoke sessions">
+  <main id="main" class="bl-container" style="max-width: 30rem; margin-top: 3rem;">
+    <Banner kind="error" title={`Revoke sessions for ${member.displayName}?`}>
+      {member.displayName} will be signed out everywhere and will need a new login link to get
+      back in.
+    </Banner>
+    <form method="post" style="display:flex; gap:0.75rem;">
+      <button type="submit" class="bl-btn bl-btn-danger">Revoke sessions</button>
+      <a href="/admin/members" class="bl-btn bl-btn-secondary">Cancel</a>
+    </form>
+  </main>
+</Layout>

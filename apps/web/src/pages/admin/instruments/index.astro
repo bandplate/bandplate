@@ -1,0 +1,154 @@
+---
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Field from "@bandlib/ui/components/Field.astro";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getAppDeps } from "../../../server/app.js";
+import { isSameOrigin } from "../../../server/csrf.js";
+import {
+  createInstrument,
+  listInstruments,
+  updateInstrument,
+} from "../../../server/pages/admin-instruments.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const appDeps = await getAppDeps();
+
+let createError: string | undefined;
+let formError: string | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = "Something about that request looked wrong. Reload the page and try again.";
+  } else {
+    const formData = await Astro.request.formData();
+    const intent = formData.get("intent");
+
+    if (intent === "create") {
+      const result = await createInstrument(appDeps.db, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect("/admin/instruments?created=1");
+      }
+      createError = result.error;
+    } else if (intent === "update") {
+      const id = String(formData.get("instrumentId") ?? "");
+      const result = await updateInstrument(appDeps.db, id, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect("/admin/instruments?updated=1");
+      }
+      formError = "Couldn't update that instrument — reload and try again.";
+    }
+  }
+}
+
+const instruments = await listInstruments(appDeps.db);
+const justCreated = Astro.url.searchParams.get("created") === "1";
+const justUpdated = Astro.url.searchParams.get("updated") === "1";
+const justArchived = Astro.url.searchParams.get("archived") === "1";
+---
+
+<AdminLayout title="Instruments" principal={principal} current="instruments">
+  {justCreated && <Banner kind="success">Instrument added.</Banner>}
+  {justUpdated && <Banner kind="success">Instrument updated.</Banner>}
+  {justArchived && <Banner kind="success">Instrument archived. Its past takes still render fine.</Banner>}
+  {formError && <Banner kind="error">{formError}</Banner>}
+
+  <section class="bl-card">
+    <h2 style="margin-top:0;">Add an instrument</h2>
+    <form method="post" novalidate>
+      <input type="hidden" name="intent" value="create" />
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0 1.25rem;">
+        <Field label="Slug" name="slug" required hint="Lowercase, no spaces — e.g. rhythm-guitar" />
+        <Field label="Label" name="label" required hint="What members see — e.g. Rhythm guitar" />
+      </div>
+      {createError && <p class="bl-field-error" role="alert">{createError}</p>}
+      <button type="submit" class="bl-btn bl-btn-primary">Add instrument</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Instruments</h2>
+    <p class="bl-field-hint">
+      Archiving an instrument hides it from new takes but keeps every past take that used it
+      rendering correctly.
+    </p>
+    {instruments.length === 0 ? (
+      <p>No instruments yet — add the first one above.</p>
+    ) : (
+      <div class="bl-table-wrap">
+        <table class="bl-table">
+          <thead>
+            <tr>
+              <th scope="col">Label</th>
+              <th scope="col">Slug</th>
+              <th scope="col">Order</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {instruments.map((instrument) => (
+              <tr>
+                <td data-label="Label">
+                  <form method="post" style="display:flex; gap:0.375rem; flex-wrap:wrap; align-items:center;">
+                    <input type="hidden" name="intent" value="update" />
+                    <input type="hidden" name="instrumentId" value={instrument.id} />
+                    <label class="sr-only" for={`label-${instrument.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                      Label for {instrument.slug}
+                    </label>
+                    <input
+                      class="bl-input"
+                      id={`label-${instrument.id}`}
+                      name="label"
+                      value={instrument.label}
+                      style="min-height:36px; padding:0.25rem 0.5rem; max-width: 12rem;"
+                    />
+                    <label class="sr-only" for={`order-${instrument.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                      Sort order for {instrument.slug}
+                    </label>
+                    <input
+                      class="bl-input"
+                      id={`order-${instrument.id}`}
+                      name="sortOrder"
+                      type="number"
+                      value={instrument.sortOrder}
+                      style="min-height:36px; padding:0.25rem 0.5rem; max-width: 5rem;"
+                    />
+                    <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
+                  </form>
+                </td>
+                <td data-label="Slug" class="bl-mono">{instrument.slug}</td>
+                <td data-label="Order" class="bl-mono">{instrument.sortOrder}</td>
+                <td data-label="Status">
+                  <span class="bl-badge">{instrument.archivedAt ? "archived" : "active"}</span>
+                </td>
+                <td data-label="Actions">
+                  {instrument.archivedAt ? (
+                    <form method="post" action={`/admin/instruments/${instrument.id}/archive?unarchive=1`}>
+                      <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Unarchive</button>
+                    </form>
+                  ) : (
+                    <a
+                      href={`/admin/instruments/${instrument.id}/archive`}
+                      class="bl-btn bl-btn-danger bl-btn-sm"
+                      data-confirm
+                      data-confirm-title={`Archive ${instrument.label}?`}
+                      data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}
+                      data-confirm-action={`/admin/instruments/${instrument.id}/archive`}
+                      data-confirm-cta="Archive"
+                    >
+                      Archive
+                    </a>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+</AdminLayout>

@@ -1,0 +1,58 @@
+---
+// No-JS fallback confirm page for archiving an instrument (see the members
+// revoke-sessions confirm page for the same pattern). `?unarchive=1`
+// reverses the direction — reached directly from the list's one-click
+// "Unarchive" button, which isn't destructive and so doesn't need a
+// confirmation step at all.
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import {
+  getInstrument,
+  setInstrumentArchived,
+} from "../../../../server/pages/admin-instruments.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/admin/instruments");
+}
+
+const archiving = Astro.url.searchParams.get("unarchive") !== "1";
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const { kind } = await setInstrumentArchived(appDeps.db, id, archiving, appDeps.clock.now());
+  if (isFetch) {
+    return new Response(kind === "ok" ? "ok" : "not found", { status: kind === "ok" ? 200 : 404 });
+  }
+  return Astro.redirect(`/admin/instruments?${archiving ? "archived=1" : "updated=1"}`);
+}
+
+const instrument = await getInstrument(appDeps.db, id);
+if (!instrument) {
+  return new Response("Instrument not found.", { status: 404 });
+}
+---
+
+<Layout title="Archive instrument">
+  <main id="main" class="bl-container" style="max-width: 30rem; margin-top: 3rem;">
+    <Banner kind="error" title={`Archive ${instrument.label}?`}>
+      {instrument.label} won't be selectable for new takes. Past takes that used it keep
+      rendering fine.
+    </Banner>
+    <form method="post" style="display:flex; gap:0.75rem;">
+      <button type="submit" class="bl-btn bl-btn-danger">Archive</button>
+      <a href="/admin/instruments" class="bl-btn bl-btn-secondary">Cancel</a>
+    </form>
+  </main>
+</Layout>

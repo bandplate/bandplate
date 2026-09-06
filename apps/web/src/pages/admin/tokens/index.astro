@@ -1,0 +1,172 @@
+---
+import { SCOPES } from "@bandlib/core";
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Field from "@bandlib/ui/components/Field.astro";
+import CopyButton from "../../../components/CopyButton.tsx";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getAppDeps, getAuthDeps } from "../../../server/app.js";
+import { isSameOrigin } from "../../../server/csrf.js";
+import { formatTimestamp } from "../../../server/format.js";
+import {
+  type CreateTokenResult,
+  createToken,
+  listTokens,
+  updateTokenScopes,
+} from "../../../server/pages/admin-tokens.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const [appDeps, authDeps] = await Promise.all([getAppDeps(), getAuthDeps()]);
+
+let createError: string | undefined;
+let formError: string | undefined;
+let created: Extract<CreateTokenResult, { kind: "ok" }> | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = "Something about that request looked wrong. Reload the page and try again.";
+  } else {
+    const formData = await Astro.request.formData();
+    const intent = formData.get("intent");
+
+    if (intent === "create") {
+      const result = await createToken(authDeps, formData);
+      if (result.kind === "ok") {
+        // Rendered directly below, on THIS response — never via a redirect,
+        // since the raw secret must never be persisted or logged anywhere,
+        // including a query string.
+        created = result;
+      } else {
+        createError = result.error;
+      }
+    } else if (intent === "update") {
+      const id = String(formData.get("tokenId") ?? "");
+      const result = await updateTokenScopes(appDeps.db, id, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect("/admin/tokens?updated=1");
+      }
+      formError = "Couldn't update that token's scopes — choose at least one and try again.";
+    }
+  }
+}
+
+const tokens = await listTokens(appDeps.db);
+const justUpdated = Astro.url.searchParams.get("updated") === "1";
+const justRevoked = Astro.url.searchParams.get("revoked") === "1";
+---
+
+<AdminLayout title="Tokens" principal={principal} current="tokens">
+  {justUpdated && <Banner kind="success">Scopes updated.</Banner>}
+  {justRevoked && <Banner kind="success">Token revoked. Anything using it will stop working immediately.</Banner>}
+  {formError && <Banner kind="error">{formError}</Banner>}
+
+  {created && (
+    <Banner kind="success" title="Token created">
+      <p style="margin: 0 0 0.5rem;">
+        <strong>Copy this secret now — it will not be shown again.</strong>
+      </p>
+      <p class="bl-mono" style="word-break: break-all; margin: 0 0 0.5rem;">{created.rawToken}</p>
+      <CopyButton client:load value={created.rawToken} label="Copy secret" />
+    </Banner>
+  )}
+
+  <section class="bl-card">
+    <h2 style="margin-top:0;">Create a token</h2>
+    <form method="post" novalidate>
+      <input type="hidden" name="intent" value="create" />
+      <Field label="Label" name="label" required hint="What this token is for — e.g. reaper-bridge" />
+      <fieldset class="bl-checkbox-group">
+        <legend>Scopes</legend>
+        {SCOPES.map((scope) => (
+          <span class="bl-checkbox-item">
+            <input type="checkbox" id={`scope-new-${scope}`} name="scopes" value={scope} />
+            <label for={`scope-new-${scope}`}>{scope}</label>
+          </span>
+        ))}
+      </fieldset>
+      {createError && <p class="bl-field-error" role="alert">{createError}</p>}
+      <button type="submit" class="bl-btn bl-btn-primary">Create token</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Service tokens</h2>
+    {tokens.length === 0 ? (
+      <p>No service tokens yet — create one above.</p>
+    ) : (
+      <div class="bl-table-wrap">
+        <table class="bl-table">
+          <thead>
+            <tr>
+              <th scope="col">Label</th>
+              <th scope="col">Scopes</th>
+              <th scope="col">Created</th>
+              <th scope="col">Last used</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tokens.map((token) => (
+              <tr>
+                <td data-label="Label">
+                  {token.label}
+                  {token.revokedAt && <span class="bl-badge" style="margin-left:0.5rem;">revoked</span>}
+                </td>
+                <td data-label="Scopes" class="bl-mono">{token.scopes.join(", ")}</td>
+                <td data-label="Created" class="bl-mono">{formatTimestamp(token.createdAt)}</td>
+                <td data-label="Last used" class="bl-mono">{formatTimestamp(token.lastUsedAt)}</td>
+                <td data-label="Actions">
+                  <div class="bl-table-actions">
+                    {!token.revokedAt && (
+                      <>
+                        <details>
+                          <summary class="bl-btn bl-btn-secondary bl-btn-sm" style="cursor:pointer;">Edit scopes</summary>
+                          <form method="post" style="margin-top: 0.75rem;">
+                            <input type="hidden" name="intent" value="update" />
+                            <input type="hidden" name="tokenId" value={token.id} />
+                            <fieldset class="bl-checkbox-group">
+                              <legend class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                                Scopes for {token.label}
+                              </legend>
+                              {SCOPES.map((scope) => (
+                                <span class="bl-checkbox-item">
+                                  <input
+                                    type="checkbox"
+                                    id={`scope-${token.id}-${scope}`}
+                                    name="scopes"
+                                    value={scope}
+                                    checked={token.scopes.includes(scope)}
+                                  />
+                                  <label for={`scope-${token.id}-${scope}`}>{scope}</label>
+                                </span>
+                              ))}
+                            </fieldset>
+                            <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save scopes</button>
+                          </form>
+                        </details>
+                        <a
+                          href={`/admin/tokens/${token.id}/revoke`}
+                          class="bl-btn bl-btn-danger bl-btn-sm"
+                          data-confirm
+                          data-confirm-title={`Revoke the token ${token.label}?`}
+                          data-confirm-body={`Anything using ${token.label} will stop being able to authenticate immediately. This can't be undone.`}
+                          data-confirm-action={`/admin/tokens/${token.id}/revoke`}
+                          data-confirm-cta="Revoke token"
+                        >
+                          Revoke
+                        </a>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+</AdminLayout>

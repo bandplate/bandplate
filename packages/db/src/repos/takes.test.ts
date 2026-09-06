@@ -146,6 +146,68 @@ describe("takes.listByEvent ordering", () => {
   });
 });
 
+// `getSongDetail` (server/pages/songs.ts) advertises "every take newest
+// first" for the song page — pinned here at the repo level, not just
+// exercised incidentally by a page test, so removing this function's
+// `ORDER BY` fails a test by itself. Rows are inserted out of
+// chronological order (like `takes.listByEvent ordering` above) so SQLite's
+// un-ordered row-scan order (insertion/rowid order) would NOT happen to
+// match the expected result — a real assertion on the ORDER BY, not an
+// accident of insert order.
+describe("takes.listBySong ordering", () => {
+  let db: Db;
+  let songId: string;
+  let eventId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    const song = await songs.create(db, {
+      title: "Song Ordering Song",
+      slug: "song-ordering-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    songId = song.id;
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    eventId = event.id;
+
+    await takes.create(db, { songId, eventId, recordedAt: 1000, createdAt: 1000, updatedAt: 1000 });
+    await takes.create(db, { songId, eventId, recordedAt: 3000, createdAt: 3000, updatedAt: 3000 });
+    await takes.create(db, { songId, eventId, recordedAt: 2000, createdAt: 2000, updatedAt: 2000 });
+  });
+
+  it("returns every take of a song newest first", async () => {
+    const result = await takes.listBySong(db, songId);
+    expect(result.map((t) => t.recordedAt)).toEqual([3000, 2000, 1000]);
+  });
+
+  it("does not include takes of a different song", async () => {
+    const now = Date.now();
+    const otherSong = await songs.create(db, {
+      title: "Other Song",
+      slug: "other-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await takes.create(db, {
+      songId: otherSong.id,
+      eventId,
+      recordedAt: 4000,
+      createdAt: 4000,
+      updatedAt: 4000,
+    });
+
+    const result = await takes.listBySong(db, songId);
+    expect(result.map((t) => t.recordedAt)).toEqual([3000, 2000, 1000]);
+  });
+});
+
 describe("takes.listInstrumentsForTakes", () => {
   let db: Db;
   let songId: string;

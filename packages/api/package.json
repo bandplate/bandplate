@@ -14,9 +14,12 @@
   },
   "dependencies": {
     "hono": "^4.6.14",
-    "@bandlib/core": "workspace:*"
+    "zod": "^3.24.1",
+    "@bandlib/core": "workspace:*",
+    "@bandlib/db": "workspace:*"
   },
   "devDependencies": {
+    "@bandlib/mail": "workspace:*",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

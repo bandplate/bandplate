@@ -1,21 +1,199 @@
 ---
-// Real nav needs a real destination — a nav item that 404s or looks
-// disabled is worse than one that's honest about not being built yet (the
-// brief's rule for a fake play button applies here too). Search itself is
-// Task 6's; this is a placeholder page, not placeholder navigation.
+// Cross-cutting search: instrument (AND), date range, rating, state, and
+// free text across song titles and aliases. A plain GET form — every
+// filter round-trips through the URL, so a search is shareable/bookmarkable
+// and works with JS off (same approach `/songs`'s instrument filter uses;
+// see that page's header comment for why no client script is worth adding
+// just to progressively enhance a form this page doesn't otherwise need
+// any script for).
+//
+// Layout: a filter panel BESIDE the results on desktop, a collapsed
+// `<details>` above them on phones (brief §4, "as /songs does") — reusing
+// `/songs`'s exact `<details>`-collapse-plus-force-open-past-lg mechanism
+// (`.bl-toolbar-details`, see components.css), generalized here to wrap
+// every filter fieldset (not just one instrument checkbox group) inside a
+// single `.bl-search-filters-body` child, so the same one CSS override
+// that already forces that one child visible past `lg` covers the whole
+// filter set instead of needing a rule per fieldset.
+import { instrumentsRepo } from "@bandlib/db";
+import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../server/app.js";
+import {
+  type SearchRating,
+  hasAnyFilter,
+  parseSearchQuery,
+  searchTakes,
+} from "../../server/pages/search.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
   return Astro.redirect("/login");
 }
+
+const appDeps = await getAppDeps();
+const query = parseSearchQuery(Astro.url.searchParams);
+const filtersApplied = hasAnyFilter(query);
+
+const [results, instruments] = await Promise.all([
+  searchTakes(appDeps.db, query),
+  instrumentsRepo.list(appDeps.db),
+]);
+
+const STATE_OPTIONS = [
+  { value: "new", label: "New" },
+  { value: "published", label: "Published" },
+  { value: "keeper", label: "Keeper" },
+  { value: "rejected", label: "Rejected" },
+] as const;
+
+const RATING_OPTIONS: Array<{ value: SearchRating; label: string }> = [
+  { value: "50", label: "50% keeper or better" },
+  { value: "75", label: "75% keeper or better" },
+  { value: "100", label: "Unanimous keeper" },
+];
+
+const resultsLabel = filtersApplied
+  ? `${results.length} ${results.length === 1 ? "take matches" : "takes match"}`
+  : `${results.length} ${results.length === 1 ? "take" : "takes"}`;
 ---
 
 <AppLayout title="Search" principal={principal} current="search">
   <div class="bl-stack">
     <h1 class="bl-page-title">Search</h1>
-    <div class="bl-empty-state">
-      <p>Search is on its way — for now, browse by Songs or Events.</p>
-    </div>
+
+    <form method="get" class="bl-search-layout">
+      <details class="bl-toolbar-details bl-search-filters" open={filtersApplied}>
+        <summary class="bl-toolbar-details-summary">
+          Filters
+          {filtersApplied && " (applied)"}
+        </summary>
+        <div class="bl-search-filters-body bl-stack">
+          <div class="bl-field">
+            <label class="bl-field-label" for="search-q">Song title or alias</label>
+            <input
+              class="bl-input"
+              type="search"
+              id="search-q"
+              name="q"
+              value={query.search ?? ""}
+              placeholder="e.g. Neon Skyline"
+            />
+          </div>
+
+          <fieldset class="bl-checkbox-group">
+            <legend>
+              Instruments
+              {query.instrumentIds.length > 1 && (
+                <span class="bl-field-hint">— must have a take with all of these</span>
+              )}
+            </legend>
+            {
+              instruments.map((instrument) => (
+                <span class="bl-checkbox-item">
+                  <input
+                    type="checkbox"
+                    id={`search-instrument-${instrument.id}`}
+                    name="instrument"
+                    value={instrument.id}
+                    checked={query.instrumentIds.includes(instrument.id)}
+                  />
+                  <label for={`search-instrument-${instrument.id}`}>{instrument.label}</label>
+                </span>
+              ))
+            }
+          </fieldset>
+
+          <div class="bl-form-grid">
+            <div class="bl-field">
+              <label class="bl-field-label" for="search-date-from">Recorded from</label>
+              <input
+                class="bl-input"
+                type="date"
+                id="search-date-from"
+                name="dateFrom"
+                value={query.dateFrom ?? ""}
+              />
+            </div>
+            <div class="bl-field">
+              <label class="bl-field-label" for="search-date-to">Recorded to</label>
+              <input
+                class="bl-input"
+                type="date"
+                id="search-date-to"
+                name="dateTo"
+                value={query.dateTo ?? ""}
+              />
+            </div>
+          </div>
+
+          <div class="bl-field">
+            <label class="bl-field-label" for="search-rating">Minimum rating</label>
+            <select class="bl-select" id="search-rating" name="rating">
+              <option value="" selected={!query.rating}>Any rating</option>
+              {
+                RATING_OPTIONS.map((option) => (
+                  <option value={option.value} selected={query.rating === option.value}>
+                    {option.label}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          <fieldset class="bl-checkbox-group">
+            <legend>State</legend>
+            {
+              STATE_OPTIONS.map((option) => (
+                <span class="bl-checkbox-item">
+                  <input
+                    type="checkbox"
+                    id={`search-state-${option.value}`}
+                    name="state"
+                    value={option.value}
+                    checked={query.states.includes(option.value)}
+                  />
+                  <label for={`search-state-${option.value}`}>{option.label}</label>
+                </span>
+              ))
+            }
+          </fieldset>
+
+          <div class="bl-toolbar-actions">
+            <button type="submit" class="bl-btn bl-btn-primary">Search</button>
+            {filtersApplied && (
+              <a href="/search" class="bl-btn bl-btn-secondary">
+                Clear
+              </a>
+            )}
+          </div>
+        </div>
+      </details>
+
+      <div class="bl-search-results">
+        <p class="bl-field-hint bl-m0">{resultsLabel}</p>
+        {
+          results.length === 0 ? (
+            <div class="bl-empty-state">
+              <p>
+                {filtersApplied
+                  ? "No takes match those filters — try clearing one."
+                  : "No takes in the archive yet."}
+              </p>
+            </div>
+          ) : (
+            <div class="bl-take-list bl-take-list--wide">
+              {results.map((take) => (
+                <TakeRow
+                  take={take}
+                  instruments={take.instruments}
+                  context={{ kind: "full", song: take.song, event: take.event }}
+                />
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </form>
   </div>
 </AppLayout>

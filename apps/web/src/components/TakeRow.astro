@@ -45,7 +45,12 @@ const stateLabel: Record<takesRepo.TakeState, string> = {
   purged: "purged",
 };
 
-const primaryLabel = song ? song.title : (take.label ?? formatShortDate(take.recordedAt));
+// On the song page (event mode) the row's own link is always the recorded
+// date — this list's entire ordering is chronological, so the date is the
+// thing that orients a reader, never suppressed just because the take also
+// has a label. A label (when present) renders as a sublabel underneath in
+// BOTH modes, never as a replacement for the date.
+const primaryLabel = song ? song.title : formatShortDate(take.recordedAt);
 ---
 
 <div class="bl-take-row">
@@ -53,7 +58,7 @@ const primaryLabel = song ? song.title : (take.label ?? formatShortDate(take.rec
     <a href={`/takes/${take.id}`} class="bl-take-label" transition:name={`take-${take.id}`}>
       {primaryLabel}
     </a>
-    {song && take.label && <span class="bl-take-meta bl-take-sublabel">{take.label}</span>}
+    {take.label && <span class="bl-take-meta bl-take-sublabel">{take.label}</span>}
     <div class="bl-take-meta bl-take-row-line">
       <span class={`bl-badge ${take.state === "keeper" ? "bl-badge-keeper" : ""}`}>
         {stateLabel[take.state]}

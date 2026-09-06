@@ -551,3 +551,756 @@ a.bl-btn {
   font-family: var(--bl-font-mono);
   word-break: break-all;
 }
+
+/* ---------------------------------------------------------------------- */
+/* App shell — the member-facing nav (Task 5). A bottom tab bar on phones, */
+/* a persistent sidebar past `lg` (1024px). Two real layouts, not one      */
+/* widened by media query: the sidebar and tab bar are separate elements,  */
+/* each hidden with `display: none` on the breakpoint it doesn't own, so   */
+/* no JS is needed to switch between them and nothing is ever "disabled"   */
+/* — the wrong one for the viewport simply isn't rendered.                 */
+/* ---------------------------------------------------------------------- */
+
+.bl-shell {
+  min-height: 100vh;
+}
+
+.bl-shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--bl-color-border);
+}
+
+.bl-shell-wordmark {
+  font-family: var(--bl-font-display);
+  font-weight: 800;
+  font-size: 1.375rem;
+  text-decoration: none;
+  color: var(--bl-color-fg);
+}
+
+.bl-shell-body {
+  display: flex;
+  align-items: flex-start;
+}
+
+.bl-shell-main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 6rem;
+  box-sizing: border-box;
+}
+
+/* Bottom tab bar — phones and tablets. */
+.bl-tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  border-top: 1px solid var(--bl-color-border);
+  background: var(--bl-color-bg);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.bl-tabbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 56px;
+  padding: 0.375rem 0.25rem;
+  text-decoration: none;
+  color: var(--bl-color-muted);
+  font-family: var(--bl-font-body);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.bl-tabbar-item[aria-current="page"] {
+  color: var(--bl-color-fg);
+}
+
+.bl-tabbar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sidebar — hidden below `lg`, shown (as a flex row with `.bl-shell-body`) at and above it. */
+.bl-sidebar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .bl-shell-header {
+    display: none;
+  }
+
+  .bl-tabbar {
+    display: none;
+  }
+
+  .bl-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 15rem;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    box-sizing: border-box;
+    padding: 1.75rem 1.25rem;
+    border-right: 1px solid var(--bl-color-border);
+  }
+
+  .bl-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .bl-sidebar-footer {
+    margin-top: auto;
+  }
+
+  .bl-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    color: var(--bl-color-fg);
+    font-family: var(--bl-font-body);
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  .bl-sidebar-item:hover {
+    background: var(--bl-color-surface);
+  }
+
+  .bl-sidebar-item[aria-current="page"] {
+    background: var(--bl-color-surface);
+    border: 1px solid var(--bl-color-fg);
+  }
+
+  .bl-sidebar-icon {
+    display: flex;
+    align-items: center;
+    color: var(--bl-color-muted);
+  }
+
+  .bl-sidebar-item[aria-current="page"] .bl-sidebar-icon {
+    color: var(--bl-color-fg);
+  }
+
+  .bl-shell-main {
+    padding: 2.25rem 2.5rem 3rem;
+    max-width: 56rem;
+    margin: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Route progress — a thin bar for View Transitions navigation, not a      */
+/* spinner: the destination is already known (it's a link), so this shows */
+/* that something is happening rather than blocking on it. Purely         */
+/* decorative (`aria-hidden`), so it carries no text alternative.         */
+/* ---------------------------------------------------------------------- */
+
+.bl-route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 200;
+  /* NOT `--bl-color-accent` — that's the SAME fixed rust hex in both
+     themes (see roost.css), which measures 9.21:1 against the light
+     ground but only 1.69:1 against the dark one (the exact regression
+     documented in components.css's file header). This bar needs to be
+     visible as a graphical object in both themes, so it uses the
+     component-scoped, dark-mode-aware variant instead: 9.21:1 / 9.96:1 in
+     light, 4.41:1 / 4.08:1 in dark (against bg / surface respectively). */
+  background: var(--bl-component-accent-strong);
+  transform-origin: left;
+  transform: scaleX(0);
+  opacity: 0;
+}
+
+.bl-route-progress.is-active {
+  opacity: 1;
+  transform: scaleX(0.7);
+  transition: transform 6s cubic-bezier(0.1, 0.5, 0.5, 1);
+}
+
+.bl-route-progress.is-done {
+  opacity: 1;
+  transform: scaleX(1);
+  transition: transform 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-route-progress,
+  .bl-route-progress.is-active,
+  .bl-route-progress.is-done {
+    transition: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Toolbar — the search/sort/filter controls above a list. Stacked on      */
+/* phones (each control full-width, easy to hit one-handed); a single row */
+/* once there's room.                                                      */
+/* ---------------------------------------------------------------------- */
+
+.bl-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+.bl-toolbar .bl-field {
+  margin-bottom: 0;
+}
+
+.bl-toolbar .bl-checkbox-group {
+  flex-basis: 100%;
+  margin-bottom: 0;
+}
+
+.bl-toolbar-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 768px) {
+  .bl-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .bl-toolbar > * {
+    flex: 1 1 12rem;
+  }
+
+  .bl-toolbar > .bl-toolbar-actions {
+    flex: 0 0 auto;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Small generic utilities — used sparingly, to replace one-off inline     */
+/* `style=` attributes rather than adding new ones (see task-5-report.md's */
+/* inline-style cleanup). Reach for a real component class first; these    */
+/* two exist only for the handful of cases that are genuinely just "zero   */
+/* out the default margin" or "a plain page heading, no hero treatment".   */
+/* ---------------------------------------------------------------------- */
+
+.bl-m0 {
+  margin: 0;
+}
+
+.bl-page-title {
+  font-family: var(--bl-font-body);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.bl-section-title {
+  font-family: var(--bl-font-body);
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+}
+
+.bl-stack-tight {
+  gap: 0.75rem;
+}
+
+.bl-list-reset {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bl-mb-sm {
+  margin-bottom: 0.5rem;
+}
+
+.bl-mt-sm {
+  margin-top: 0.75rem;
+}
+
+.bl-ml-sm {
+  margin-left: 0.5rem;
+}
+
+.bl-cursor-pointer {
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Admin shell (Task 4, cleaned up here — see task-5-report.md's inline-   */
+/* style debt section). `.bl-admin-title` intentionally does NOT reuse     */
+/* `.bl-hero-title`: the admin control panel is a different vocabulary     */
+/* from the member-facing browsing surface, not the same primitive reused  */
+/* "regardless of hierarchy".                                              */
+/* ---------------------------------------------------------------------- */
+
+.bl-admin-title {
+  font-family: var(--bl-font-display);
+  font-weight: 800;
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+.bl-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.bl-inline-nav-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Admin overview's stat tiles — a real grid (`.bl-stat-grid`), never a
+   `.bl-stack` (flex-column) with a `display: grid` inline override sitting
+   on top of it (that contradiction was the report's C-item: the inline
+   rule wins, so it "worked", but authoring a flex class and then
+   overriding its own `display` inline is nonsense — this replaces both
+   with one real class). */
+.bl-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.bl-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.bl-stat-value {
+  font-family: var(--bl-font-display);
+  font-weight: 800;
+  font-size: 2.5rem;
+  margin: 0.25rem 0;
+}
+
+/* The "Add a member" / "Add an instrument" / "Create a token" form grids —
+   one or two columns depending on width. `--wide` gives the two email/name
+   fields on the members form more room before wrapping to two columns. */
+.bl-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0 1.25rem;
+}
+
+.bl-form-grid--wide {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+/* The per-row inline edit forms in the admin tables (rename+reorder an
+   instrument, change a member's role/status) — compact controls that sit
+   next to a Save button in a single wrapping line. */
+.bl-inline-form {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.bl-input-compact {
+  padding: 0.25rem 0.5rem;
+}
+
+.bl-input-inline-label {
+  padding: 0.25rem 0.5rem;
+  max-width: 12rem;
+}
+
+.bl-input-inline-number {
+  padding: 0.25rem 0.5rem;
+  max-width: 5rem;
+}
+
+/* Auth pages (login, the login-token page, setup) — one narrow centered
+   column, one display headline. */
+.bl-auth-main {
+  max-width: 26rem;
+  margin-top: 3.5rem;
+}
+
+.bl-auth-title {
+  font-family: var(--bl-font-display);
+  font-weight: 800;
+  font-size: 2.25rem;
+  margin: 0 0 1.5rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Library list (songs) — flat rows, not cards: this is an index to scan   */
+/* fast, not a grid of equally-weighted tiles. The title is the one thing  */
+/* in body type; everything else that's a measurement (key, tempo, take    */
+/* count, last played) is mono, right-aligned on desktop as real columns.  */
+/* ---------------------------------------------------------------------- */
+
+.bl-song-list {
+  border-top: 1px solid var(--bl-color-border);
+}
+
+.bl-song-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 44px;
+  padding: 1rem 0.25rem;
+  border-bottom: 1px solid var(--bl-color-border);
+  text-decoration: none;
+  color: var(--bl-color-fg);
+}
+
+.bl-song-row:hover {
+  background: var(--bl-color-surface);
+}
+
+.bl-song-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.bl-song-title {
+  font-weight: 700;
+  font-size: 1.0625rem;
+  margin: 0 0 0.1875rem;
+}
+
+.bl-song-title-stub {
+  color: var(--bl-color-muted);
+  font-style: italic;
+  font-weight: 600;
+}
+
+.bl-song-meta {
+  font-family: var(--bl-font-mono);
+  font-size: 0.8125rem;
+  color: var(--bl-color-muted);
+}
+
+.bl-song-row-stats {
+  display: none;
+  flex-shrink: 0;
+  gap: 1.5rem;
+  font-family: var(--bl-font-mono);
+  font-size: 0.8125rem;
+  color: var(--bl-color-muted);
+  text-align: right;
+}
+
+.bl-song-row-stat-value {
+  display: block;
+  color: var(--bl-color-fg);
+  font-size: 0.9375rem;
+}
+
+@media (min-width: 1024px) {
+  .bl-song-row-stats {
+    display: flex;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Event archive — rehearsals and concerts together, distinguished by a    */
+/* left accent stripe AND an explicit kind word (never color alone, per    */
+/* WCAG 1.4.1). Contrast of the accent stripe against both grounds — see  */
+/* components.css's file header for `--bl-component-accent-strong`        */
+/* (rust family) and `--bl-component-accent-success` (olive family), both */
+/* already verified at >=3:1 in both themes. `--bl-color-muted` (the      */
+/* rehearsal color, the common case) is 4.65:1 / 6.93:1 — see roost.css.  */
+/* ---------------------------------------------------------------------- */
+
+.bl-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bl-event-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 44px;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--bl-color-border);
+  border-left: 4px solid var(--bl-color-muted);
+  border-radius: 0.375rem;
+  text-decoration: none;
+  color: var(--bl-color-fg);
+}
+
+.bl-event-row:hover {
+  background: var(--bl-color-surface);
+}
+
+.bl-event-row--concert {
+  border-left-color: var(--bl-component-accent-strong);
+}
+
+.bl-event-row--session {
+  border-left-color: var(--bl-component-accent-success);
+}
+
+.bl-event-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.bl-event-row-date {
+  font-family: var(--bl-font-mono);
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.bl-event-row-venue {
+  font-size: 0.9375rem;
+  color: var(--bl-color-muted);
+  margin: 0.125rem 0 0;
+}
+
+.bl-event-row-stats {
+  flex-shrink: 0;
+  font-family: var(--bl-font-mono);
+  font-size: 0.8125rem;
+  color: var(--bl-color-muted);
+  text-align: right;
+}
+
+.bl-badge-concert::before {
+  background: var(--bl-component-accent-strong);
+}
+
+.bl-badge-session::before {
+  background: var(--bl-component-accent-success);
+}
+
+.bl-badge-keeper::before {
+  background: var(--bl-component-accent-success);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Take row — shared by the song detail and event detail take lists. Not  */
+/* playable yet (Task 6 builds `/takes/[id]`): a plain row, never a fake   */
+/* disabled play button (a disabled-looking affordance reads worse than    */
+/* none, per the brief).                                                   */
+/* ---------------------------------------------------------------------- */
+
+.bl-take-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.bl-take-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 44px;
+  padding: 0.875rem 0.25rem;
+  border-bottom: 1px solid var(--bl-color-border);
+}
+
+.bl-take-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.bl-take-label {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--bl-color-fg);
+  text-decoration: underline;
+  /* `--bl-color-muted`, not `--bl-color-border` (1.31:1 / 1.39:1) — this
+     underline is the link's own non-color affordance (WCAG 1.4.1), so it
+     gets the same >=3:1-in-both-themes token every other boundary in this
+     file uses (4.65:1 / 6.93:1 — see roost.css). */
+  text-decoration-color: var(--bl-color-muted);
+  text-underline-offset: 0.15em;
+}
+
+.bl-take-label:hover {
+  text-decoration-color: currentColor;
+}
+
+.bl-take-sublabel {
+  display: block;
+  font-family: var(--bl-font-body);
+  font-style: italic;
+}
+
+.bl-take-meta {
+  font-family: var(--bl-font-mono);
+  font-size: 0.8125rem;
+  color: var(--bl-color-muted);
+}
+
+.bl-take-row-line {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: 0.25rem;
+}
+
+.bl-take-event-link {
+  font-family: var(--bl-font-body);
+  color: var(--bl-color-muted);
+  text-decoration: underline;
+}
+
+.bl-take-instruments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3125rem;
+  margin-top: 0.375rem;
+}
+
+.bl-take-instrument-tag {
+  font-family: var(--bl-font-mono);
+  font-size: 0.6875rem;
+  padding: 0.0625rem 0.4375rem;
+  border: 1px solid var(--bl-color-border);
+  border-radius: 999px;
+  color: var(--bl-color-muted);
+  white-space: nowrap;
+}
+
+.bl-take-row-duration {
+  display: none;
+  flex-shrink: 0;
+  font-family: var(--bl-font-mono);
+  font-size: 0.8125rem;
+  color: var(--bl-color-muted);
+}
+
+@media (min-width: 1024px) {
+  .bl-take-row-duration {
+    display: block;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Song / event hero — Coda Caption spent on exactly one thing per page:   */
+/* the song's title, or the event's date. Everything else on the page      */
+/* stays in body/mono type — see the design plan in task-5-report.md.      */
+/* ---------------------------------------------------------------------- */
+
+.bl-hero-title {
+  font-family: var(--bl-font-display);
+  font-weight: 800;
+  font-size: 2.25rem;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.bl-hero-date {
+  font-family: var(--bl-font-display);
+  font-weight: 800;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  .bl-hero-title {
+    font-size: 3.25rem;
+  }
+
+  .bl-hero-date {
+    font-size: 2.5rem;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Chords and lyrics — read at arm's length, in bad light, holding an      */
+/* instrument. Generous size and line height; `ch`-based max-width is a    */
+/* direct, font-relative answer to "must not run to 200 characters a      */
+/* line" rather than a guessed `rem` value.                                */
+/* ---------------------------------------------------------------------- */
+
+.bl-chords {
+  font-family: var(--bl-font-mono);
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  max-width: 46ch;
+  margin: 0;
+}
+
+.bl-lyrics {
+  font-family: var(--bl-font-body);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  max-width: 38ch;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Song detail layout — chords/lyrics beside the take list at `lg`.        */
+/* ---------------------------------------------------------------------- */
+
+.bl-song-detail-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .bl-song-detail-grid {
+    grid-template-columns: minmax(0, 1fr) 23rem;
+    align-items: start;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Empty states — an invitation, not a report (per the brief's copy rule). */
+/* ---------------------------------------------------------------------- */
+
+.bl-empty-state {
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  color: var(--bl-color-muted);
+  border: 1px dashed var(--bl-color-border);
+  border-radius: 0.5rem;
+}
+
+.bl-empty-state p {
+  margin: 0;
+}

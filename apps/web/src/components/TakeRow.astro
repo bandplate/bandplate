@@ -1,0 +1,76 @@
+---
+// A single take, listed but not yet playable — `/takes/[id]` is Task 6's.
+// This is a domain-specific composite (a Take + its instruments + either
+// the event it belongs to or the song it is, depending on which list it's
+// in) rather than a generic primitive, so it lives here rather than in
+// packages/ui — see the boundary rule in task-5-report.md.
+//
+// Two modes, one component: on the song page (`event` given) each row's
+// own link goes to `/takes/[id]` and carries a SECOND, separately worded
+// link to its event ("every take... each linking to its event", per the
+// brief) — two links reading the same text but pointing at different
+// places would fail WCAG 2.4.4 (link purpose from text alone), so the
+// second link is phrased as "View this rehearsal/concert/session", never a
+// repeat of the take's own label. On the event page (`song` given) there
+// is only one link per row (to `/takes/[id]`, labeled with the song title,
+// since "what was played" is that page's spine) — no second link is added
+// there, since nothing else in the brief requires one and inventing one
+// re-creates the same duplicate-text problem.
+//
+// `transition:name` on the take's own link points forward to Task 6's take
+// detail page: once that page names the same take's hero with the same
+// transition name, View Transitions morphs one into the other. It's inert
+// until then — a transition name with no matching element on the next page
+// is a no-op, not an error.
+import type { instrumentsRepo, takesRepo } from "@bandlib/db";
+import { formatDuration, formatShortDate } from "../server/format.js";
+
+export interface Props {
+  take: takesRepo.Take;
+  instruments: instrumentsRepo.Instrument[];
+  /** Song mode: the event this take belongs to, linked separately. */
+  event?: { id: string; heldAt: number; kind: string } | undefined;
+  /** Event mode: the song this take is of — the row's own link text. */
+  song?: { slug: string; title: string } | undefined;
+}
+
+const { take, instruments, event, song } = Astro.props;
+
+const stateLabel: Record<takesRepo.TakeState, string> = {
+  uploading: "uploading",
+  new: "new",
+  published: "published",
+  keeper: "keeper",
+  rejected: "rejected",
+  purged: "purged",
+};
+
+const primaryLabel = song ? song.title : (take.label ?? formatShortDate(take.recordedAt));
+---
+
+<div class="bl-take-row">
+  <div class="bl-take-row-main">
+    <a href={`/takes/${take.id}`} class="bl-take-label" transition:name={`take-${take.id}`}>
+      {primaryLabel}
+    </a>
+    {song && take.label && <span class="bl-take-meta bl-take-sublabel">{take.label}</span>}
+    <div class="bl-take-meta bl-take-row-line">
+      <span class={`bl-badge ${take.state === "keeper" ? "bl-badge-keeper" : ""}`}>
+        {stateLabel[take.state]}
+      </span>
+      {event && (
+        <a href={`/events/${event.id}`} class="bl-take-event-link">
+          View this {event.kind}
+        </a>
+      )}
+    </div>
+    {instruments.length > 0 && (
+      <div class="bl-take-instruments">
+        {instruments.map((instrument) => (
+          <span class="bl-take-instrument-tag">{instrument.label}</span>
+        ))}
+      </div>
+    )}
+  </div>
+  <span class="bl-take-row-duration">{formatDuration(take.durationMs)}</span>
+</div>

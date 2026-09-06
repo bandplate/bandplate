@@ -1,0 +1,127 @@
+---
+import { ClientRouter } from "astro:transitions";
+// The member-facing app shell (Task 5) — Songs / Events / Search / Me, no
+// hierarchy between them. A bottom tab bar on phones, a persistent sidebar
+// past `lg` (1024px); see components.css's "App shell" section for why
+// these are two separate elements rather than one reflowed with media
+// queries. `<ClientRouter />` gives every page under this layout animated
+// navigation (with a progress bar — see the inline script below) without
+// any page needing its own client-side JS; it respects
+// `prefers-reduced-motion` itself (Astro's built-in behavior).
+import type { MemberPrincipal } from "@bandlib/core";
+import NavIcon from "../components/NavIcon.astro";
+import Layout from "./Layout.astro";
+
+export interface Props {
+  title: string;
+  principal: MemberPrincipal;
+  current: "songs" | "events" | "search" | "me";
+}
+
+const { title, principal, current } = Astro.props;
+
+const navItems = [
+  { key: "songs", label: "Songs", href: "/songs" },
+  { key: "events", label: "Events", href: "/events" },
+  { key: "search", label: "Search", href: "/search" },
+  { key: "me", label: "Me", href: "/me" },
+] as const;
+---
+
+<Layout title={title}>
+  <ClientRouter />
+  <div class="bl-route-progress" id="route-progress" aria-hidden="true"></div>
+  <div class="bl-shell">
+    <header class="bl-shell-header">
+      <a href="/" class="bl-shell-wordmark">bandlib</a>
+      <form method="post" action="/logout">
+        <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Sign out</button>
+      </form>
+    </header>
+    <div class="bl-shell-body">
+      <nav class="bl-sidebar" aria-label="Main">
+        <a href="/" class="bl-shell-wordmark">bandlib</a>
+        <ul class="bl-sidebar-nav">
+          {
+            navItems.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class="bl-sidebar-item"
+                  aria-current={item.key === current ? "page" : undefined}
+                >
+                  <span class="bl-sidebar-icon">
+                    <NavIcon name={item.key} />
+                  </span>
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <form method="post" action="/logout" class="bl-sidebar-footer">
+          <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">
+            Sign out ({principal.role})
+          </button>
+        </form>
+      </nav>
+      <main id="main" class="bl-shell-main">
+        <slot />
+      </main>
+    </div>
+    <nav class="bl-tabbar" aria-label="Main">
+      {
+        navItems.map((item) => (
+          <a href={item.href} class="bl-tabbar-item" aria-current={item.key === current ? "page" : undefined}>
+            <span class="bl-tabbar-icon">
+              <NavIcon name={item.key} />
+            </span>
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+</Layout>
+
+<script>
+  // Progress bar for View Transitions navigation — see components.css's
+  // ".bl-route-progress" for the actual animation and its
+  // prefers-reduced-motion override. Astro fires these events on
+  // `document` around every ClientRouter-driven navigation; a plain <a>
+  // click that ClientRouter intercepts goes through this same lifecycle.
+  const bar = document.getElementById("route-progress");
+  if (bar) {
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    let armed = false; // true only once a real navigation has actually started
+
+    document.addEventListener("astro:before-preparation", () => {
+      armed = true;
+      clearTimeout(hideTimer);
+      bar.classList.remove("is-done");
+      // Force reflow so re-adding "is-active" restarts the transition even
+      // if a previous navigation left it applied.
+      bar.classList.remove("is-active");
+      void bar.offsetWidth;
+      bar.classList.add("is-active");
+    });
+    document.addEventListener("astro:page-load", () => {
+      // Fires on the very first page load too, with no preceding
+      // "before-preparation" — nothing to finish animating in that case,
+      // so leave the bar alone rather than snapping it to a visible,
+      // fully-opaque "done" state that would then never get cleaned up.
+      if (!armed) {
+        return;
+      }
+      armed = false;
+      bar.classList.remove("is-active");
+      bar.classList.add("is-done");
+      // Return to the resting (invisible) state once the "done" fill-in
+      // transition has had time to finish, so the bar doesn't linger as a
+      // permanent line across the top of the page.
+      hideTimer = setTimeout(() => {
+        bar.classList.remove("is-done");
+      }, 300);
+    });
+  }
+</script>

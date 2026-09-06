@@ -1,0 +1,55 @@
+---
+// Tiny line icons for AppLayout's nav (sidebar + tab bar) — plain geometry,
+// `currentColor` stroke so it always matches the surrounding text color
+// (never a decorative accent, never JetBrains Mono standing in for an
+// icon — that would be exactly the "mono as decoration on an ordinary
+// label" the brief rules out). Lives here rather than packages/ui because
+// it is specific to this one shell, not a primitive other pages compose.
+export interface Props {
+  name: "songs" | "events" | "search" | "me";
+}
+
+const { name } = Astro.props;
+---
+
+{
+  name === "songs" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="7" cy="18" r="2.5" />
+        <circle cx="16" cy="16" r="2.5" />
+        <path d="M9.5 18V6.5L18.5 5v9.5" />
+      </g>
+    </svg>
+  )
+}
+{
+  name === "events" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="5.5" width="16" height="14.5" rx="2" />
+        <path d="M4 10h16M8 3.5v3.5M16 3.5v3.5" />
+      </g>
+    </svg>
+  )
+}
+{
+  name === "search" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="10.5" cy="10.5" r="6" />
+        <path d="M19 19l-4.3-4.3" />
+      </g>
+    </svg>
+  )
+}
+{
+  name === "me" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8.5" r="3.25" />
+        <path d="M5 20c0-3.6 3.13-6 7-6s7 2.4 7 6" />
+      </g>
+    </svg>
+  )
+}

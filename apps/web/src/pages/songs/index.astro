@@ -58,28 +58,45 @@ const resultsLabel =
         </select>
       </div>
 
-      <fieldset class="bl-checkbox-group">
-        <legend>
-          Instruments
-          {query.instrumentIds.length > 1 && (
-            <span class="bl-field-hint">— must have a take with all of these</span>
-          )}
-        </legend>
-        {
-          instruments.map((instrument) => (
-            <span class="bl-checkbox-item">
-              <input
-                type="checkbox"
-                id={`instrument-${instrument.id}`}
-                name="instrument"
-                value={instrument.id}
-                checked={query.instrumentIds.includes(instrument.id)}
-              />
-              <label for={`instrument-${instrument.id}`}>{instrument.label}</label>
-            </span>
-          ))
-        }
-      </fieldset>
+      {
+        /* Collapsed by default on phones — a real (JS-free) <details>
+        disclosure, not a script-driven show/hide. On the stated primary
+        device this is the tallest, hardest-to-scan control in the toolbar
+        (up to a dozen 44px checkbox rows), and it was pushing the actual
+        song list entirely below the fold. It stays open automatically when
+        a filter is already applied, so an active filter is never hidden
+        from view, and it's forced open past `lg` (see components.css),
+        where there's room for it beside search/sort without burying
+        anything. */
+      }
+      <details class="bl-toolbar-details" open={query.instrumentIds.length > 0}>
+        <summary class="bl-toolbar-details-summary">
+          Filter by instrument
+          {query.instrumentIds.length > 0 && ` (${query.instrumentIds.length} selected)`}
+        </summary>
+        <fieldset class="bl-checkbox-group">
+          <legend>
+            Instruments
+            {query.instrumentIds.length > 1 && (
+              <span class="bl-field-hint">— must have a take with all of these</span>
+            )}
+          </legend>
+          {
+            instruments.map((instrument) => (
+              <span class="bl-checkbox-item">
+                <input
+                  type="checkbox"
+                  id={`instrument-${instrument.id}`}
+                  name="instrument"
+                  value={instrument.id}
+                  checked={query.instrumentIds.includes(instrument.id)}
+                />
+                <label for={`instrument-${instrument.id}`}>{instrument.label}</label>
+              </span>
+            ))
+          }
+        </fieldset>
+      </details>
 
       <div class="bl-toolbar-actions">
         <button type="submit" class="bl-btn bl-btn-primary">Apply filters</button>

@@ -3,7 +3,16 @@
 // middleware.test.ts already prove the redirect/allow decision logic in
 // isolation, but nothing before this exercised the actual routes wired
 // through Astro's router and this session middleware together. One shared
-// dev server for the whole suite, since each spawn costs several seconds.
+// server for the whole suite, since each spawn costs several seconds.
+//
+// Drives the BUILT server (`pnpm build` then `node dist/start.mjs`), never
+// `astro dev` — the project's own constraint (see the brief and
+// `astro.config.mjs`'s `security.checkOrigin` comment): the dev server and
+// the Node adapter resolve request origin differently, a divergence that's
+// invisible to typecheck/lint/unit-tests/build and already shipped one
+// Critical here. A route test that only ever boots `astro dev` cannot catch
+// that class of bug, which defeats the point of a route-level test in this
+// codebase specifically.
 import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -145,31 +154,28 @@ async function seedAndGetSessionCookie(): Promise<string> {
   return setCookie.split(";")[0] ?? "";
 }
 
-function startDevServer(): ChildProcess {
-  return spawn(
-    process.execPath,
-    [
-      join(process.cwd(), "node_modules", "astro", "astro.js"),
-      "dev",
-      "--port",
-      String(PORT),
-      "--host",
-      "127.0.0.1",
-    ],
-    {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        BANDLIB_DATABASE_URL: `file:${dbPath}`,
-        BANDLIB_BOOTSTRAP_TOKEN: "route-test-bootstrap-token",
-        BANDLIB_APP_ORIGIN: ORIGIN,
-        BANDLIB_ALLOW_DEV_MAILER: "true",
-        BANDLIB_COOKIE_SECURE: "false",
-        NODE_ENV: "test",
-      },
-      stdio: "ignore",
+/** `pnpm build` (astro build + the `dist/start.mjs` bundling step) — see `package.json`. */
+async function buildApp(): Promise<void> {
+  await execFileAsync("pnpm", ["run", "build"], { cwd: process.cwd() });
+}
+
+/** The real production entry point (`node dist/start.mjs`), never `astro dev`. */
+function startBuiltServer(): ChildProcess {
+  return spawn(process.execPath, [join(process.cwd(), "dist", "start.mjs")], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      HOST: "127.0.0.1",
+      BANDLIB_DATABASE_URL: `file:${dbPath}`,
+      BANDLIB_BOOTSTRAP_TOKEN: "route-test-bootstrap-token",
+      BANDLIB_APP_ORIGIN: ORIGIN,
+      BANDLIB_ALLOW_DEV_MAILER: "true",
+      BANDLIB_COOKIE_SECURE: "false",
+      NODE_ENV: "test",
     },
-  );
+    stdio: "ignore",
+  });
 }
 
 describe("member browsing routes over real HTTP", () => {
@@ -177,11 +183,12 @@ describe("member browsing routes over real HTTP", () => {
     dbDir = await mkdtemp(join(tmpdir(), "bandlib-songs-events-route-"));
     dbPath = join(dbDir, "db.sqlite");
 
-    child = startDevServer();
+    await buildApp();
+    child = startBuiltServer();
     await waitForServer(`${ORIGIN}/login`, 30_000);
 
     sessionCookie = await seedAndGetSessionCookie();
-  }, 45_000);
+  }, 90_000);
 
   afterAll(async () => {
     if (child && !child.killed) {

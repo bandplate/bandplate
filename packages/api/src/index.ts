@@ -121,3 +121,15 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
 
 export type { AppEnv } from "./types.js";
 export { GuardedRouter, publicRoute, requireScopes } from "./route-registry.js";
+// Re-exported so other front doors onto the login flow (apps/web's Astro
+// `/login` page) can apply the exact same rate-limit policy and client-IP
+// extraction instead of a second, independently-tuned copy. See
+// routes/auth.ts's doc comments on these.
+export {
+  DEFAULT_TRUSTED_PROXY_DEPTH,
+  LOGIN_EMAIL_LIMIT,
+  LOGIN_EMAIL_WINDOW_MS,
+  LOGIN_IP_LIMIT,
+  LOGIN_IP_WINDOW_MS,
+  extractClientIp,
+} from "./routes/auth.js";

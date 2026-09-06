@@ -1,17 +1,20 @@
 import type { AuthDeps, RateLimiter } from "@bandlib/core";
 import { consumeLoginToken, peekLoginToken, requestLogin, revokeSession } from "@bandlib/core";
-import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { z } from "zod";
 import { SESSION_COOKIE_NAME, clearSessionCookie, setSessionCookie } from "../cookies.js";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, publicRoute } from "../route-registry.js";
-import type { AppEnv } from "../types.js";
 
-const LOGIN_EMAIL_LIMIT = 5;
-const LOGIN_EMAIL_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_IP_LIMIT = 20;
-const LOGIN_IP_WINDOW_MS = 15 * 60 * 1000;
+// Exported so other front doors onto the same login flow (currently:
+// apps/web's Astro `/login` page, which calls `requestLogin` directly
+// rather than round-tripping through this HTTP route — see its brief for
+// why) apply the exact same rate-limit policy instead of a second,
+// independently-tuned copy that could drift from this one.
+export const LOGIN_EMAIL_LIMIT = 5;
+export const LOGIN_EMAIL_WINDOW_MS = 15 * 60 * 1000;
+export const LOGIN_IP_LIMIT = 20;
+export const LOGIN_IP_WINDOW_MS = 15 * 60 * 1000;
 
 /**
  * Number of reverse proxy hops in front of this app that are trusted to
@@ -20,7 +23,7 @@ const LOGIN_IP_WINDOW_MS = 15 * 60 * 1000;
  * is a safe default; a deployment with an extra internal load balancer
  * would set this higher.
  */
-const DEFAULT_TRUSTED_PROXY_DEPTH = 1;
+export const DEFAULT_TRUSTED_PROXY_DEPTH = 1;
 
 const loginBodySchema = z.object({ email: z.string().trim().min(1).max(320) });
 
@@ -46,13 +49,18 @@ export interface AuthRouteDeps {
  * by Cloudflare's edge and isn't client-suppliable at all, so it's
  * preferred outright.
  */
-function extractClientIp(c: Context<AppEnv>, trustedProxyDepth: number): string {
-  const cfConnectingIp = c.req.header("cf-connecting-ip");
+/**
+ * Takes a `Headers`-shaped getter rather than a Hono `Context` so it can be
+ * called from any HTTP layer — the Astro `/login` page passes
+ * `request.headers.get` directly.
+ */
+export function extractClientIp(headers: Pick<Headers, "get">, trustedProxyDepth: number): string {
+  const cfConnectingIp = headers.get("cf-connecting-ip");
   if (cfConnectingIp) {
     return cfConnectingIp;
   }
 
-  const xForwardedFor = c.req.header("x-forwarded-for");
+  const xForwardedFor = headers.get("x-forwarded-for");
   if (xForwardedFor) {
     const hops = xForwardedFor
       .split(",")
@@ -83,7 +91,10 @@ export function registerAuthRoutes(router: GuardedRouter, deps: AuthRouteDeps): 
       return errorResponse(c, 400, "invalid_body", "A valid email is required.");
     }
 
-    const ip = extractClientIp(c, deps.trustedProxyDepth ?? DEFAULT_TRUSTED_PROXY_DEPTH);
+    const ip = extractClientIp(
+      c.req.raw.headers,
+      deps.trustedProxyDepth ?? DEFAULT_TRUSTED_PROXY_DEPTH,
+    );
     const emailKey = `login:email:${parsed.data.email.toLowerCase()}`;
     const ipKey = `login:ip:${ip}`;
 

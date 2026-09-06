@@ -22,11 +22,13 @@ const KIND_OPTIONS = [
   { value: "session", label: "Sessions" },
 ] as const;
 
-function eventTitle(event: (typeof events)[number]): string {
-  return (
-    event.title ??
-    (event.kind === "rehearsal" ? "Rehearsal" : event.kind === "concert" ? "Concert" : "Session")
-  );
+// The kind badge already names the kind ("rehearsal"/"concert"/"session") —
+// an untitled event must not repeat it as a second, capitalised word (e.g.
+// "rehearsal Rehearsal"). When there's a real title and/or venue, show
+// those; when there's neither (the common untitled-rehearsal case), the
+// badge plus date is the whole row and that's enough.
+function eventLabel(event: (typeof events)[number]): string {
+  return [event.title, event.venue].filter(Boolean).join(" — ");
 }
 ---
 
@@ -79,7 +81,7 @@ function eventTitle(event: (typeof events)[number]): string {
                 <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
                 <p class="bl-event-row-venue bl-m0">
                   <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
-                  {event.venue ? ` ${eventTitle(event)} — ${event.venue}` : ` ${eventTitle(event)}`}
+                  {eventLabel(event) && ` ${eventLabel(event)}`}
                 </p>
               </div>
               <div class="bl-event-row-stats">

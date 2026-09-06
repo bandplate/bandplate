@@ -1,0 +1,35 @@
+---
+// Shared no-JS confirm-page body — the part of a destructive-action confirm
+// page that never actually differs between actions: a `Banner` that names
+// the object and states the consequence, plus a plain `<form method="post">`
+// with a danger submit and a Cancel link back out. This was near-identical,
+// hand-copied markup across `admin/members/[id]/revoke-sessions.astro`,
+// `admin/instruments/[id]/archive.astro` and `admin/tokens/[id]/revoke.astro`
+// — the server-side logic (which repo call runs, which redirect query
+// string) genuinely differs per action and stays in each page's
+// frontmatter, but the body itself was duplicated three times with only
+// the copy swapped. Render THIS for a fourth destructive action, not a
+// fourth copy of the markup.
+import Banner from "./Banner.astro";
+
+export interface Props {
+  /** Names the object and states the consequence — never a bare "Are you sure?". */
+  bannerTitle: string;
+  /** The danger button's label — should echo the verb the trigger used (e.g. "Revoke token"). */
+  cta: string;
+  /** Where "Cancel" goes back to. */
+  cancelHref: string;
+}
+
+const { bannerTitle, cta, cancelHref } = Astro.props;
+---
+
+<main id="main" class="bl-container" style="max-width: 30rem; margin-top: 3rem;">
+  <Banner kind="error" title={bannerTitle}>
+    <slot />
+  </Banner>
+  <form method="post" style="display:flex; gap:0.75rem;">
+    <button type="submit" class="bl-btn bl-btn-danger">{cta}</button>
+    <a href={cancelHref} class="bl-btn bl-btn-secondary">Cancel</a>
+  </form>
+</main>

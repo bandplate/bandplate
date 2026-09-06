@@ -55,7 +55,12 @@ if (Astro.request.method === "POST") {
 
     {(!result || result.kind === "invalid") && (
       <form method="post" novalidate>
-        <p class="bl-m0">Enter your email and we'll send you a link to sign in.</p>
+        {/* mt-0 only — NOT bl-m0 (margin: 0 on both sides). The Task 4
+        inline-style-to-class cleanup replaced `style="margin-top: 0"` with
+        `bl-m0`, silently also zeroing the bottom margin the original inline
+        style left alone — a behaviour change smuggled into a mechanical
+        cleanup. This restores the original, narrower intent. */}
+        <p class="mt-0">Enter your email and we'll send you a link to sign in.</p>
         <Field
           label="Email address"
           name="email"

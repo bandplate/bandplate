@@ -99,7 +99,7 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
             <h2 class="bl-section-title">
               Also known as
             </h2>
-            <ul class="bl-stack bl-stack-tight bl-list-reset">
+            <ul class="bl-stack bl-stack-tight list-none">
               {aliases.map((alias) => (
                 <li class={alias.source === "ingest" ? "bl-mono" : ""}>{alias.aliasNorm}</li>
               ))}

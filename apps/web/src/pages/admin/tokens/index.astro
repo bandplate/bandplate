@@ -67,10 +67,10 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
 
   {created && (
     <Banner kind="success" title="Token created">
-      <p class="bl-mb-sm">
+      <p class="mb-2">
         <strong>Copy this secret now — it will not be shown again.</strong>
       </p>
-      <p class="bl-mono bl-mb-sm">{created.rawToken}</p>
+      <p class="bl-mono mb-2">{created.rawToken}</p>
       <CopyButton client:load value={created.rawToken} label="Copy secret" />
     </Banner>
   )}
@@ -127,7 +127,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
               <tr>
                 <td data-label="Label">
                   {token.label}
-                  {token.revokedAt && <span class="bl-badge bl-ml-sm">revoked</span>}
+                  {token.revokedAt && <span class="bl-badge ml-2">revoked</span>}
                 </td>
                 <td data-label="Scopes" class="bl-mono">{token.scopes.join(", ")}</td>
                 <td data-label="Created" class="bl-mono">{formatTimestamp(token.createdAt)}</td>
@@ -137,8 +137,9 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                     {!token.revokedAt && (
                       <>
                         <details>
-                          <summary class="bl-btn bl-btn-secondary bl-btn-sm bl-cursor-pointer">Edit scopes</summary>
-                          <form method="post" class="bl-mt-sm">
+                          {/* No cursor utility needed — .bl-btn already sets cursor: pointer. */}
+                          <summary class="bl-btn bl-btn-secondary bl-btn-sm">Edit scopes</summary>
+                          <form method="post" class="mt-3">
                             <input type="hidden" name="intent" value="update" />
                             <input type="hidden" name="tokenId" value={token.id} />
                             <fieldset class="bl-checkbox-group">

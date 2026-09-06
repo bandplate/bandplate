@@ -865,6 +865,12 @@ a.bl-btn {
 /* inline-style cleanup). Reach for a real component class first; these    */
 /* two exist only for the handful of cases that are genuinely just "zero   */
 /* out the default margin" or "a plain page heading, no hero treatment".   */
+/* A generic single-property spacing/list-reset/cursor tweak (margin,      */
+/* list-style, cursor) belongs to Tailwind's own utilities (already loaded */
+/* via `@tailwindcss/vite`, see `theme.css`) rather than a second,         */
+/* overlapping vocabulary of `.bl-*-sm` classes for the same thing — see   */
+/* task-5-report.md's fix-round-1 notes on `.bl-list-reset`/`.bl-mb-sm`/    */
+/* `.bl-mt-sm`/`.bl-ml-sm`/`.bl-cursor-pointer`, removed in that round.     */
 /* ---------------------------------------------------------------------- */
 
 .bl-m0 {
@@ -887,28 +893,6 @@ a.bl-btn {
 
 .bl-stack-tight {
   gap: 0.75rem;
-}
-
-.bl-list-reset {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.bl-mb-sm {
-  margin-bottom: 0.5rem;
-}
-
-.bl-mt-sm {
-  margin-top: 0.75rem;
-}
-
-.bl-ml-sm {
-  margin-left: 0.5rem;
-}
-
-.bl-cursor-pointer {
-  cursor: pointer;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -147,7 +147,11 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
           ) : (
             <div class="bl-take-list">
               {takes.map((take) => (
-                <TakeRow take={take} instruments={take.instruments} event={take.event} />
+                <TakeRow
+                  take={take}
+                  instruments={take.instruments}
+                  context={{ kind: "song", event: take.event }}
+                />
               ))}
             </div>
           )

@@ -68,7 +68,11 @@ const kindLabel =
         ) : (
           <div class="bl-take-list bl-take-list--wide">
             {takes.map((take) => (
-              <TakeRow take={take} instruments={take.instruments} song={take.song} />
+              <TakeRow
+                take={take}
+                instruments={take.instruments}
+                context={{ kind: "event", song: take.song }}
+              />
             ))}
           </div>
         )

@@ -1,59 +1,92 @@
 ---
-// A single take, listed but not yet playable — `/takes/[id]` is Task 6's.
-// This is a domain-specific composite (a Take + its instruments + either
-// the event it belongs to or the song it is, depending on which list it's
-// in) rather than a generic primitive, so it lives here rather than in
+// A single take, listed but not yet playable in this task — `/takes/[id]`
+// is Task 6's own detail page. This is a domain-specific composite (a Take
+// + its instruments + the song/event context it's being listed under)
+// rather than a generic primitive, so it lives here rather than in
 // packages/ui — see the boundary rule in task-5-report.md.
 //
-// Two modes, one component: on the song page (`event` given) each row's
-// own link goes to `/takes/[id]` and carries a SECOND, separately worded
-// link to its event ("every take... each linking to its event", per the
-// brief) — two links reading the same text but pointing at different
-// places would fail WCAG 2.4.4 (link purpose from text alone), so the
-// second link is phrased as "View this rehearsal/concert/session", never a
-// repeat of the take's own label. On the event page (`song` given) there
-// is only one link per row (to `/takes/[id]`, labeled with the song title,
-// since "what was played" is that page's spine) — no second link is added
-// there, since nothing else in the brief requires one and inventing one
-// re-creates the same duplicate-text problem.
+// --- Variant design (Task 6, replacing Task 5's two ad-hoc boolean-ish
+// props) -----------------------------------------------------------------
 //
-// `transition:name` on the take's own link points forward to Task 6's take
-// detail page: once that page names the same take's hero with the same
-// transition name, View Transitions morphs one into the other. It's inert
-// until then — a transition name with no matching element on the next page
-// is a no-op, not an error.
+// `context` is a discriminated union on `kind`, not a pair of optional
+// `event`/`song` props a caller could set both-or-neither of by accident:
+//
+//   - "song"  — listed under a song page (`event` given): the row's own
+//     link is the recorded date (this list is already scoped to one song
+//     and ordered chronologically), plus a second link to the event.
+//   - "event" — listed under an event page (`song` given): the row's own
+//     link is the song title (that page's whole point is "what was
+//     played"); no second link, since the page itself IS the event.
+//   - "full"  — listed somewhere that is scoped to neither a single song
+//     nor a single event (Task 6 adds three such places: `/search`, the
+//     home page's "needs your vote", and its favorited-takes list): the
+//     row needs the song title AND a recorded date AND a link to the
+//     event, because none of those is implied by the page it's on.
+//
+// A caller can only construct one shape per `kind` — no "song and event
+// both given", no "neither given", which the old `event?`/`song?` pair
+// allowed silently (and which would have rendered a nonsensical row: two
+// links reading the same thing, or a date-only row with no way to reach
+// what was played).
+//
+// Two links reading the same text but pointing at different places would
+// fail WCAG 2.4.4 (link purpose from text alone) — the second link is
+// always phrased as "View this rehearsal/concert/session", never a repeat
+// of the take's own label.
+//
+// --- The seam for increments 4 and 5 --------------------------------
+//
+// Two named slots, empty today, are the extension points increments 4 and
+// 5 live in — NOT a fourth prop each, and not a fork of this component:
+//
+//   - `leading`  — increment 4's play/pause affordance, rendered before the
+//     take's own label. Unfilled today, so nothing renders there (an empty
+//     `<slot>` emits no markup at all) — satisfying the brief's "no fake
+//     play affordance" rule by construction, not by a conditional the next
+//     increment has to remember to remove.
+//   - `trailing` — increment 5's vote control (cast/change a keeper vote),
+//     rendered in the same trailing column as the duration, so a take row
+//     ends with "how long" and "what the room thinks" side by side.
+//
+// Neither slot needs a new prop, a new fork, or a change to `context` —
+// increments 4/5 fill them from the caller (`<TakeRow ...><Fragment
+// slot="leading">...</Fragment></TakeRow>`), and every existing call site
+// (song/event/full) keeps working unchanged.
+//
+// `TakeRowContext` itself (and its two ref types) lives in the sibling
+// `take-row-context.ts`, not exported from here — see that file's header
+// comment for why (an Astro server-build compiler bug, not a style choice).
 import type { instrumentsRepo, takesRepo } from "@bandlib/db";
 import { formatDuration, formatShortDate } from "../server/format.js";
+import { TAKE_STATE_LABEL } from "../server/take-state.js";
+import type { TakeRowContext } from "./take-row-context.js";
 
 export interface Props {
   take: takesRepo.Take;
   instruments: instrumentsRepo.Instrument[];
-  /** Song mode: the event this take belongs to, linked separately. */
-  event?: { id: string; heldAt: number; kind: string } | undefined;
-  /** Event mode: the song this take is of — the row's own link text. */
-  song?: { slug: string; title: string } | undefined;
+  context: TakeRowContext;
 }
 
-const { take, instruments, event, song } = Astro.props;
+const { take, instruments, context } = Astro.props;
 
-const stateLabel: Record<takesRepo.TakeState, string> = {
-  uploading: "uploading",
-  new: "new",
-  published: "published",
-  keeper: "keeper",
-  rejected: "rejected",
-  purged: "purged",
-};
+const event = context.kind !== "event" ? context.event : undefined;
+const song = context.kind !== "song" ? context.song : undefined;
 
-// On the song page (event mode) the row's own link is always the recorded
-// date — this list's entire ordering is chronological, so the date is the
-// thing that orients a reader, never suppressed just because the take also
-// has a label. A label (when present) renders as a sublabel underneath in
-// BOTH modes, never as a replacement for the date.
+// "song" mode's own list is already chronological — the date IS the thing
+// that orients a reader there, never suppressed just because the take also
+// has a label. "event" and "full" mode both use the song title instead,
+// since "what was played" (not "when") is what those lists are for. A
+// label (when present) renders as a sublabel underneath in every mode,
+// never as a replacement for the primary link text.
 const primaryLabel = song ? song.title : formatShortDate(take.recordedAt);
+// "full" mode alone needs an explicit date line — it's the one context
+// where the date isn't implied by the page (a song page's rows already
+// linger under that song; an event page's rows already share one date).
+const showDate = context.kind === "full";
 ---
 
 <div class="bl-take-row">
+  <slot name="leading" />
   <div class="bl-take-row-main">
     <a href={`/takes/${take.id}`} class="bl-take-label" transition:name={`take-${take.id}`}>
       {primaryLabel}
@@ -61,8 +94,9 @@ const primaryLabel = song ? song.title : formatShortDate(take.recordedAt);
     {take.label && <span class="bl-take-meta bl-take-sublabel">{take.label}</span>}
     <div class="bl-take-meta bl-take-row-line">
       <span class={`bl-badge ${take.state === "keeper" ? "bl-badge-keeper" : ""}`}>
-        {stateLabel[take.state]}
+        {TAKE_STATE_LABEL[take.state]}
       </span>
+      {showDate && <span>{formatShortDate(take.recordedAt)}</span>}
       {event && (
         <a href={`/events/${event.id}`} class="bl-take-event-link">
           View this {event.kind}
@@ -77,5 +111,8 @@ const primaryLabel = song ? song.title : formatShortDate(take.recordedAt);
       </div>
     )}
   </div>
-  <span class="bl-take-row-duration">{formatDuration(take.durationMs)}</span>
+  <div class="bl-take-row-trailing">
+    <span class="bl-take-row-duration">{formatDuration(take.durationMs)}</span>
+    <slot name="trailing" />
+  </div>
 </div>

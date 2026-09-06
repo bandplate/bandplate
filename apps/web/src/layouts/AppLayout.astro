@@ -15,7 +15,10 @@ import Layout from "./Layout.astro";
 export interface Props {
   title: string;
   principal: MemberPrincipal;
-  current: "songs" | "events" | "search" | "me";
+  // "home" (Task 6's `/`) matches no nav item — the wordmark link is home's
+  // only nav entry point, same as before this task, so it's a valid value
+  // with none of the four tabs rendering `aria-current`.
+  current: "home" | "songs" | "events" | "search" | "me";
 }
 
 const { title, principal, current } = Astro.props;

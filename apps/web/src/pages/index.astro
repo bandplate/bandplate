@@ -1,25 +1,156 @@
 ---
-import "@bandlib/ui/tokens/theme.css";
+// Home — the page a member opens one-handed, mid-rehearsal (brief §3), so
+// it answers "what should I listen to" in the order the brief specifies:
+// favorites first (the things they reach for), then recent events with
+// their takes, then "needs your vote". No longer public (see
+// `server/guard.ts`) — this reads the signed-in member's own favorites and
+// unvoted takes, so it needs a principal like every other member-facing
+// page now that it's real.
+//
+// Favorites and "needs your vote" are DISPLAY ONLY — no favorite toggle, no
+// vote control. Both land in increment 5; a control that no-ops here would
+// be worse than omitting it (brief §"Ambiguities").
+import TakeRow from "../components/TakeRow.astro";
+import AppLayout from "../layouts/AppLayout.astro";
+import { getAppDeps } from "../server/app.js";
+import { eventLabel, formatLongDate } from "../server/format.js";
+import { getHomeData } from "../server/pages/home.js";
 
-const bandName = "ROOST";
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const appDeps = await getAppDeps();
+const { favorites, recentEvents, unvotedTakes } = await getHomeData(appDeps.db, principal.memberId);
+
+const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{bandName} — bandlib</title>
-  </head>
-  <body class="bg-bl-bg text-bl-fg font-bl-body">
-    <main class="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <h1 class="font-bl-display text-4xl">{bandName}</h1>
-      <p>Rehearsal recording archive — scaffold placeholder.</p>
-      <p class="text-bl-muted text-sm">
-        This page uses <code class="font-bl-mono">--bl-color-bg</code> /
-        <code class="font-bl-mono">--bl-color-fg</code> tokens. It should read
-        espresso ink on sand in light mode and sand ink on espresso in dark
-        mode — toggle your OS theme to check.
-      </p>
-    </main>
-  </body>
-</html>
+<AppLayout title="Home" principal={principal} current="home">
+  <div class="bl-stack">
+    <h1 class="bl-page-title">Welcome back</h1>
+
+    <section>
+      <h2 class="bl-section-title bl-section-title-favorite">
+        <svg
+          class="bl-favorite-mark"
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="currentColor"
+        >
+          <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
+        </svg>
+        Your favorites
+      </h2>
+      {
+        !hasFavorites ? (
+          <div class="bl-empty-state">
+            <p>
+              Nothing pinned yet — favorite a song or a take and it'll show up here, ready for
+              rehearsal.
+            </p>
+          </div>
+        ) : (
+          <div class="bl-stack bl-stack-tight">
+            {favorites.songs.length > 0 && (
+              <div>
+                {favorites.takes.length > 0 && <p class="bl-field-label bl-m0">Songs</p>}
+                <div class="bl-song-list">
+                  {favorites.songs.map((song) => (
+                    <a href={`/songs/${song.slug}`} class="bl-song-row">
+                      <div class="bl-song-row-main">
+                        <p class="bl-song-title bl-m0">{song.title}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            {favorites.takes.length > 0 && (
+              <div>
+                {favorites.songs.length > 0 && <p class="bl-field-label bl-m0">Takes</p>}
+                <div class="bl-take-list bl-take-list--wide">
+                  {favorites.takes.map((take) => (
+                    <TakeRow
+                      take={take}
+                      instruments={take.instruments}
+                      context={{ kind: "full", song: take.song, event: take.event }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      }
+    </section>
+
+    <section>
+      <h2 class="bl-section-title">Recent events</h2>
+      {
+        recentEvents.length === 0 ? (
+          <div class="bl-empty-state">
+            <p>No events yet — they'll show up here once a rehearsal or show is logged.</p>
+          </div>
+        ) : (
+          <div class="bl-stack">
+            {recentEvents.map(({ event, takes }) => (
+              <div class="bl-home-event-group">
+                <a href={`/events/${event.id}`} class={`bl-event-row bl-event-row--${event.kind}`}>
+                  <div class="bl-event-row-main">
+                    <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
+                    <p class="bl-event-row-venue bl-m0">
+                      <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+                      {eventLabel(event) && ` ${eventLabel(event)}`}
+                      <span class="bl-event-row-count">
+                        {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="bl-event-row-stats">
+                    {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+                  </div>
+                </a>
+                {takes.length > 0 && (
+                  <div class="bl-take-list bl-take-list--wide">
+                    {takes.map((take) => (
+                      <TakeRow
+                        take={take}
+                        instruments={take.instruments}
+                        context={{ kind: "event", song: take.song }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      }
+    </section>
+
+    <section>
+      <h2 class="bl-section-title">Needs your vote</h2>
+      {
+        unvotedTakes.length === 0 ? (
+          <div class="bl-empty-state">
+            <p>You're all caught up — no published takes waiting on your vote.</p>
+          </div>
+        ) : (
+          <div class="bl-take-list bl-take-list--wide">
+            {unvotedTakes.map((take) => (
+              <TakeRow
+                take={take}
+                instruments={take.instruments}
+                context={{ kind: "full", song: take.song, event: take.event }}
+              />
+            ))}
+          </div>
+        )
+      }
+    </section>
+  </div>
+</AppLayout>

@@ -46,6 +46,30 @@ export function formatShortDate(ms: number | undefined | null): string {
   return shortDateFormatter.format(new Date(ms));
 }
 
+/**
+ * The kind badge already names the kind ("rehearsal"/"concert"/"session") —
+ * an untitled event must not repeat it as a second, capitalised word (e.g.
+ * "rehearsal Rehearsal"). When there's a real title and/or venue, show
+ * those; when there's neither (the common untitled-rehearsal case), the
+ * badge plus date is the whole row and that's enough. Shared by
+ * `/events` and `/` (Task 6's home "recent events" section) rather than
+ * duplicated in both.
+ */
+export function eventLabel(event: { title: string | null; venue: string | null }): string {
+  return [event.title, event.venue].filter(Boolean).join(" — ");
+}
+
+/** Byte count as a human `MB`/`KB`/`B` figure — `/takes/[id]`'s asset list. */
+export function formatBytes(bytes: number): string {
+  if (bytes >= 1_000_000) {
+    return `${(bytes / 1_000_000).toFixed(1)} MB`;
+  }
+  if (bytes >= 1_000) {
+    return `${(bytes / 1_000).toFixed(1)} KB`;
+  }
+  return `${bytes} B`;
+}
+
 /** `durationMs` as `m:ss` (or `h:mm:ss` past an hour) — takes are minutes long, never sub-second. */
 export function formatDuration(ms: number | undefined | null): string {
   if (ms === undefined || ms === null) {

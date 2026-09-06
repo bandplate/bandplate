@@ -1,6 +1,6 @@
 import type { MemberPrincipal, Principal, Scope } from "@bandlib/core";
 import { describe, expect, it } from "vitest";
-import { guardAdminPath, guardMemberPath, isPublicPath } from "./guard.js";
+import { guardAdminPath, guardMemberPath, isAdminPath, isPublicPath } from "./guard.js";
 
 function member(scopes: Scope[]): MemberPrincipal {
   return { kind: "member", memberId: "m1", role: "member", scopes };
@@ -106,5 +106,45 @@ describe("guardMemberPath", () => {
     expect(guardMemberPath("/songs", member(["songs:read"]))).toEqual({ kind: "allow" });
     expect(guardMemberPath("/events", member([]))).toEqual({ kind: "allow" });
     expect(guardMemberPath("/takes/some-take-id", member([]))).toEqual({ kind: "allow" });
+  });
+});
+
+// Regression: `PUBLIC_PATH_PREFIXES` contains `"/"`, and the prefix check
+// `pathname.startsWith(prefix + "/")` means `"/" + "/"` is `"//"` — so
+// *any* `//`-prefixed path used to satisfy that one prefix and come back
+// public, anonymous-readable, no matter what followed the slashes. Proven
+// live against the built server: `GET //takes/some-id` returned 200 with
+// the take's detail rendered, while `GET /takes/some-id` correctly 302'd.
+// Astro's router still resolves the double-slash path to the exact same
+// page a single slash would, so the guard has to see through it too.
+describe("double-slash path bypass (regression)", () => {
+  it("does not treat a //-prefixed path as public, even one that looks like an allowlisted route", () => {
+    expect(isPublicPath("//takes/some-take-id")).toBe(false);
+    expect(isPublicPath("//songs")).toBe(false);
+    expect(isPublicPath("//login-admin")).toBe(false);
+    expect(isPublicPath("//setupx")).toBe(false);
+    // A genuine double-slash root still normalizes to the public root.
+    expect(isPublicPath("//")).toBe(true);
+  });
+
+  it("still recognizes a //-prefixed path as the admin section, so the scope check isn't skipped either", () => {
+    expect(isAdminPath("//admin/members")).toBe(true);
+  });
+
+  it("redirects an anonymous visitor away from //-prefixed unregistered AND registered routes", () => {
+    expect(guardMemberPath("//takes/some-take-id", undefined)).toEqual({
+      kind: "redirect",
+      to: "/login",
+    });
+    expect(guardMemberPath("//songs", undefined)).toEqual({ kind: "redirect", to: "/login" });
+    expect(guardMemberPath("//some-route-nobody-has-written-yet", undefined)).toEqual({
+      kind: "redirect",
+      to: "/login",
+    });
+  });
+
+  it("forbids a //-prefixed admin path for a member principal lacking members:admin, instead of silently allowing it through", () => {
+    const decision = guardAdminPath("//admin/members", member(["songs:read"]));
+    expect(decision).toEqual({ kind: "forbidden" });
   });
 });

@@ -15,8 +15,26 @@ export type GuardDecision =
 
 const ADMIN_SCOPE = "members:admin" as const;
 
+// Collapses repeated leading (or embedded) slashes so a request path can't
+// dodge either guard below by never landing on any prefix they check.
+// `"//takes/x"` is the concrete exploit: `PUBLIC_PATH_PREFIXES` contains
+// `"/"`, and `"/" + "/"` is `"//"` — so `isPublicPath` used to match
+// `pathname.startsWith("//")` for ANY path, classifying every
+// `//`-prefixed request as public and skipping the member guard entirely.
+// The same shape of bug lurks the other way for `isAdminPath`: `"/admin"`'s
+// own prefix check (`startsWith("/admin/")`) does NOT match
+// `"//admin/members"`, so an unnormalized pathname would let a signed-in
+// non-admin member's `//admin/...` request skip the scope check too, even
+// though Astro's own router still resolves the double-slash path to the
+// same page a single slash would. Normalizing once, here, closes both
+// holes the same way rather than patching `isPublicPath` alone.
+function normalizePathname(pathname: string): string {
+  return pathname.replace(/\/{2,}/g, "/");
+}
+
 export function isAdminPath(pathname: string): boolean {
-  return pathname === "/admin" || pathname.startsWith("/admin/");
+  const path = normalizePathname(pathname);
+  return path === "/admin" || path.startsWith("/admin/");
 }
 
 export function guardAdminPath(pathname: string, principal: Principal | undefined): GuardDecision {
@@ -66,9 +84,8 @@ const PUBLIC_PATH_PREFIXES = [
 ] as const;
 
 export function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  const path = normalizePathname(pathname);
+  return PUBLIC_PATH_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
 export function guardMemberPath(pathname: string, principal: Principal | undefined): GuardDecision {

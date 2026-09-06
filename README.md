@@ -62,18 +62,26 @@ pnpm build
 3. **Build and start the app.** For local dev, `pnpm --filter web dev` is
    fine. For a real deployment, build (`pnpm --filter web build`) and start
    with **`pnpm --filter web start`** — NOT `astro preview` (dev-only) and
-   NOT `node dist/server/entry.mjs` directly. `start` runs
-   `apps/web/scripts/start.ts`, which validates configuration and fails
-   loudly *before* the server binds a port; running the built adapter
-   entry directly skips that check, binds the port, prints "Server
-   listening" regardless of whether configuration is valid, and only
-   500s once the first real request arrives — which looks like a healthy
-   boot to a supervisor or `docker run` health check. (Astro's own
+   NOT `node dist/server/entry.mjs` directly. `start` runs `node
+   dist/start.mjs`, a small dependency-free wrapper (bundled by `pnpm
+   build` itself — see `apps/web/scripts/build-start.mjs`) that validates
+   configuration and fails loudly *before* the server binds a port; running
+   the built adapter entry directly skips that check, binds the port,
+   prints "Server listening" regardless of whether configuration is valid,
+   and only 500s once the first real request arrives — which looks like a
+   healthy boot to a supervisor or `docker run` health check. `dist/` is
+   the only thing this needs beyond production `node_modules`: no dev
+   tooling, no `src/` — verified by running it from a scratch directory
+   containing nothing but `dist/`, `package.json`, and a `pnpm install
+   --prod` node_modules (see task-4-report.md). (Astro's own
    `security.checkOrigin` CSRF guard is disabled in `astro.config.mjs` for
    a related reason: under the standalone Node adapter it checks the wrong
    origin and 403s every real form POST in the built server — see the
    comment there. The app's own `isSameOrigin` check, applied by every
-   mutating page route, is what actually guards CSRF here.)
+   mutating page route, is what actually guards CSRF here — backed up by a
+   structural check in `apps/web/src/middleware.ts` that rejects any
+   mutating page request with a mismatched `Origin` regardless of whether
+   the specific page remembered its own check.)
 
    Once it's running, visit `/setup`. This page only exists until the first
    member is created — it 404s permanently afterward. Enter the bootstrap

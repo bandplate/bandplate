@@ -21,8 +21,22 @@
 // the first `GET /login` against it then 500s with
 // `ConfigError: Invalid configuration: BANDLIB_DATABASE_URL Required`.
 //
-// Run this instead of `node dist/server/entry.mjs` directly — see
-// README.md's deployment section and the `"start"` script in package.json.
+// THIS FILE IS NOT THE PRODUCTION ENTRY POINT — `dist/start.mjs` is. Round
+// 1 shipped this as `tsx scripts/start.ts`, run straight from TypeScript
+// source. That cannot work in production: `tsx` is a devDependency (absent
+// from `pnpm install --prod`) and this file imports `../src/server/config.js`
+// — `src/` isn't shipped either in a `dist`-only deploy (a Docker stage
+// that copies `dist/` plus production `node_modules`, say). Documenting
+// `pnpm --filter web start` as the one true deploy command while it
+// silently required a devDependency and the full source tree was round 2's
+// finding — see task-4-report.md "Fix round 2".
+//
+// The fix: `scripts/build-start.mjs` (run as part of `pnpm build`, see
+// `package.json`) bundles *this* file — config validation, zod, all of
+// it — into a single dependency-free `dist/start.mjs`. `"start"` runs
+// `node dist/start.mjs`, which needs nothing but the Node runtime plus
+// whatever `dist/server/entry.mjs` itself needs (already required for
+// `astro build`'s own output to run at all).
 import { ConfigError, loadConfig } from "../src/server/config.js";
 
 try {
@@ -37,4 +51,11 @@ try {
   process.exit(1);
 }
 
-await import("../dist/server/entry.mjs");
+// Resolved relative to *this file's location after bundling* (i.e.
+// `dist/start.mjs`), not this source file's location — see
+// `scripts/build-start.mjs`. The target is a computed URL, not a string
+// literal, specifically so esbuild leaves this `import()` call alone
+// rather than trying to bundle `dist/server/entry.mjs` — a huge,
+// separately-built dependency graph — into this file too.
+const entryUrl = new URL("./server/entry.mjs", import.meta.url);
+await import(entryUrl.href);

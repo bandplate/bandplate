@@ -1106,6 +1106,19 @@ a.bl-btn {
   gap: 0.75rem;
 }
 
+/* Past `lg`, the archive is a real two-column layout, not a phone-width
+   list stretched wider — the same "two real layouts, not one plus a media
+   query" bar the song page's grid already met. A rehearsal/concert row is
+   compact enough that two side by side reads as a proper archive grid,
+   not cramped. */
+@media (min-width: 1024px) {
+  .bl-event-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1.5rem;
+  }
+}
+
 .bl-event-row {
   display: flex;
   align-items: center;
@@ -1149,11 +1162,18 @@ a.bl-btn {
 }
 
 .bl-event-row-stats {
+  display: none;
   flex-shrink: 0;
   font-family: var(--bl-font-mono);
   font-size: 0.8125rem;
   color: var(--bl-color-muted);
   text-align: right;
+}
+
+@media (min-width: 1024px) {
+  .bl-event-row-stats {
+    display: block;
+  }
 }
 
 .bl-badge-concert::before {
@@ -1178,6 +1198,20 @@ a.bl-btn {
 .bl-take-list {
   display: flex;
   flex-direction: column;
+}
+
+/* Event detail's take list only (never the song page's — that one lives in
+   a narrow ~23rem aside next to the chords/lyrics grid, where two columns
+   would be cramped). The event page has no aside to fill that width with,
+   so its take list — "what was played", the page's own stated spine —
+   becomes a real two-column grid past `lg` instead of stretching one
+   narrow list across a wide viewport. */
+@media (min-width: 1024px) {
+  .bl-take-list--wide {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1.5rem;
+  }
 }
 
 .bl-take-row {

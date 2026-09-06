@@ -28,13 +28,24 @@ export async function listMembersWithLastSeen(db: Db): Promise<MemberWithLastSee
 
 const createMemberSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name.").max(200),
-  email: z.string().trim().min(1, "Enter an email address.").max(320),
+  // `.email()`, not just non-empty — a display name typo in the email
+  // field used to create a member who could never log in (the login flow
+  // only ever accepts a real address to send a link to), with nothing at
+  // creation time to catch it.
+  email: z
+    .string()
+    .trim()
+    .min(1, "Enter an email address.")
+    .max(320)
+    .email("Enter a valid email address."),
   role: z.enum(["member", "admin"]).optional(),
 });
 
+export type CreateMemberField = "displayName" | "email";
+
 export type CreateMemberResult =
   | { kind: "ok"; member: Member }
-  | { kind: "invalid"; error: string }
+  | { kind: "invalid"; error: string; field: CreateMemberField }
   | { kind: "email_taken" };
 
 export async function createMember(
@@ -48,7 +59,9 @@ export async function createMember(
     role: formData.get("role") || undefined,
   });
   if (!parsed.success) {
-    return { kind: "invalid", error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    const issue = parsed.error.issues[0];
+    const field = (issue?.path[0] as CreateMemberField | undefined) ?? "displayName";
+    return { kind: "invalid", error: issue?.message ?? "Invalid input.", field };
   }
 
   const existing = await membersRepo.getByEmail(db, parsed.data.email);
@@ -66,18 +79,43 @@ export async function createMember(
   return { kind: "ok", member };
 }
 
-const patchMemberSchema = z.object({
-  status: z.enum(["invited", "active", "disabled"]).optional(),
-  role: z.enum(["member", "admin"]).optional(),
-});
+const patchMemberSchema = z
+  .object({
+    status: z.enum(["invited", "active", "disabled"]).optional(),
+    role: z.enum(["member", "admin"]).optional(),
+  })
+  // Restored to match `packages/api/src/routes/admin-members.ts`'s
+  // `patchMemberSchema` exactly — the web copy dropped this `.refine` in
+  // the first pass, so `intent=update` with neither field set parsed
+  // successfully and did nothing, but still redirected to `?updated=1` as
+  // if it had.
+  .refine((v) => v.status !== undefined || v.role !== undefined, {
+    message: "At least one of status or role is required.",
+  });
 
-export type UpdateMemberResult = { kind: "ok" } | { kind: "not_found" } | { kind: "invalid" };
+export type UpdateMemberResult =
+  | { kind: "ok" }
+  | { kind: "not_found" }
+  | { kind: "invalid" }
+  | { kind: "self" }
+  | { kind: "last_admin" };
 
 export async function updateMember(
   db: Db,
   id: string,
   formData: FormData,
+  actingMemberId: string,
 ): Promise<UpdateMemberResult> {
+  // An admin can otherwise demote or disable their own only working
+  // account and lock themselves out unrecoverably — `/setup` 404s once any
+  // member exists, so there is no self-service way back in. The UI hides
+  // these controls on the acting principal's own row (see
+  // `members/index.astro`); this is the server-side backstop for a
+  // crafted request that submits one anyway.
+  if (id === actingMemberId) {
+    return { kind: "self" };
+  }
+
   const parsed = patchMemberSchema.safeParse({
     status: formData.get("status") || undefined,
     role: formData.get("role") || undefined,
@@ -89,6 +127,23 @@ export async function updateMember(
   const existing = await membersRepo.getById(db, id);
   if (!existing) {
     return { kind: "not_found" };
+  }
+
+  const nextRole = parsed.data.role ?? existing.role;
+  const nextStatus = parsed.data.status ?? existing.status;
+  const demotesOrDisablesAnAdmin =
+    existing.role === "admin" && (nextRole !== "admin" || nextStatus === "disabled");
+
+  if (demotesOrDisablesAnAdmin) {
+    // Cheap at this scale (a band roster, not a userbase) — list every
+    // member rather than maintaining a running admin count.
+    const allMembers = await membersRepo.list(db);
+    const otherActiveAdmins = allMembers.filter(
+      (m) => m.id !== id && m.role === "admin" && m.status !== "disabled",
+    );
+    if (otherActiveAdmins.length === 0) {
+      return { kind: "last_admin" };
+    }
   }
 
   const update: membersRepo.UpdateMemberInput = {};

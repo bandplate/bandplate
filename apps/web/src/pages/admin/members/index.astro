@@ -19,6 +19,7 @@ if (!principal) {
 const appDeps = await getAppDeps();
 
 let createError: string | undefined;
+let createErrorField: "displayName" | "email" | undefined;
 let formError: string | undefined;
 
 if (Astro.request.method === "POST") {
@@ -33,15 +34,26 @@ if (Astro.request.method === "POST") {
       if (result.kind === "ok") {
         return Astro.redirect("/admin/members?created=1");
       }
-      createError =
-        result.kind === "email_taken" ? "A member with this email already exists." : result.error;
+      if (result.kind === "email_taken") {
+        createError = "A member with this email already exists.";
+        createErrorField = "email";
+      } else {
+        createError = result.error;
+        createErrorField = result.field;
+      }
     } else if (intent === "update") {
       const id = String(formData.get("memberId") ?? "");
-      const result = await updateMember(appDeps.db, id, formData);
+      const result = await updateMember(appDeps.db, id, formData, principal.memberId);
       if (result.kind === "ok") {
         return Astro.redirect("/admin/members?updated=1");
       }
-      formError = "Couldn't update that member — reload and try again.";
+      if (result.kind === "self") {
+        formError = "You can't change your own role or status — ask another admin to do it.";
+      } else if (result.kind === "last_admin") {
+        formError = "That would leave the band with no active admin. Promote someone else first.";
+      } else {
+        formError = "Couldn't update that member — reload and try again.";
+      }
     }
   }
 }
@@ -63,12 +75,22 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 1.25rem;">
-        <Field label="Name" name="displayName" required autocomplete="name" />
-        <Field label="Email" name="email" type="email" required autocomplete="email" />
+        <Field
+          label="Name"
+          name="displayName"
+          required
+          autocomplete="name"
+          error={createErrorField === "displayName" ? createError : undefined}
+        />
+        <Field
+          label="Email"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          error={createErrorField === "email" ? createError : undefined}
+        />
       </div>
-      {createError && (
-        <p class="bl-field-error" role="alert">{createError}</p>
-      )}
       <button type="submit" class="bl-btn bl-btn-primary">Add member</button>
     </form>
   </section>
@@ -111,26 +133,36 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                 <td data-label="Last seen" class="bl-mono">{formatTimestamp(member.lastSeenAt)}</td>
                 <td data-label="Actions">
                   <div class="bl-table-actions">
-                    <form method="post" style="display:flex; gap:0.375rem; flex-wrap:wrap; align-items:center;">
-                      <input type="hidden" name="intent" value="update" />
-                      <input type="hidden" name="memberId" value={member.id} />
-                      <label class="sr-only" for={`role-${member.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
-                        Role for {member.displayName}
-                      </label>
-                      <select class="bl-select" id={`role-${member.id}`} name="role" style="min-height:36px; padding:0.25rem 0.5rem;">
-                        <option value="member" selected={member.role === "member"}>member</option>
-                        <option value="admin" selected={member.role === "admin"}>admin</option>
-                      </select>
-                      <label class="sr-only" for={`status-${member.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
-                        Status for {member.displayName}
-                      </label>
-                      <select class="bl-select" id={`status-${member.id}`} name="status" style="min-height:36px; padding:0.25rem 0.5rem;">
-                        <option value="invited" selected={member.status === "invited"}>invited</option>
-                        <option value="active" selected={member.status === "active"}>active</option>
-                        <option value="disabled" selected={member.status === "disabled"}>disabled</option>
-                      </select>
-                      <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
-                    </form>
+                    {member.id === principal.memberId ? (
+                      // An admin can't change their own role/status here —
+                      // the server rejects it anyway (see updateMember's
+                      // self-demotion guard), but hiding the controls
+                      // means there's no dead-end control to click in the
+                      // first place, and no way to lock yourself out via
+                      // this row at all.
+                      <p class="bl-field-hint" style="margin:0;">This is you.</p>
+                    ) : (
+                      <form method="post" style="display:flex; gap:0.375rem; flex-wrap:wrap; align-items:center;">
+                        <input type="hidden" name="intent" value="update" />
+                        <input type="hidden" name="memberId" value={member.id} />
+                        <label class="sr-only" for={`role-${member.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                          Role for {member.displayName}
+                        </label>
+                        <select class="bl-select" id={`role-${member.id}`} name="role" style="padding:0.25rem 0.5rem;">
+                          <option value="member" selected={member.role === "member"}>member</option>
+                          <option value="admin" selected={member.role === "admin"}>admin</option>
+                        </select>
+                        <label class="sr-only" for={`status-${member.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                          Status for {member.displayName}
+                        </label>
+                        <select class="bl-select" id={`status-${member.id}`} name="status" style="padding:0.25rem 0.5rem;">
+                          <option value="invited" selected={member.status === "invited"}>invited</option>
+                          <option value="active" selected={member.status === "active"}>active</option>
+                          <option value="disabled" selected={member.status === "disabled"}>disabled</option>
+                        </select>
+                        <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
+                      </form>
+                    )}
                     <a
                       href={`/admin/members/${member.id}/revoke-sessions`}
                       class="bl-btn bl-btn-danger bl-btn-sm"

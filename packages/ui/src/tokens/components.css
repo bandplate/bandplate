@@ -32,6 +32,15 @@
  * text. Every component below that needs a guaranteed-visible boundary
  * (buttons, inputs, the dialog) uses `--bl-color-fg` instead, which is
  * ~15:1 against `--bl-color-bg` in both themes by construction.
+ *
+ * The SAME fixed-hex problem also applies to `.bl-btn-primary`'s FILL TEXT,
+ * not just boundaries — and it shipped uncaught here in the first pass.
+ * The button's rust background never flips, so its text color can't flip
+ * either: `roost.css` defines `--bl-color-on-accent` (fixed sand, never
+ * redefined in a dark-mode block) for exactly this, so
+ * `rust-bg vs sand-text` is the same 9.21:1 computation in both themes.
+ * Using `--bl-color-bg` there instead (which DOES flip, to espresso in
+ * dark mode) put espresso text on the same fixed rust fill — 1.69:1.
  */
 
 :root {
@@ -113,8 +122,9 @@
 @media (prefers-reduced-motion: reduce) {
   .bl-btn,
   .bl-dialog,
-  .bl-dialog-backdrop,
-  .bl-copy-btn {
+  .bl-dialog::backdrop,
+  .bl-copy-btn,
+  .bl-skip-link {
     transition: none !important;
     animation: none !important;
   }
@@ -127,23 +137,51 @@
 
 .bl-btn-primary {
   background: var(--bl-color-accent);
-  color: var(--bl-color-bg);
+  /* Fixed, NOT `--bl-color-bg` — see the file header note. `--bl-color-bg`
+     flips to espresso in dark mode while this fill stays the same fixed
+     rust in both themes, which put unreadable espresso-on-rust (1.69:1)
+     text on every primary button in dark mode. `--bl-color-on-accent` is
+     deliberately fixed too, so the 9.21:1 sand-on-rust ratio holds in
+     both themes by construction. */
+  color: var(--bl-color-on-accent);
 }
 .bl-btn-primary:hover:not([disabled]) {
   background: color-mix(in srgb, var(--bl-color-accent) 85%, black);
 }
 
+/* Secondary and danger used to have NO resting-state rules at all — only
+   `:hover` — so both rendered as a bare `.bl-btn` at rest, indistinguishable
+   from each other (and, on a "Revoke token" / "Cancel" pair, from a plain
+   unstyled button) until a mouse happened to hover one. Touch has no
+   hover, so on a phone the distinction never appeared at all. Both now
+   have a real resting look, not just a hover accent. */
+.bl-btn-secondary {
+  background: var(--bl-color-surface);
+  border-color: var(--bl-color-fg);
+  color: var(--bl-color-fg);
+}
 .bl-btn-secondary:hover:not([disabled]) {
   border-color: var(--bl-component-accent-success);
 }
 
+.bl-btn-danger {
+  background: color-mix(in srgb, var(--bl-component-accent-strong) 10%, var(--bl-color-surface));
+  border-color: var(--bl-component-accent-strong);
+  color: var(--bl-color-fg);
+}
 .bl-btn-danger:hover:not([disabled]) {
   background: color-mix(in srgb, var(--bl-component-accent-strong) 18%, var(--bl-color-surface));
   border-color: var(--bl-component-accent-strong);
 }
 
 .bl-btn-sm {
-  min-height: 36px;
+  /* Still >= the 44px touch-target floor (WCAG 2.5.8) — only the padding
+     and type size shrink for a denser table row. `.bl-btn-sm` used to drop
+     to 36px, which every non-primary control in the admin tables (row
+     actions, the sign-out link, the nav) inherited, putting almost every
+     interactive element on the page under the floor `.bl-btn` itself
+     claims to guarantee. */
+  min-height: 44px;
   padding: 0.375rem 0.875rem;
   font-size: 0.875rem;
 }
@@ -236,8 +274,10 @@ a.bl-btn {
 }
 
 .bl-checkbox-item input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  /* WCAG 2.5.8 target size (minimum) is 24px for a checkbox — this was
+     20px. */
+  width: 24px;
+  height: 24px;
   accent-color: var(--bl-component-accent-success);
 }
 
@@ -279,7 +319,13 @@ a.bl-btn {
 }
 
 .bl-banner-info {
-  border-color: var(--bl-color-border);
+  /* NOT `--bl-color-border` — that token is 1.31:1 / 1.39:1 against the
+     page ground, fine for a purely decorative divider (a table rule, a
+     card outline) but this is an interactive component's only boundary,
+     which WCAG 1.4.11 requires at 3:1. `--bl-color-muted` clears that
+     (4.64:1 / 6.93:1 against `--bl-color-bg`, see roost.css) with room to
+     spare. */
+  border-color: var(--bl-color-muted);
   background: var(--bl-color-surface);
 }
 
@@ -299,7 +345,9 @@ a.bl-btn {
   text-transform: lowercase;
   padding: 0.125rem 0.625rem;
   border-radius: 999px;
-  border: 1.5px solid var(--bl-color-border);
+  /* NOT `--bl-color-border` (1.31:1 / 1.39:1) — same 3:1 boundary
+     requirement as `.bl-banner-info`, same fix. */
+  border: 1.5px solid var(--bl-color-muted);
   color: var(--bl-color-fg);
   white-space: nowrap;
 }
@@ -425,15 +473,14 @@ a.bl-btn {
 /* confirm page; this only ever appears once JS has intercepted a click.  */
 /* ---------------------------------------------------------------------- */
 
-.bl-dialog-backdrop {
-  position: fixed;
-  inset: 0;
+/* `ConfirmDialog.tsx` renders a bare `<dialog class="bl-dialog">` — no
+   wrapping element — and opens it with `showModal()`, so the scrim the
+   platform actually paints is the dialog's own `::backdrop` pseudo-element,
+   not a sibling/wrapper div. A `.bl-dialog-backdrop` class used to be
+   defined here but nothing in the markup ever had that class, so it was
+   dead CSS and the intended dimming scrim never rendered at all. */
+.bl-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  z-index: 1000;
 }
 
 .bl-dialog {
@@ -444,6 +491,7 @@ a.bl-btn {
   padding: 1.5rem;
   max-width: 28rem;
   width: 100%;
+  margin: auto;
 }
 
 .bl-dialog h2 {

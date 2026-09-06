@@ -33,6 +33,19 @@
 
   --bl-color-surface: #fbf8ef;
   --bl-color-overlay: rgba(244, 239, 226, 0.92);
+
+  /* Fixed (never redefined in the dark-mode blocks below) — the foreground
+     for text painted directly on an accent fill (e.g. `.bl-btn-primary`).
+     `--bl-color-accent`/`-accent-alt` are themselves fixed hexes (same in
+     both themes — see components.css's header comment), so their on-fill
+     text must be fixed too: sand-on-rust measures 9.21:1, and that number
+     only holds if this token does NOT flip to espresso in dark mode the
+     way `--bl-color-bg` does. Using `--bl-color-bg` here (as this file
+     used to) put espresso text on the same fixed rust fill in dark mode —
+     1.69:1, correctness bug, see task-4-report.md "Fix round 1" (C2).
+     Never use this as running body text — same rust/olive-fill-only rule
+     as every other accent token. */
+  --bl-color-on-accent: #f4efe2; /* sand, fixed */
 }
 
 @media (prefers-color-scheme: dark) {

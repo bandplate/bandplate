@@ -1,6 +1,6 @@
 import type { MemberPrincipal, Principal, Scope } from "@bandlib/core";
 import { describe, expect, it } from "vitest";
-import { guardAdminPath } from "./guard.js";
+import { guardAdminPath, guardMemberPath, isMemberPath } from "./guard.js";
 
 function member(scopes: Scope[]): MemberPrincipal {
   return { kind: "member", memberId: "m1", role: "member", scopes };
@@ -44,5 +44,42 @@ describe("guardAdminPath", () => {
   it("forbids a member principal that carries ONLY tokens:admin (not members:admin)", () => {
     const decision = guardAdminPath("/admin/members", member(["tokens:admin"]));
     expect(decision).toEqual({ kind: "forbidden" });
+  });
+});
+
+describe("isMemberPath", () => {
+  it("matches /songs, /events, /search, /me and their nested paths", () => {
+    expect(isMemberPath("/songs")).toBe(true);
+    expect(isMemberPath("/songs/neon-skyline")).toBe(true);
+    expect(isMemberPath("/events")).toBe(true);
+    expect(isMemberPath("/events/abc-123")).toBe(true);
+    expect(isMemberPath("/search")).toBe(true);
+    expect(isMemberPath("/me")).toBe(true);
+  });
+
+  it("does not match unrelated paths, including a prefix collision like /songster", () => {
+    expect(isMemberPath("/")).toBe(false);
+    expect(isMemberPath("/login")).toBe(false);
+    expect(isMemberPath("/admin")).toBe(false);
+    expect(isMemberPath("/songster")).toBe(false);
+  });
+});
+
+describe("guardMemberPath", () => {
+  it("allows any principal (including anonymous) on a non-member path", () => {
+    expect(guardMemberPath("/login", undefined)).toEqual({ kind: "allow" });
+  });
+
+  it("redirects an anonymous visitor to /login for /songs and /events", () => {
+    expect(guardMemberPath("/songs", undefined)).toEqual({ kind: "redirect", to: "/login" });
+    expect(guardMemberPath("/events/abc-123", undefined)).toEqual({
+      kind: "redirect",
+      to: "/login",
+    });
+  });
+
+  it("admits any signed-in member — songs:read/events:read come from every role", () => {
+    expect(guardMemberPath("/songs", member(["songs:read"]))).toEqual({ kind: "allow" });
+    expect(guardMemberPath("/events", member([]))).toEqual({ kind: "allow" });
   });
 });

@@ -21,7 +21,7 @@ import { defineMiddleware } from "astro:middleware";
 import { getAppDeps, getAuthDeps } from "./server/app.js";
 import { SESSION_COOKIE_NAME } from "./server/cookies.js";
 import { isSameOrigin } from "./server/csrf.js";
-import { guardAdminPath } from "./server/guard.js";
+import { guardAdminPath, guardMemberPath } from "./server/guard.js";
 import { resolvePrincipalFromCookie } from "./server/principal.js";
 
 const FORBIDDEN_HTML = `<!doctype html>
@@ -80,15 +80,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
     });
   }
 
-  const decision = guardAdminPath(context.url.pathname, principal);
-  if (decision.kind === "redirect") {
-    return context.redirect(decision.to);
+  const adminDecision = guardAdminPath(context.url.pathname, principal);
+  if (adminDecision.kind === "redirect") {
+    return context.redirect(adminDecision.to);
   }
-  if (decision.kind === "forbidden") {
+  if (adminDecision.kind === "forbidden") {
     return new Response(FORBIDDEN_HTML, {
       status: 403,
       headers: { "content-type": "text/html; charset=utf-8" },
     });
+  }
+
+  // The song library / event archive (Task 5) — every other route a signed-in
+  // member reaches: no extra scope beyond "signed in" (see guard.ts).
+  const memberDecision = guardMemberPath(context.url.pathname, principal);
+  if (memberDecision.kind === "redirect") {
+    return context.redirect(memberDecision.to);
   }
 
   return next();

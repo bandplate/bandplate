@@ -158,6 +158,43 @@ describe("middleware onRequest", () => {
   });
 });
 
+describe("middleware onRequest — member-facing routes (/songs, /events)", () => {
+  beforeEach(() => {
+    resolvePrincipalFromCookie.mockReset();
+    next.mockClear();
+  });
+
+  it("redirects an anonymous visitor away from /songs to /login (302, Location: /login)", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue(undefined);
+    const response = await onRequest(makeContext("/songs"), next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/login");
+  });
+
+  it("redirects an anonymous visitor away from /events/some-id to /login", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue(undefined);
+    const response = await onRequest(makeContext("/events/some-id"), next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/login");
+  });
+
+  it("calls next() and admits a plain member principal on /songs and /events", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue(member());
+
+    const songsResponse = await onRequest(makeContext("/songs"), next);
+    expect(songsResponse).toBe(nextResponse);
+
+    const eventsResponse = await onRequest(makeContext("/events/some-id"), next);
+    expect(eventsResponse).toBe(nextResponse);
+
+    expect(next).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("middleware onRequest — structural CSRF backstop", () => {
   beforeEach(() => {
     resolvePrincipalFromCookie.mockReset();

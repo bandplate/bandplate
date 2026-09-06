@@ -532,6 +532,15 @@ a.bl-btn {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  /* Without this, a flex column's cross-axis (width) sizing still won't
+     shrink below a descendant's min-content size — a `<pre>` with
+     `white-space: pre` and no wrap has a min-content width equal to its
+     longest unwrapped line, so that width bubbles up through every
+     ancestor flex box in the chain and out past the viewport (the
+     ".bl-chords" 46ch-overflow bug). `min-width: 0` on the stack itself is
+     never wrong: a column stack never NEEDS to be wider than its own
+     container's content box. */
+  min-width: 0;
 }
 
 .bl-card {
@@ -1360,10 +1369,16 @@ a.bl-btn {
      (monospace exists to keep chord names lined up over the syllable they
      land on), and letting a long line soft-wrap destroys that alignment.
      `overflow-x: auto` scrolls the rare line that exceeds the measure
-     instead, keeping every line's own spacing intact. */
+     instead, keeping every line's own spacing intact. `min(46ch, 100%)`,
+     not a bare `46ch` — 46ch (469px) is wider than a 375px viewport's
+     content column, and `max-width` alone doesn't shrink an element below
+     it; without the `100%` clamp the block itself overflowed its column
+     and scrolled the whole DOCUMENT sideways (measured: `scrollWidth` 489
+     vs `clientWidth` 375), not just this element's own `overflow-x: auto`
+     — the per-line scroll this rule exists for never even engaged. */
   white-space: pre;
   overflow-x: auto;
-  max-width: 46ch;
+  max-width: min(46ch, 100%);
   margin: 0;
 }
 
@@ -1390,12 +1405,17 @@ a.bl-btn {
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
+  /* Part of the same min-content-width fix as `.bl-stack` above — every
+     flex box between `.bl-chords` and the page's outer column needs this,
+     not just the `<pre>` itself (tried alone; not enough). */
+  min-width: 0;
 }
 
 .bl-song-chart-section {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .bl-song-chart-label {

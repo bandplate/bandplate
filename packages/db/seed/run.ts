@@ -26,6 +26,23 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const now = Date.now();
 const daysAgo = (n: number) => now - n * DAY_MS;
 
+/**
+ * Deterministic pseudo-random duration in [3min, 4min), derived from the
+ * take's clientRef via FNV-1a rather than Math.random(). Two fresh seeds
+ * must produce byte-identical data (this is asserted in the task-2
+ * verification), which Math.random() cannot guarantee. FNV-1a's avalanche
+ * behavior avoids the near-linear output you'd get from a naive polynomial
+ * hash on clientRefs that differ only in a trailing digit.
+ */
+function seededDurationMs(clientRef: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < clientRef.length; i++) {
+    hash ^= clientRef.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return 3 * 60 * 1000 + ((hash >>> 0) % (60 * 1000));
+}
+
 async function main() {
   const url = process.env.DATABASE_URL ?? `file:${DEFAULT_DB_PATH}`;
   if (url.startsWith("file:")) {
@@ -333,7 +350,7 @@ async function main() {
       songId: song(seed.songSlug),
       eventId: event(seed.eventRef),
       recordedAt: seed.recordedAt,
-      durationMs: 3 * 60 * 1000 + Math.round(Math.random() * 60 * 1000),
+      durationMs: seededDurationMs(seed.clientRef),
       state: seed.state,
       clientRef: seed.clientRef,
       label: seed.label ?? null,

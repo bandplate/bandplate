@@ -1,0 +1,61 @@
+/*
+ * ROOST design tokens.
+ *
+ * Source of truth: brands/roost/brand.json (video-toolkit repo).
+ * Component code must reference these semantic custom properties only —
+ * never a brand hex value directly.
+ *
+ * Contrast (WCAG relative luminance, computed for Task 1):
+ *   body text (--bl-color-fg) on ground (--bl-color-bg)
+ *     light theme: espresso #2f0c02 on sand #f4efe2  -> 15.58:1
+ *     dark theme:  sand #f4efe2 on espresso #2f0c02  -> 15.58:1
+ *   Both comfortably exceed the 4.5:1 minimum for body text.
+ */
+
+:root {
+  /* Light palette (default) */
+  --bl-color-bg: #f4efe2; /* sand */
+  --bl-color-fg: #2f0c02; /* espresso */
+
+  --bl-color-accent: #7b190a; /* rust */
+  --bl-color-accent-alt: #334f14; /* olive */
+  --bl-color-accent-gold: #f6aa1c; /* gold */
+
+  --bl-color-muted: #8a7362;
+  --bl-color-border: #d8d2c2;
+
+  --bl-color-surface: #fbf8ef;
+  --bl-color-overlay: rgba(244, 239, 226, 0.92);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bl-color-bg: #2f0c02; /* espresso */
+    --bl-color-fg: #f4efe2; /* sand */
+
+    --bl-color-accent: #7b190a; /* rust */
+    --bl-color-accent-alt: #334f14; /* olive */
+    --bl-color-accent-gold: #f6aa1c; /* gold */
+
+    --bl-color-muted: #b89c86;
+    --bl-color-border: #4a2a1a;
+
+    --bl-color-surface: #3a1206;
+    --bl-color-overlay: rgba(47, 12, 2, 0.92);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bl-color-bg: #2f0c02; /* espresso */
+  --bl-color-fg: #f4efe2; /* sand */
+
+  --bl-color-accent: #7b190a; /* rust */
+  --bl-color-accent-alt: #334f14; /* olive */
+  --bl-color-accent-gold: #f6aa1c; /* gold */
+
+  --bl-color-muted: #b89c86;
+  --bl-color-border: #4a2a1a;
+
+  --bl-color-surface: #3a1206;
+  --bl-color-overlay: rgba(47, 12, 2, 0.92);
+}

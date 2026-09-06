@@ -5,11 +5,18 @@
  * Component code must reference these semantic custom properties only —
  * never a brand hex value directly.
  *
- * Contrast (WCAG relative luminance, computed for Task 1):
+ * Contrast (WCAG relative luminance; see task-1-report.md "Fix round 1" for
+ * every text-intent token in both themes):
  *   body text (--bl-color-fg) on ground (--bl-color-bg)
  *     light theme: espresso #2f0c02 on sand #f4efe2  -> 15.58:1
  *     dark theme:  sand #f4efe2 on espresso #2f0c02  -> 15.58:1
- *   Both comfortably exceed the 4.5:1 minimum for body text.
+ *   muted text (--bl-color-muted) on ground (--bl-color-bg)
+ *     light theme: #7c6758 on sand #f4efe2 -> 4.65:1 (darkened from the
+ *       brand's textMuted #8a7362, which measured 3.88:1 and failed AA for
+ *       normal-size text; shifted the minimum amount within the warm-brown
+ *       family to clear 4.5:1)
+ *     dark theme: #b89c86 on espresso #2f0c02 -> 6.93:1 (unchanged, already
+ *       passes)
  */
 
 :root {
@@ -21,7 +28,7 @@
   --bl-color-accent-alt: #334f14; /* olive */
   --bl-color-accent-gold: #f6aa1c; /* gold */
 
-  --bl-color-muted: #8a7362;
+  --bl-color-muted: #7c6758; /* darkened from brand textMuted #8a7362 for AA */
   --bl-color-border: #d8d2c2;
 
   --bl-color-surface: #fbf8ef;

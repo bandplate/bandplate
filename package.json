@@ -1,0 +1,22 @@
+{
+  "name": "bandlib",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.18.1"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --if-present run dev",
+    "build": "pnpm -r --if-present run build",
+    "test": "pnpm -r --if-present run test",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.7.2"
+  }
+}

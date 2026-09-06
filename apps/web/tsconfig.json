@@ -3,7 +3,10 @@
   "compilerOptions": {
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "jsxImportSource": "preact"
+    "jsxImportSource": "preact",
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true
   },
   "include": [".astro/types.d.ts", "src/**/*"],
   "exclude": ["dist"]

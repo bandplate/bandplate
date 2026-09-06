@@ -30,7 +30,12 @@ const navItems = [
 
 <Layout title={title}>
   <ClientRouter />
-  <div class="bl-route-progress" id="route-progress" aria-hidden="true" transition:persist></div>
+  <div
+    class="bl-route-progress"
+    id="route-progress"
+    aria-hidden="true"
+    transition:persist="route-progress"
+  ></div>
   <div class="bl-shell">
     <header class="bl-shell-header">
       <a href="/" class="bl-shell-wordmark">bandlib</a>
@@ -90,38 +95,53 @@ const navItems = [
   // prefers-reduced-motion override. Astro fires these events on
   // `document` around every ClientRouter-driven navigation; a plain <a>
   // click that ClientRouter intercepts goes through this same lifecycle.
-  const bar = document.getElementById("route-progress");
-  if (bar) {
-    let hideTimer: ReturnType<typeof setTimeout> | undefined;
-    let armed = false; // true only once a real navigation has actually started
+  //
+  // `transition:persist="route-progress"` — an EXPLICIT id — is what keeps
+  // this the same DOM node across a navigation. Bare `transition:persist`
+  // (no id) auto-generates one from a per-page count of transition
+  // directives, and that count differs between pages (a take row emits one
+  // `transition:name` per take, so `/songs`, a song with 8 takes, and an
+  // event with 3 takes each land on a different auto id) — the node then
+  // gets silently recreated instead of persisted, and a reference captured
+  // before the swap goes stale. Belt-and-braces on top of the explicit id:
+  // every handler below re-queries the live element by id rather than
+  // trusting a reference captured once at module init, so a future
+  // persistence regression fails loud (no bar animates) instead of quietly
+  // animating a detached node nobody sees.
+  let hideTimer: ReturnType<typeof setTimeout> | undefined;
+  let armed = false; // true only once a real navigation has actually started
 
-    document.addEventListener("astro:before-preparation", () => {
-      armed = true;
-      clearTimeout(hideTimer);
+  document.addEventListener("astro:before-preparation", () => {
+    const bar = document.getElementById("route-progress");
+    if (!bar) {
+      return;
+    }
+    armed = true;
+    clearTimeout(hideTimer);
+    bar.classList.remove("is-done");
+    // Force reflow so re-adding "is-active" restarts the transition even
+    // if a previous navigation left it applied.
+    bar.classList.remove("is-active");
+    void bar.offsetWidth;
+    bar.classList.add("is-active");
+  });
+  document.addEventListener("astro:page-load", () => {
+    const bar = document.getElementById("route-progress");
+    // Fires on the very first page load too, with no preceding
+    // "before-preparation" — nothing to finish animating in that case,
+    // so leave the bar alone rather than snapping it to a visible,
+    // fully-opaque "done" state that would then never get cleaned up.
+    if (!bar || !armed) {
+      return;
+    }
+    armed = false;
+    bar.classList.remove("is-active");
+    bar.classList.add("is-done");
+    // Return to the resting (invisible) state once the "done" fill-in
+    // transition has had time to finish, so the bar doesn't linger as a
+    // permanent line across the top of the page.
+    hideTimer = setTimeout(() => {
       bar.classList.remove("is-done");
-      // Force reflow so re-adding "is-active" restarts the transition even
-      // if a previous navigation left it applied.
-      bar.classList.remove("is-active");
-      void bar.offsetWidth;
-      bar.classList.add("is-active");
-    });
-    document.addEventListener("astro:page-load", () => {
-      // Fires on the very first page load too, with no preceding
-      // "before-preparation" — nothing to finish animating in that case,
-      // so leave the bar alone rather than snapping it to a visible,
-      // fully-opaque "done" state that would then never get cleaned up.
-      if (!armed) {
-        return;
-      }
-      armed = false;
-      bar.classList.remove("is-active");
-      bar.classList.add("is-done");
-      // Return to the resting (invisible) state once the "done" fill-in
-      // transition has had time to finish, so the bar doesn't linger as a
-      // permanent line across the top of the page.
-      hideTimer = setTimeout(() => {
-        bar.classList.remove("is-done");
-      }, 300);
-    });
-  }
+    }, 300);
+  });
 </script>

@@ -12,7 +12,7 @@ import { createNullMailer } from "./null.js";
 
 export type DevMailerKind = "console" | "null";
 
-export interface CreateMailerOptions {
+export interface CreateDevMailerOptions {
   /**
    * Must be explicitly `true` to construct a dev-unsafe mailer. There is no
    * default of `true` anywhere in this function — a missing/undefined
@@ -27,7 +27,7 @@ export interface CreateMailerOptions {
  * `createSmtpMailer` from `@bandlib/mail/smtp` directly instead of calling
  * this factory.
  */
-export function createMailer(kind: DevMailerKind, options: CreateMailerOptions): Mailer {
+export function createDevMailer(kind: DevMailerKind, options: CreateDevMailerOptions): Mailer {
   if (options.allowDevMailer !== true) {
     throw new Error(
       `Refusing to construct the "${kind}" mailer without allowDevMailer: true. The app has no non-email way in after bootstrap, so a mailer that discards login links would lock a real deployment out. Only pass allowDevMailer: true for local development.`,

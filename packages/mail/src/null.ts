@@ -1,5 +1,5 @@
 // Tests-only mailer: discards everything. Never construct this directly —
-// go through `createMailer` in `factory.ts`, which refuses it unless the
+// go through `createDevMailer` in `factory.ts`, which refuses it unless the
 // caller explicitly opts into a dev-unsafe mailer. Prefer the capturing
 // mailer (`capturing.ts`) in tests that need to assert on what was sent.
 import type { Mailer } from "@bandlib/core";

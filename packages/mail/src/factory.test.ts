@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { createCapturingMailer } from "./capturing.js";
-import { createMailer } from "./factory.js";
+import { createDevMailer } from "./factory.js";
 
-describe("createMailer", () => {
+describe("createDevMailer", () => {
   it("refuses to construct a console mailer without allowDevMailer", () => {
-    expect(() => createMailer("console", { allowDevMailer: false })).toThrow(/allowDevMailer/);
+    expect(() => createDevMailer("console", { allowDevMailer: false })).toThrow(/allowDevMailer/);
   });
 
   it("refuses to construct a null mailer without allowDevMailer", () => {
-    expect(() => createMailer("null", { allowDevMailer: false })).toThrow(/allowDevMailer/);
+    expect(() => createDevMailer("null", { allowDevMailer: false })).toThrow(/allowDevMailer/);
   });
 
   it("constructs a console mailer when explicitly allowed", async () => {
-    const mailer = createMailer("console", { allowDevMailer: true });
+    const mailer = createDevMailer("console", { allowDevMailer: true });
     await expect(mailer.sendLoginLink("a@example.com", "https://x/y")).resolves.toBeUndefined();
   });
 
   it("constructs a null mailer when explicitly allowed, and it discards everything", async () => {
-    const mailer = createMailer("null", { allowDevMailer: true });
+    const mailer = createDevMailer("null", { allowDevMailer: true });
     await expect(
       mailer.send({ to: "a@example.com", subject: "s", text: "t" }),
     ).resolves.toBeUndefined();

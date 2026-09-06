@@ -1,7 +1,7 @@
 import { type AppDeps, createApp } from "@bandlib/api";
 import { createInMemoryRateLimiter, systemClock } from "@bandlib/core";
 import { createDb } from "@bandlib/db";
-import { createMailer } from "@bandlib/mail";
+import { createDevMailer } from "@bandlib/mail";
 import { createClient } from "@libsql/client";
 import type { APIRoute } from "astro";
 
@@ -32,7 +32,7 @@ function buildAppDeps(): AppDeps {
         "or wire a real mailer (see @bandlib/mail/smtp) for anything else.",
     );
   }
-  const mailer = createMailer("console", { allowDevMailer: true });
+  const mailer = createDevMailer("console", { allowDevMailer: true });
 
   return {
     db,

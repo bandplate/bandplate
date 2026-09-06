@@ -4,9 +4,23 @@
 // redirected to `/login`, a signed-in member without the `members:admin`
 // scope gets a 403, an admin is admitted. See `server/guard.ts` for the
 // (pure, unit-tested) decision logic.
+//
+// Also the **structural CSRF backstop** for every hand-written page route
+// (`.astro` frontmatter, or a bespoke `.ts` endpoint) under `src/pages/`
+// — see task-4-report.md "Fix round 2". Before this, `server/csrf.ts#isSameOrigin`
+// was called by convention: all ten current mutating pages call it, but
+// nothing made an eleventh page do the same — no lint rule, no test, no
+// compiler error, just a developer remembering a line. This middleware
+// runs before every page handler and independently rejects any mutating
+// (non-GET/HEAD) request whose `Origin` doesn't match, so a page that
+// forgets its own check is still covered, and a brand-new page can't ship
+// unguarded even by accident. The ten existing pages' own `isSameOrigin`
+// calls are left exactly as they were (redundant with this, not replaced
+// by it) — see the task-4 handoff's "do not disturb" list.
 import { defineMiddleware } from "astro:middleware";
-import { getAuthDeps } from "./server/app.js";
+import { getAppDeps, getAuthDeps } from "./server/app.js";
 import { SESSION_COOKIE_NAME } from "./server/cookies.js";
+import { isSameOrigin } from "./server/csrf.js";
 import { guardAdminPath } from "./server/guard.js";
 import { resolvePrincipalFromCookie } from "./server/principal.js";
 
@@ -29,11 +43,42 @@ const FORBIDDEN_HTML = `<!doctype html>
 </body>
 </html>`;
 
+const ORIGIN_ERROR_TEXT =
+  "Something about that request looked wrong. Reload the page and try again.";
+
+/** Mirrors `packages/api`'s `originCheckMiddleware` `MUTATING_METHODS`. */
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/**
+ * `/api/*` is excluded: it's a single catch-all (`pages/api/[...path].ts`)
+ * that delegates to `@bandlib/api`'s own Hono app, which runs its own
+ * `originCheckMiddleware` — and that one additionally exempts
+ * service-token (bearer) requests, which this cookie-only check can't
+ * evaluate (it never looks at `Authorization`). Re-checking here would
+ * reject legitimate service-token API calls that carry no `Origin` header
+ * at all. A future hand-written `.ts` endpoint anywhere else under
+ * `src/pages/` is NOT excluded and gets the same check as an `.astro` page.
+ */
+function isApiRoute(pathname: string): boolean {
+  return pathname === "/api" || pathname.startsWith("/api/");
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
-  const authDeps = await getAuthDeps();
+  const [authDeps, appDeps] = await Promise.all([getAuthDeps(), getAppDeps()]);
   const cookieValue = context.cookies.get(SESSION_COOKIE_NAME)?.value;
   const principal = await resolvePrincipalFromCookie(authDeps, cookieValue);
   context.locals.principal = principal;
+
+  if (
+    MUTATING_METHODS.has(context.request.method) &&
+    !isApiRoute(context.url.pathname) &&
+    !isSameOrigin(context.request, appDeps.config.appOrigin)
+  ) {
+    return new Response(ORIGIN_ERROR_TEXT, {
+      status: 403,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
+  }
 
   const decision = guardAdminPath(context.url.pathname, principal);
   if (decision.kind === "redirect") {

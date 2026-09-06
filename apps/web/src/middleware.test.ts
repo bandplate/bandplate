@@ -6,12 +6,18 @@
 // at :39-41 or the 403 at :42-47) survives the whole suite — this file is
 // what closes that.
 //
+// Round 2 adds coverage for the structural CSRF backstop `onRequest` now
+// applies to every mutating (non-GET/HEAD) request to a non-`/api/*` page
+// route — see the header comment in `middleware.ts`.
+//
 // `defineMiddleware` (astro/dist/core/middleware/index.js) is the identity
 // function, so `onRequest` is callable directly with a hand-built
 // `context`/`next` — no need to boot Astro's dev server or the Node
 // adapter for this.
 import type { MemberPrincipal } from "@bandlib/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const TEST_APP_ORIGIN = "https://bandlib.example";
 
 const resolvePrincipalFromCookie = vi.fn();
 
@@ -29,6 +35,7 @@ vi.mock("./server/principal.js", () => ({
 }));
 vi.mock("./server/app.js", () => ({
   getAuthDeps: vi.fn(async () => ({})),
+  getAppDeps: vi.fn(async () => ({ config: { appOrigin: TEST_APP_ORIGIN } })),
 }));
 
 const { onRequest: rawOnRequest } = await import("./middleware.js");
@@ -51,10 +58,22 @@ async function onRequest(
   return result;
 }
 
-function makeContext(pathname: string, cookieValue?: string) {
+interface MakeContextOptions {
+  cookieValue?: string;
+  method?: string;
+  origin?: string;
+}
+
+function makeContext(pathname: string, options: MakeContextOptions = {}) {
+  const { cookieValue, method = "GET", origin } = options;
   const locals: Record<string, unknown> = {};
+  const headers: Record<string, string> = {};
+  if (origin !== undefined) {
+    headers.origin = origin;
+  }
   return {
     url: new URL(`http://localhost${pathname}`),
+    request: new Request(`http://localhost${pathname}`, { method, headers }),
     cookies: {
       get: (_name: string) => (cookieValue === undefined ? undefined : { value: cookieValue }),
     },
@@ -133,8 +152,61 @@ describe("middleware onRequest", () => {
   it("sets locals.principal to the resolved member for an authenticated request", async () => {
     const m = member();
     resolvePrincipalFromCookie.mockResolvedValue(m);
-    const context = makeContext("/", "some-cookie-value");
+    const context = makeContext("/", { cookieValue: "some-cookie-value" });
     await onRequest(context, next);
     expect(context.locals.principal).toEqual(m);
+  });
+});
+
+describe("middleware onRequest — structural CSRF backstop", () => {
+  beforeEach(() => {
+    resolvePrincipalFromCookie.mockReset();
+    resolvePrincipalFromCookie.mockResolvedValue(undefined);
+    next.mockClear();
+  });
+
+  it("rejects a mutating request to a page route with a mismatched Origin (403, next not called)", async () => {
+    const context = makeContext("/login", { method: "POST", origin: "https://evil.example" });
+
+    const response = await onRequest(context, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(response.status).toBe(403);
+  });
+
+  it("rejects a mutating request to a page route with no Origin header at all", async () => {
+    const context = makeContext("/login", { method: "POST" });
+
+    const response = await onRequest(context, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(response.status).toBe(403);
+  });
+
+  it("admits a mutating request to a page route with the correct Origin", async () => {
+    const context = makeContext("/login", { method: "POST", origin: TEST_APP_ORIGIN });
+
+    const response = await onRequest(context, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(response).toBe(nextResponse);
+  });
+
+  it("does not check Origin on a non-mutating (GET) request", async () => {
+    const context = makeContext("/login", { method: "GET", origin: "https://evil.example" });
+
+    const response = await onRequest(context, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(response).toBe(nextResponse);
+  });
+
+  it("does not apply this check to /api/* — that's the Hono app's own originCheckMiddleware's job, which (unlike this cookie-only check) exempts service-token requests", async () => {
+    const context = makeContext("/api/admin/members", { method: "POST" });
+
+    const response = await onRequest(context, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(response).toBe(nextResponse);
   });
 });

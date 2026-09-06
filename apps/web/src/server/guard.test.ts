@@ -1,6 +1,6 @@
 import type { MemberPrincipal, Principal, Scope } from "@bandlib/core";
 import { describe, expect, it } from "vitest";
-import { guardAdminPath, guardMemberPath, isMemberPath } from "./guard.js";
+import { guardAdminPath, guardMemberPath, isPublicPath } from "./guard.js";
 
 function member(scopes: Scope[]): MemberPrincipal {
   return { kind: "member", memberId: "m1", role: "member", scopes };
@@ -47,27 +47,40 @@ describe("guardAdminPath", () => {
   });
 });
 
-describe("isMemberPath", () => {
-  it("matches /songs, /events, /search, /me and their nested paths", () => {
-    expect(isMemberPath("/songs")).toBe(true);
-    expect(isMemberPath("/songs/neon-skyline")).toBe(true);
-    expect(isMemberPath("/events")).toBe(true);
-    expect(isMemberPath("/events/abc-123")).toBe(true);
-    expect(isMemberPath("/search")).toBe(true);
-    expect(isMemberPath("/me")).toBe(true);
+describe("isPublicPath", () => {
+  it("matches the public allowlist and nested paths under it", () => {
+    expect(isPublicPath("/")).toBe(true);
+    expect(isPublicPath("/login")).toBe(true);
+    expect(isPublicPath("/login/some-token")).toBe(true);
+    expect(isPublicPath("/setup")).toBe(true);
+    expect(isPublicPath("/logout")).toBe(true);
+    expect(isPublicPath("/api")).toBe(true);
+    expect(isPublicPath("/api/songs")).toBe(true);
+    expect(isPublicPath("/_astro/chunk-abc123.js")).toBe(true);
   });
 
-  it("does not match unrelated paths, including a prefix collision like /songster", () => {
-    expect(isMemberPath("/")).toBe(false);
-    expect(isMemberPath("/login")).toBe(false);
-    expect(isMemberPath("/admin")).toBe(false);
-    expect(isMemberPath("/songster")).toBe(false);
+  it("does not match member/admin paths, or a prefix collision like /loginish", () => {
+    expect(isPublicPath("/songs")).toBe(false);
+    expect(isPublicPath("/events/abc-123")).toBe(false);
+    expect(isPublicPath("/admin")).toBe(false);
+    expect(isPublicPath("/loginish")).toBe(false);
+  });
+
+  // The whole point of deny-by-default: a route nobody has registered
+  // anywhere must still come back non-public, so `guardMemberPath` gates it.
+  // This is the failure mode the old member-path ALLOWLIST could not catch —
+  // a brand-new route shipped unguarded simply by never being added to it.
+  it("treats a brand-new, never-registered route as non-public — Task 6's /takes/[id]", () => {
+    expect(isPublicPath("/takes/some-take-id")).toBe(false);
+    expect(isPublicPath("/some-route-nobody-has-written-yet")).toBe(false);
   });
 });
 
 describe("guardMemberPath", () => {
-  it("allows any principal (including anonymous) on a non-member path", () => {
+  it("allows any principal (including anonymous) on a public path", () => {
     expect(guardMemberPath("/login", undefined)).toEqual({ kind: "allow" });
+    expect(guardMemberPath("/", undefined)).toEqual({ kind: "allow" });
+    expect(guardMemberPath("/api/songs", undefined)).toEqual({ kind: "allow" });
   });
 
   it("redirects an anonymous visitor to /login for /songs and /events", () => {
@@ -78,8 +91,20 @@ describe("guardMemberPath", () => {
     });
   });
 
-  it("admits any signed-in member — songs:read/events:read come from every role", () => {
+  // The regression this whole finding is about: a route that exists in the
+  // app (linked from TakeRow.astro) but was never added to any guard list.
+  // Deny-by-default must still redirect an anonymous visitor away from it —
+  // proving the guard, not a remembered registration, is what protects it.
+  it("redirects an anonymous visitor away from a brand-new, unregistered route", () => {
+    expect(guardMemberPath("/takes/some-take-id", undefined)).toEqual({
+      kind: "redirect",
+      to: "/login",
+    });
+  });
+
+  it("admits any signed-in member on both a known member path and an unregistered one", () => {
     expect(guardMemberPath("/songs", member(["songs:read"]))).toEqual({ kind: "allow" });
     expect(guardMemberPath("/events", member([]))).toEqual({ kind: "allow" });
+    expect(guardMemberPath("/takes/some-take-id", member([]))).toEqual({ kind: "allow" });
   });
 });

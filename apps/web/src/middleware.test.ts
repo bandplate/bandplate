@@ -193,6 +193,23 @@ describe("middleware onRequest — member-facing routes (/songs, /events)", () =
 
     expect(next).toHaveBeenCalledTimes(2);
   });
+
+  // guard.ts is deny-by-default: a route that exists in the app (Task 6's
+  // `/takes/[id]`, already linked from TakeRow.astro) but appears in NO
+  // guard allowlist must still be redirected for an anonymous visitor, and
+  // still admitted for a signed-in member — proving the wiring through the
+  // real middleware, not just the pure `guardMemberPath` function.
+  it("guards a brand-new route that was never registered in any allowlist, end to end", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue(undefined);
+    const anonResponse = await onRequest(makeContext("/takes/some-take-id"), next);
+    expect(next).not.toHaveBeenCalled();
+    expect(anonResponse.status).toBe(302);
+    expect(anonResponse.headers.get("location")).toBe("/login");
+
+    resolvePrincipalFromCookie.mockResolvedValue(member());
+    const memberResponse = await onRequest(makeContext("/takes/some-take-id"), next);
+    expect(memberResponse).toBe(nextResponse);
+  });
 });
 
 describe("middleware onRequest — structural CSRF backstop", () => {

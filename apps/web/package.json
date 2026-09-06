@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev --port 4321",
-    "build": "astro build",
+    "build": "astro build && node scripts/build-start.mjs",
     "preview": "astro preview",
-    "start": "tsx scripts/start.ts",
+    "start": "node dist/start.mjs",
     "typecheck": "astro check",
     "test": "vitest run"
   },
@@ -28,8 +28,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
+    "esbuild": "^0.24.0",
     "typescript": "^5.7.2",
-    "tsx": "^4.19.2",
     "vitest": "^2.1.8"
   }
 }

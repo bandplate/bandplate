@@ -60,9 +60,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.4
         version: 0.9.10(prettier@3.9.6)(typescript@5.9.3)
-      tsx:
-        specifier: ^4.19.2
-        version: 4.23.13
+      esbuild:
+        specifier: ^0.24.0
+        version: 0.24.2
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -100,6 +100,9 @@ importers:
       '@bandlib/db':
         specifier: workspace:*
         version: link:../db
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
     devDependencies:
       typescript:
         specifier: ^5.7.2

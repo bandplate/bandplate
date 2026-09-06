@@ -33,26 +33,54 @@ pnpm build
 ## First run (a fresh deployment or a local scratch database)
 
 1. **Configure.** Copy `apps/web/.env.example` to `apps/web/.env` and fill it
-   in — every variable is documented there, including
-   `BANDLIB_TRUSTED_PROXY_DEPTH` (get this wrong and the login rate limit is
-   either shared across everyone behind your proxy, or bypassable outright —
-   read the comment before deploying). The app validates this config once,
-   at startup, and refuses to start with a message naming the specific
+   in — every variable is documented there. The app validates this config
+   once, at startup, and refuses to start with a message naming the specific
    variable if something required is missing — including refusing to start
    with no way to send login emails (set `BANDLIB_SMTP_*`, or
-   `BANDLIB_ALLOW_DEV_MAILER=true` for local dev only).
+   `BANDLIB_ALLOW_DEV_MAILER=true` for local dev only, which is also
+   refused outright once `NODE_ENV=production`).
+
+   One variable needs a deployment-time decision, not just a value:
+   **`BANDLIB_TRUSTED_PROXY_DEPTH`** controls how many reverse-proxy hops in
+   front of bandlib are trusted to have appended their own observed peer
+   address to `X-Forwarded-For` — this is how the login rate limiter picks
+   the real client IP. It defaults to `1`, correct for the common case of
+   one edge/proxy (a CDN, a PaaS router, a single nginx/Caddy) in front of
+   the app. **If bandlib has no reverse proxy in front of it at all —
+   it receives connections directly from clients — set this to `0`.** Left
+   at `1` with no fronting proxy, a client can set `X-Forwarded-For` on
+   their own request with nothing trustworthy having appended to it, letting
+   an attacker pick an arbitrary rate-limit bucket per request and bypass
+   the login rate limit entirely. Get it backwards the other way (`0` behind
+   a real proxy) and the rate limit bucket becomes the proxy's own address,
+   shared across everyone behind it.
 2. **Run migrations** against `BANDLIB_DATABASE_URL`:
    ```sh
    BANDLIB_DATABASE_URL=file:./apps/web/.data/bandlib.db \
      pnpm --filter @bandlib/db run migrate
    ```
-3. **Start the app** (`pnpm --filter web dev` for local dev, or build +
-   `pnpm --filter web preview` / your Node host for a real deployment) and
-   visit `/setup`. This page only exists until the first member is created —
-   it 404s permanently afterward. Enter the bootstrap token from your env
-   config plus your own name and email; on success you're signed in as the
-   first admin and told whether the mail self-test succeeded, so a broken
-   mailer is caught here rather than by the first member who can't log in.
+3. **Build and start the app.** For local dev, `pnpm --filter web dev` is
+   fine. For a real deployment, build (`pnpm --filter web build`) and start
+   with **`pnpm --filter web start`** — NOT `astro preview` (dev-only) and
+   NOT `node dist/server/entry.mjs` directly. `start` runs
+   `apps/web/scripts/start.ts`, which validates configuration and fails
+   loudly *before* the server binds a port; running the built adapter
+   entry directly skips that check, binds the port, prints "Server
+   listening" regardless of whether configuration is valid, and only
+   500s once the first real request arrives — which looks like a healthy
+   boot to a supervisor or `docker run` health check. (Astro's own
+   `security.checkOrigin` CSRF guard is disabled in `astro.config.mjs` for
+   a related reason: under the standalone Node adapter it checks the wrong
+   origin and 403s every real form POST in the built server — see the
+   comment there. The app's own `isSameOrigin` check, applied by every
+   mutating page route, is what actually guards CSRF here.)
+
+   Once it's running, visit `/setup`. This page only exists until the first
+   member is created — it 404s permanently afterward. Enter the bootstrap
+   token from your env config plus your own name and email; on success
+   you're signed in as the first admin and told whether the mail self-test
+   succeeded, so a broken mailer is caught here rather than by the first
+   member who can't log in.
 4. From `/admin/members`, add the rest of the band. Each member signs in by
    requesting a link at `/login` with their email — there is no password.
 

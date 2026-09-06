@@ -79,12 +79,24 @@ function normalizeLabel(label: string | undefined): string | undefined {
 /**
  * A label is trusted immediately if it's one of the unambiguous chord-chart
  * words. An ambiguous word (see `AMBIGUOUS_SECTION_WORDS`) is only trusted
- * when `ambiguousAllowed` says the rest of the song corroborates it —
- * computed by the caller, either from the chord side already having a
- * recognized label, or from this same text using ≥2 distinct section words
- * (see `hasAmbiguousCorroboration`).
+ * when `ambiguousAllowed` says so — either:
+ *  - a plain `true`/`false`: every ambiguous word is trusted, or none is.
+ *    Used for lyrics-only self-corroboration (≥2 distinct section words
+ *    already in this same text — see `hasAmbiguousCorroboration`), where
+ *    there's no more specific signal available.
+ *  - a predicate checked per normalized word: trusts THAT SPECIFIC word
+ *    only. Used by `buildSongChart` once chord text exists — a lyric
+ *    label is corroborated only when the SAME normalized label already
+ *    exists as a recognized chord section, not merely because the chord
+ *    side recognized something else entirely. See task-5-report.md
+ *    "Fix round 4": a coarser, word-agnostic gate here let a properly
+ *    labelled chart (Verse/Chorus/Bridge) still promote a coincidental
+ *    English "Most" lyric line into a false heading.
  */
-function isSectionLabel(candidate: string, ambiguousAllowed: boolean): boolean {
+function isSectionLabel(
+  candidate: string,
+  ambiguousAllowed: boolean | ((normalizedWord: string) => boolean),
+): boolean {
   const trimmed = candidate.trim();
   if (!trimmed || trimmed.length > 24) {
     return false;
@@ -96,7 +108,10 @@ function isSectionLabel(candidate: string, ambiguousAllowed: boolean): boolean {
   if (STRONG_SECTION_WORDS.has(normalized)) {
     return true;
   }
-  return ambiguousAllowed && AMBIGUOUS_SECTION_WORDS.has(normalized);
+  if (!AMBIGUOUS_SECTION_WORDS.has(normalized)) {
+    return false;
+  }
+  return typeof ambiguousAllowed === "function" ? ambiguousAllowed(normalized) : ambiguousAllowed;
 }
 
 /**
@@ -145,12 +160,17 @@ export interface TextSection {
  * `ambiguousAllowed` gates whether a bare ambiguous word ("Most", "Solo",
  * "Coda") is trusted as a label — defaults to this text's own
  * self-corroboration (≥2 distinct section words already in these lyrics)
- * when the caller doesn't have outside context; `buildSongChart` passes an
- * explicit value informed by the chord side too.
+ * when the caller doesn't have outside context. `buildSongChart` instead
+ * passes a per-word predicate informed by the chord side (see
+ * `isSectionLabel`), since a chord-side match must be specific to that
+ * exact label, not a blanket "the chords recognized *something*".
  */
 export function splitLyricsIntoSections(
   lyrics: string,
-  ambiguousAllowed: boolean = hasAmbiguousCorroboration(lyrics, (line) => line),
+  ambiguousAllowed: boolean | ((normalizedWord: string) => boolean) = hasAmbiguousCorroboration(
+    lyrics,
+    (line) => line,
+  ),
 ): TextSection[] {
   const sections: TextSection[] = [];
   let current: TextSection | undefined;
@@ -272,14 +292,36 @@ export function buildSongChart(
   const chordSections = hasChordText ? splitChordsIntoSections(chordText as string) : [];
   const chordsRecognized = chordSections.some((c) => c.label !== undefined);
 
+  // Map of normalized label -> first chord section with that label. Built
+  // early so it can also gate ambiguous lyric words below (see
+  // `lyricsAmbiguousAllowed`); reused again further down for the actual
+  // chord/lyric pairing, rather than being rebuilt.
+  const chordByNormLabel = new Map<string, TextSection>();
+  for (const c of chordSections) {
+    const key = normalizeLabel(c.label);
+    if (key && !chordByNormLabel.has(key)) {
+      chordByNormLabel.set(key, c);
+    }
+  }
+
   // Section labels are primarily a property of the CHORD chart convention
   // ("Label: changes"); a lyric section label only means something when
   // there's a chord section to pair it with. So an ambiguous word in the
-  // lyrics (see AMBIGUOUS_SECTION_WORDS) is trusted unconditionally once the
-  // chords already have a recognized label — no need for lyrics-only
-  // self-corroboration in that case.
-  const lyricsAmbiguousAllowed =
-    chordsRecognized || hasAmbiguousCorroboration(lyricsText ?? "", (line) => line);
+  // lyrics (see AMBIGUOUS_SECTION_WORDS) is trusted only when THAT SAME
+  // normalized label already exists as a recognized chord section — not
+  // merely because the chords recognized *some* label. Fix round 4: the
+  // previous gate ("chordsRecognized || ...") granted blanket trust to
+  // every ambiguous lyric word the instant the chords had ANY recognized
+  // label, so a properly labelled chart (Verse/Chorus/Bridge) still
+  // promoted a coincidental English "Most" lyric line into a false heading
+  // — see task-5-report.md "Fix round 4". Self-corroboration (≥2 distinct
+  // section words within the lyrics alone) is only used as a fallback when
+  // there's no chord text at all to check specific labels against (a
+  // lyrics-only sheet) — the same case `splitLyricsIntoSections`'s own
+  // default handles when called standalone.
+  const lyricsAmbiguousAllowed = hasChordText
+    ? (word: string) => chordByNormLabel.has(word)
+    : hasAmbiguousCorroboration(lyricsText ?? "", (line) => line);
   const lyricSections = hasLyricsText
     ? splitLyricsIntoSections(lyricsText as string, lyricsAmbiguousAllowed)
     : [];
@@ -321,14 +363,8 @@ export function buildSongChart(
     };
   }
 
-  const chordByNormLabel = new Map<string, TextSection>();
-  for (const c of chordSections) {
-    const key = normalizeLabel(c.label);
-    if (key && !chordByNormLabel.has(key)) {
-      chordByNormLabel.set(key, c);
-    }
-  }
-
+  // `chordByNormLabel` was already built above (it also gated
+  // `lyricsAmbiguousAllowed`); reused here rather than rebuilt.
   const firstUsedIndex = chordSections.findIndex((c) => {
     const key = normalizeLabel(c.label);
     return key !== undefined && lyricSections.some((l) => normalizeLabel(l.label) === key);

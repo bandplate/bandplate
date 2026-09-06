@@ -268,10 +268,12 @@ describe("buildSongChart", () => {
     ]);
   });
 
-  it("trusts an ambiguous word once the chord side already recognized a label", () => {
-    // Chords use a real, unambiguous label ("Verse"), so a "Most" lyric
-    // line is corroborated as intentional structure (the Czech sense),
-    // even though "Most" alone in the lyrics wouldn't self-corroborate.
+  it("trusts an ambiguous word once the chord side already has a matching recognized label", () => {
+    // Chords use a real, unambiguous label ("Verse") AND a chord section
+    // for "Most" itself, so the lyric "Most" line is corroborated
+    // SPECIFICALLY — that exact label exists on the chord side — as
+    // intentional structure (the Czech sense), even though "Most" alone in
+    // the lyrics wouldn't self-corroborate.
     const chords = ["Verse: Am F C G", "Most: F C G Am"].join("\n");
     const lyrics = ["Verse 1", "line a", "", "Most", "line b"].join("\n");
 
@@ -282,6 +284,50 @@ describe("buildSongChart", () => {
       sections: [
         { label: "Verse 1", chordLines: ["Am F C G"], lyricLines: ["line a"] },
         { label: "Most", chordLines: ["F C G Am"], lyricLines: ["line b"] },
+      ],
+    });
+  });
+
+  // Fix round 4: round 3's gate trusted an ambiguous lyric word the instant
+  // the chord side recognized ANY label at all, never checking whether
+  // THIS word had a matching chord section. A properly labelled chart
+  // (Verse/Chorus/Bridge, no "Most" chord section anywhere) must NOT
+  // promote a coincidental English "Most" lyric line into a false heading
+  // — it stays ordinary content of whatever section it falls inside, so
+  // the stanza around it isn't orphaned. See task-5-report.md
+  // "Fix round 4" for the built-server reproduction this closes.
+  it("does not trust an ambiguous lyric word just because the chords recognized a DIFFERENT label", () => {
+    const chords = ["Verse: Am F C G", "Chorus: F C G Am", "Bridge: Dm G C"].join("\n");
+    const lyrics = [
+      "Verse 1",
+      "I gave you all I had",
+      "",
+      "Chorus",
+      "and the rest stayed home",
+      "",
+      "Most",
+      "of what I never said",
+    ].join("\n");
+
+    const chart = buildSongChart(chords, lyrics);
+
+    expect(chart).toEqual({
+      kind: "sections",
+      sections: [
+        {
+          label: "Verse 1",
+          chordLines: ["Am F C G"],
+          lyricLines: ["I gave you all I had"],
+        },
+        {
+          // "Most" was not corroborated (no matching chord section), so it
+          // stays a plain lyric line folded into the still-open "Chorus"
+          // section rather than becoming its own heading.
+          label: "Chorus",
+          chordLines: ["F C G Am"],
+          lyricLines: ["and the rest stayed home", "Most", "of what I never said"],
+        },
+        { label: "Bridge", chordLines: ["Dm G C"], lyricLines: [] },
       ],
     });
   });
@@ -338,5 +384,23 @@ describe("buildSongChart", () => {
         { label: "Refren", chordLines: ["Bb A"], lyricLines: ["radek dva"] },
       ],
     });
+  });
+
+  // Accepted conservative false-negative (see task-5-report.md "Fix round
+  // 4"): a genuinely single-section Czech chart, where "Most" is the ONLY
+  // section on either side. The chord-side self-corroboration inside
+  // `splitChordsIntoSections` requires >=2 distinct section words within
+  // the chords text alone to trust an ambiguous word with no outside
+  // context, so a lone "Most: ..." chord line isn't recognized as a label
+  // — the whole chart falls back to the raw two-block layout rather than
+  // interleaving. Raw is the documented safe fallback, so this is fine;
+  // the rule is deliberately not contorted to rescue this single case.
+  it("falls back to raw for a genuinely single-section Czech chart (accepted false negative)", () => {
+    const chords = "Most: F C G Am";
+    const lyrics = ["Most", "jenom slova"].join("\n");
+
+    const chart = buildSongChart(chords, lyrics);
+
+    expect(chart).toEqual({ kind: "raw", chordText: chords, lyricsText: lyrics });
   });
 });

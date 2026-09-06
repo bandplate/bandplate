@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTitle } from "./text.js";
+import { normalizeTitle, slugify } from "./text.js";
 
 describe("normalizeTitle", () => {
   const cases: Array<[string, string]> = [
@@ -49,5 +49,43 @@ describe("normalizeTitle", () => {
   it("is idempotent", () => {
     const once = normalizeTitle("Přítel (take 3)");
     expect(normalizeTitle(once)).toBe(once);
+  });
+});
+
+describe("slugify", () => {
+  const cases: Array<[string, string]> = [
+    // Case + spaces -> single hyphens
+    ["Hello World", "hello-world"],
+    ["  multiple   spaces   here  ", "multiple-spaces-here"],
+
+    // Czech diacritics
+    ["Přítel", "pritel"],
+    ["Ř", "r"],
+    ["Čáry Máry Ďáblík", "cary-mary-dablik"],
+
+    // Punctuation collapsed to a single hyphen, not kept verbatim
+    ["Song Title!!!", "song-title"],
+    ["foo___bar", "foo-bar"],
+    ["a  -  b", "a-b"],
+
+    // Leading/trailing separators trimmed rather than left as edge hyphens
+    ["-leading-and-trailing-", "leading-and-trailing"],
+
+    // Alphanumeric mix survives
+    ["Track 42", "track-42"],
+
+    // Total on odd/empty input: falls back to "item" rather than "" or "-"
+    ["", "item"],
+    ["   ", "item"],
+    ["!!!???", "item"],
+  ];
+
+  it.each(cases)("slugify(%j) === %j", (input, expected) => {
+    expect(slugify(input)).toBe(expected);
+  });
+
+  it("is idempotent", () => {
+    const once = slugify("Čáry Máry (take 3)!");
+    expect(slugify(once)).toBe(once);
   });
 });

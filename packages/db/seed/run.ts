@@ -4,6 +4,7 @@
 // only — a generic band lineup, not any real band's roster.
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import { normalizeTitle } from "@bandlib/core";
 import { createClient } from "@libsql/client";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
@@ -137,14 +138,91 @@ async function main() {
   };
 
   // ---------------------------------------------------------------------
-  // Songs
+  // Songs — chord progressions and lyrics are original demo content
+  // written for this seed, not lyrics from any real song.
   // ---------------------------------------------------------------------
+  const NEON_SKYLINE_CHORDS = [
+    "Intro: Am - F - C - G",
+    "Verse: Am - F - C - G (x2)",
+    "Chorus: F - C - G - Am",
+    "Bridge: Dm - Am - E - Am",
+    "Outro: Am - F - C - G (fade)",
+  ].join("\n");
+  const NEON_SKYLINE_LYRICS = [
+    "Verse 1",
+    "Woke up under a neon skyline glow",
+    "Counting cars that never seem to slow",
+    "Got a bassline running through my chest",
+    "This town don't know when to rest",
+    "",
+    "Chorus",
+    "Hold on, hold on, we're almost home",
+    "Headlights cutting through the chrome",
+    "Hold on, hold on, don't let go",
+    "Ride the neon skyline glow",
+    "",
+    "Verse 2",
+    "Streetlights flicker like a second thought",
+    "Every corner's a lesson that we caught",
+    "Rolling slow past the old arcade",
+    "Where the best mistakes were made",
+    "",
+    "Bridge",
+    "Somewhere between the exit and the dawn",
+    "We found the song we're building on",
+  ].join("\n");
+  const BASEMENT_TAPES_CHORDS = [
+    "Intro: E - B - C#m - A",
+    "Verse: E - B - C#m - A (x2)",
+    "Chorus: A - E - B - C#m",
+    "Outro: E (let ring)",
+  ].join("\n");
+  const BASEMENT_TAPES_LYRICS = [
+    "Verse 1",
+    "Down in the basement where the tape machine hums",
+    "Counting out loud on our fingers and thumbs",
+    "Secondhand amp buzzing low in the dark",
+    "Chasing a sound that leaves its mark",
+    "",
+    "Chorus",
+    "Press record, don't think twice",
+    "We'll get it right on the second try",
+    "Press record, roll the dice",
+    "Someday we'll hear it and wonder why",
+    "",
+    "Verse 2",
+    "Dust on the cables, coffee gone cold",
+    "Same three chords but they never get old",
+  ].join("\n");
+
   const songSeeds = [
-    { slug: "neon-skyline", title: "Neon Skyline", tempoBpm: 128, musicalKey: "Am" },
-    { slug: "basement-tapes", title: "Basement Tapes", tempoBpm: 96, musicalKey: "E" },
+    {
+      slug: "neon-skyline",
+      title: "Neon Skyline",
+      tempoBpm: 128,
+      musicalKey: "Am",
+      chordProgression: NEON_SKYLINE_CHORDS,
+      lyrics: NEON_SKYLINE_LYRICS,
+      notes: "Set closer. Bring the tempo up slightly live — it drags at 128 with a full room.",
+    },
+    {
+      slug: "basement-tapes",
+      title: "Basement Tapes",
+      tempoBpm: 96,
+      musicalKey: "E",
+      chordProgression: BASEMENT_TAPES_CHORDS,
+      lyrics: BASEMENT_TAPES_LYRICS,
+    },
     { slug: "wildfire", title: "Wildfire", tempoBpm: 140, musicalKey: "G" },
     { slug: "slow-burn", title: "Slow Burn", tempoBpm: 72, musicalKey: "Dm" },
     { slug: "nightbus", title: "Nightbus", tempoBpm: 110, musicalKey: "C" },
+    {
+      slug: "because-the-night-cover",
+      title: "Because the Night (cover)",
+      tempoBpm: 100,
+      musicalKey: "Em",
+      notes: "One-off for the New Year Bash encore. Never rehearsed again — worth a second look.",
+    },
     { slug: "untitled-jam-1", title: "Untitled Jam #1", isStub: true },
   ];
   const songBySlug = new Map<string, string>();
@@ -156,8 +234,8 @@ async function main() {
     }
     const created = await songsRepo.create(db, {
       ...seed,
-      createdAt: daysAgo(180),
-      updatedAt: daysAgo(180),
+      createdAt: daysAgo(360),
+      updatedAt: daysAgo(360),
     });
     songBySlug.set(seed.slug, created.id);
   }
@@ -170,21 +248,94 @@ async function main() {
   };
 
   // ---------------------------------------------------------------------
-  // Events — a mix of rehearsals and one concert, spread over months.
+  // Song aliases — a genuine alternate/working title (manual) and a
+  // Reaper-style external ref an ingest run would have created. Guarded by
+  // `findByAlias` first since, unlike the other seed sections, `addAlias`
+  // itself has no upsert path (aliasNorm is unique across the whole table).
+  // ---------------------------------------------------------------------
+  async function ensureAlias(
+    songId: string,
+    alias: string,
+    source: songsRepo.SongAliasSource,
+  ): Promise<void> {
+    const existing = await songsRepo.findByAlias(db, normalizeTitle(alias));
+    if (existing) {
+      return;
+    }
+    await songsRepo.addAlias(db, songId, alias, source);
+  }
+
+  await ensureAlias(song("neon-skyline"), "Neon Skies", "manual");
+  await ensureAlias(
+    song("basement-tapes"),
+    "reaper:region-guid:6F3A9C2E-4B7D-4E1A-9F2C-1D8E5A6B7C3D",
+    "ingest",
+  );
+  await ensureAlias(song("wildfire"), "Forest Fire", "manual");
+
+  // ---------------------------------------------------------------------
+  // Per-instrument playing notes — setInstrumentNote is already an upsert.
+  // ---------------------------------------------------------------------
+  await songsRepo.setInstrumentNote(
+    db,
+    song("neon-skyline"),
+    instrument("bass"),
+    "Walking bass under the chorus — resist the urge to fill.",
+    daysAgo(90),
+  );
+  await songsRepo.setInstrumentNote(
+    db,
+    song("neon-skyline"),
+    instrument("drums"),
+    "Half-time feel on the bridge, back to straight eighths for the last chorus.",
+    daysAgo(90),
+  );
+  await songsRepo.setInstrumentNote(
+    db,
+    song("wildfire"),
+    instrument("vocals"),
+    "Melody sits high in the second verse — drop it an octave if the singer's voice is tired.",
+    daysAgo(60),
+  );
+
+  // ---------------------------------------------------------------------
+  // Events — rehearsals and two concerts, spread across a full year.
   // ---------------------------------------------------------------------
   const eventSeeds = [
-    { clientRef: "seed-event-1", kind: "rehearsal" as const, heldAt: daysAgo(150) },
-    { clientRef: "seed-event-2", kind: "rehearsal" as const, heldAt: daysAgo(120) },
-    { clientRef: "seed-event-3", kind: "rehearsal" as const, heldAt: daysAgo(90) },
+    { clientRef: "seed-event-1", kind: "rehearsal" as const, heldAt: daysAgo(360) },
+    { clientRef: "seed-event-2", kind: "rehearsal" as const, heldAt: daysAgo(300) },
+    { clientRef: "seed-event-3", kind: "rehearsal" as const, heldAt: daysAgo(240) },
     {
       clientRef: "seed-event-4",
+      kind: "concert" as const,
+      heldAt: daysAgo(200),
+      title: "New Year Bash",
+      venue: "The Attic",
+      notes: "First outing for the new setlist. Crowd was into it, but the monitor mix needs work.",
+    },
+    { clientRef: "seed-event-5", kind: "rehearsal" as const, heldAt: daysAgo(150) },
+    {
+      clientRef: "seed-event-6",
+      kind: "rehearsal" as const,
+      heldAt: daysAgo(120),
+      notes: "Ran the spring setlist twice end to end.",
+    },
+    { clientRef: "seed-event-7", kind: "rehearsal" as const, heldAt: daysAgo(90) },
+    {
+      clientRef: "seed-event-8",
       kind: "concert" as const,
       heldAt: daysAgo(60),
       title: "Live at The Attic",
       venue: "The Attic",
+      notes: "Sold out. PA mix was muddy in the low end — bass needs cutting live next time.",
     },
-    { clientRef: "seed-event-5", kind: "rehearsal" as const, heldAt: daysAgo(30) },
-    { clientRef: "seed-event-6", kind: "rehearsal" as const, heldAt: daysAgo(7) },
+    { clientRef: "seed-event-9", kind: "rehearsal" as const, heldAt: daysAgo(30) },
+    {
+      clientRef: "seed-event-10",
+      kind: "rehearsal" as const,
+      heldAt: daysAgo(7),
+      notes: "Quick run before the next show. Vocals still finding the new key on Wildfire.",
+    },
   ];
   const eventByRef = new Map<string, string>();
   for (const seed of eventSeeds) {
@@ -213,7 +364,10 @@ async function main() {
   };
 
   // ---------------------------------------------------------------------
-  // Takes — several per song, across several events, varied state.
+  // Takes — neon-skyline gets eight takes across the whole year (the
+  // flagship song), because-the-night-cover gets exactly one (played
+  // once, never rehearsed again), and untitled-jam-1 (a stub) gets none —
+  // its page has to render a real "no takes yet" empty state.
   // ---------------------------------------------------------------------
   interface TakeSeed {
     clientRef: string;
@@ -226,11 +380,13 @@ async function main() {
   }
 
   const takeSeeds: TakeSeed[] = [
+    // neon-skyline — eight takes, one per event across the year except the
+    // very first concert.
     {
       clientRef: "seed-take-1",
       songSlug: "neon-skyline",
       eventRef: "seed-event-1",
-      recordedAt: daysAgo(150),
+      recordedAt: daysAgo(360),
       state: "published",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
     },
@@ -238,7 +394,7 @@ async function main() {
       clientRef: "seed-take-2",
       songSlug: "neon-skyline",
       eventRef: "seed-event-3",
-      recordedAt: daysAgo(90),
+      recordedAt: daysAgo(240),
       state: "keeper",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
       label: "with new bridge",
@@ -246,93 +402,142 @@ async function main() {
     {
       clientRef: "seed-take-3",
       songSlug: "neon-skyline",
-      eventRef: "seed-event-6",
-      recordedAt: daysAgo(7),
-      state: "new",
-      instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
-    },
-    {
-      clientRef: "seed-take-4",
-      songSlug: "basement-tapes",
-      eventRef: "seed-event-2",
-      recordedAt: daysAgo(120),
-      state: "published",
-      instrumentSlugs: ["guitar", "vocals"],
-    },
-    {
-      clientRef: "seed-take-5",
-      songSlug: "basement-tapes",
       eventRef: "seed-event-5",
-      recordedAt: daysAgo(30),
-      state: "keeper",
-      instrumentSlugs: ["drums", "bass", "guitar", "vocals", "keys"],
-    },
-    {
-      clientRef: "seed-take-6",
-      songSlug: "wildfire",
-      eventRef: "seed-event-3",
-      recordedAt: daysAgo(90),
+      recordedAt: daysAgo(150),
       state: "rejected",
       instrumentSlugs: ["drums", "bass", "guitar"],
     },
     {
-      clientRef: "seed-take-7",
-      songSlug: "wildfire",
-      eventRef: "seed-event-4",
+      clientRef: "seed-take-4",
+      songSlug: "neon-skyline",
+      eventRef: "seed-event-6",
+      recordedAt: daysAgo(120),
+      state: "published",
+      instrumentSlugs: ["drums", "bass", "guitar", "vocals", "keys"],
+    },
+    {
+      clientRef: "seed-take-5",
+      songSlug: "neon-skyline",
+      eventRef: "seed-event-7",
+      recordedAt: daysAgo(90),
+      state: "new",
+      instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
+    },
+    {
+      clientRef: "seed-take-6",
+      songSlug: "neon-skyline",
+      eventRef: "seed-event-8",
       recordedAt: daysAgo(60),
       state: "keeper",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals", "trumpet", "trombone"],
       label: "live",
     },
     {
-      clientRef: "seed-take-8",
-      songSlug: "wildfire",
-      eventRef: "seed-event-6",
-      recordedAt: daysAgo(7),
+      clientRef: "seed-take-7",
+      songSlug: "neon-skyline",
+      eventRef: "seed-event-9",
+      recordedAt: daysAgo(30),
       state: "new",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
     },
     {
+      clientRef: "seed-take-8",
+      songSlug: "neon-skyline",
+      eventRef: "seed-event-10",
+      recordedAt: daysAgo(7),
+      state: "new",
+      instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
+      label: "new arrangement attempt",
+    },
+    // basement-tapes — two takes.
+    {
       clientRef: "seed-take-9",
-      songSlug: "slow-burn",
-      eventRef: "seed-event-1",
-      recordedAt: daysAgo(150),
-      state: "rejected",
+      songSlug: "basement-tapes",
+      eventRef: "seed-event-2",
+      recordedAt: daysAgo(300),
+      state: "published",
       instrumentSlugs: ["guitar", "vocals"],
     },
     {
       clientRef: "seed-take-10",
+      songSlug: "basement-tapes",
+      eventRef: "seed-event-7",
+      recordedAt: daysAgo(90),
+      state: "keeper",
+      instrumentSlugs: ["drums", "bass", "guitar", "vocals", "keys"],
+    },
+    // wildfire — three takes.
+    {
+      clientRef: "seed-take-11",
+      songSlug: "wildfire",
+      eventRef: "seed-event-3",
+      recordedAt: daysAgo(240),
+      state: "rejected",
+      instrumentSlugs: ["drums", "bass", "guitar"],
+    },
+    {
+      clientRef: "seed-take-12",
+      songSlug: "wildfire",
+      eventRef: "seed-event-8",
+      recordedAt: daysAgo(60),
+      state: "keeper",
+      instrumentSlugs: ["drums", "bass", "guitar", "vocals", "trumpet", "trombone"],
+      label: "live",
+    },
+    {
+      clientRef: "seed-take-13",
+      songSlug: "wildfire",
+      eventRef: "seed-event-10",
+      recordedAt: daysAgo(7),
+      state: "new",
+      instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
+    },
+    // slow-burn — two takes.
+    {
+      clientRef: "seed-take-14",
       songSlug: "slow-burn",
-      eventRef: "seed-event-5",
+      eventRef: "seed-event-1",
+      recordedAt: daysAgo(360),
+      state: "rejected",
+      instrumentSlugs: ["guitar", "vocals"],
+    },
+    {
+      clientRef: "seed-take-15",
+      songSlug: "slow-burn",
+      eventRef: "seed-event-9",
       recordedAt: daysAgo(30),
       state: "published",
       instrumentSlugs: ["drums", "bass", "guitar", "keys", "vocals"],
     },
+    // nightbus — two takes.
     {
-      clientRef: "seed-take-11",
+      clientRef: "seed-take-16",
       songSlug: "nightbus",
       eventRef: "seed-event-4",
-      recordedAt: daysAgo(60),
+      recordedAt: daysAgo(200),
       state: "keeper",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
       label: "live",
     },
     {
-      clientRef: "seed-take-12",
+      clientRef: "seed-take-17",
       songSlug: "nightbus",
-      eventRef: "seed-event-6",
+      eventRef: "seed-event-10",
       recordedAt: daysAgo(7),
       state: "new",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
     },
+    // because-the-night-cover — exactly one take, ever.
     {
-      clientRef: "seed-take-13",
-      songSlug: "untitled-jam-1",
-      eventRef: "seed-event-6",
-      recordedAt: daysAgo(7),
+      clientRef: "seed-take-18",
+      songSlug: "because-the-night-cover",
+      eventRef: "seed-event-8",
+      recordedAt: daysAgo(60),
       state: "new",
-      instrumentSlugs: ["drums", "bass"],
+      instrumentSlugs: ["guitar", "vocals"],
+      label: "just for fun",
     },
+    // untitled-jam-1 gets NO takes — it stays a stub with an empty state.
   ];
 
   const takeByRef = new Map<string, string>();
@@ -369,8 +574,8 @@ async function main() {
   };
 
   // ---------------------------------------------------------------------
-  // Assets — seed-take-2 gets full stems + a lossless master; seed-take-4
-  // gets only a lossy master (no stems).
+  // Assets — seed-take-2 (the neon-skyline keeper) gets full stems + a
+  // lossless master; seed-take-9 gets only a lossy master (no stems).
   // ---------------------------------------------------------------------
   async function ensureAsset(
     storageKey: string,
@@ -443,7 +648,7 @@ async function main() {
     readyAt: daysAgo(90),
   });
 
-  const masterOnlyTakeId = take("seed-take-4");
+  const masterOnlyTakeId = take("seed-take-9");
   await ensureAsset(`${masterOnlyTakeId}/master.opus`, {
     takeId: masterOnlyTakeId,
     kind: "master",
@@ -453,12 +658,18 @@ async function main() {
     bytes: 3_900_000,
     status: "ready",
     durationMs: 195_000,
-    createdAt: daysAgo(120),
-    readyAt: daysAgo(120),
+    createdAt: daysAgo(300),
+    readyAt: daysAgo(300),
   });
 
   // A couple more masters so listings have something to show.
-  for (const ref of ["seed-take-7", "seed-take-10", "seed-take-11", "seed-take-13"]) {
+  for (const ref of [
+    "seed-take-1",
+    "seed-take-6",
+    "seed-take-12",
+    "seed-take-16",
+    "seed-take-18",
+  ]) {
     const takeId = take(ref);
     await ensureAsset(`${takeId}/master.opus`, {
       takeId,
@@ -499,8 +710,13 @@ async function main() {
     { takeRef: "seed-take-5", email: "admin@example.com", keeper: true },
     { takeRef: "seed-take-5", email: "bailey@example.com", keeper: true },
     { takeRef: "seed-take-5", email: "cass@example.com", keeper: true },
-    { takeRef: "seed-take-6", email: "admin@example.com", keeper: false, comment: "tempo drifts" },
-    { takeRef: "seed-take-6", email: "bailey@example.com", keeper: false },
+    {
+      takeRef: "seed-take-6",
+      email: "admin@example.com",
+      keeper: true,
+      comment: "great energy live",
+    },
+    { takeRef: "seed-take-6", email: "bailey@example.com", keeper: true },
     { takeRef: "seed-take-7", email: "admin@example.com", keeper: true },
     { takeRef: "seed-take-7", email: "bailey@example.com", keeper: true },
     { takeRef: "seed-take-7", email: "cass@example.com", keeper: true },
@@ -508,9 +724,12 @@ async function main() {
     { takeRef: "seed-take-9", email: "admin@example.com", keeper: false },
     { takeRef: "seed-take-10", email: "admin@example.com", keeper: true },
     { takeRef: "seed-take-10", email: "cass@example.com", keeper: true },
-    { takeRef: "seed-take-11", email: "admin@example.com", keeper: true },
-    { takeRef: "seed-take-11", email: "bailey@example.com", keeper: true },
-    { takeRef: "seed-take-11", email: "dee@example.com", keeper: true },
+    { takeRef: "seed-take-12", email: "admin@example.com", keeper: true },
+    { takeRef: "seed-take-12", email: "bailey@example.com", keeper: true },
+    { takeRef: "seed-take-12", email: "dee@example.com", keeper: true },
+    { takeRef: "seed-take-11", email: "admin@example.com", keeper: false, comment: "tempo drifts" },
+    { takeRef: "seed-take-16", email: "admin@example.com", keeper: true },
+    { takeRef: "seed-take-16", email: "sam@example.com", keeper: true },
   ];
   for (const seed of voteSeeds) {
     await votesRepo.castVote(db, {

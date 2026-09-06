@@ -50,7 +50,11 @@ function seededDurationMs(clientRef: string): number {
 }
 
 async function main() {
-  const url = process.env.DATABASE_URL ?? `file:${DEFAULT_DB_PATH}`;
+  // Match `scripts/migrate.ts`: `BANDLIB_DATABASE_URL` is the name the app
+  // itself uses, so seeding and running must agree on it or the seed
+  // silently populates a database nothing else opens.
+  const url =
+    process.env.BANDLIB_DATABASE_URL ?? process.env.DATABASE_URL ?? `file:${DEFAULT_DB_PATH}`;
   if (url.startsWith("file:")) {
     await mkdir(dirname(url.slice("file:".length)), { recursive: true });
   }

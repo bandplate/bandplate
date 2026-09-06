@@ -1,0 +1,166 @@
+---
+// Take detail — the song (linked), the event and date (linked), duration,
+// label, instruments recorded, state, and the current vote tally. Then the
+// take's assets: the master, stems by instrument, and whether a lossless
+// master exists (derived — `assetsRepo.takeHasLossless`, never stored).
+//
+// No playback and no fake play affordance (brief §2) — increment 4 adds
+// the player. It belongs directly under the hero, above the metadata list:
+// that's the one gap this page leaves for it on purpose, not a placeholder
+// box (a rendered "player coming soon" box would itself be exactly the
+// kind of affordance-that-does-nothing the brief rules out).
+//
+// `transition:name={`take-${take.id}`}` on the song-title hero matches the
+// same name `TakeRow.astro` puts on its own link — clicking a take row
+// morphs that link into this heading via View Transitions. Continuity is
+// closest coming from "event"/"full" mode rows (whose own link text is
+// already the song title); a "song" mode row's link is the recorded date
+// instead, so that one morphs a date into a title — still a smooth shared
+// transition, just not a pixel-identical one. See task-6-report.md.
+import type { assetsRepo } from "@bandlib/db";
+import AppLayout from "../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../server/app.js";
+import { formatBytes, formatDuration, formatLongDate } from "../../server/format.js";
+import { getTakeDetail } from "../../server/pages/takes.js";
+import { TAKE_STATE_LABEL } from "../../server/take-state.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const { id } = Astro.params;
+if (!id) {
+  return new Response("Not found.", { status: 404 });
+}
+
+const appDeps = await getAppDeps();
+const detail = await getTakeDetail(appDeps.db, id);
+if (!detail) {
+  return new Response("Not found.", { status: 404 });
+}
+
+const { take, song, event, instruments, assets, hasLossless } = detail;
+const instrumentLabelById = new Map(instruments.map((i) => [i.id, i.label]));
+
+// `peaks` assets are waveform data for the future player, not something a
+// member browses as a "recording" — the brief's own enumeration ("master,
+// stems by instrument") doesn't mention them either.
+const masters = assets.filter((a) => a.kind === "master");
+const stems = assets.filter((a) => a.kind === "stem");
+
+function assetLabel(asset: assetsRepo.Asset): string {
+  if (asset.kind === "master") {
+    return "Master";
+  }
+  return instrumentLabelById.get(asset.instrumentId ?? "") ?? "Unknown instrument";
+}
+
+const voteTallyText =
+  take.totalVotes === 0
+    ? "No votes yet."
+    : `${take.keeperVotes} of ${take.totalVotes} ${take.totalVotes === 1 ? "vote says" : "votes say"} keeper (${Math.round(take.ratingScore * 100)}%).`;
+
+const kindLabel =
+  event?.kind === "rehearsal" ? "rehearsal" : event?.kind === "concert" ? "concert" : "session";
+---
+
+<AppLayout title={song ? song.title : "Take"} principal={principal} current="home">
+  <div class="bl-stack">
+    <div>
+      {
+        song ? (
+          <h1 class="bl-hero-title">
+            <a
+              href={`/songs/${song.slug}`}
+              class="bl-hero-title-link"
+              transition:name={`take-${take.id}`}
+            >
+              {song.title}
+            </a>
+          </h1>
+        ) : (
+          <h1 class="bl-hero-title" transition:name={`take-${take.id}`}>
+            Take
+          </h1>
+        )
+      }
+      {take.label && <p class="bl-m0">{take.label}</p>}
+    </div>
+
+    <dl class="bl-take-detail-meta">
+      <div>
+        <dt>Recorded</dt>
+        <dd>
+          {event ? (
+            <a href={`/events/${event.id}`}>
+              {formatLongDate(event.heldAt)} — this {kindLabel}
+            </a>
+          ) : (
+            formatLongDate(take.recordedAt)
+          )}
+        </dd>
+      </div>
+      <div>
+        <dt>Duration</dt>
+        <dd class="bl-mono">{formatDuration(take.durationMs)}</dd>
+      </div>
+      <div>
+        <dt>State</dt>
+        <dd>
+          <span class={`bl-badge ${take.state === "keeper" ? "bl-badge-keeper" : ""}`}>
+            {TAKE_STATE_LABEL[take.state]}
+          </span>
+        </dd>
+      </div>
+      <div>
+        <dt>Instruments</dt>
+        <dd>
+          {instruments.length === 0 ? (
+            "—"
+          ) : (
+            <div class="bl-take-instruments">
+              {instruments.map((instrument) => (
+                <span class="bl-take-instrument-tag">{instrument.label}</span>
+              ))}
+            </div>
+          )}
+        </dd>
+      </div>
+      <div>
+        <dt>Vote tally</dt>
+        <dd>{voteTallyText}</dd>
+      </div>
+    </dl>
+
+    <section>
+      <h2 class="bl-section-title">Assets</h2>
+      {
+        assets.length === 0 ? (
+          <div class="bl-empty-state">
+            <p>No assets uploaded for this take yet.</p>
+          </div>
+        ) : (
+          <div class="bl-stack bl-stack-tight">
+            <p class="bl-field-hint bl-m0">
+              {hasLossless
+                ? "A lossless master is available."
+                : "No lossless master available yet."}
+            </p>
+            <ul class="bl-asset-list">
+              {[...masters, ...stems].map((asset) => (
+                <li class="bl-asset-row">
+                  <span class="bl-asset-row-label">{assetLabel(asset)}</span>
+                  <span class="bl-asset-row-meta bl-mono">
+                    {asset.format} · {asset.tier} · {formatBytes(asset.bytes)}
+                    {asset.status !== "ready" && ` · ${asset.status}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </section>
+  </div>
+</AppLayout>

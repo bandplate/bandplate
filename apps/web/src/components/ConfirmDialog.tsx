@@ -85,7 +85,19 @@ export default function ConfirmDialog() {
       if (!res.ok) {
         throw new Error(`That didn't work (status ${res.status}). Try again.`);
       }
-      window.location.reload();
+      // `location.reload()` repeats the ORIGINAL request that loaded the
+      // current document, method included — and on the token-creation
+      // page, that document is itself the response to a `<form
+      // method="post">` submission (the raw-secret page, rendered
+      // directly rather than via a redirect — see admin-tokens.ts). If a
+      // JS-enabled admin creates a token and then confirms an unrelated
+      // dialog (e.g. revoking a different token) on that same page,
+      // `reload()` would resubmit the create-token POST — either a
+      // browser confirmation prompt or, if silently allowed, a second,
+      // unwanted token. `location.replace()` with the same URL always
+      // does a fresh GET navigation instead, regardless of how the
+      // current document was loaded.
+      window.location.replace(window.location.href);
     } catch (err) {
       setPending(false);
       setError(err instanceof Error ? err.message : "That didn't work. Try again.");

@@ -82,6 +82,9 @@ function eventLabel(event: (typeof events)[number]): string {
                 <p class="bl-event-row-venue bl-m0">
                   <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
                   {eventLabel(event) && ` ${eventLabel(event)}`}
+                  <span class="bl-event-row-count">
+                    {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+                  </span>
                 </p>
               </div>
               <div class="bl-event-row-stats">

@@ -1182,6 +1182,29 @@ a.bl-btn {
   }
 }
 
+/* The compact, mobile-only equivalent of `.bl-event-row-stats` — the take
+   count a member uses "to tell a well-documented rehearsal from an empty
+   placeholder before opening it" (see `listRecentWithTakeCounts`), inline
+   next to the kind badge instead of in its own right-aligned column, since
+   phones don't have a spare column. Below `lg` this is the ONLY place the
+   count renders (most seeded rehearsals are untitled, so on a phone the
+   badge + this count IS the row's content, besides the date); past `lg`
+   the wide `.bl-event-row-stats` column takes over and this is hidden, so
+   the count never renders twice. */
+.bl-event-row-count {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-family: var(--bl-font-mono);
+  font-size: 0.8125rem;
+  color: var(--bl-color-muted);
+}
+
+@media (min-width: 1024px) {
+  .bl-event-row-count {
+    display: none;
+  }
+}
+
 .bl-badge-concert::before {
   background: var(--bl-component-accent-strong);
 }

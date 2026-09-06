@@ -57,4 +57,67 @@ describe("members repo", () => {
     expect(found).toBeDefined();
     expect(found?.status).toBe("disabled");
   });
+
+  it("setRole changes the role", async () => {
+    const created = await members.create(db, {
+      displayName: "Robin",
+      slug: "robin",
+      email: "robin@example.com",
+      createdAt: Date.now(),
+    });
+
+    await members.setRole(db, created.id, "admin");
+
+    const found = await members.getById(db, created.id);
+    expect(found?.role).toBe("admin");
+  });
+
+  it("count reflects the number of rows", async () => {
+    expect(await members.count(db)).toBe(0);
+
+    await members.create(db, {
+      displayName: "Robin",
+      slug: "robin",
+      email: "robin@example.com",
+      createdAt: Date.now(),
+    });
+
+    expect(await members.count(db)).toBe(1);
+  });
+
+  describe("createIfEmpty", () => {
+    it("creates an admin/active member with a normalized email when the table is empty", async () => {
+      const created = await members.createIfEmpty(db, {
+        displayName: "Root Admin",
+        slug: "root-admin",
+        email: "  Admin@Example.COM  ",
+        createdAt: 1_000,
+        emailVerifiedAt: 1_000,
+      });
+
+      expect(created).toBeDefined();
+      expect(created?.role).toBe("admin");
+      expect(created?.status).toBe("active");
+      expect(created?.email).toBe("admin@example.com");
+    });
+
+    it("refuses when a member already exists", async () => {
+      await members.create(db, {
+        displayName: "Existing",
+        slug: "existing",
+        email: "existing@example.com",
+        createdAt: 1_000,
+      });
+
+      const second = await members.createIfEmpty(db, {
+        displayName: "Root Admin",
+        slug: "root-admin",
+        email: "admin@example.com",
+        createdAt: 2_000,
+      });
+
+      expect(second).toBeUndefined();
+      expect(await members.count(db)).toBe(1);
+    });
+  });
 });

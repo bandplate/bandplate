@@ -1,5 +1,5 @@
 import { uuidv7 } from "@bandlib/core";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { members } from "../schema/sqlite/index.js";
 
@@ -61,4 +61,45 @@ export async function list(db: Db): Promise<Member[]> {
 
 export async function setStatus(db: Db, id: string, status: MemberStatus): Promise<void> {
   await db.update(members).set({ status }).where(eq(members.id, id));
+}
+
+export async function setRole(db: Db, id: string, role: MemberRole): Promise<void> {
+  await db.update(members).set({ role }).where(eq(members.id, id));
+}
+
+export async function count(db: Db): Promise<number> {
+  const [row] = await db.select({ count: sql<number>`count(*)` }).from(members);
+  return row?.count ?? 0;
+}
+
+export interface CreateIfEmptyInput {
+  displayName: string;
+  slug: string;
+  email: string;
+  createdAt: number;
+  emailVerifiedAt?: number | null;
+}
+
+/**
+ * Bootstrap-only guarded insert: creates the very first member (as
+ * `admin`/`active`) iff the table is currently empty, via one
+ * `INSERT ... SELECT ... WHERE NOT EXISTS` statement so two concurrent
+ * bootstrap requests can't race each other into creating two admins.
+ * Returns the created row, or `undefined` if a member already existed
+ * (bootstrap already happened) — the id is generated up front and the
+ * guarded insert is followed by a plain read-back rather than trying to
+ * type the driver's raw run() result (which the shared `Db` interface
+ * types as `unknown` by design; see `client.ts`).
+ */
+export async function createIfEmpty(
+  db: Db,
+  input: CreateIfEmptyInput,
+): Promise<Member | undefined> {
+  const id = uuidv7();
+  await db.run(sql`
+    insert into members (id, display_name, slug, email, role, status, created_at, email_verified_at)
+    select ${id}, ${input.displayName}, ${input.slug}, ${normalizeEmail(input.email)}, 'admin', 'active', ${input.createdAt}, ${input.emailVerifiedAt ?? null}
+    where not exists (select 1 from members)
+  `);
+  return getById(db, id);
 }

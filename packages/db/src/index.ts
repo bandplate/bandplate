@@ -11,3 +11,6 @@ export * as takesRepo from "./repos/takes.js";
 export * as assetsRepo from "./repos/assets.js";
 export * as votesRepo from "./repos/votes.js";
 export * as favoritesRepo from "./repos/favorites.js";
+export * as loginTokensRepo from "./repos/login-tokens.js";
+export * as authSessionsRepo from "./repos/auth-sessions.js";
+export * as serviceTokensRepo from "./repos/service-tokens.js";

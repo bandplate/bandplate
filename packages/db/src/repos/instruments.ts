@@ -47,3 +47,22 @@ export async function list(db: Db, options: ListInstrumentsOptions = {}): Promis
 export async function archive(db: Db, id: string, archivedAt: number): Promise<void> {
   await db.update(instruments).set({ archivedAt }).where(eq(instruments.id, id));
 }
+
+export interface UpdateInstrumentInput {
+  label?: string;
+  sortOrder?: number;
+  /** `null` unarchives; a number archives at that timestamp. */
+  archivedAt?: number | null;
+}
+
+export async function update(db: Db, id: string, input: UpdateInstrumentInput): Promise<void> {
+  if (Object.keys(input).length === 0) {
+    return;
+  }
+  await db.update(instruments).set(input).where(eq(instruments.id, id));
+}
+
+export async function getById(db: Db, id: string): Promise<Instrument | undefined> {
+  const [row] = await db.select().from(instruments).where(eq(instruments.id, id)).limit(1);
+  return row;
+}

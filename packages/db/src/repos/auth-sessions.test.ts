@@ -1,0 +1,130 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import type { Db } from "../client.js";
+import { createTestDb } from "../testing/create-test-db.js";
+import * as authSessions from "./auth-sessions.js";
+import * as members from "./members.js";
+
+describe("auth-sessions repo", () => {
+  let db: Db;
+  let memberId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const member = await members.create(db, {
+      displayName: "Alex",
+      slug: "alex",
+      email: "alex@example.com",
+      status: "invited",
+      createdAt: 1_000,
+    });
+    memberId = member.id;
+  });
+
+  it("create stores a session not revoked", async () => {
+    const session = await authSessions.create(db, {
+      memberId,
+      tokenHash: "hash-1",
+      createdAt: 1_000,
+      expiresAt: 2_000,
+    });
+    expect(session.revokedAt).toBeNull();
+    expect(session.lastSeenAt).toBe(1_000);
+  });
+
+  it("createFromLogin without activation leaves the member untouched", async () => {
+    await authSessions.createFromLogin(db, {
+      memberId,
+      tokenHash: "hash-1",
+      createdAt: 1_000,
+      expiresAt: 2_000,
+    });
+
+    const member = await members.getById(db, memberId);
+    expect(member?.status).toBe("invited");
+    expect(member?.emailVerifiedAt).toBeNull();
+  });
+
+  it("createFromLogin with activation flips the member to active in the same write", async () => {
+    await authSessions.createFromLogin(db, {
+      memberId,
+      tokenHash: "hash-1",
+      createdAt: 1_000,
+      expiresAt: 2_000,
+      activateMemberAt: 1_234,
+    });
+
+    const member = await members.getById(db, memberId);
+    const session = await authSessions.getByHash(db, "hash-1");
+
+    expect(member?.status).toBe("active");
+    expect(member?.emailVerifiedAt).toBe(1_234);
+    expect(session).not.toBeUndefined();
+  });
+
+  it("touch extends lastSeenAt and expiresAt", async () => {
+    const session = await authSessions.create(db, {
+      memberId,
+      tokenHash: "hash-1",
+      createdAt: 1_000,
+      expiresAt: 2_000,
+    });
+
+    await authSessions.touch(db, session.id, { lastSeenAt: 5_000, expiresAt: 9_000 });
+    const refreshed = await authSessions.getByHash(db, "hash-1");
+
+    expect(refreshed?.lastSeenAt).toBe(5_000);
+    expect(refreshed?.expiresAt).toBe(9_000);
+  });
+
+  it("revoke sets revokedAt", async () => {
+    const session = await authSessions.create(db, {
+      memberId,
+      tokenHash: "hash-1",
+      createdAt: 1_000,
+      expiresAt: 2_000,
+    });
+
+    await authSessions.revoke(db, session.id, 3_000);
+    const revoked = await authSessions.getByHash(db, "hash-1");
+
+    expect(revoked?.revokedAt).toBe(3_000);
+  });
+
+  it("revokeAllForMember revokes every active session for that member only", async () => {
+    const other = await members.create(db, {
+      displayName: "Sam",
+      slug: "sam",
+      email: "sam@example.com",
+      createdAt: 1_000,
+    });
+
+    await authSessions.create(db, {
+      memberId,
+      tokenHash: "hash-a",
+      createdAt: 1_000,
+      expiresAt: 2_000,
+    });
+    await authSessions.create(db, {
+      memberId,
+      tokenHash: "hash-b",
+      createdAt: 1_000,
+      expiresAt: 2_000,
+    });
+    await authSessions.create(db, {
+      memberId: other.id,
+      tokenHash: "hash-c",
+      createdAt: 1_000,
+      expiresAt: 2_000,
+    });
+
+    await authSessions.revokeAllForMember(db, memberId, 5_000);
+
+    const a = await authSessions.getByHash(db, "hash-a");
+    const b = await authSessions.getByHash(db, "hash-b");
+    const c = await authSessions.getByHash(db, "hash-c");
+
+    expect(a?.revokedAt).toBe(5_000);
+    expect(b?.revokedAt).toBe(5_000);
+    expect(c?.revokedAt).toBeNull();
+  });
+});

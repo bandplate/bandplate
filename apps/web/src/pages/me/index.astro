@@ -1,27 +1,166 @@
 ---
-// Same reasoning as /search/index.astro: a real placeholder page rather
-// than a nav item with nowhere to go. Favorites/votes/profile land in a
-// later increment.
+// The signed-in member's own page: name, sessions (sign out of THIS one —
+// reusing the existing `POST /logout`, not a new endpoint), favorites, and
+// votes so far. Replaces Task 5's placeholder.
+//
+// No "their instruments" field — see server/pages/me.ts's header comment:
+// there is no member<->instrument relation anywhere in the schema, so this
+// is a gap between the brief and the data model, not something to paper
+// over with fabricated data.
+import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../server/app.js";
+import { SESSION_COOKIE_NAME } from "../../server/cookies.js";
+import { formatTimestamp } from "../../server/format.js";
+import { getMeData } from "../../server/pages/me.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
   return Astro.redirect("/login");
 }
+
+const appDeps = await getAppDeps();
+const cookieValue = Astro.cookies.get(SESSION_COOKIE_NAME)?.value;
+const data = await getMeData(appDeps.db, principal.memberId, cookieValue);
+if (!data) {
+  return new Response("Not found.", { status: 404 });
+}
+
+const { member, sessions, favorites, votes } = data;
+const now = appDeps.clock.now();
+
+function sessionStatus(session: (typeof sessions)[number]): "active" | "revoked" | "expired" {
+  if (session.revokedAt !== null) {
+    return "revoked";
+  }
+  if (session.expiresAt <= now) {
+    return "expired";
+  }
+  return "active";
+}
+
+const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
 ---
 
 <AppLayout title="Me" principal={principal} current="me">
   <div class="bl-stack">
     <h1 class="bl-page-title">Me</h1>
-    <div class="bl-empty-state">
-      <p>Your favorites and votes will live here soon.</p>
-    </div>
-    {principal.role === "admin" && (
-      <p>
-        <a href="/admin" class="bl-btn bl-btn-secondary">
-          Go to admin
-        </a>
+
+    <section class="bl-card">
+      <h2 class="bl-section-title bl-m0">{member.displayName}</h2>
+      <p class="bl-field-hint bl-m0">
+        {member.email}
+        <span class={`bl-badge ${member.role === "admin" ? "bl-badge-admin" : ""}`}>
+          {member.role}
+        </span>
       </p>
-    )}
+      {member.role === "admin" && (
+        <p>
+          <a href="/admin" class="bl-btn bl-btn-secondary bl-btn-sm">
+            Go to admin
+          </a>
+        </p>
+      )}
+    </section>
+
+    <section>
+      <h2 class="bl-section-title">Sessions</h2>
+      <ul class="bl-session-list">
+        {
+          sessions.map((session) => {
+            const status = sessionStatus(session);
+            return (
+              <li class="bl-session-row">
+                <div class="bl-session-row-main">
+                  <p class="bl-mono bl-m0">{session.userAgent ?? "Unknown device"}</p>
+                  <p class="bl-field-hint bl-m0">
+                    Signed in {formatTimestamp(session.createdAt)} — last active{" "}
+                    {formatTimestamp(session.lastSeenAt)}
+                    {session.isCurrent && " — this device"}
+                  </p>
+                  <span class={`bl-badge ${status === "active" ? "bl-badge-active" : ""}`}>
+                    {status}
+                  </span>
+                </div>
+                {session.isCurrent && (
+                  <form method="post" action="/logout">
+                    <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">
+                      Sign out
+                    </button>
+                  </form>
+                )}
+              </li>
+            );
+          })
+        }
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="bl-section-title">Favorites</h2>
+      {
+        !hasFavorites ? (
+          <div class="bl-empty-state">
+            <p>Nothing pinned yet — favorite a song or a take to see it here.</p>
+          </div>
+        ) : (
+          <div class="bl-stack bl-stack-tight">
+            {favorites.songs.length > 0 && (
+              <div class="bl-song-list">
+                {favorites.songs.map((song) => (
+                  <a href={`/songs/${song.slug}`} class="bl-song-row">
+                    <div class="bl-song-row-main">
+                      <p class="bl-song-title bl-m0">{song.title}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+            {favorites.takes.length > 0 && (
+              <div class="bl-take-list">
+                {favorites.takes.map((take) => (
+                  <TakeRow
+                    take={take}
+                    instruments={take.instruments}
+                    context={{ kind: "full", song: take.song, event: take.event }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      }
+    </section>
+
+    <section>
+      <h2 class="bl-section-title">Votes so far</h2>
+      {
+        votes.length === 0 ? (
+          <div class="bl-empty-state">
+            <p>You haven't voted on anything yet — check "Needs your vote" on the home page.</p>
+          </div>
+        ) : (
+          <ul class="bl-vote-list">
+            {votes.map(({ vote, take }) => (
+              <li class="bl-vote-row">
+                <div class="bl-vote-row-main">
+                  {take ? (
+                    <a href={`/takes/${take.id}`} class="bl-vote-row-song">
+                      {take.song?.title ?? "Untitled take"}
+                    </a>
+                  ) : (
+                    <span class="bl-vote-row-song">A take that's since been removed</span>
+                  )}
+                  {vote.comment && <p class="bl-field-hint bl-m0">&ldquo;{vote.comment}&rdquo;</p>}
+                </div>
+                <span class={`bl-badge ${vote.keeper ? "bl-badge-keeper" : ""}`}>
+                  {vote.keeper ? "keeper" : "not a keeper"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </section>
   </div>
 </AppLayout>

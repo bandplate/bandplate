@@ -39,6 +39,44 @@ describe("assertEveryRouteIsGuarded", () => {
 
     expect(() => assertEveryRouteIsGuarded(app, router)).toThrow(/ghost/);
   });
+
+  it("throws when a route is registered via app.all(...), bypassing the router", () => {
+    const app = new Hono<AppEnv>();
+    const router = new GuardedRouter(app);
+    router.get("/a", publicRoute(), (c) => c.json({}));
+    // `app.all` registers under Hono's "ALL" method, same as `app.use`. A
+    // filter that only recognizes get/post/put/patch/delete discards this
+    // route entirely instead of flagging it — this is the exact bypass a
+    // prior version of `assertEveryRouteIsGuarded` had: it filtered the
+    // live route table down to known methods before comparing, so an
+    // "ALL"-method route never appeared in the comparison at all and
+    // sailed through unguarded and publicly reachable.
+    app.all("/backdoor", (c) => c.json({ leaked: true }));
+
+    expect(() => assertEveryRouteIsGuarded(app, router)).toThrow(/backdoor/);
+  });
+
+  it("throws when middleware is registered via app.use(...) directly, bypassing GuardedRouter.use", () => {
+    const app = new Hono<AppEnv>();
+    const router = new GuardedRouter(app);
+    router.get("/a", publicRoute(), (c) => c.json({}));
+    app.use("/secret", async (c, next) => {
+      await next();
+    });
+
+    expect(() => assertEveryRouteIsGuarded(app, router)).toThrow(/secret/);
+  });
+
+  it("passes when middleware is registered via GuardedRouter.use", () => {
+    const app = new Hono<AppEnv>();
+    const router = new GuardedRouter(app);
+    router.get("/a", publicRoute(), (c) => c.json({}));
+    router.use("*", async (c, next) => {
+      await next();
+    });
+
+    expect(() => assertEveryRouteIsGuarded(app, router)).not.toThrow();
+  });
 });
 
 describe("route coverage on the real app", () => {

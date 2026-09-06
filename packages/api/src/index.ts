@@ -53,8 +53,13 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
   // Middleware order matters: principal resolution first (origin check and
   // scope checks both need `c.get("principal")`), then the origin check,
   // then each route's own `requireScopes`/`publicRoute` declaration.
-  app.use("*", principalMiddleware(auth));
-  app.use("*", originCheckMiddleware(deps.config.appOrigin));
+  //
+  // Registered via `router.use`, not `app.use` — that's what lets
+  // `assertEveryRouteIsGuarded` tell these two legitimate global
+  // middleware registrations apart from a stray/malicious `app.use(...)`
+  // or `app.all(...)` reaching the live Hono instance some other way.
+  router.use("*", principalMiddleware(auth));
+  router.use("*", originCheckMiddleware(deps.config.appOrigin));
 
   router.get("/health", publicRoute(), (c) => c.json({ ok: true }));
 

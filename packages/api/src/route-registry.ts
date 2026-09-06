@@ -20,7 +20,8 @@ import { hasAllScopes } from "@bandlib/core";
 // construction, in every environment, before it can ever serve a request.
 // The coverage test in `route-registry.test.ts` exercises the same function
 // directly so a regression here is caught without needing to boot the app.
-import type { Context, Hono } from "hono";
+import type { Context, Hono, MiddlewareHandler } from "hono";
+import { mergePath } from "hono/utils/url";
 import type { AppEnv } from "./types.js";
 
 export type RouteGuard = { public: true } | { scopes: readonly Scope[] };
@@ -41,6 +42,11 @@ export interface RegisteredRoute {
   guard: RouteGuard;
 }
 
+/** A recorded `app.use(...)` registration — see `GuardedRouter.use`. */
+export interface RegisteredMiddleware {
+  path: string;
+}
+
 type RouteHandler = (c: Context<AppEnv>) => Response | Promise<Response>;
 
 const METHODS = ["get", "post", "put", "patch", "delete"] as const;
@@ -48,8 +54,35 @@ type Method = (typeof METHODS)[number];
 
 export class GuardedRouter {
   readonly registry: RegisteredRoute[] = [];
+  /**
+   * Global middleware registered via `use()` below — the only sanctioned
+   * way to call `app.use`. `assertEveryRouteIsGuarded` treats any live
+   * route whose method isn't one of `METHODS` (i.e. Hono's `"ALL"`, which
+   * both `app.use` and `app.all` register under) as a violation unless it
+   * has a matching entry here. This is deliberately narrow — it does not
+   * exempt `app.use`/`app.all` in general, only the specific registrations
+   * that went through this method.
+   */
+  readonly middlewareRegistry: RegisteredMiddleware[] = [];
 
   constructor(private readonly app: Hono<AppEnv>) {}
+
+  /**
+   * The only sanctioned way to register global middleware. Anything with
+   * method `"ALL"` on the live Hono app that isn't recorded here — a stray
+   * `app.use(...)` or, more importantly, an `app.all(...)` route someone
+   * reaches for instead of `router.get`/`router.post`/etc. — fails
+   * `assertEveryRouteIsGuarded`, and with it, `createApp()` itself.
+   */
+  use(path: string, handler: MiddlewareHandler<AppEnv>): void {
+    // Normalized with the same `mergePath` Hono applies internally
+    // (against its default `basePath` of `"/"`) so e.g. `"*"` is recorded
+    // as `"/*"` here too, matching what shows up in `app.routes` — without
+    // this, a correct `router.use("*", ...)` would still fail the
+    // coverage check on a path mismatch alone.
+    this.middlewareRegistry.push({ path: mergePath("/", path) });
+    this.app.use(path, handler);
+  }
 
   private register(method: Method, path: string, guard: RouteGuard, handler: RouteHandler): void {
     this.registry.push({ method: method.toUpperCase(), path, guard });
@@ -88,41 +121,66 @@ export class GuardedRouter {
 
 /**
  * Cross-checks the live Hono route table against what `GuardedRouter`
- * recorded. Anything present in one but not the other means a route was
- * registered outside the guard mechanism (or the guard mechanism silently
- * failed to register what it thinks it did) — either way, fail loudly
- * rather than serve it.
+ * recorded — in both directions, and for both kinds of registration it
+ * supports (scoped/public routes, and global middleware).
+ *
+ * Critically, this does NOT filter the live route table down to
+ * `METHODS` first: any route registered with a method outside that list
+ * (in practice, Hono's `"ALL"`, which both `app.use(...)` and
+ * `app.all(...)` register under) is treated as a route needing a matching
+ * declaration, exactly like a GET/POST/etc. route. `app.all("/backdoor",
+ * ...)` reaching the live Hono instance with no corresponding
+ * `middlewareRegistry`/`registry` entry is exactly the bypass this
+ * function exists to catch — silently discarding "ALL" routes from the
+ * check (as an earlier version of this function did, by filtering to
+ * `METHODS` up front) would let it through unguarded.
  */
 export function assertEveryRouteIsGuarded(app: Hono<AppEnv>, router: GuardedRouter): void {
+  const isKnownMethod = (method: string) =>
+    (METHODS as readonly string[]).includes(method.toLowerCase());
+
   const actualRoutes = app.routes
-    .filter((r) => (METHODS as readonly string[]).includes(r.method.toLowerCase()))
+    .filter((r) => isKnownMethod(r.method))
     .map((r) => `${r.method.toUpperCase()} ${r.path}`);
   const declaredRoutes = router.registry.map((r) => `${r.method} ${r.path}`);
 
-  const actualCounts = countBy(actualRoutes);
-  const declaredCounts = countBy(declaredRoutes);
+  const actualMiddleware = app.routes
+    .filter((r) => !isKnownMethod(r.method))
+    .map((r) => `${r.method.toUpperCase()} ${r.path}`);
+  const declaredMiddleware = router.middlewareRegistry.map((m) => `ALL ${m.path}`);
+
+  const problems: string[] = [
+    ...diff(actualRoutes, declaredRoutes, "GuardedRouter route"),
+    ...diff(actualMiddleware, declaredMiddleware, "GuardedRouter.use middleware"),
+  ];
+
+  if (problems.length > 0) {
+    throw new Error(
+      `Route(s) with no matching GuardedRouter declaration — every route must be registered via GuardedRouter with requireScopes(...)/publicRoute(), and every global middleware via GuardedRouter.use(...): ${problems.join("; ")}`,
+    );
+  }
+}
+
+function diff(actual: string[], declared: string[], declarationKind: string): string[] {
+  const actualCounts = countBy(actual);
+  const declaredCounts = countBy(declared);
 
   const problems: string[] = [];
   for (const [route, count] of actualCounts) {
     if (declaredCounts.get(route) !== count) {
       problems.push(
-        `${route} (registered on the Hono app ${count}x, declared via GuardedRouter ${declaredCounts.get(route) ?? 0}x)`,
+        `${route} (registered on the Hono app ${count}x, declared via ${declarationKind} ${declaredCounts.get(route) ?? 0}x)`,
       );
     }
   }
   for (const [route, count] of declaredCounts) {
     if (!actualCounts.has(route)) {
       problems.push(
-        `${route} (declared via GuardedRouter but not present on the Hono app — ${count}x)`,
+        `${route} (declared via ${declarationKind} but not present on the Hono app — ${count}x)`,
       );
     }
   }
-
-  if (problems.length > 0) {
-    throw new Error(
-      `Route(s) with no matching GuardedRouter declaration — every route must be registered via GuardedRouter with requireScopes(...) or publicRoute(): ${problems.join("; ")}`,
-    );
-  }
+  return problems;
 }
 
 function countBy(items: string[]): Map<string, number> {

@@ -1,0 +1,110 @@
+---
+// Bootstraps the first admin. 404s once any member exists (same rule as
+// the JSON API's `GET /setup`) so this page can't be used to re-run setup
+// on a live deployment. On success the mail self-test result is rendered
+// directly here (not after a redirect) — a broken mailer needs to be
+// discovered by the operator running setup, not by the first member who
+// can't get a login link.
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Field from "@bandlib/ui/components/Field.astro";
+import Layout from "../layouts/Layout.astro";
+import { getAppDeps, getAuthDeps } from "../server/app.js";
+import { setSessionCookie } from "../server/cookies.js";
+import { isSameOrigin } from "../server/csrf.js";
+import {
+  type BootstrapPostResult,
+  handleSetupPost,
+  isBootstrapAvailable,
+} from "../server/pages/setup.js";
+
+const [appDeps, authDeps] = await Promise.all([getAppDeps(), getAuthDeps()]);
+
+if (!(await isBootstrapAvailable(appDeps.db))) {
+  return new Response("Not found.", { status: 404 });
+}
+
+let result: BootstrapPostResult | undefined;
+let originError = false;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    originError = true;
+  } else {
+    const formData = await Astro.request.formData();
+    result = await handleSetupPost(authDeps, formData);
+    if (result.kind === "ok") {
+      setSessionCookie(Astro.cookies, result.sessionToken, {
+        cookieSecure: appDeps.config.cookieSecure,
+      });
+    }
+  }
+}
+
+const fieldErrors = result?.kind === "invalid" ? result.errors : {};
+---
+
+<Layout title="Set up bandlib">
+  <main id="main" class="bl-container" style="max-width: 30rem; margin-top: 3rem;">
+    <h1 class="font-bl-display" style="font-size: 2rem;">Set up bandlib</h1>
+
+    {originError && (
+      <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
+    )}
+
+    {result?.kind === "ok" ? (
+      <>
+        <Banner kind="success" title="You're signed in as the first admin">
+          bandlib is ready to use.
+        </Banner>
+        {result.testEmailSent ? (
+          <Banner kind="success" title="Test email sent">
+            The mailer works — a confirmation email went out to your address.
+          </Banner>
+        ) : (
+          <Banner kind="error" title="Test email failed to send">
+            Members won't be able to sign in by email until this is fixed — check your SMTP
+            configuration. You're still signed in, so you can fix it and continue.
+          </Banner>
+        )}
+        <p><a href="/admin" class="bl-btn bl-btn-primary">Go to admin</a></p>
+      </>
+    ) : (
+      <form method="post" novalidate>
+        <p style="margin-top:0;">
+          Create the first admin account. You'll need the bootstrap token from your server's
+          environment configuration.
+        </p>
+        {result?.kind === "bad_token" && (
+          <Banner kind="error">That bootstrap token isn't right. Check your server configuration.</Banner>
+        )}
+        {result?.kind === "already_bootstrapped" && (
+          <Banner kind="error">bandlib is already set up. Sign in instead.</Banner>
+        )}
+        <Field
+          label="Bootstrap token"
+          name="bootstrapToken"
+          type="password"
+          required
+          autocomplete="off"
+          error={fieldErrors.bootstrapToken}
+        />
+        <Field
+          label="Your name"
+          name="displayName"
+          required
+          autocomplete="name"
+          error={fieldErrors.displayName}
+        />
+        <Field
+          label="Your email address"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          error={fieldErrors.email}
+        />
+        <button type="submit" class="bl-btn bl-btn-primary">Create admin account</button>
+      </form>
+    )}
+  </main>
+</Layout>

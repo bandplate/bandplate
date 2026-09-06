@@ -1,0 +1,24 @@
+---
+// POST-only sign-out. A direct GET (e.g. a bookmarked URL) just bounces
+// home rather than doing anything.
+import { revokeSession } from "@bandlib/core";
+import { getAppDeps, getAuthDeps } from "../server/app.js";
+import { SESSION_COOKIE_NAME, clearSessionCookie } from "../server/cookies.js";
+import { isSameOrigin } from "../server/csrf.js";
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect("/");
+}
+
+const [appDeps, authDeps] = await Promise.all([getAppDeps(), getAuthDeps()]);
+
+if (isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+  const cookie = Astro.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (cookie) {
+    await revokeSession(authDeps, cookie);
+  }
+  clearSessionCookie(Astro.cookies, { cookieSecure: appDeps.config.cookieSecure });
+}
+
+return Astro.redirect("/login");
+---

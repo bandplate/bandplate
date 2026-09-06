@@ -1,0 +1,72 @@
+---
+// GET renders the form. POST requests a login link — always the same
+// confirmation regardless of whether the address is registered (see
+// `handleLoginPost`/`requestLogin`), so this page has no branch that could
+// leak membership.
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Field from "@bandlib/ui/components/Field.astro";
+import Layout from "../../layouts/Layout.astro";
+import { getAppDeps, getAuthDeps } from "../../server/app.js";
+import { isSameOrigin } from "../../server/csrf.js";
+import { type LoginPostResult, handleLoginPost } from "../../server/pages/login.js";
+
+let result: LoginPostResult | undefined;
+let originError = false;
+
+if (Astro.request.method === "POST") {
+  const [appDeps, authDeps] = await Promise.all([getAppDeps(), getAuthDeps()]);
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    originError = true;
+  } else {
+    const formData = await Astro.request.formData();
+    result = await handleLoginPost(
+      {
+        auth: authDeps,
+        rateLimiter: appDeps.rateLimiter,
+        appOrigin: appDeps.config.appOrigin,
+        trustedProxyDepth: appDeps.config.trustedProxyDepth,
+      },
+      formData,
+      Astro.request.headers,
+    );
+  }
+}
+---
+
+<Layout title="Sign in">
+  <main id="main" class="bl-container" style="max-width: 26rem; margin-top: 3.5rem;">
+    <h1 class="font-bl-display" style="font-size: 2.25rem; margin: 0 0 1.5rem;">bandlib</h1>
+
+    {originError && (
+      <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
+    )}
+
+    {result?.kind === "sent" && (
+      <Banner kind="success" title="Check your email">
+        If that address is registered, a link is on its way. It's good for 15 minutes.
+      </Banner>
+    )}
+
+    {result?.kind === "rate_limited" && (
+      <Banner kind="error">
+        Too many login requests from here. Try again in about {result.retryAfterSeconds} seconds.
+      </Banner>
+    )}
+
+    {(!result || result.kind === "invalid") && (
+      <form method="post" novalidate>
+        <p style="margin-top:0;">Enter your email and we'll send you a link to sign in.</p>
+        <Field
+          label="Email address"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          inputmode="email"
+          error={result?.kind === "invalid" ? result.error : undefined}
+        />
+        <button type="submit" class="bl-btn bl-btn-primary">Send me a link</button>
+      </form>
+    )}
+  </main>
+</Layout>

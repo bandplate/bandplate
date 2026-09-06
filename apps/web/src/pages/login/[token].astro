@@ -1,0 +1,76 @@
+---
+// GET renders "Sign in as {name}" and mutates nothing at all — no call
+// here reaches `consumeLoginToken`. This is load-bearing, not stylistic:
+// Gmail, Outlook and AV scanners prefetch links to build previews, and a
+// consuming GET would break logins non-deterministically depending on the
+// member's mail provider. POST is the only path that consumes the token.
+//
+// `Cache-Control: no-store` and `<meta name="robots" content="noindex">`
+// (via `Layout`'s `noindex` prop) keep any intermediate cache or crawler
+// from ever holding onto this URL, since holding it is equivalent to
+// holding a (time-limited, single-use) credential.
+import Banner from "@bandlib/ui/components/Banner.astro";
+import Layout from "../../layouts/Layout.astro";
+import { getAppDeps, getAuthDeps } from "../../server/app.js";
+import { setSessionCookie } from "../../server/cookies.js";
+import { isSameOrigin } from "../../server/csrf.js";
+import { type LoginTokenView, consume, peekView } from "../../server/pages/login-token.js";
+
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const token = Astro.params.token;
+if (!token) {
+  return Astro.redirect("/login");
+}
+
+const [appDeps, authDeps] = await Promise.all([getAppDeps(), getAuthDeps()]);
+
+let view: LoginTokenView;
+let originError = false;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    originError = true;
+    view = await peekView(authDeps, token);
+  } else {
+    const result = await consume(authDeps, token, Astro.request.headers.get("user-agent"));
+    if (result.ok) {
+      setSessionCookie(Astro.cookies, result.sessionToken, {
+        cookieSecure: appDeps.config.cookieSecure,
+      });
+      return Astro.redirect("/");
+    }
+    view = { kind: "invalid" };
+  }
+} else {
+  view = await peekView(authDeps, token);
+}
+---
+
+<Layout title="Sign in" noindex>
+  <main id="main" class="bl-container" style="max-width: 26rem; margin-top: 3.5rem;">
+    <h1 class="font-bl-display" style="font-size: 2.25rem; margin: 0 0 1.5rem;">bandlib</h1>
+
+    {originError && (
+      <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
+    )}
+
+    {view.kind === "valid" ? (
+      <>
+        <p>
+          Sign in as <strong>{view.displayName ?? "yourself"}</strong>.
+        </p>
+        <form method="post">
+          <button type="submit" class="bl-btn bl-btn-primary">Sign in</button>
+        </form>
+      </>
+    ) : (
+      <Banner kind="info" title="This link has expired or was already used">
+        Login links are single-use and expire after 15 minutes.
+      </Banner>
+    )}
+    {view.kind !== "valid" && (
+      <p><a href="/login" class="bl-btn bl-btn-secondary">Request a new link</a></p>
+    )}
+  </main>
+</Layout>

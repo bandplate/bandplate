@@ -71,10 +71,10 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
   {formError && <Banner kind="error">{formError}</Banner>}
 
   <section class="bl-card">
-    <h2 style="margin-top:0;">Add a member</h2>
+    <h2 class="bl-section-title">Add a member</h2>
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 1.25rem;">
+      <div class="bl-form-grid bl-form-grid--wide">
         <Field
           label="Name"
           name="displayName"
@@ -102,7 +102,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
     ) : (
       <div class="bl-table-wrap">
         <table class="bl-table">
-          <caption class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">
+          <caption class="sr-only">
             Band members
           </caption>
           <thead>
@@ -140,22 +140,22 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                       // means there's no dead-end control to click in the
                       // first place, and no way to lock yourself out via
                       // this row at all.
-                      <p class="bl-field-hint" style="margin:0;">This is you.</p>
+                      <p class="bl-field-hint bl-m0">This is you.</p>
                     ) : (
-                      <form method="post" style="display:flex; gap:0.375rem; flex-wrap:wrap; align-items:center;">
+                      <form method="post" class="bl-inline-form">
                         <input type="hidden" name="intent" value="update" />
                         <input type="hidden" name="memberId" value={member.id} />
-                        <label class="sr-only" for={`role-${member.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                        <label class="sr-only" for={`role-${member.id}`}>
                           Role for {member.displayName}
                         </label>
-                        <select class="bl-select" id={`role-${member.id}`} name="role" style="padding:0.25rem 0.5rem;">
+                        <select class="bl-select bl-input-compact" id={`role-${member.id}`} name="role">
                           <option value="member" selected={member.role === "member"}>member</option>
                           <option value="admin" selected={member.role === "admin"}>admin</option>
                         </select>
-                        <label class="sr-only" for={`status-${member.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                        <label class="sr-only" for={`status-${member.id}`}>
                           Status for {member.displayName}
                         </label>
-                        <select class="bl-select" id={`status-${member.id}`} name="status" style="padding:0.25rem 0.5rem;">
+                        <select class="bl-select bl-input-compact" id={`status-${member.id}`} name="status">
                           <option value="invited" selected={member.status === "invited"}>invited</option>
                           <option value="active" selected={member.status === "active"}>active</option>
                           <option value="disabled" selected={member.status === "disabled"}>disabled</option>

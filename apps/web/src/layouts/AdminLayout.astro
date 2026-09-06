@@ -21,9 +21,9 @@ const navItems = [
 
 <Layout title={`Admin — ${title}`}>
   <div class="bl-container bl-stack">
-    <header class="bl-stack" style="gap: 0.75rem;">
-      <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap: 0.75rem;">
-        <h1 class="font-bl-display" style="font-size: 1.75rem; margin: 0;">bandlib admin</h1>
+    <header class="bl-stack bl-stack-tight">
+      <div class="bl-header-row">
+        <h1 class="bl-admin-title">bandlib admin</h1>
         <form method="post" action="/logout">
           <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">
             Sign out ({principal.role})
@@ -31,7 +31,7 @@ const navItems = [
         </form>
       </div>
       <nav aria-label="Admin sections">
-        <ul style="display:flex; flex-wrap:wrap; gap: 0.5rem; list-style:none; padding:0; margin:0;">
+        <ul class="bl-inline-nav-list">
           {
             navItems.map((item) => (
               <li>

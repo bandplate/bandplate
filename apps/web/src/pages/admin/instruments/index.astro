@@ -59,10 +59,10 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
   {formError && <Banner kind="error">{formError}</Banner>}
 
   <section class="bl-card">
-    <h2 style="margin-top:0;">Add an instrument</h2>
+    <h2 class="bl-section-title">Add an instrument</h2>
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0 1.25rem;">
+      <div class="bl-form-grid">
         <Field
           label="Slug"
           name="slug"
@@ -106,29 +106,27 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
             {instruments.map((instrument) => (
               <tr>
                 <td data-label="Label">
-                  <form method="post" style="display:flex; gap:0.375rem; flex-wrap:wrap; align-items:center;">
+                  <form method="post" class="bl-inline-form">
                     <input type="hidden" name="intent" value="update" />
                     <input type="hidden" name="instrumentId" value={instrument.id} />
-                    <label class="sr-only" for={`label-${instrument.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                    <label class="sr-only" for={`label-${instrument.id}`}>
                       Label for {instrument.slug}
                     </label>
                     <input
-                      class="bl-input"
+                      class="bl-input bl-input-inline-label"
                       id={`label-${instrument.id}`}
                       name="label"
                       value={instrument.label}
-                      style="padding:0.25rem 0.5rem; max-width: 12rem;"
                     />
-                    <label class="sr-only" for={`order-${instrument.id}`} style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                    <label class="sr-only" for={`order-${instrument.id}`}>
                       Sort order for {instrument.slug}
                     </label>
                     <input
-                      class="bl-input"
+                      class="bl-input bl-input-inline-number"
                       id={`order-${instrument.id}`}
                       name="sortOrder"
                       type="number"
                       value={instrument.sortOrder}
-                      style="padding:0.25rem 0.5rem; max-width: 5rem;"
                     />
                     <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
                   </form>

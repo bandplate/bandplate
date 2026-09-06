@@ -48,8 +48,8 @@ if (Astro.request.method === "POST") {
 ---
 
 <Layout title="Sign in" noindex>
-  <main id="main" class="bl-container" style="max-width: 26rem; margin-top: 3.5rem;">
-    <h1 class="font-bl-display" style="font-size: 2.25rem; margin: 0 0 1.5rem;">bandlib</h1>
+  <main id="main" class="bl-container bl-auth-main">
+    <h1 class="bl-auth-title">bandlib</h1>
 
     {originError && (
       <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>

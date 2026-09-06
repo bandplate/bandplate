@@ -67,16 +67,16 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
 
   {created && (
     <Banner kind="success" title="Token created">
-      <p style="margin: 0 0 0.5rem;">
+      <p class="bl-mb-sm">
         <strong>Copy this secret now — it will not be shown again.</strong>
       </p>
-      <p class="bl-mono" style="word-break: break-all; margin: 0 0 0.5rem;">{created.rawToken}</p>
+      <p class="bl-mono bl-mb-sm">{created.rawToken}</p>
       <CopyButton client:load value={created.rawToken} label="Copy secret" />
     </Banner>
   )}
 
   <section class="bl-card">
-    <h2 style="margin-top:0;">Create a token</h2>
+    <h2 class="bl-section-title">Create a token</h2>
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
       <Field
@@ -127,7 +127,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
               <tr>
                 <td data-label="Label">
                   {token.label}
-                  {token.revokedAt && <span class="bl-badge" style="margin-left:0.5rem;">revoked</span>}
+                  {token.revokedAt && <span class="bl-badge bl-ml-sm">revoked</span>}
                 </td>
                 <td data-label="Scopes" class="bl-mono">{token.scopes.join(", ")}</td>
                 <td data-label="Created" class="bl-mono">{formatTimestamp(token.createdAt)}</td>
@@ -137,12 +137,12 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                     {!token.revokedAt && (
                       <>
                         <details>
-                          <summary class="bl-btn bl-btn-secondary bl-btn-sm" style="cursor:pointer;">Edit scopes</summary>
-                          <form method="post" style="margin-top: 0.75rem;">
+                          <summary class="bl-btn bl-btn-secondary bl-btn-sm bl-cursor-pointer">Edit scopes</summary>
+                          <form method="post" class="bl-mt-sm">
                             <input type="hidden" name="intent" value="update" />
                             <input type="hidden" name="tokenId" value={token.id} />
                             <fieldset class="bl-checkbox-group">
-                              <legend class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;">
+                              <legend class="sr-only">
                                 Scopes for {token.label}
                               </legend>
                               {SCOPES.map((scope) => (

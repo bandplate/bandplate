@@ -44,8 +44,8 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
 ---
 
 <Layout title="Set up bandlib">
-  <main id="main" class="bl-container" style="max-width: 30rem; margin-top: 3rem;">
-    <h1 class="font-bl-display" style="font-size: 2rem;">Set up bandlib</h1>
+  <main id="main" class="bl-container bl-auth-main">
+    <h1 class="bl-auth-title">Set up bandlib</h1>
 
     {originError && (
       <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
@@ -70,7 +70,7 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
       </>
     ) : (
       <form method="post" novalidate>
-        <p style="margin-top:0;">
+        <p class="bl-m0">
           Create the first admin account. You'll need the bootstrap token from your server's
           environment configuration.
         </p>

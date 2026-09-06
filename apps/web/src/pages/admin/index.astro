@@ -22,21 +22,21 @@ const activeTokens = tokens.filter((t) => t.revokedAt === null);
 ---
 
 <AdminLayout title="Overview" principal={principal} current="overview">
-  <div class="bl-stack" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem;">
-    <a href="/admin/members" class="bl-card" style="text-decoration:none; color:inherit;">
-      <p class="bl-field-hint" style="margin:0;">Members</p>
-      <p class="font-bl-display" style="font-size: 2.5rem; margin: 0.25rem 0;">{members.length}</p>
-      <p style="margin:0;">Manage the band roster, roles and status.</p>
+  <div class="bl-stat-grid">
+    <a href="/admin/members" class="bl-card bl-card-link">
+      <p class="bl-field-hint bl-m0">Members</p>
+      <p class="bl-stat-value">{members.length}</p>
+      <p class="bl-m0">Manage the band roster, roles and status.</p>
     </a>
-    <a href="/admin/instruments" class="bl-card" style="text-decoration:none; color:inherit;">
-      <p class="bl-field-hint" style="margin:0;">Instruments</p>
-      <p class="font-bl-display" style="font-size: 2.5rem; margin: 0.25rem 0;">{activeInstruments.length}</p>
-      <p style="margin:0;">{instruments.length - activeInstruments.length} archived.</p>
+    <a href="/admin/instruments" class="bl-card bl-card-link">
+      <p class="bl-field-hint bl-m0">Instruments</p>
+      <p class="bl-stat-value">{activeInstruments.length}</p>
+      <p class="bl-m0">{instruments.length - activeInstruments.length} archived.</p>
     </a>
-    <a href="/admin/tokens" class="bl-card" style="text-decoration:none; color:inherit;">
-      <p class="bl-field-hint" style="margin:0;">Service tokens</p>
-      <p class="font-bl-display" style="font-size: 2.5rem; margin: 0.25rem 0;">{activeTokens.length}</p>
-      <p style="margin:0;">{tokens.length - activeTokens.length} revoked.</p>
+    <a href="/admin/tokens" class="bl-card bl-card-link">
+      <p class="bl-field-hint bl-m0">Service tokens</p>
+      <p class="bl-stat-value">{activeTokens.length}</p>
+      <p class="bl-m0">{tokens.length - activeTokens.length} revoked.</p>
     </a>
   </div>
 </AdminLayout>

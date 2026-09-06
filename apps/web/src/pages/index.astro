@@ -1,0 +1,25 @@
+---
+import "@bandlib/ui/tokens/theme.css";
+
+const bandName = "ROOST";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{bandName} — bandlib</title>
+  </head>
+  <body class="bg-bl-bg text-bl-fg font-bl-body">
+    <main class="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
+      <h1 class="font-bl-display text-4xl">{bandName}</h1>
+      <p>Rehearsal recording archive — scaffold placeholder.</p>
+      <p class="text-bl-muted text-sm">
+        This page uses <code class="font-bl-mono">--bl-color-bg</code> /
+        <code class="font-bl-mono">--bl-color-fg</code> tokens. It should read
+        espresso ink on sand in light mode and sand ink on espresso in dark
+        mode — toggle your OS theme to check.
+      </p>
+    </main>
+  </body>
+</html>

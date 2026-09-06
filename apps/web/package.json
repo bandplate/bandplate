@@ -1,0 +1,27 @@
+{
+  "name": "@bandlib/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "astro": "^5.1.1",
+    "@astrojs/node": "^9.0.0",
+    "@astrojs/preact": "^4.0.1",
+    "preact": "^10.25.3",
+    "@tailwindcss/vite": "^4.0.0",
+    "tailwindcss": "^4.0.0",
+    "@bandlib/api": "workspace:*",
+    "@bandlib/core": "workspace:*",
+    "@bandlib/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.7.2"
+  }
+}

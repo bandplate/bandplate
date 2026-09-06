@@ -3,6 +3,7 @@ import type { Db } from "../client.js";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as assets from "./assets.js";
 import * as events from "./events.js";
+import * as instruments from "./instruments.js";
 import * as songs from "./songs.js";
 import * as takes from "./takes.js";
 
@@ -125,5 +126,49 @@ describe("assets slot unique index", () => {
     await expect(
       assets.createMany(db, [{ ...slot, storageKey: `${take.id}/b.opus` }]),
     ).rejects.toThrow();
+  });
+
+  it("rejects a duplicate stem slot (non-null instrumentId)", async () => {
+    const take = await seedTake(db);
+    const bassId = (await instruments.create(db, { slug: "bass", label: "Bass" })).id;
+    const slot = {
+      takeId: take.id,
+      kind: "stem" as const,
+      instrumentId: bassId,
+      tier: "lossy" as const,
+      format: "opus" as const,
+      contentType: "audio/opus",
+      bytes: 1000,
+      createdAt: Date.now(),
+    };
+
+    await assets.createMany(db, [{ ...slot, storageKey: `${take.id}/stems/bass-a.opus` }]);
+
+    await expect(
+      assets.createMany(db, [{ ...slot, storageKey: `${take.id}/stems/bass-b.opus` }]),
+    ).rejects.toThrow();
+  });
+
+  it("accepts two distinct stem slots on the same take (coalesce does not over-collapse)", async () => {
+    const take = await seedTake(db);
+    const bassId = (await instruments.create(db, { slug: "bass", label: "Bass" })).id;
+    const drumsId = (await instruments.create(db, { slug: "drums", label: "Drums" })).id;
+    const baseSlot = {
+      takeId: take.id,
+      kind: "stem" as const,
+      tier: "lossy" as const,
+      format: "opus" as const,
+      contentType: "audio/opus",
+      bytes: 1000,
+      createdAt: Date.now(),
+    };
+
+    const created = await assets.createMany(db, [
+      { ...baseSlot, instrumentId: bassId, storageKey: `${take.id}/stems/bass.opus` },
+      { ...baseSlot, instrumentId: drumsId, storageKey: `${take.id}/stems/drums.opus` },
+    ]);
+
+    expect(created).toHaveLength(2);
+    expect(created.map((a) => a.instrumentId).sort()).toEqual([bassId, drumsId].sort());
   });
 });

@@ -1,0 +1,27 @@
+---
+// Same reasoning as /search/index.astro: a real placeholder page rather
+// than a nav item with nowhere to go. Favorites/votes/profile land in a
+// later increment.
+import AppLayout from "../../layouts/AppLayout.astro";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+---
+
+<AppLayout title="Me" principal={principal} current="me">
+  <div class="bl-stack">
+    <h1 class="bl-page-title">Me</h1>
+    <div class="bl-empty-state">
+      <p>Your favorites and votes will live here soon.</p>
+    </div>
+    {principal.role === "admin" && (
+      <p>
+        <a href="/admin" class="bl-btn bl-btn-secondary">
+          Go to admin
+        </a>
+      </p>
+    )}
+  </div>
+</AppLayout>

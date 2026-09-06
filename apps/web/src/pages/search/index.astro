@@ -1,0 +1,21 @@
+---
+// Real nav needs a real destination — a nav item that 404s or looks
+// disabled is worse than one that's honest about not being built yet (the
+// brief's rule for a fake play button applies here too). Search itself is
+// Task 6's; this is a placeholder page, not placeholder navigation.
+import AppLayout from "../../layouts/AppLayout.astro";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+---
+
+<AppLayout title="Search" principal={principal} current="search">
+  <div class="bl-stack">
+    <h1 class="bl-page-title">Search</h1>
+    <div class="bl-empty-state">
+      <p>Search is on its way — for now, browse by Songs or Events.</p>
+    </div>
+  </div>
+</AppLayout>

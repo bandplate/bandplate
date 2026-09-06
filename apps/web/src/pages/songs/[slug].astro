@@ -1,0 +1,126 @@
+---
+// The song page. Its metadata, chord progression, lyrics, per-instrument
+// notes, known aliases, and every take newest first (each linking to its
+// event) — see TakeRow.astro for why that link is separate from the take's
+// own link to `/takes/[id]`.
+//
+// Measured against seeded data before deciding: `getSongDetail` (song +
+// aliases + instrument notes + up to 8 takes with their instruments and
+// events, all batch-fetched) runs in ~0.5-1.3ms locally — nowhere near the
+// ~150ms bar for a Server Island, so nothing on this page is deferred. See
+// task-5-report.md for the full measurement.
+import TakeRow from "../../components/TakeRow.astro";
+import AppLayout from "../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../server/app.js";
+import { getSongDetail } from "../../server/pages/songs.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect("/songs");
+}
+
+const appDeps = await getAppDeps();
+const detail = await getSongDetail(appDeps.db, slug);
+if (!detail) {
+  return new Response("Not found.", { status: 404 });
+}
+
+const { song, aliases, instrumentNotes, takes } = detail;
+const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined].filter(
+  Boolean,
+);
+---
+
+<AppLayout title={song.title} principal={principal} current="songs">
+  <div class="bl-stack">
+    <div>
+      <h1 class="bl-hero-title">{song.title}</h1>
+      {song.isStub && <p class="bl-field-hint bl-m0">Stub — not a full song entry yet.</p>}
+      {metaParts.length > 0 && <p class="bl-mono bl-m0">{metaParts.join(", ")}</p>}
+    </div>
+
+    <div class="bl-song-detail-grid">
+      <div class="bl-stack">
+        {song.chordProgression && (
+          <section>
+            <h2 class="bl-section-title">
+              Chords
+            </h2>
+            <pre class="bl-chords">{song.chordProgression}</pre>
+          </section>
+        )}
+
+        {song.lyrics && (
+          <section>
+            <h2 class="bl-section-title">
+              Lyrics
+            </h2>
+            <pre class="bl-lyrics">{song.lyrics}</pre>
+          </section>
+        )}
+
+        {instrumentNotes.length > 0 && (
+          <section class="bl-card">
+            <h2 class="bl-section-title">
+              Notes by instrument
+            </h2>
+            <div class="bl-stack bl-stack-tight">
+              {instrumentNotes.map((note) => (
+                <div>
+                  <p class="bl-field-label bl-m0">{note.instrumentLabel}</p>
+                  <p class="bl-m0">{note.body}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {song.notes && (
+          <section class="bl-card">
+            <h2 class="bl-section-title">
+              General notes
+            </h2>
+            <p class="bl-m0">{song.notes}</p>
+          </section>
+        )}
+
+        {aliases.length > 0 && (
+          <section>
+            <h2 class="bl-section-title">
+              Also known as
+            </h2>
+            <ul class="bl-stack bl-stack-tight bl-list-reset">
+              {aliases.map((alias) => (
+                <li class={alias.source === "ingest" ? "bl-mono" : ""}>{alias.aliasNorm}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+
+      <div>
+        <h2 class="bl-section-title">
+          Takes
+        </h2>
+        {
+          takes.length === 0 ? (
+            <div class="bl-empty-state">
+              <p>No takes of this one yet — record a rehearsal and it'll show up here.</p>
+            </div>
+          ) : (
+            <div class="bl-take-list">
+              {takes.map((take) => (
+                <TakeRow take={take} instruments={take.instruments} event={take.event} />
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</AppLayout>

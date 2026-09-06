@@ -1,0 +1,94 @@
+---
+// The event archive — rehearsals and concerts together, newest first,
+// filterable by kind. The kind filter is a plain GET form (checkboxes),
+// same JS-off approach as /songs.
+import AppLayout from "../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../server/app.js";
+import { formatLongDate } from "../../server/format.js";
+import { listEventsForArchive, parseEventsListKindFilter } from "../../server/pages/events.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const appDeps = await getAppDeps();
+const kindFilter = parseEventsListKindFilter(Astro.url.searchParams);
+const events = await listEventsForArchive(appDeps.db, kindFilter);
+
+const KIND_OPTIONS = [
+  { value: "rehearsal", label: "Rehearsals" },
+  { value: "concert", label: "Concerts" },
+  { value: "session", label: "Sessions" },
+] as const;
+
+function eventTitle(event: (typeof events)[number]): string {
+  return (
+    event.title ??
+    (event.kind === "rehearsal" ? "Rehearsal" : event.kind === "concert" ? "Concert" : "Session")
+  );
+}
+---
+
+<AppLayout title="Events" principal={principal} current="events">
+  <div class="bl-stack">
+    <h1 class="bl-page-title">Events</h1>
+
+    <form method="get" class="bl-toolbar">
+      <fieldset class="bl-checkbox-group">
+        <legend>Kind</legend>
+        {
+          KIND_OPTIONS.map((option) => (
+            <span class="bl-checkbox-item">
+              <input
+                type="checkbox"
+                id={`kind-${option.value}`}
+                name="kind"
+                value={option.value}
+                checked={kindFilter.includes(option.value)}
+              />
+              <label for={`kind-${option.value}`}>{option.label}</label>
+            </span>
+          ))
+        }
+      </fieldset>
+      <div class="bl-toolbar-actions">
+        <button type="submit" class="bl-btn bl-btn-primary">Apply</button>
+        {kindFilter.length > 0 && (
+          <a href="/events" class="bl-btn bl-btn-secondary">
+            Clear
+          </a>
+        )}
+      </div>
+    </form>
+
+    {
+      events.length === 0 ? (
+        <div class="bl-empty-state">
+          <p>
+            {kindFilter.length > 0
+              ? "Nothing of that kind yet — try clearing the filter."
+              : "No events yet — they'll show up here once a rehearsal or show is logged."}
+          </p>
+        </div>
+      ) : (
+        <div class="bl-event-list">
+          {events.map((event) => (
+            <a href={`/events/${event.id}`} class={`bl-event-row bl-event-row--${event.kind}`}>
+              <div class="bl-event-row-main">
+                <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
+                <p class="bl-event-row-venue bl-m0">
+                  <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+                  {event.venue ? ` ${eventTitle(event)} — ${event.venue}` : ` ${eventTitle(event)}`}
+                </p>
+              </div>
+              <div class="bl-event-row-stats">
+                {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+              </div>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</AppLayout>

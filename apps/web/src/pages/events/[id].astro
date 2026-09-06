@@ -1,0 +1,74 @@
+---
+// One event: kind, date, venue, notes, and the takes recorded that day in
+// recorded order (not newest-first — `getEventDetail` asks
+// `takesRepo.listByEvent` for `{ order: "asc" }`, reconstructing what
+// actually happened during the session).
+//
+// Measured before deciding on Server Islands: this page's whole query (the
+// event plus every take that day, with instruments and songs batch-fetched)
+// ran at ~0.5-0.7ms against seeded data — see task-5-report.md. Nothing
+// here is deferred.
+import TakeRow from "../../components/TakeRow.astro";
+import AppLayout from "../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../server/app.js";
+import { formatLongDate } from "../../server/format.js";
+import { getEventDetail } from "../../server/pages/events.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const { id } = Astro.params;
+if (!id) {
+  return Astro.redirect("/events");
+}
+
+const appDeps = await getAppDeps();
+const detail = await getEventDetail(appDeps.db, id);
+if (!detail) {
+  return new Response("Not found.", { status: 404 });
+}
+
+const { event, takes } = detail;
+const kindLabel =
+  event.kind === "rehearsal" ? "Rehearsal" : event.kind === "concert" ? "Concert" : "Session";
+---
+
+<AppLayout title={event.title ?? kindLabel} principal={principal} current="events">
+  <div class="bl-stack">
+    <div>
+      <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+      <h1 class="bl-hero-date">{formatLongDate(event.heldAt)}</h1>
+      {event.title && <p class="bl-mono bl-m0">{event.title}</p>}
+      {event.venue && <p class="bl-m0">{event.venue}</p>}
+    </div>
+
+    {event.notes && (
+      <section class="bl-card">
+        <h2 class="bl-section-title">Notes</h2>
+        <p class="bl-m0">{event.notes}</p>
+      </section>
+    )}
+
+    <section>
+      <h2 class="bl-section-title">
+        Takes recorded that day
+        {takes.length > 0 && <span class="bl-field-hint"> — in the order they were played</span>}
+      </h2>
+      {
+        takes.length === 0 ? (
+          <div class="bl-empty-state">
+            <p>No takes logged for this one yet.</p>
+          </div>
+        ) : (
+          <div class="bl-take-list">
+            {takes.map((take) => (
+              <TakeRow take={take} instruments={take.instruments} song={take.song} />
+            ))}
+          </div>
+        )
+      }
+    </section>
+  </div>
+</AppLayout>

@@ -1,0 +1,135 @@
+---
+// The song library. Search, sort, and an instrument filter — all a single
+// plain GET form, so every one of these works with JS off: submitting
+// reloads this same page with the query string set, and the server does
+// the actual filtering (`listSongsForLibrary` -> `songsRepo.listWithStats`).
+// There is nothing here for JS to progressively enhance without shipping a
+// script this page doesn't otherwise need — see task-5-report.md's
+// "instrument filter" section for why that trade was made deliberately.
+import { instrumentsRepo } from "@bandlib/db";
+import AppLayout from "../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../server/app.js";
+import { formatShortDate } from "../../server/format.js";
+import { listSongsForLibrary, parseSongsListQuery } from "../../server/pages/songs.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const appDeps = await getAppDeps();
+const query = parseSongsListQuery(Astro.url.searchParams);
+
+const [songs, instruments] = await Promise.all([
+  listSongsForLibrary(appDeps.db, query),
+  instrumentsRepo.list(appDeps.db),
+]);
+
+const sort = query.sort ?? "title";
+const resultsLabel =
+  query.search || query.instrumentIds.length > 0
+    ? `${songs.length} ${songs.length === 1 ? "song matches" : "songs match"}`
+    : `${songs.length} ${songs.length === 1 ? "song" : "songs"}`;
+---
+
+<AppLayout title="Songs" principal={principal} current="songs">
+  <div class="bl-stack">
+    <h1 class="bl-page-title">Songs</h1>
+
+    <form method="get" class="bl-toolbar">
+      <div class="bl-field">
+        <label class="bl-field-label" for="song-search">Search titles</label>
+        <input
+          class="bl-input"
+          type="search"
+          id="song-search"
+          name="q"
+          value={query.search ?? ""}
+          placeholder="e.g. Neon Skyline"
+        />
+      </div>
+
+      <div class="bl-field">
+        <label class="bl-field-label" for="song-sort">Sort by</label>
+        <select class="bl-select" id="song-sort" name="sort">
+          <option value="title" selected={sort === "title"}>Title (A to Z)</option>
+          <option value="recent" selected={sort === "recent"}>Recently played</option>
+          <option value="takes" selected={sort === "takes"}>Most takes</option>
+        </select>
+      </div>
+
+      <fieldset class="bl-checkbox-group">
+        <legend>
+          Instruments
+          {query.instrumentIds.length > 1 && (
+            <span class="bl-field-hint">— must have a take with all of these</span>
+          )}
+        </legend>
+        {
+          instruments.map((instrument) => (
+            <span class="bl-checkbox-item">
+              <input
+                type="checkbox"
+                id={`instrument-${instrument.id}`}
+                name="instrument"
+                value={instrument.id}
+                checked={query.instrumentIds.includes(instrument.id)}
+              />
+              <label for={`instrument-${instrument.id}`}>{instrument.label}</label>
+            </span>
+          ))
+        }
+      </fieldset>
+
+      <div class="bl-toolbar-actions">
+        <button type="submit" class="bl-btn bl-btn-primary">Apply filters</button>
+        {(query.search || query.instrumentIds.length > 0 || sort !== "title") && (
+          <a href="/songs" class="bl-btn bl-btn-secondary">
+            Clear
+          </a>
+        )}
+      </div>
+    </form>
+
+    <p class="bl-field-hint bl-m0">{resultsLabel}</p>
+
+    {
+      songs.length === 0 ? (
+        <div class="bl-empty-state">
+          <p>
+            {query.search || query.instrumentIds.length > 0
+              ? "No songs match that search — try clearing a filter."
+              : "No songs yet — they'll show up here once takes start coming in."}
+          </p>
+        </div>
+      ) : (
+        <div class="bl-song-list">
+          {songs.map((song) => (
+            <a href={`/songs/${song.slug}`} class="bl-song-row">
+              <div class="bl-song-row-main">
+                <p class={`bl-song-title ${song.isStub ? "bl-song-title-stub" : ""}`}>
+                  {song.title}
+                </p>
+                <p class="bl-song-meta">
+                  {[song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined]
+                    .filter(Boolean)
+                    .join(", ") || "No key or tempo set"}
+                </p>
+              </div>
+              <div class="bl-song-row-stats">
+                <span>
+                  <span class="bl-song-row-stat-value">{song.takeCount}</span>
+                  {song.takeCount === 1 ? "take" : "takes"}
+                </span>
+                <span>
+                  <span class="bl-song-row-stat-value">{formatShortDate(song.lastPlayedAt)}</span>
+                  last played
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</AppLayout>

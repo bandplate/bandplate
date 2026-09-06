@@ -21,32 +21,50 @@ export interface CreateTakeInput {
   instrumentIds?: string[];
 }
 
+/**
+ * Inserts a take and its take_instruments rows atomically. The id is
+ * client-generated (uuidv7), so there is no need to read the row back after
+ * writing it — that read-then-write pattern is exactly what the D1 batch
+ * constraint forbids: two round trips with no atomicity between them would
+ * let a partial failure leave a take with zero take_instruments rows, which
+ * then silently vanishes from listByInstruments. Instead, when there are
+ * instruments to attach, both inserts go into a single `db.batch([...])` so
+ * they succeed or fail together; the row returned to the caller is the one
+ * constructed locally, matching the column defaults declared in the schema.
+ */
 export async function create(db: Db, input: CreateTakeInput): Promise<Take> {
-  const [row] = await db
-    .insert(takes)
-    .values({
-      id: uuidv7(),
-      songId: input.songId,
-      eventId: input.eventId,
-      label: input.label ?? null,
-      recordedAt: input.recordedAt,
-      durationMs: input.durationMs ?? null,
-      state: input.state ?? "uploading",
-      clientRef: input.clientRef ?? null,
-      notes: input.notes ?? null,
-      createdAt: input.createdAt,
-      updatedAt: input.updatedAt,
-    })
-    .returning();
+  const id = uuidv7();
+  const row: Take = {
+    id,
+    songId: input.songId,
+    eventId: input.eventId,
+    label: input.label ?? null,
+    recordedAt: input.recordedAt,
+    durationMs: input.durationMs ?? null,
+    state: input.state ?? "uploading",
+    keeperVotes: 0,
+    totalVotes: 0,
+    ratingScore: 0,
+    clientRef: input.clientRef ?? null,
+    notes: input.notes ?? null,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+    publishedAt: null,
+    purgedAt: null,
+  };
 
-  if (!row) {
-    throw new Error("insert into takes returned no row");
-  }
+  const insertTake = db.insert(takes).values(row);
+  const instrumentIds = input.instrumentIds ?? [];
 
-  if (input.instrumentIds && input.instrumentIds.length > 0) {
-    await db
-      .insert(takeInstruments)
-      .values(input.instrumentIds.map((instrumentId) => ({ takeId: row.id, instrumentId })));
+  if (instrumentIds.length > 0) {
+    await db.batch([
+      insertTake,
+      db
+        .insert(takeInstruments)
+        .values(instrumentIds.map((instrumentId) => ({ takeId: id, instrumentId }))),
+    ]);
+  } else {
+    await insertTake;
   }
 
   return row;

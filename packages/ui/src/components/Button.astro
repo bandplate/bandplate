@@ -1,0 +1,42 @@
+---
+// Button primitive — renders a `<button>` or an `<a>` depending on whether
+// `href` is supplied, so a purely navigational "button" (e.g. the no-JS
+// path to a destructive-action confirm page) is a real link a screen
+// reader announces as a link, not a `<button>` that silently does nothing
+// without a click handler.
+export interface Props {
+  variant?: "primary" | "secondary" | "danger";
+  size?: "md" | "sm";
+  href?: string;
+  type?: "button" | "submit" | "reset";
+  disabled?: boolean;
+  class?: string;
+  [key: string]: unknown;
+}
+
+const {
+  variant = "secondary",
+  size = "md",
+  href,
+  type = "button",
+  disabled = false,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const classes = ["bl-btn", `bl-btn-${variant}`, size === "sm" ? "bl-btn-sm" : "", className ?? ""]
+  .filter(Boolean)
+  .join(" ");
+---
+
+{
+  href ? (
+    <a href={href} class={classes} {...rest}>
+      <slot />
+    </a>
+  ) : (
+    <button type={type} class={classes} disabled={disabled} {...rest}>
+      <slot />
+    </button>
+  )
+}

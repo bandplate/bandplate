@@ -1,0 +1,505 @@
+/*
+ * ROOST component primitives — shared CSS "class recipes" for the first UI
+ * (Task 4: auth pages, admin screens). Consumed by both `.astro` components
+ * in `packages/ui/src/components/` and by pages/islands in `apps/web`.
+ *
+ * Only semantic tokens from `roost.css`/`fonts.css` are referenced here —
+ * never a raw brand hex, with one deliberate exception documented below.
+ *
+ * ---------------------------------------------------------------------
+ * Why this file adds two more custom properties on top of roost.css's set
+ * ---------------------------------------------------------------------
+ * `--bl-color-accent` (rust) and `--bl-color-accent-alt` (olive) are the
+ * SAME hex value in both themes (see roost.css) — they don't get lighter in
+ * dark mode the way `--bl-color-fg`/`--bl-color-bg` do. Both are dark,
+ * low-luminance colors. That's fine as text on the *light* ground (rust on
+ * sand: 9.21:1) but collapses as a boundary/fill against the *dark* ground
+ * (rust on espresso: 1.69:1 — nowhere near the 3:1 a component boundary
+ * needs). Rather than use a failing boundary color in dark mode, this file
+ * defines two derived, component-scoped tokens that resolve to the plain
+ * accent in light mode and to a lightened variant (accent mixed with sand)
+ * in dark mode — verified below and in task-4-report.md:
+ *
+ *   --bl-component-accent-strong  (rust family — danger/error boundaries)
+ *     light: #7b190a vs sand bg    -> 9.21:1 / vs surface -> 9.96:1
+ *     dark:  #ab6f60 vs espresso bg -> 4.41:1 / vs surface -> 4.08:1
+ *   --bl-component-accent-success (olive family — success/active boundaries)
+ *     light: #334f14 vs sand bg    -> 8.06:1 / vs surface -> 8.71:1
+ *     dark:  #808f66 vs espresso bg -> 5.14:1 / vs surface -> 4.76:1
+ *
+ * These are used ONLY for borders, dots and tinted-background fills — never
+ * as text color, per the brief's rule that rust/olive/gold aren't for body
+ * text. Every component below that needs a guaranteed-visible boundary
+ * (buttons, inputs, the dialog) uses `--bl-color-fg` instead, which is
+ * ~15:1 against `--bl-color-bg` in both themes by construction.
+ */
+
+:root {
+  --bl-component-accent-strong: var(--bl-color-accent);
+  --bl-component-accent-success: var(--bl-color-accent-alt);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bl-component-accent-strong: #ab6f60;
+    --bl-component-accent-success: #808f66;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bl-component-accent-strong: #ab6f60;
+  --bl-component-accent-success: #808f66;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Base                                                                    */
+/* ---------------------------------------------------------------------- */
+
+/* Shared focus style: `--bl-color-fg` rather than an accent, because it's
+   the one color guaranteed to hit 3:1 against `--bl-color-bg` in BOTH
+   themes (~15:1 either way) — see the file header. Never remove an
+   `outline` without this replacement. */
+:focus-visible {
+  outline: 3px solid var(--bl-color-fg);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.bl-skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 100;
+  background: var(--bl-color-surface);
+  color: var(--bl-color-fg);
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
+  border: 2px solid var(--bl-color-fg);
+  transition: top 0.15s ease;
+}
+
+.bl-skip-link:focus {
+  top: 0.5rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Button                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.bl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.375rem;
+  /* fg border on every variant: guarantees the button's boundary reads
+     against the page ground (~15:1) regardless of what its fill does —
+     see the file header note on why fill alone can't be trusted here. */
+  border: 2px solid var(--bl-color-fg);
+  font-family: var(--bl-font-body);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--bl-color-fg);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-btn,
+  .bl-dialog,
+  .bl-dialog-backdrop,
+  .bl-copy-btn {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.bl-btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.bl-btn-primary {
+  background: var(--bl-color-accent);
+  color: var(--bl-color-bg);
+}
+.bl-btn-primary:hover:not([disabled]) {
+  background: color-mix(in srgb, var(--bl-color-accent) 85%, black);
+}
+
+.bl-btn-secondary:hover:not([disabled]) {
+  border-color: var(--bl-component-accent-success);
+}
+
+.bl-btn-danger:hover:not([disabled]) {
+  background: color-mix(in srgb, var(--bl-component-accent-strong) 18%, var(--bl-color-surface));
+  border-color: var(--bl-component-accent-strong);
+}
+
+.bl-btn-sm {
+  min-height: 36px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+/* A destructive trigger rendered as a plain link (the no-JS path to a
+   confirm page) but styled to match the button set. */
+a.bl-btn {
+  display: inline-flex;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Field (label + input/select/textarea + error)                          */
+/* ---------------------------------------------------------------------- */
+
+.bl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+}
+
+.bl-field-label {
+  font-family: var(--bl-font-body);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--bl-color-fg);
+}
+
+.bl-field-hint {
+  font-size: 0.8125rem;
+  color: var(--bl-color-muted);
+}
+
+.bl-input,
+.bl-select,
+.bl-textarea {
+  font-family: var(--bl-font-body);
+  font-size: 1rem;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 2px solid var(--bl-color-fg);
+  background: var(--bl-color-surface);
+  color: var(--bl-color-fg);
+}
+
+.bl-textarea {
+  min-height: 88px;
+}
+
+.bl-input:focus-visible,
+.bl-select:focus-visible,
+.bl-textarea:focus-visible {
+  border-color: var(--bl-component-accent-success);
+}
+
+.bl-input[aria-invalid="true"],
+.bl-select[aria-invalid="true"],
+.bl-textarea[aria-invalid="true"] {
+  border-color: var(--bl-component-accent-strong);
+}
+
+.bl-field-error {
+  font-size: 0.875rem;
+  color: var(--bl-color-fg);
+  font-weight: 700;
+}
+
+.bl-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  border: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+}
+
+.bl-checkbox-group legend {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.bl-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+
+.bl-checkbox-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--bl-component-accent-success);
+}
+
+.bl-checkbox-item label {
+  font-family: var(--bl-font-mono);
+  font-size: 0.875rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Banner                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.bl-banner {
+  border-radius: 0.375rem;
+  border: 2px solid var(--bl-color-border);
+  padding: 0.875rem 1.125rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9375rem;
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+  color: var(--bl-color-fg);
+}
+
+.bl-banner-icon {
+  flex-shrink: 0;
+  font-family: var(--bl-font-mono);
+  font-weight: 700;
+}
+
+.bl-banner-success {
+  border-color: var(--bl-component-accent-success);
+  background: color-mix(in srgb, var(--bl-color-accent-alt) 12%, var(--bl-color-surface));
+}
+
+.bl-banner-error {
+  border-color: var(--bl-component-accent-strong);
+  background: color-mix(in srgb, var(--bl-color-accent) 12%, var(--bl-color-surface));
+}
+
+.bl-banner-info {
+  border-color: var(--bl-color-border);
+  background: var(--bl-color-surface);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Badge (role/status pills) — text stays `--bl-color-fg` always; accent   */
+/* colors appear only as the small decorative dot, never as the label     */
+/* text, and the label text itself ("admin" / "active" / ...) is the real */
+/* signal — color is reinforcement, not the sole means (WCAG 1.4.1).      */
+/* ---------------------------------------------------------------------- */
+
+.bl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--bl-font-mono);
+  font-size: 0.75rem;
+  text-transform: lowercase;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--bl-color-border);
+  color: var(--bl-color-fg);
+  white-space: nowrap;
+}
+
+.bl-badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--bl-color-muted);
+}
+
+.bl-badge-admin::before {
+  background: var(--bl-component-accent-strong);
+}
+
+.bl-badge-active::before {
+  background: var(--bl-component-accent-success);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Table — real columns on wide viewports, a stacked key/value list on     */
+/* narrow ones (not a horizontal scrollbar as the only answer).           */
+/* ---------------------------------------------------------------------- */
+
+.bl-table-wrap {
+  width: 100%;
+}
+
+.bl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.bl-table caption {
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.bl-table th,
+.bl-table td {
+  text-align: left;
+  padding: 0.75rem 0.625rem;
+  border-bottom: 1px solid var(--bl-color-border);
+  vertical-align: middle;
+}
+
+.bl-table th {
+  font-family: var(--bl-font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bl-color-muted);
+  font-weight: 600;
+}
+
+.bl-table tbody tr:hover {
+  background: var(--bl-color-surface);
+}
+
+.bl-table .bl-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .bl-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .bl-table,
+  .bl-table tbody,
+  .bl-table tr,
+  .bl-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .bl-table tr {
+    border: 1px solid var(--bl-color-border);
+    border-radius: 0.5rem;
+    margin-bottom: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .bl-table td {
+    border-bottom: none;
+    padding: 0.375rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: right;
+  }
+
+  .bl-table td::before {
+    content: attr(data-label);
+    font-family: var(--bl-font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bl-color-muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .bl-table .bl-table-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Dialog (confirmation) — JS-enhanced modal. The no-JS fallback is a real */
+/* confirm page; this only ever appears once JS has intercepted a click.  */
+/* ---------------------------------------------------------------------- */
+
+.bl-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.bl-dialog {
+  background: var(--bl-color-bg);
+  color: var(--bl-color-fg);
+  border: 2px solid var(--bl-color-fg);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  max-width: 28rem;
+  width: 100%;
+}
+
+.bl-dialog h2 {
+  font-family: var(--bl-font-display);
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem;
+}
+
+.bl-dialog p {
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+
+.bl-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Layout helpers                                                         */
+/* ---------------------------------------------------------------------- */
+
+.bl-container {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .bl-container {
+    padding: 2rem;
+  }
+}
+
+.bl-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.bl-card {
+  border: 1px solid var(--bl-color-border);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  background: var(--bl-color-surface);
+}
+
+.bl-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.bl-mono {
+  font-family: var(--bl-font-mono);
+  word-break: break-all;
+}

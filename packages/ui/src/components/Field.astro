@@ -1,0 +1,95 @@
+---
+// Field primitive — label + control + error, wired together the way every
+// form control on the site must be: a real `<label for>`, the error text
+// associated via `aria-describedby`, and `aria-invalid` set whenever an
+// error is present. `as="select"` renders a <select> and expects <option>
+// children in the default slot; `as="textarea"` renders a <textarea> (the
+// slot becomes its text content); anything else renders an <input>.
+export interface Props {
+  label: string;
+  name: string;
+  as?: "input" | "textarea" | "select";
+  type?: string;
+  value?: string | number;
+  required?: boolean;
+  error?: string;
+  hint?: string;
+  id?: string;
+  [key: string]: unknown;
+}
+
+const {
+  label,
+  name,
+  as = "input",
+  type = "text",
+  value,
+  required = false,
+  error,
+  hint,
+  id,
+  ...rest
+} = Astro.props;
+
+const fieldId = id ?? `field-${name}`;
+const errorId = `${fieldId}-error`;
+const hintId = `${fieldId}-hint`;
+const describedBy =
+  [error ? errorId : "", hint ? hintId : ""].filter(Boolean).join(" ") || undefined;
+---
+
+<div class="bl-field">
+  <label class="bl-field-label" for={fieldId}>
+    {label}
+    {required && <span aria-hidden="true"> *</span>}
+  </label>
+  {hint && (
+    <span class="bl-field-hint" id={hintId}>
+      {hint}
+    </span>
+  )}
+  {
+    as === "textarea" ? (
+      <textarea
+        class="bl-textarea"
+        id={fieldId}
+        name={name}
+        required={required}
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={describedBy}
+        {...rest}
+      >
+        {value}
+      </textarea>
+    ) : as === "select" ? (
+      <select
+        class="bl-select"
+        id={fieldId}
+        name={name}
+        required={required}
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={describedBy}
+        {...rest}
+      >
+        <slot />
+      </select>
+    ) : (
+      <input
+        class="bl-input"
+        id={fieldId}
+        name={name}
+        type={type}
+        value={value}
+        required={required}
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={describedBy}
+        {...rest}
+      />
+    )
+  }
+  {error && (
+    <p class="bl-field-error" id={errorId} role="alert">
+      {error}
+    </p>
+  )}
+</div>

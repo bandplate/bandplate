@@ -1,0 +1,23 @@
+---
+// Banner primitive — success/error/info callout. Text always inherits
+// `--bl-color-fg` (set by `.bl-banner`, never an accent color); the accent
+// only tints the border and background wash. See components.css's file
+// header for the contrast rationale.
+export interface Props {
+  kind?: "success" | "error" | "info";
+  title?: string;
+}
+
+const { kind = "info", title } = Astro.props;
+
+const icon = kind === "success" ? "✓" : kind === "error" ? "!" : "i";
+const role = kind === "error" ? "alert" : "status";
+---
+
+<div class={`bl-banner bl-banner-${kind}`} role={role}>
+  <span class="bl-banner-icon" aria-hidden="true">{icon}</span>
+  <div>
+    {title && <strong>{title}</strong>}
+    <div><slot /></div>
+  </div>
+</div>

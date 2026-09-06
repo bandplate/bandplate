@@ -49,7 +49,6 @@ describe("guardAdminPath", () => {
 
 describe("isPublicPath", () => {
   it("matches the public allowlist and nested paths under it", () => {
-    expect(isPublicPath("/")).toBe(true);
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/login/some-token")).toBe(true);
     expect(isPublicPath("/setup")).toBe(true);
@@ -66,6 +65,13 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/loginish")).toBe(false);
   });
 
+  // Task 6: `/` stopped being public once it became the real home page (it
+  // now reads the signed-in member's own favorites/votes) — unlike Task 5's
+  // placeholder, which needed no principal at all.
+  it("no longer treats / as public now that it's the real, member-scoped home page", () => {
+    expect(isPublicPath("/")).toBe(false);
+  });
+
   // The whole point of deny-by-default: a route nobody has registered
   // anywhere must still come back non-public, so `guardMemberPath` gates it.
   // This is the failure mode the old member-path ALLOWLIST could not catch —
@@ -79,7 +85,6 @@ describe("isPublicPath", () => {
 describe("guardMemberPath", () => {
   it("allows any principal (including anonymous) on a public path", () => {
     expect(guardMemberPath("/login", undefined)).toEqual({ kind: "allow" });
-    expect(guardMemberPath("/", undefined)).toEqual({ kind: "allow" });
     expect(guardMemberPath("/api/songs", undefined)).toEqual({ kind: "allow" });
   });
 
@@ -89,6 +94,13 @@ describe("guardMemberPath", () => {
       kind: "redirect",
       to: "/login",
     });
+  });
+
+  // Task 6: the real home page needs a principal (its favorites/unvoted
+  // sections are member-scoped), so it's guarded like every other
+  // member-facing route now, not allowlisted as public.
+  it("redirects an anonymous visitor to /login for / now that it's the real home page", () => {
+    expect(guardMemberPath("/", undefined)).toEqual({ kind: "redirect", to: "/login" });
   });
 
   // The regression this whole finding is about: a route that exists in the
@@ -123,8 +135,10 @@ describe("double-slash path bypass (regression)", () => {
     expect(isPublicPath("//songs")).toBe(false);
     expect(isPublicPath("//login-admin")).toBe(false);
     expect(isPublicPath("//setupx")).toBe(false);
-    // A genuine double-slash root still normalizes to the public root.
-    expect(isPublicPath("//")).toBe(true);
+    // A genuine double-slash root normalizes to "/", which is no longer
+    // public (Task 6's real home is member-scoped) — see isPublicPath's
+    // own "no longer treats / as public" test above.
+    expect(isPublicPath("//")).toBe(false);
   });
 
   it("still recognizes a //-prefixed path as the admin section, so the scope check isn't skipped either", () => {

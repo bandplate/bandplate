@@ -17,11 +17,15 @@ const ADMIN_SCOPE = "members:admin" as const;
 
 // Collapses repeated leading (or embedded) slashes so a request path can't
 // dodge either guard below by never landing on any prefix they check.
-// `"//takes/x"` is the concrete exploit: `PUBLIC_PATH_PREFIXES` contains
-// `"/"`, and `"/" + "/"` is `"//"` — so `isPublicPath` used to match
+// `"//takes/x"` was the concrete exploit while `PUBLIC_PATH_PREFIXES`
+// still contained `"/"` (Task 5's home placeholder — see that entry's own
+// history below): `"/" + "/"` is `"//"`, so `isPublicPath` matched
 // `pathname.startsWith("//")` for ANY path, classifying every
 // `//`-prefixed request as public and skipping the member guard entirely.
-// The same shape of bug lurks the other way for `isAdminPath`: `"/admin"`'s
+// `"/"` is no longer on the list (Task 6's real home needs a principal),
+// but the normalization stays load-bearing for every prefix still on it —
+// `"//login/x"` needs the same collapse to match `"/login"`. The same
+// shape of bug lurks the other way for `isAdminPath`: `"/admin"`'s
 // own prefix check (`startsWith("/admin/")`) does NOT match
 // `"//admin/members"`, so an unnormalized pathname would let a signed-in
 // non-admin member's `//admin/...` request skip the scope check too, even
@@ -71,7 +75,10 @@ export function guardAdminPath(pathname: string, principal: Principal | undefine
 // brand-new route needs no registration to be guarded; it only needs
 // registering to be made PUBLIC, which is the rarer, more deliberate case.
 const PUBLIC_PATH_PREFIXES = [
-  "/", // Task 6's real home; today's placeholder is public too.
+  // "/" (home) is deliberately NOT here, unlike Task 5's placeholder: Task
+  // 6's real home reads the signed-in member's own favorites and unvoted
+  // takes, so it needs a principal like every other member-facing page —
+  // see task-6-report.md.
   "/login", // the sign-in form and /login/[token]
   "/setup", // first-admin bootstrap — self-guards via isBootstrapAvailable
   "/logout",

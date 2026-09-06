@@ -129,6 +129,49 @@ describe("auth-sessions repo", () => {
     expect(c?.revokedAt).toBeNull();
   });
 
+  describe("getLastSeenAtByMember", () => {
+    it("returns the max lastSeenAt per member across multiple sessions, excluding members with none", async () => {
+      const other = await members.create(db, {
+        displayName: "Sam",
+        slug: "sam",
+        email: "sam@example.com",
+        createdAt: 1_000,
+      });
+      const untouched = await members.create(db, {
+        displayName: "Never Logged In",
+        slug: "never",
+        email: "never@example.com",
+        createdAt: 1_000,
+      });
+
+      const earlySession = await authSessions.create(db, {
+        memberId,
+        tokenHash: "hash-early",
+        createdAt: 1_000,
+        expiresAt: 2_000,
+      });
+      await authSessions.touch(db, earlySession.id, { lastSeenAt: 3_000, expiresAt: 9_000 });
+      await authSessions.create(db, {
+        memberId,
+        tokenHash: "hash-late",
+        createdAt: 5_000,
+        expiresAt: 9_000,
+      });
+      await authSessions.create(db, {
+        memberId: other.id,
+        tokenHash: "hash-other",
+        createdAt: 4_000,
+        expiresAt: 9_000,
+      });
+
+      const result = await authSessions.getLastSeenAtByMember(db);
+
+      expect(result.get(memberId)).toBe(5_000);
+      expect(result.get(other.id)).toBe(4_000);
+      expect(result.has(untouched.id)).toBe(false);
+    });
+  });
+
   describe("buildCreateIfMemberExistsStatement", () => {
     it("inserts the session when the referenced member exists", async () => {
       const { statement } = authSessions.buildCreateIfMemberExistsStatement(db, {

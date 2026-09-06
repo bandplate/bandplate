@@ -117,3 +117,26 @@ export async function revokeAllForMember(
     .set({ revokedAt })
     .where(and(eq(authSessions.memberId, memberId), isNull(authSessions.revokedAt)));
 }
+
+/**
+ * The most recent `lastSeenAt` across ALL of a member's sessions (including
+ * revoked/expired ones — this is "when were they last active", not "is
+ * their current session still valid"), for every member with at least one
+ * session, in a single grouped query. Used by the admin members list ("last
+ * seen" column) so it isn't N+1 queries against a handful of members.
+ */
+export async function getLastSeenAtByMember(db: Db): Promise<Map<string, number>> {
+  const rows = await db
+    .select({
+      memberId: authSessions.memberId,
+      lastSeenAt: sql<number>`max(${authSessions.lastSeenAt})`,
+    })
+    .from(authSessions)
+    .groupBy(authSessions.memberId);
+
+  const result = new Map<string, number>();
+  for (const row of rows) {
+    result.set(row.memberId, row.lastSeenAt);
+  }
+  return result;
+}

@@ -1,0 +1,323 @@
+# bandlib ingest API — contract v1
+
+**Status: frozen for parallel development.** This document is the interface
+between two independently built projects:
+
+- **bandlib** (this repo) — implements the server side in increment 6.
+- **the Reaper bridge** (separate repo) — renders takes locally and pushes them
+  here.
+
+Either side may be built first. Where this document and an implementation
+disagree, this document wins until it is deliberately revised. Revisions bump the
+version prefix (`/api/ingest/v1/` → `/v2/`); the server keeps serving `v1` until
+every bridge has moved.
+
+The server publishes a machine-readable OpenAPI 3.1 document at
+`/api/ingest/v1/openapi.json`, generated from the same Zod schemas that validate
+requests, so a typed client can be generated rather than hand-written.
+
+---
+
+## 1. Division of responsibility
+
+**The bridge owns:**
+- Cutting the rehearsal recording into takes (Reaper regions).
+- Rendering: one lossy master mix per take, optionally one lossy stem per
+  instrument, optionally a lossless master.
+- Mapping messy Reaper track names (`BASS DI 2`, `OH L/R`) onto bandlib
+  instrument slugs. **The server will not guess this** — see §6.
+- Computing waveform peaks (cheap where the raw audio already is; expensive in a
+  browser) — see §5.
+- Persisting its own `clientRef` values so a re-run is idempotent — see §3.
+- Retrying uploads, including refreshing expired presigned URLs.
+
+**The server owns:**
+- Identity: resolving a submitted song title to a song row, or creating a stub.
+- Storage keys, presigned URLs, and checksum enforcement.
+- Deciding when a take is complete enough to publish.
+
+The bridge never talks to the object store directly except through presigned URLs
+the server hands it. It never needs storage credentials.
+
+---
+
+## 2. Authentication
+
+All ingest endpoints require a **service token**:
+
+```
+Authorization: Bearer blk_{tokenId}_{secret}
+```
+
+Tokens are issued from the bandlib admin UI (`/admin/tokens`), carry an explicit
+scope set, and are revocable. The secret is shown **once** at creation and is
+stored only as a hash — if it is lost, issue a new token.
+
+An ingest token needs `ingest:write`, plus the reads it uses to resolve
+vocabulary: `songs:read`, `events:read`, `takes:read`. Grant nothing else, so a
+token that leaks out of a script on a laptop cannot read votes or touch members.
+
+Ingest requests are exempt from the browser Origin/CSRF check — they carry no
+cookies and no ambient authority.
+
+**Errors:** `401` for a missing, malformed, unknown, or revoked token. `403` when
+the token is valid but lacks a required scope; the body names the missing scope.
+
+---
+
+## 3. Idempotency — the design assumption
+
+Every ingest run must be safely repeatable. Rehearsals get re-rendered, uploads
+die halfway, laptops sleep. Re-running the bridge over the same Reaper project
+must converge on the same server state, never duplicate it.
+
+The mechanism is a **`clientRef`**: an opaque string the bridge generates once,
+persists next to the Reaper project, and reuses forever.
+
+- `events.clientRef` — one per Reaper project. Generate a UUID on first ingest and
+  write it to a sidecar file beside the `.rpp`.
+- `takes.clientRef` — stable per take within a project. Prefer the Reaper region
+  GUID; fall back to `{projectRef}/item-{n}` only if you must, and understand that
+  reordering regions then re-identifies takes.
+
+Both are unique server-side. Re-posting an existing `clientRef` returns the
+existing row with `created: false` — it is a lookup, not an error.
+
+Storage keys are derived from the take id, so a re-uploaded file **overwrites**
+rather than orphaning:
+
+```
+takes/{takeId}/master/{tier}.{ext}
+takes/{takeId}/stems/{instrumentSlug}/{tier}.{ext}
+takes/{takeId}/peaks.json
+```
+
+---
+
+## 4. The three phases
+
+### Phase 1 — declare the event
+
+```http
+POST /api/ingest/v1/events
+Content-Type: application/json
+
+{
+  "clientRef": "5e2c8f1a-...",
+  "kind": "rehearsal",
+  "heldAt": "2026-09-05T19:30:00+02:00",
+  "venue": "Zkušebna Vysočany",
+  "notes": "new tune runthroughs",
+  "title": null
+}
+```
+
+```json
+200 { "eventId": "0192f...", "created": true }
+```
+
+`kind` is one of `rehearsal | concert | session`. It matters: concerts are
+surfaced differently in the UI and are excluded from automatic retention culling.
+Get it right at ingest rather than fixing it by hand later.
+
+`heldAt` is an ISO-8601 timestamp **with offset**. The server stores epoch
+milliseconds; the offset is how it knows what you meant.
+
+### Phase 2 — declare a take and its assets, receive upload URLs
+
+```http
+POST /api/ingest/v1/takes
+
+{
+  "clientRef": "reaper:region-guid:{A1B2C3D4-...}",
+  "eventClientRef": "5e2c8f1a-...",
+  "song": {
+    "externalRef": "reaper:region-guid:{A1B2C3D4-...}",
+    "title": "Dub Corner",
+    "createIfMissing": true
+  },
+  "recordedAt": "2026-09-05T20:14:33+02:00",
+  "durationMs": 254300,
+  "label": "take 3",
+  "instruments": ["bass", "drums", "gtr-rhythm", "organ", "vox-lead"],
+  "assets": [
+    { "kind": "master", "tier": "lossy", "format": "opus",
+      "bytes": 4103221, "sha256": "…", "durationMs": 254300,
+      "sampleRate": 48000, "channels": 2 },
+    { "kind": "stem", "instrument": "bass", "tier": "lossy", "format": "opus",
+      "bytes": 3980112, "sha256": "…" },
+    { "kind": "peaks", "tier": "lossy", "format": "json", "bytes": 4210 }
+  ]
+}
+```
+
+```json
+200 {
+  "takeId": "0192f...",
+  "songId": "0192a...", "songCreated": true, "songMatch": "created-stub",
+  "state": "uploading",
+  "uploads": [
+    { "assetId": "0192b…", "kind": "master", "instrument": null, "tier": "lossy",
+      "storageKey": "takes/0192f…/master/lossy.opus",
+      "status": "pending",
+      "method": "PUT",
+      "url": "https://…?X-Amz-Signature=…",
+      "headers": { "Content-Type": "audio/ogg", "x-amz-checksum-sha256": "…" },
+      "expiresAt": "2026-09-05T21:14:00Z" },
+    { "assetId": "0192c…", "kind": "stem", "instrument": "bass",
+      "status": "ready" }
+  ]
+}
+```
+
+**`instruments`** is what was *played and captured* on this take. It is the
+filter axis in the UI ("every take with horns on it") and is deliberately
+**not** the same as which stems exist — a take can capture the whole band in the
+master mix and have isolated files for only three players.
+
+**Retry semantics.** Re-posting the same `takes.clientRef` returns the existing
+take with freshly signed URLs. Per asset:
+- declared `sha256` and `bytes` match a row already `ready` → returned as
+  `status: "ready"` with **no** `url`; skip it.
+- hash differs → the slot resets to `pending` and a new URL is issued; the upload
+  overwrites the same key.
+
+This is what lets a bridge crash mid-session and resume without re-uploading
+gigabytes.
+
+**Upload.** `PUT` the bytes to `url` with exactly the `headers` given. The
+`x-amz-checksum-sha256` header makes the object store itself reject a corrupt
+upload, so corruption surfaces at upload time rather than at playback.
+
+**Expiry.** Presigned PUT URLs live **1 hour**. A slow uplink pushing an entire
+session will outlive that — on `403`, re-POST the take (or
+`GET /api/ingest/v1/takes/{takeId}/uploads`) for fresh URLs and continue. Treat
+this as normal operation, not an error path.
+
+**Size.** Single `PUT` only; no multipart in v1. Files are expected in the tens of
+MB, far below the 5 GB single-PUT ceiling. If lossless multitrack masters ever
+push past ~200 MB on a flaky uplink, multipart is a documented extension:
+`POST /api/ingest/v1/assets/{id}/multipart` returning per-part URLs plus a
+complete endpoint. Not implemented in v1.
+
+### Phase 3 — commit
+
+```http
+POST /api/ingest/v1/takes/{takeId}/commit
+{ "publish": true }
+```
+
+```json
+200 { "takeId": "…", "state": "published",
+      "assets": [ { "assetId": "…", "status": "ready", "bytes": 4103221 } ] }
+```
+
+```json
+409 { "code": "assets_incomplete",
+      "missing": [ { "assetId": "…", "storageKey": "…" } ] }
+```
+
+The server `HEAD`s every pending key, compares content-length against what was
+declared, flips matching assets to `ready`, enforces that **at least one** master
+or stem exists, and publishes. `publish: false` leaves the take in `new` — use
+that if you want to review before the band sees it.
+
+Committing an already-published take is a no-op returning `200`. Commit is safe
+to retry.
+
+---
+
+## 5. Waveform peaks
+
+Send a `kind: "peaks"` asset: JSON, a single array of **1000 integers in the
+range -128..127**, representing min/max-folded amplitude across the take.
+
+The bridge already has the decoded audio, so this costs it almost nothing. A
+browser computing the same thing would have to download and decode the whole
+file. The slot exists in v1 even though the UI may render a plain progress bar at
+first — retrofitting it later would mean re-running the bridge across the entire
+back catalogue.
+
+---
+
+## 6. Song identity
+
+Resolution order, first match wins:
+
+1. `song.externalRef` matches a stored alias → that song. Most stable: it survives
+   the band renaming the tune. Always send it if you have a region GUID.
+2. Normalized `song.title` matches a song's normalized title → that song, **and**
+   the `externalRef` is recorded as a new alias so future ingests hit case 1.
+3. Normalized `song.title` matches an existing alias → that song.
+4. No match and `createIfMissing: true` → a **stub song** is created
+   (`songMatch: "created-stub"`), flagged in the UI as needing tempo, key, chords
+   and lyrics filled in by a human.
+5. No match and `createIfMissing: false` → `409 song_not_found` with fuzzy
+   candidates, so the bridge can prompt.
+
+Normalization lowercases, strips diacritics (NFKD — this matters for Czech:
+`Přítel` → `pritel`), collapses whitespace, and strips a trailing take/version
+suffix (`(take 3)`, `[take 12]`, `- take 2`).
+
+---
+
+## 7. Instrument vocabulary
+
+`instruments` and each stem's `instrument` are **slugs from the server's
+vocabulary**, which an admin manages in the bandlib UI.
+
+`GET /api/ingest/v1/instruments` returns the live list — use it to build the
+bridge's mapping UI rather than hardcoding.
+
+An unknown slug is rejected with `422` listing the valid ones. This is deliberate:
+Reaper track names are messy, and letting `BASS DI 2` silently become a new
+instrument would corrupt the filter vocabulary within one rehearsal. Ship a
+user-editable mapping file (Reaper track name → bandlib slug) in the bridge.
+
+---
+
+## 8. Other endpoints
+
+- `GET /api/ingest/v1/instruments` — live vocabulary (see §7).
+- `GET /api/ingest/v1/takes/{takeId}/uploads` — fresh presigned URLs for any
+  still-pending assets, without re-declaring the take.
+- `DELETE /api/ingest/v1/takes/{takeId}` — undo a mistaken push. Permitted only
+  while `state` is `uploading` or `new`; a published take must be rejected through
+  the UI instead.
+
+---
+
+## 9. Errors
+
+All errors are `{ "error": { "code": "...", "message": "..." } }`, except `409`
+responses which carry extra structured context alongside (`missing`,
+`candidates`).
+
+| Status | Code | Meaning |
+|---|---|---|
+| 401 | `unauthorized` | Missing, malformed, unknown, or revoked token |
+| 403 | `forbidden` | Valid token, missing scope (names the scope) |
+| 422 | `unknown_instrument` | Slug not in vocabulary; lists valid slugs |
+| 422 | `validation_failed` | Body failed schema validation |
+| 409 | `song_not_found` | No match and `createIfMissing: false`; lists candidates |
+| 409 | `assets_incomplete` | Commit before all assets uploaded; lists missing |
+| 429 | `rate_limited` | Backoff; `Retry-After` is set |
+
+---
+
+## 10. Recommended bridge sequence
+
+```
+for each Reaper project:
+  POST /events                     (idempotent on clientRef)
+  for each region:
+    POST /takes                    (idempotent; returns per-asset status)
+    for each upload with status=pending:
+      PUT bytes to its presigned url
+      on 403 → re-POST /takes for fresh urls, continue
+    POST /takes/{id}/commit
+```
+
+Every step is safe to repeat. A bridge that crashes anywhere and restarts from
+the top converges on the same state without duplicating a row or re-uploading a
+completed file.

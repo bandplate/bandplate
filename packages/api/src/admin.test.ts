@@ -99,6 +99,72 @@ describe("admin members routes", () => {
 
     expect(res.status).toBe(404);
   });
+
+  // Round 2 closes the gap the review found: `updateMember` (the web page
+  // logic) rejected these, but `PATCH /admin/members/:id` had no such
+  // guard at all — the sole admin could self-demote via one authenticated
+  // API request, no browser session shenanigans required. Both cases now
+  // go through `@bandlib/core`'s `updateMemberWithGuards`, shared with the
+  // web page — see `packages/core/src/services/members.ts`.
+  it("rejects an admin demoting or disabling themselves via the API", async () => {
+    const testApp = await buildTestApp();
+    const cookie = await loginAsAdmin(testApp);
+    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+
+    const listRes = await testApp.app.request("/admin/members", {
+      headers: { cookie: `bl_session=${cookie}` },
+    });
+    const { members } = await listRes.json();
+    const self = members.find((m: { email: string }) => m.email === "admin@example.com");
+
+    const res = await testApp.app.request(`/admin/members/${self.id}`, {
+      method: "PATCH",
+      headers: authedHeaders,
+      body: JSON.stringify({ role: "member" }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("self_target");
+
+    const after = await membersRepo.getById(testApp.db, self.id);
+    expect(after?.role).toBe("admin");
+  });
+
+  it("rejects demoting the last admin via the API, even from a service token", async () => {
+    const testApp = await buildTestApp();
+    const cookie = await loginAsAdmin(testApp);
+    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+
+    const listRes = await testApp.app.request("/admin/members", {
+      headers: { cookie: `bl_session=${cookie}` },
+    });
+    const { members } = await listRes.json();
+    const soleAdmin = members.find((m: { email: string }) => m.email === "admin@example.com");
+
+    // A service token has no member id of its own, so it can't hit the
+    // "self" guard — this exercises the last-admin guard on its own,
+    // independent of the acting principal's kind.
+    const tokenRes = await testApp.app.request("/admin/tokens", {
+      method: "POST",
+      headers: authedHeaders,
+      body: JSON.stringify({ label: "member management bot", scopes: ["members:admin"] }),
+    });
+    const { token } = await tokenRes.json();
+
+    const res = await testApp.app.request(`/admin/members/${soleAdmin.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token.rawToken}` },
+      body: JSON.stringify({ role: "member" }),
+    });
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error.code).toBe("last_admin");
+
+    const after = await membersRepo.getById(testApp.db, soleAdmin.id);
+    expect(after?.role).toBe("admin");
+  });
 });
 
 describe("admin instruments routes", () => {

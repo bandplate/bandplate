@@ -1,12 +1,22 @@
-// `/admin/members` page logic. Mirrors `packages/api/src/routes/admin-members.ts`
-// exactly (same validation, same repo calls) — this is the Astro
-// composition root's own front door onto the same domain layer, not a
-// second, divergent implementation of member management.
+// `/admin/members` page logic. Calls the exact same `@bandlib/core`
+// functions `packages/api/src/routes/admin-members.ts` calls for
+// validation (`createMemberSchema`/`patchMemberSchema`) and for the
+// self-demotion/last-admin guard (`updateMemberWithGuards`) — this is the
+// Astro composition root's own front door onto the same domain layer, not
+// a second, divergent implementation of member management. See
+// task-4-report.md "Fix round 2": the API route used to have no
+// self-demotion/last-admin guard of its own at all, which this shared
+// function structurally rules out going forward.
 import type { AuthDeps } from "@bandlib/core";
-import { revokeAllSessionsForMember, slugify } from "@bandlib/core";
+import {
+  createMemberSchema,
+  patchMemberSchema,
+  revokeAllSessionsForMember,
+  slugify,
+  updateMemberWithGuards,
+} from "@bandlib/core";
 import type { Db } from "@bandlib/db";
 import { authSessionsRepo, membersRepo } from "@bandlib/db";
-import { z } from "zod";
 
 type Member = membersRepo.Member;
 
@@ -25,21 +35,6 @@ export async function listMembersWithLastSeen(db: Db): Promise<MemberWithLastSee
   ]);
   return members.map((member) => ({ ...member, lastSeenAt: lastSeenByMember.get(member.id) }));
 }
-
-const createMemberSchema = z.object({
-  displayName: z.string().trim().min(1, "Enter a display name.").max(200),
-  // `.email()`, not just non-empty — a display name typo in the email
-  // field used to create a member who could never log in (the login flow
-  // only ever accepts a real address to send a link to), with nothing at
-  // creation time to catch it.
-  email: z
-    .string()
-    .trim()
-    .min(1, "Enter an email address.")
-    .max(320)
-    .email("Enter a valid email address."),
-  role: z.enum(["member", "admin"]).optional(),
-});
 
 export type CreateMemberField = "displayName" | "email";
 
@@ -79,20 +74,6 @@ export async function createMember(
   return { kind: "ok", member };
 }
 
-const patchMemberSchema = z
-  .object({
-    status: z.enum(["invited", "active", "disabled"]).optional(),
-    role: z.enum(["member", "admin"]).optional(),
-  })
-  // Restored to match `packages/api/src/routes/admin-members.ts`'s
-  // `patchMemberSchema` exactly — the web copy dropped this `.refine` in
-  // the first pass, so `intent=update` with neither field set parsed
-  // successfully and did nothing, but still redirected to `?updated=1` as
-  // if it had.
-  .refine((v) => v.status !== undefined || v.role !== undefined, {
-    message: "At least one of status or role is required.",
-  });
-
 export type UpdateMemberResult =
   | { kind: "ok" }
   | { kind: "not_found" }
@@ -106,16 +87,6 @@ export async function updateMember(
   formData: FormData,
   actingMemberId: string,
 ): Promise<UpdateMemberResult> {
-  // An admin can otherwise demote or disable their own only working
-  // account and lock themselves out unrecoverably — `/setup` 404s once any
-  // member exists, so there is no self-service way back in. The UI hides
-  // these controls on the acting principal's own row (see
-  // `members/index.astro`); this is the server-side backstop for a
-  // crafted request that submits one anyway.
-  if (id === actingMemberId) {
-    return { kind: "self" };
-  }
-
   const parsed = patchMemberSchema.safeParse({
     status: formData.get("status") || undefined,
     role: formData.get("role") || undefined,
@@ -124,37 +95,14 @@ export async function updateMember(
     return { kind: "invalid" };
   }
 
-  const existing = await membersRepo.getById(db, id);
-  if (!existing) {
-    return { kind: "not_found" };
+  // Self-demotion and last-admin lockout rules live in `@bandlib/core`
+  // now, shared with `packages/api`'s identical PATCH route — see this
+  // module's header comment.
+  const result = await updateMemberWithGuards(db, id, actingMemberId, parsed.data);
+  if (result.kind === "ok") {
+    return { kind: "ok" };
   }
-
-  const nextRole = parsed.data.role ?? existing.role;
-  const nextStatus = parsed.data.status ?? existing.status;
-  const demotesOrDisablesAnAdmin =
-    existing.role === "admin" && (nextRole !== "admin" || nextStatus === "disabled");
-
-  if (demotesOrDisablesAnAdmin) {
-    // Cheap at this scale (a band roster, not a userbase) — list every
-    // member rather than maintaining a running admin count.
-    const allMembers = await membersRepo.list(db);
-    const otherActiveAdmins = allMembers.filter(
-      (m) => m.id !== id && m.role === "admin" && m.status !== "disabled",
-    );
-    if (otherActiveAdmins.length === 0) {
-      return { kind: "last_admin" };
-    }
-  }
-
-  const update: membersRepo.UpdateMemberInput = {};
-  if (parsed.data.status !== undefined) {
-    update.status = parsed.data.status;
-  }
-  if (parsed.data.role !== undefined) {
-    update.role = parsed.data.role;
-  }
-  await membersRepo.update(db, id, update);
-  return { kind: "ok" };
+  return result;
 }
 
 export async function getMember(db: Db, id: string): Promise<Member | undefined> {

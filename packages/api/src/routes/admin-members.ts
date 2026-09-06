@@ -1,24 +1,14 @@
 import type { AuthDeps } from "@bandlib/core";
-import { revokeAllSessionsForMember, slugify } from "@bandlib/core";
+import {
+  createMemberSchema,
+  patchMemberSchema,
+  revokeAllSessionsForMember,
+  slugify,
+  updateMemberWithGuards,
+} from "@bandlib/core";
 import { type Db, membersRepo } from "@bandlib/db";
-import { z } from "zod";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";
-
-const createMemberSchema = z.object({
-  displayName: z.string().trim().min(1).max(200),
-  email: z.string().trim().min(1).max(320),
-  role: z.enum(["member", "admin"]).optional(),
-});
-
-const patchMemberSchema = z
-  .object({
-    status: z.enum(["invited", "active", "disabled"]).optional(),
-    role: z.enum(["member", "admin"]).optional(),
-  })
-  .refine((v) => v.status !== undefined || v.role !== undefined, {
-    message: "At least one of status or role is required.",
-  });
 
 export interface AdminMemberRouteDeps {
   db: Db;
@@ -65,27 +55,27 @@ export function registerAdminMemberRoutes(router: GuardedRouter, deps: AdminMemb
       return errorResponse(c, 400, "invalid_body", "status and/or role must be valid.");
     }
 
-    const existing = await membersRepo.getById(deps.db, id);
-    if (!existing) {
-      return errorResponse(c, 404, "not_found", "Member not found.");
-    }
+    // A service-token caller has no member id and can never match `id` —
+    // see `updateMemberWithGuards`'s doc comment.
+    const principal = c.get("principal");
+    const actingMemberId = principal?.kind === "member" ? principal.memberId : undefined;
 
-    // One statement, not two independent round trips — a {role, status}
-    // patch must not be able to land half-applied. Only include keys that
-    // were actually provided (rather than passing `status: undefined`
-    // through) so `membersRepo.update`'s "nothing to do" guard sees an
-    // accurate key count.
-    const update: membersRepo.UpdateMemberInput = {};
-    if (parsed.data.status !== undefined) {
-      update.status = parsed.data.status;
+    const result = await updateMemberWithGuards(deps.db, id, actingMemberId, parsed.data);
+    switch (result.kind) {
+      case "not_found":
+        return errorResponse(c, 404, "not_found", "Member not found.");
+      case "self":
+        return errorResponse(c, 400, "self_target", "You cannot change your own role or status.");
+      case "last_admin":
+        return errorResponse(
+          c,
+          409,
+          "last_admin",
+          "At least one other admin must remain before this change.",
+        );
+      case "ok":
+        return c.json({ member: result.member });
     }
-    if (parsed.data.role !== undefined) {
-      update.role = parsed.data.role;
-    }
-    await membersRepo.update(deps.db, id, update);
-
-    const updated = await membersRepo.getById(deps.db, id);
-    return c.json({ member: updated });
   });
 
   router.post("/admin/members/:id/revoke-sessions", requireScopes("members:admin"), async (c) => {

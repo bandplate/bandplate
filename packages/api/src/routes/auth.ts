@@ -1,15 +1,26 @@
 import type { AuthDeps, RateLimiter } from "@bandlib/core";
 import { consumeLoginToken, peekLoginToken, requestLogin, revokeSession } from "@bandlib/core";
+import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { z } from "zod";
 import { SESSION_COOKIE_NAME, clearSessionCookie, setSessionCookie } from "../cookies.js";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, publicRoute } from "../route-registry.js";
+import type { AppEnv } from "../types.js";
 
 const LOGIN_EMAIL_LIMIT = 5;
 const LOGIN_EMAIL_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_IP_LIMIT = 20;
 const LOGIN_IP_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * Number of reverse proxy hops in front of this app that are trusted to
+ * have appended their own observed peer to `X-Forwarded-For`. Most
+ * deployments sit behind exactly one (the platform's own edge/proxy), so 1
+ * is a safe default; a deployment with an extra internal load balancer
+ * would set this higher.
+ */
+const DEFAULT_TRUSTED_PROXY_DEPTH = 1;
 
 const loginBodySchema = z.object({ email: z.string().trim().min(1).max(320) });
 
@@ -18,6 +29,46 @@ export interface AuthRouteDeps {
   rateLimiter: RateLimiter;
   appOrigin: string;
   cookieSecure: boolean;
+  /** See `DEFAULT_TRUSTED_PROXY_DEPTH`. */
+  trustedProxyDepth?: number;
+}
+
+/**
+ * Extracts the caller's IP for rate-limiting purposes. `X-Forwarded-For`
+ * is a spoofable, attacker-suppliable header in general — most proxies
+ * *append* the peer they see to whatever value arrived with the request,
+ * rather than replacing it, so an attacker can prepend an arbitrary fake
+ * prefix and get a fresh rate-limit bucket on every request by varying it.
+ * Only the entries appended by proxies we actually trust are meaningful:
+ * with `trustedProxyDepth` trusted hops in front of us, the real client is
+ * `trustedProxyDepth` entries from the *right* end of the list, not the
+ * first (leftmost) one. `CF-Connecting-IP`, when present, is set directly
+ * by Cloudflare's edge and isn't client-suppliable at all, so it's
+ * preferred outright.
+ */
+function extractClientIp(c: Context<AppEnv>, trustedProxyDepth: number): string {
+  const cfConnectingIp = c.req.header("cf-connecting-ip");
+  if (cfConnectingIp) {
+    return cfConnectingIp;
+  }
+
+  const xForwardedFor = c.req.header("x-forwarded-for");
+  if (xForwardedFor) {
+    const hops = xForwardedFor
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter((hop) => hop.length > 0);
+    if (hops.length > 0) {
+      const depth = Math.max(1, trustedProxyDepth);
+      const index = Math.min(Math.max(hops.length - depth, 0), hops.length - 1);
+      const hop = hops[index];
+      if (hop) {
+        return hop;
+      }
+    }
+  }
+
+  return "unknown";
 }
 
 // Identical body for every outcome — whitelisted, unknown, or disabled —
@@ -32,7 +83,7 @@ export function registerAuthRoutes(router: GuardedRouter, deps: AuthRouteDeps): 
       return errorResponse(c, 400, "invalid_body", "A valid email is required.");
     }
 
-    const ip = c.req.header("x-forwarded-for") ?? c.req.header("cf-connecting-ip") ?? "unknown";
+    const ip = extractClientIp(c, deps.trustedProxyDepth ?? DEFAULT_TRUSTED_PROXY_DEPTH);
     const emailKey = `login:email:${parsed.data.email.toLowerCase()}`;
     const ipKey = `login:ip:${ip}`;
 
@@ -42,6 +93,8 @@ export function registerAuthRoutes(router: GuardedRouter, deps: AuthRouteDeps): 
     ]);
 
     if (!emailLimit.allowed || !ipLimit.allowed) {
+      const retryAfterMs = Math.max(emailLimit.retryAfterMs, ipLimit.retryAfterMs);
+      c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
       return errorResponse(c, 429, "rate_limited", "Too many login requests. Try again later.");
     }
 

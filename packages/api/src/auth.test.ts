@@ -289,4 +289,48 @@ describe("rate limiting", () => {
 
     expect(responses.at(-1)?.status).toBe(429);
   });
+
+  it("sets Retry-After on a 429", async () => {
+    const { app } = await buildTestApp();
+
+    let last: Response | undefined;
+    for (let i = 0; i < 6; i++) {
+      last = await app.request("/auth/login", {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ email: "retry-after@example.com" }),
+      });
+    }
+
+    expect(last?.status).toBe(429);
+    const retryAfter = last?.headers.get("Retry-After");
+    expect(retryAfter).not.toBeNull();
+    expect(Number(retryAfter)).toBeGreaterThan(0);
+  });
+
+  it("cannot be evaded by varying a fake X-Forwarded-For prefix — only the last (trusted) hop counts", async () => {
+    const { app } = await buildTestApp();
+
+    const responses = [];
+    for (let i = 0; i < 21; i++) {
+      responses.push(
+        await app.request("/auth/login", {
+          method: "POST",
+          // A different, attacker-controlled prefix on every request; the
+          // real (trusted-proxy-appended) hop stays fixed at the end. With
+          // the default trustedProxyDepth of 1, only that last hop should
+          // matter for the rate-limit key — if the first entry were used
+          // instead (the pre-fix behavior), each of these would land in a
+          // fresh bucket and none would ever be throttled.
+          headers: {
+            ...jsonHeaders,
+            "x-forwarded-for": `10.0.0.${i}, 203.0.113.9`,
+          },
+          body: JSON.stringify({ email: `spoofed-${i}@example.com` }),
+        }),
+      );
+    }
+
+    expect(responses.at(-1)?.status).toBe(429);
+  });
 });

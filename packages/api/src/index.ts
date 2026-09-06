@@ -19,6 +19,12 @@ export interface AppConfig {
   bootstrapToken: string;
   /** Whether `bl_session` is marked `Secure`. `false` only for non-TLS local dev. */
   cookieSecure: boolean;
+  /**
+   * Number of trusted reverse-proxy hops in front of this app, for
+   * extracting the real client IP out of `X-Forwarded-For` (see
+   * `routes/auth.ts`'s `extractClientIp`). Defaults to 1.
+   */
+  trustedProxyDepth?: number;
 }
 
 /**
@@ -94,6 +100,7 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
     rateLimiter: deps.rateLimiter,
     appOrigin: deps.config.appOrigin,
     cookieSecure: deps.config.cookieSecure,
+    trustedProxyDepth: deps.config.trustedProxyDepth,
   });
   registerSetupRoutes(router, { db: deps.db, auth, cookieSecure: deps.config.cookieSecure });
   registerAdminMemberRoutes(router, { db: deps.db, auth });

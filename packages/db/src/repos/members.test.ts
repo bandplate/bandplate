@@ -58,18 +58,52 @@ describe("members repo", () => {
     expect(found?.status).toBe("disabled");
   });
 
-  it("setRole changes the role", async () => {
-    const created = await members.create(db, {
-      displayName: "Robin",
-      slug: "robin",
-      email: "robin@example.com",
-      createdAt: Date.now(),
+  describe("update", () => {
+    it("updates status and role together in one statement", async () => {
+      const created = await members.create(db, {
+        displayName: "Robin",
+        slug: "robin",
+        email: "robin@example.com",
+        createdAt: Date.now(),
+      });
+
+      await members.update(db, created.id, { status: "active", role: "admin" });
+
+      const found = await members.getById(db, created.id);
+      expect(found?.status).toBe("active");
+      expect(found?.role).toBe("admin");
     });
 
-    await members.setRole(db, created.id, "admin");
+    it("updates only the provided field, leaving the other untouched", async () => {
+      const created = await members.create(db, {
+        displayName: "Sam",
+        slug: "sam",
+        email: "sam2@example.com",
+        role: "admin",
+        createdAt: Date.now(),
+      });
 
-    const found = await members.getById(db, created.id);
-    expect(found?.role).toBe("admin");
+      await members.update(db, created.id, { status: "active" });
+
+      const found = await members.getById(db, created.id);
+      expect(found?.status).toBe("active");
+      expect(found?.role).toBe("admin");
+    });
+
+    it("is a no-op when given an empty input", async () => {
+      const created = await members.create(db, {
+        displayName: "Sam",
+        slug: "sam",
+        email: "sam3@example.com",
+        createdAt: Date.now(),
+      });
+
+      await members.update(db, created.id, {});
+
+      const found = await members.getById(db, created.id);
+      expect(found?.status).toBe("invited");
+      expect(found?.role).toBe("member");
+    });
   });
 
   it("count reflects the number of rows", async () => {

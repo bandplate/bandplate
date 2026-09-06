@@ -63,8 +63,26 @@ export async function setStatus(db: Db, id: string, status: MemberStatus): Promi
   await db.update(members).set({ status }).where(eq(members.id, id));
 }
 
-export async function setRole(db: Db, id: string, role: MemberRole): Promise<void> {
-  await db.update(members).set({ role }).where(eq(members.id, id));
+export interface UpdateMemberInput {
+  status?: MemberStatus;
+  role?: MemberRole;
+}
+
+/**
+ * Single-statement partial update for `status`/`role` together — used by
+ * `PATCH /admin/members/:id` so a `{role, status}` patch is one `UPDATE`
+ * rather than two independent round trips that could land half-applied.
+ */
+export async function update(db: Db, id: string, input: UpdateMemberInput): Promise<void> {
+  // Checked against defined values, not just key presence — drizzle's
+  // `.set()` itself drops `undefined` entries, so `{status: undefined}`
+  // would otherwise slip past a bare `Object.keys(...).length === 0` guard
+  // and reach `.set()` with nothing left to set.
+  const hasUpdate = Object.values(input).some((v) => v !== undefined);
+  if (!hasUpdate) {
+    return;
+  }
+  await db.update(members).set(input).where(eq(members.id, id));
 }
 
 export async function count(db: Db): Promise<number> {

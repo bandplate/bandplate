@@ -70,12 +70,19 @@ export function registerAdminMemberRoutes(router: GuardedRouter, deps: AdminMemb
       return errorResponse(c, 404, "not_found", "Member not found.");
     }
 
+    // One statement, not two independent round trips — a {role, status}
+    // patch must not be able to land half-applied. Only include keys that
+    // were actually provided (rather than passing `status: undefined`
+    // through) so `membersRepo.update`'s "nothing to do" guard sees an
+    // accurate key count.
+    const update: membersRepo.UpdateMemberInput = {};
     if (parsed.data.status !== undefined) {
-      await membersRepo.setStatus(deps.db, id, parsed.data.status);
+      update.status = parsed.data.status;
     }
     if (parsed.data.role !== undefined) {
-      await membersRepo.setRole(deps.db, id, parsed.data.role);
+      update.role = parsed.data.role;
     }
+    await membersRepo.update(deps.db, id, update);
 
     const updated = await membersRepo.getById(deps.db, id);
     return c.json({ member: updated });

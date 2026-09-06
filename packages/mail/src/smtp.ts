@@ -22,6 +22,17 @@ export interface SmtpConfig {
   from: string;
 }
 
+/** Escapes the five HTML-significant characters. Used before interpolating
+ * any caller-supplied string (display name, URL) into the HTML body. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function createSmtpMailer(config: SmtpConfig): Mailer {
   const transport = nodemailer.createTransport({
     host: config.host,
@@ -36,12 +47,21 @@ export function createSmtpMailer(config: SmtpConfig): Mailer {
         ? ` This link expires at ${new Date(opts.expiresAt).toISOString()}.`
         : "";
       const greeting = opts?.displayName ? `Hi ${opts.displayName},\n\n` : "";
+      // `displayName` is admin-set and `url` is server-built (from a
+      // generated token), so this is low severity either way — but both
+      // are escaped before landing in the HTML body regardless, since
+      // neither is a compile-time constant.
+      const safeUrl = escapeHtml(url);
+      const safeGreeting = opts?.displayName ? `Hi ${escapeHtml(opts.displayName)},<br><br>` : "";
+      const safeExpiresLine = opts?.expiresAt
+        ? ` This link expires at ${escapeHtml(new Date(opts.expiresAt).toISOString())}.`
+        : "";
       await transport.sendMail({
         from: config.from,
         to,
         subject: "Your bandlib login link",
         text: `${greeting}Use this link to sign in:\n${url}\n${expiresLine}`,
-        html: `<p>${greeting.replace(/\n/g, "<br>")}Use this link to sign in: <a href="${url}">${url}</a>${expiresLine}</p>`,
+        html: `<p>${safeGreeting}Use this link to sign in: <a href="${safeUrl}">${safeUrl}</a>${safeExpiresLine}</p>`,
       });
     },
     async send(msg) {

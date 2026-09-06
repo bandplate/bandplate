@@ -40,7 +40,11 @@ const kindLabel =
     <div>
       <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
       <h1 class="bl-hero-date">{formatLongDate(event.heldAt)}</h1>
-      {event.title && <p class="bl-mono bl-m0">{event.title}</p>}
+      {/* Not .bl-mono — that's for technical data (chord progressions,
+      timestamps, durations), not a human title, and its word-break: break-all
+      would mangle a long venue-derived title with no real word boundaries
+      to break at. */}
+      {event.title && <p class="bl-m0">{event.title}</p>}
       {event.venue && <p class="bl-m0">{event.venue}</p>}
     </div>
 
@@ -62,7 +66,7 @@ const kindLabel =
             <p>No takes logged for this one yet.</p>
           </div>
         ) : (
-          <div class="bl-take-list">
+          <div class="bl-take-list bl-take-list--wide">
             {takes.map((take) => (
               <TakeRow take={take} instruments={take.instruments} song={take.song} />
             ))}

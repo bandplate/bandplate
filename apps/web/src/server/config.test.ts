@@ -43,10 +43,18 @@ describe("loadConfig", () => {
   });
 
   it("accepts an explicit BANDLIB_APP_ORIGIN in production", () => {
+    // NOT `...BASE_ENV` here — it carries BANDLIB_ALLOW_DEV_MAILER=true,
+    // which is now itself rejected once NODE_ENV=production (see the
+    // BANDLIB_ALLOW_DEV_MAILER tests below). A real SMTP config isolates
+    // this test to the one thing it's actually checking: the app origin.
     const config = loadConfig({
-      ...BASE_ENV,
+      BANDLIB_DATABASE_URL: "file:./test.db",
+      BANDLIB_BOOTSTRAP_TOKEN: "test-token",
       NODE_ENV: "production",
       BANDLIB_APP_ORIGIN: "https://bandlib.example",
+      BANDLIB_SMTP_HOST: "smtp.example.com",
+      BANDLIB_SMTP_PORT: "587",
+      BANDLIB_SMTP_FROM: "bandlib@example.com",
     });
     expect(config.appOrigin).toBe("https://bandlib.example");
   });
@@ -100,6 +108,55 @@ describe("loadConfig", () => {
     });
     expect(config.cookieSecure).toBe(false);
     expect(config.trustedProxyDepth).toBe(0);
+  });
+
+  it("fails when BANDLIB_ALLOW_DEV_MAILER=true and NODE_ENV=production", () => {
+    const env = {
+      ...BASE_ENV,
+      NODE_ENV: "production",
+      BANDLIB_APP_ORIGIN: "https://bandlib.example",
+      BANDLIB_ALLOW_DEV_MAILER: "true",
+    };
+    expect(() => loadConfig(env)).toThrow(/BANDLIB_ALLOW_DEV_MAILER/);
+  });
+
+  it("accepts BANDLIB_ALLOW_DEV_MAILER=true outside production", () => {
+    const config = loadConfig({ ...BASE_ENV, BANDLIB_ALLOW_DEV_MAILER: "true" });
+    expect(config.allowDevMailer).toBe(true);
+  });
+
+  it("still starts in production with a real SMTP config and no dev-mailer flag", () => {
+    const config = loadConfig({
+      BANDLIB_DATABASE_URL: "file:./test.db",
+      BANDLIB_BOOTSTRAP_TOKEN: "test-token",
+      NODE_ENV: "production",
+      BANDLIB_APP_ORIGIN: "https://bandlib.example",
+      BANDLIB_SMTP_HOST: "smtp.example.com",
+      BANDLIB_SMTP_PORT: "587",
+      BANDLIB_SMTP_FROM: "bandlib@example.com",
+    });
+    expect(config.isProduction).toBe(true);
+    expect(config.allowDevMailer).toBe(false);
+  });
+
+  it("rejects a BANDLIB_APP_ORIGIN with a trailing slash", () => {
+    const env = { ...BASE_ENV, BANDLIB_APP_ORIGIN: "https://bandlib.example/" };
+    expect(() => loadConfig(env)).toThrow(/BANDLIB_APP_ORIGIN/);
+  });
+
+  it("rejects a BANDLIB_APP_ORIGIN with a path", () => {
+    const env = { ...BASE_ENV, BANDLIB_APP_ORIGIN: "https://bandlib.example/app" };
+    expect(() => loadConfig(env)).toThrow(/BANDLIB_APP_ORIGIN/);
+  });
+
+  it("rejects a BANDLIB_APP_ORIGIN that isn't a URL at all", () => {
+    const env = { ...BASE_ENV, BANDLIB_APP_ORIGIN: "not a url" };
+    expect(() => loadConfig(env)).toThrow(/BANDLIB_APP_ORIGIN/);
+  });
+
+  it("accepts a bare BANDLIB_APP_ORIGIN with a port", () => {
+    const config = loadConfig({ ...BASE_ENV, BANDLIB_APP_ORIGIN: "http://localhost:5000" });
+    expect(config.appOrigin).toBe("http://localhost:5000");
   });
 
   it("memoizes: a second call returns the same object without re-reading env", () => {

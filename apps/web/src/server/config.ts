@@ -48,7 +48,32 @@ const EnvSchema = z
   .object({
     NODE_ENV: z.string().optional(),
     BANDLIB_DATABASE_URL: z.string().trim().min(1, "is required"),
-    BANDLIB_APP_ORIGIN: z.string().trim().min(1).optional(),
+    // Parsed as a URL, not just a non-empty string: a trailing slash or a
+    // stray path (e.g. "https://bandlib.example/") is a value the browser's
+    // `Origin` header can NEVER match — `Origin` is always exactly
+    // scheme://host[:port], no path, no trailing slash — so a value like
+    // that silently 403s every mutating request via `isSameOrigin` with no
+    // clue why. Re-serializing the parsed URL's `.origin` and comparing it
+    // back to the input catches exactly that shape of mistake.
+    BANDLIB_APP_ORIGIN: z
+      .string()
+      .trim()
+      .min(1)
+      .refine(
+        (v) => {
+          try {
+            return new URL(v).origin === v;
+          } catch {
+            return false;
+          }
+        },
+        {
+          message:
+            "must be a bare origin — scheme + host only, e.g. https://bandlib.example " +
+            "(no trailing slash, no path, no query string)",
+        },
+      )
+      .optional(),
     BANDLIB_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
     BANDLIB_COOKIE_SECURE: BOOLEAN_STRING.optional(),
     BANDLIB_TRUSTED_PROXY_DEPTH: NON_NEGATIVE_INT_STRING.optional(),
@@ -121,6 +146,24 @@ const EnvSchema = z
           "which is a lockout waiting to happen. Set BANDLIB_SMTP_HOST/PORT/FROM (and optionally " +
           "USER/PASS) for a real deployment, or BANDLIB_ALLOW_DEV_MAILER=true for local dev only " +
           "(prints login links to the console instead of emailing them).",
+      });
+    }
+
+    // The console mailer prints raw, unconsumed login links to stdout —
+    // fine on a laptop, a credential leak in any real deployment's logs.
+    // `.env.example` documents this flag as dev-only, but a copied `.env`
+    // with SMTP left commented out and this flag left on is exactly the
+    // mistake that ships a lockout-proof-looking config that's actually
+    // handing out login links in plaintext. Refuse it outright once
+    // NODE_ENV=production, regardless of what else is configured.
+    if (isProduction && allowDevMailer) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BANDLIB_ALLOW_DEV_MAILER"],
+        message:
+          "must not be true when NODE_ENV=production — the console mailer prints raw login " +
+          "links to stdout, which is a credential leak in any real deployment's logs. Configure " +
+          "BANDLIB_SMTP_* instead.",
       });
     }
   });

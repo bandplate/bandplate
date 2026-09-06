@@ -13,6 +13,7 @@ import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { getSongDetail } from "../../server/pages/songs.js";
+import { buildSongChart } from "../../server/song-text.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -34,6 +35,9 @@ const { song, aliases, instrumentNotes, takes } = detail;
 const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined].filter(
   Boolean,
 );
+// One interleaved chart (chords above their matching lyric section) rather
+// than two stacked, unrelated `<pre>` blocks — see server/song-text.ts.
+const chart = buildSongChart(song.chordProgression, song.lyrics);
 ---
 
 <AppLayout title={song.title} principal={principal} current="songs">
@@ -46,21 +50,22 @@ const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : und
 
     <div class="bl-song-detail-grid">
       <div class="bl-stack">
-        {song.chordProgression && (
+        {chart.length > 0 && (
           <section>
-            <h2 class="bl-section-title">
-              Chords
-            </h2>
-            <pre class="bl-chords">{song.chordProgression}</pre>
-          </section>
-        )}
-
-        {song.lyrics && (
-          <section>
-            <h2 class="bl-section-title">
-              Lyrics
-            </h2>
-            <pre class="bl-lyrics">{song.lyrics}</pre>
+            <h2 class="bl-section-title">Chords &amp; lyrics</h2>
+            <div class="bl-song-chart">
+              {chart.map((section) => (
+                <div class="bl-song-chart-section">
+                  {section.label && <p class="bl-song-chart-label">{section.label}</p>}
+                  {section.chordLines.length > 0 && (
+                    <pre class="bl-chords">{section.chordLines.join("\n")}</pre>
+                  )}
+                  {section.lyricLines.length > 0 && (
+                    <pre class="bl-lyrics">{section.lyricLines.join("\n")}</pre>
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

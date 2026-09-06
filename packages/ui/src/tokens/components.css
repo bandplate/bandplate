@@ -1280,7 +1280,13 @@ a.bl-btn {
   font-family: var(--bl-font-mono);
   font-size: 1.0625rem;
   line-height: 1.9;
-  white-space: pre-wrap;
+  /* `pre`, not `pre-wrap` — a chord line's spacing is column alignment
+     (monospace exists to keep chord names lined up over the syllable they
+     land on), and letting a long line soft-wrap destroys that alignment.
+     `overflow-x: auto` scrolls the rare line that exceeds the measure
+     instead, keeping every line's own spacing intact. */
+  white-space: pre;
+  overflow-x: auto;
   max-width: 46ch;
   margin: 0;
 }
@@ -1292,6 +1298,42 @@ a.bl-btn {
   white-space: pre-wrap;
   max-width: 38ch;
   margin: 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Song chart — chords interleaved with lyrics by section (Verse/Chorus/    */
+/* Bridge/…), not two stacked, unrelated `<pre>` blocks (see                */
+/* apps/web/src/server/song-text.ts for the parsing/pairing). A section     */
+/* label is bold plus a short accent-colored left rule — NOT tracked-out    */
+/* ALL-CAPS (the brief's own example of a template tell) — so the           */
+/* structure is findable at a glance, the way a musician actually reads a   */
+/* chart: section first, then the words and changes under it.               */
+/* ---------------------------------------------------------------------- */
+
+.bl-song-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.bl-song-chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bl-song-chart-label {
+  font-family: var(--bl-font-body);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  margin: 0;
+  padding-left: 0.75rem;
+  /* `--bl-component-accent-strong` — the same token/pairing already
+     verified against the page ground elsewhere in this file (9.21:1 light,
+     4.41:1 dark; well over the 3:1 WCAG 1.4.11 non-text-boundary floor), not
+     a new ratio. Fill/border use only, never as this label's own text
+     color, per the brief's accent-token rule. */
+  border-left: 3px solid var(--bl-component-accent-strong);
 }
 
 /* ---------------------------------------------------------------------- */

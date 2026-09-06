@@ -1,11 +1,19 @@
 import { normalizeTitle, uuidv7 } from "@bandlib/core";
-import { eq } from "drizzle-orm";
+import { type SQL, and, eq, inArray, like, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
-import { songAliases, songs } from "../schema/sqlite/index.js";
+import {
+  instruments,
+  songAliases,
+  songInstrumentNotes,
+  songs,
+  takes,
+} from "../schema/sqlite/index.js";
+import * as takesRepo from "./takes.js";
 
 export type Song = typeof songs.$inferSelect;
 export type SongAlias = typeof songAliases.$inferSelect;
 export type SongAliasSource = SongAlias["source"];
+export type SongInstrumentNote = typeof songInstrumentNotes.$inferSelect;
 
 export interface CreateSongInput {
   title: string;
@@ -55,6 +63,14 @@ export async function getById(db: Db, id: string): Promise<Song | undefined> {
   return row;
 }
 
+/** Batch lookup — avoids one round trip per row when rendering an event's take list. */
+export async function getByIds(db: Db, ids: string[]): Promise<Song[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return db.select().from(songs).where(inArray(songs.id, ids));
+}
+
 export async function findByTitleNorm(db: Db, titleNorm: string): Promise<Song | undefined> {
   const [row] = await db.select().from(songs).where(eq(songs.titleNorm, titleNorm)).limit(1);
   return row;
@@ -71,8 +87,140 @@ export async function findByAlias(db: Db, aliasNorm: string): Promise<Song | und
   return row?.song;
 }
 
+/** Alphabetical by normalized title — SQLite row order is not contractual otherwise. */
 export async function list(db: Db): Promise<Song[]> {
-  return db.select().from(songs);
+  return db.select().from(songs).orderBy(songs.titleNorm);
+}
+
+export interface SongWithStats extends Song {
+  /** Number of takes recorded of this song, across all events. */
+  takeCount: number;
+  /** `recordedAt` of the most recent take, or `null` for a song with none. */
+  lastPlayedAt: number | null;
+}
+
+export type SongSort = "title" | "recent" | "takes";
+
+export interface ListWithStatsOptions {
+  /** Case/diacritic-insensitive substring match against the title. */
+  search?: string;
+  /**
+   * Restrict to songs that have at least one take carrying ALL of these
+   * instruments (AND semantics — delegates to `takes.listByInstruments`,
+   * the one place that logic is tested, rather than re-deriving it here).
+   */
+  instrumentIds?: string[];
+  sort?: SongSort;
+}
+
+/**
+ * The library view's backing query: every song plus its take count and last
+ * time it was played, searchable by title and filterable by instrument.
+ * Sorting happens in JS once the (small, per-band) result set is in memory —
+ * simpler than expressing "order by an aggregate, nulls last" portably in
+ * SQL, and easy to unit test as plain array behavior.
+ */
+export async function listWithStats(
+  db: Db,
+  options: ListWithStatsOptions = {},
+): Promise<SongWithStats[]> {
+  let songIdFilter: Set<string> | undefined;
+  if (options.instrumentIds && options.instrumentIds.length > 0) {
+    const matchingTakes = await takesRepo.listByInstruments(db, options.instrumentIds);
+    songIdFilter = new Set(matchingTakes.map((t) => t.songId));
+    if (songIdFilter.size === 0) {
+      return [];
+    }
+  }
+
+  const conditions: SQL[] = [];
+  if (options.search) {
+    conditions.push(like(songs.titleNorm, `%${normalizeTitle(options.search)}%`));
+  }
+  if (songIdFilter) {
+    conditions.push(inArray(songs.id, [...songIdFilter]));
+  }
+
+  const base = db
+    .select({
+      song: songs,
+      takeCount: sql<number>`count(${takes.id})`,
+      lastPlayedAt: sql<number | null>`max(${takes.recordedAt})`,
+    })
+    .from(songs)
+    .leftJoin(takes, eq(takes.songId, songs.id));
+
+  const rows =
+    conditions.length > 0
+      ? await base.where(and(...conditions)).groupBy(songs.id)
+      : await base.groupBy(songs.id);
+
+  const results: SongWithStats[] = rows.map((row) => ({
+    ...row.song,
+    takeCount: row.takeCount,
+    lastPlayedAt: row.lastPlayedAt,
+  }));
+
+  const sort = options.sort ?? "title";
+  if (sort === "recent") {
+    results.sort(
+      (a, b) =>
+        (b.lastPlayedAt ?? Number.NEGATIVE_INFINITY) - (a.lastPlayedAt ?? Number.NEGATIVE_INFINITY),
+    );
+  } else if (sort === "takes") {
+    results.sort((a, b) => b.takeCount - a.takeCount);
+  } else {
+    results.sort((a, b) => a.titleNorm.localeCompare(b.titleNorm));
+  }
+
+  return results;
+}
+
+/** Every known alias of a song (manual or ingest-created), in no particular order. */
+export async function listAliases(db: Db, songId: string): Promise<SongAlias[]> {
+  return db.select().from(songAliases).where(eq(songAliases.songId, songId));
+}
+
+export interface InstrumentNote {
+  instrumentId: string;
+  instrumentLabel: string;
+  body: string;
+  updatedAt: number;
+}
+
+/** Per-instrument playing notes for a song, ordered by the instrument's sort order. */
+export async function listInstrumentNotes(db: Db, songId: string): Promise<InstrumentNote[]> {
+  const rows = await db
+    .select({
+      instrumentId: songInstrumentNotes.instrumentId,
+      instrumentLabel: instruments.label,
+      body: songInstrumentNotes.body,
+      updatedAt: songInstrumentNotes.updatedAt,
+      sortOrder: instruments.sortOrder,
+    })
+    .from(songInstrumentNotes)
+    .innerJoin(instruments, eq(instruments.id, songInstrumentNotes.instrumentId))
+    .where(eq(songInstrumentNotes.songId, songId))
+    .orderBy(instruments.sortOrder);
+
+  return rows.map(({ sortOrder: _sortOrder, ...rest }) => rest);
+}
+
+/** Upserts a per-instrument playing note for a song (composite PK: song + instrument). */
+export async function setInstrumentNote(
+  db: Db,
+  songId: string,
+  instrumentId: string,
+  body: string,
+  updatedAt: number,
+): Promise<void> {
+  await db
+    .insert(songInstrumentNotes)
+    .values({ songId, instrumentId, body, updatedAt })
+    .onConflictDoUpdate({
+      target: [songInstrumentNotes.songId, songInstrumentNotes.instrumentId],
+      set: { body, updatedAt },
+    });
 }
 
 export async function addAlias(

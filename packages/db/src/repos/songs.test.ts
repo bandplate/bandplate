@@ -2,7 +2,10 @@ import { normalizeTitle } from "@bandlib/core";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "../client.js";
 import { createTestDb } from "../testing/create-test-db.js";
+import * as events from "./events.js";
+import * as instruments from "./instruments.js";
 import * as songs from "./songs.js";
+import * as takes from "./takes.js";
 
 describe("songs repo", () => {
   let db: Db;
@@ -68,5 +71,192 @@ describe("songs repo", () => {
   it("getBySlug returns undefined for an unknown slug", async () => {
     const found = await songs.getBySlug(db, "does-not-exist");
     expect(found).toBeUndefined();
+  });
+
+  it("list() orders alphabetically by normalized title, not insertion order", async () => {
+    await songs.create(db, {
+      title: "Zebra",
+      slug: "zebra",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await songs.create(db, {
+      title: "Apple",
+      slug: "apple",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    const list = await songs.list(db);
+    expect(list.map((s) => s.slug)).toEqual(["apple", "zebra"]);
+  });
+
+  it("listAliases returns every alias of a song", async () => {
+    const song = await songs.create(db, {
+      title: "Many Aliases",
+      slug: "many-aliases",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await songs.addAlias(db, song.id, "First Alias", "manual");
+    await songs.addAlias(db, song.id, "reaper:region-guid:abc123", "ingest");
+
+    const aliases = await songs.listAliases(db, song.id);
+    expect(aliases.map((a) => a.aliasNorm).sort()).toEqual(
+      ["first alias", "reaper:region-guid:abc123"].sort(),
+    );
+  });
+
+  it("listAliases returns an empty array for a song with no aliases", async () => {
+    const song = await songs.create(db, {
+      title: "No Aliases",
+      slug: "no-aliases",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    expect(await songs.listAliases(db, song.id)).toEqual([]);
+  });
+
+  it("setInstrumentNote upserts, and listInstrumentNotes orders by instrument sort order", async () => {
+    const song = await songs.create(db, {
+      title: "Notes Song",
+      slug: "notes-song",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    const bass = await instruments.create(db, { slug: "bass", label: "Bass", sortOrder: 1 });
+    const drums = await instruments.create(db, { slug: "drums", label: "Drums", sortOrder: 0 });
+
+    await songs.setInstrumentNote(db, song.id, bass.id, "Walk the bridge in half time.", 1000);
+    await songs.setInstrumentNote(db, song.id, drums.id, "Count in on the hi-hat.", 1000);
+    // Upsert: same song+instrument pair updates the body, not a second row.
+    await songs.setInstrumentNote(db, song.id, bass.id, "Walk the bridge, revised.", 2000);
+
+    const notes = await songs.listInstrumentNotes(db, song.id);
+    expect(notes).toHaveLength(2);
+    expect(notes.map((n) => n.instrumentLabel)).toEqual(["Drums", "Bass"]);
+    expect(notes[1]?.body).toBe("Walk the bridge, revised.");
+  });
+
+  describe("listWithStats", () => {
+    let songId: string;
+    let eventId: string;
+    let bassId: string;
+    let drumsId: string;
+
+    beforeEach(async () => {
+      const now = Date.now();
+      const song = await songs.create(db, {
+        title: "Stats Song",
+        slug: "stats-song",
+        createdAt: now,
+        updatedAt: now,
+      });
+      songId = song.id;
+      const event = await events.create(db, {
+        kind: "rehearsal",
+        heldAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+      eventId = event.id;
+      bassId = (await instruments.create(db, { slug: "bass", label: "Bass" })).id;
+      drumsId = (await instruments.create(db, { slug: "drums", label: "Drums" })).id;
+    });
+
+    it("reports zero takes and a null lastPlayedAt for a song with none", async () => {
+      const [result] = await songs.listWithStats(db);
+      expect(result?.takeCount).toBe(0);
+      expect(result?.lastPlayedAt).toBeNull();
+    });
+
+    it("counts takes and reports the most recent recordedAt", async () => {
+      await takes.create(db, {
+        songId,
+        eventId,
+        recordedAt: 1000,
+        createdAt: 1000,
+        updatedAt: 1000,
+      });
+      await takes.create(db, {
+        songId,
+        eventId,
+        recordedAt: 5000,
+        createdAt: 5000,
+        updatedAt: 5000,
+      });
+
+      const [result] = await songs.listWithStats(db);
+      expect(result?.takeCount).toBe(2);
+      expect(result?.lastPlayedAt).toBe(5000);
+    });
+
+    it("search matches a diacritic/case-insensitive substring of the title", async () => {
+      const results = await songs.listWithStats(db, { search: "STATS" });
+      expect(results.map((s) => s.slug)).toEqual(["stats-song"]);
+
+      const noMatch = await songs.listWithStats(db, { search: "nonexistent" });
+      expect(noMatch).toEqual([]);
+    });
+
+    it("instrumentIds filter requires ALL instruments on the SAME take (AND semantics)", async () => {
+      await takes.create(db, {
+        songId,
+        eventId,
+        recordedAt: 1000,
+        createdAt: 1000,
+        updatedAt: 1000,
+        instrumentIds: [bassId],
+      });
+
+      const bassOnly = await songs.listWithStats(db, { instrumentIds: [bassId] });
+      expect(bassOnly.map((s) => s.slug)).toContain("stats-song");
+
+      // No take has both bass AND drums together, so the AND-filtered query
+      // must exclude this song even though it has a take with bass alone.
+      const bassAndDrums = await songs.listWithStats(db, { instrumentIds: [bassId, drumsId] });
+      expect(bassAndDrums.map((s) => s.slug)).not.toContain("stats-song");
+    });
+
+    it("instrumentIds filter returns an empty array when nothing matches", async () => {
+      const results = await songs.listWithStats(db, { instrumentIds: [bassId] });
+      expect(results).toEqual([]);
+    });
+
+    it("sort: 'recent' orders by lastPlayedAt descending, unplayed songs last", async () => {
+      const other = await songs.create(db, {
+        title: "Other Song",
+        slug: "other-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await takes.create(db, {
+        songId: other.id,
+        eventId,
+        recordedAt: 9000,
+        createdAt: 9000,
+        updatedAt: 9000,
+      });
+
+      const results = await songs.listWithStats(db, { sort: "recent" });
+      // "other-song" was played (9000); "stats-song" has never been played.
+      expect(results.map((s) => s.slug)).toEqual(["other-song", "stats-song"]);
+    });
+
+    it("sort: 'takes' orders by take count descending", async () => {
+      await takes.create(db, { songId, eventId, recordedAt: 1, createdAt: 1, updatedAt: 1 });
+      const quiet = await songs.create(db, {
+        title: "Quiet Song",
+        slug: "quiet-song",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+
+      const results = await songs.listWithStats(db, { sort: "takes" });
+      const quietIndex = results.findIndex((s) => s.slug === "quiet-song");
+      const statsIndex = results.findIndex((s) => s.slug === "stats-song");
+      expect(quiet.slug).toBe("quiet-song");
+      expect(statsIndex).toBeLessThan(quietIndex);
+    });
   });
 });

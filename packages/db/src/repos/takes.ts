@@ -1,7 +1,8 @@
 import { uuidv7 } from "@bandlib/core";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
-import { takeInstruments, takes } from "../schema/sqlite/index.js";
+import { instruments, takeInstruments, takes } from "../schema/sqlite/index.js";
+import type { Instrument } from "./instruments.js";
 
 export type Take = typeof takes.$inferSelect;
 export type TakeState = Take["state"];
@@ -79,8 +80,23 @@ export async function listBySong(db: Db, songId: string): Promise<Take[]> {
   return db.select().from(takes).where(eq(takes.songId, songId)).orderBy(desc(takes.recordedAt));
 }
 
-export async function listByEvent(db: Db, eventId: string): Promise<Take[]> {
-  return db.select().from(takes).where(eq(takes.eventId, eventId)).orderBy(desc(takes.recordedAt));
+export interface ListByEventOptions {
+  /**
+   * `"desc"` (default, newest first) matches every other take listing.
+   * `"asc"` gives the order takes were actually recorded during that one
+   * session — what the event detail page shows, since "first take of the
+   * day first" is how a member reconstructs what happened that day.
+   */
+  order?: "asc" | "desc";
+}
+
+export async function listByEvent(
+  db: Db,
+  eventId: string,
+  options: ListByEventOptions = {},
+): Promise<Take[]> {
+  const direction = options.order === "asc" ? asc(takes.recordedAt) : desc(takes.recordedAt);
+  return db.select().from(takes).where(eq(takes.eventId, eventId)).orderBy(direction);
 }
 
 /**
@@ -115,4 +131,37 @@ export async function setState(
   updatedAt: number,
 ): Promise<void> {
   await db.update(takes).set({ state, updatedAt }).where(eq(takes.id, id));
+}
+
+/**
+ * Batch-fetches the instruments on each of the given takes in one query
+ * (rather than one round trip per take row in a list), ordered by the
+ * instrument's own sort order. Callers must dedupe `takeIds` themselves —
+ * this does not, matching `listByInstruments`.
+ */
+export async function listInstrumentsForTakes(
+  db: Db,
+  takeIds: string[],
+): Promise<Map<string, Instrument[]>> {
+  const result = new Map<string, Instrument[]>();
+  if (takeIds.length === 0) {
+    return result;
+  }
+
+  const rows = await db
+    .select({ takeId: takeInstruments.takeId, instrument: instruments })
+    .from(takeInstruments)
+    .innerJoin(instruments, eq(instruments.id, takeInstruments.instrumentId))
+    .where(inArray(takeInstruments.takeId, takeIds))
+    .orderBy(instruments.sortOrder);
+
+  for (const row of rows) {
+    const existing = result.get(row.takeId);
+    if (existing) {
+      existing.push(row.instrument);
+    } else {
+      result.set(row.takeId, [row.instrument]);
+    }
+  }
+  return result;
 }

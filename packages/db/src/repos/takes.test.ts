@@ -107,6 +107,116 @@ describe("takes.listByInstruments", () => {
   });
 });
 
+describe("takes.listByEvent ordering", () => {
+  let db: Db;
+  let songId: string;
+  let eventId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    const song = await songs.create(db, {
+      title: "Ordering Song",
+      slug: "ordering-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    songId = song.id;
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    eventId = event.id;
+
+    await takes.create(db, { songId, eventId, recordedAt: 1000, createdAt: 1000, updatedAt: 1000 });
+    await takes.create(db, { songId, eventId, recordedAt: 3000, createdAt: 3000, updatedAt: 3000 });
+    await takes.create(db, { songId, eventId, recordedAt: 2000, createdAt: 2000, updatedAt: 2000 });
+  });
+
+  it("defaults to newest first (desc)", async () => {
+    const result = await takes.listByEvent(db, eventId);
+    expect(result.map((t) => t.recordedAt)).toEqual([3000, 2000, 1000]);
+  });
+
+  it("order: 'asc' returns recorded order — the order the session actually happened", async () => {
+    const result = await takes.listByEvent(db, eventId, { order: "asc" });
+    expect(result.map((t) => t.recordedAt)).toEqual([1000, 2000, 3000]);
+  });
+});
+
+describe("takes.listInstrumentsForTakes", () => {
+  let db: Db;
+  let songId: string;
+  let eventId: string;
+  let bassId: string;
+  let drumsId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    const song = await songs.create(db, {
+      title: "Instruments Song",
+      slug: "instruments-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    songId = song.id;
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    eventId = event.id;
+    bassId = (await instruments.create(db, { slug: "bass", label: "Bass", sortOrder: 1 })).id;
+    drumsId = (await instruments.create(db, { slug: "drums", label: "Drums", sortOrder: 0 })).id;
+  });
+
+  it("batches instruments for multiple takes into one map, ordered by sort order", async () => {
+    const now = Date.now();
+    const take1 = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      instrumentIds: [bassId, drumsId],
+    });
+    const take2 = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      instrumentIds: [bassId],
+    });
+
+    const map = await takes.listInstrumentsForTakes(db, [take1.id, take2.id]);
+    expect(map.get(take1.id)?.map((i) => i.slug)).toEqual(["drums", "bass"]);
+    expect(map.get(take2.id)?.map((i) => i.slug)).toEqual(["bass"]);
+  });
+
+  it("returns an empty map for an empty takeIds list", async () => {
+    const map = await takes.listInstrumentsForTakes(db, []);
+    expect(map.size).toBe(0);
+  });
+
+  it("a take with no instruments has no entry in the map", async () => {
+    const now = Date.now();
+    const take = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const map = await takes.listInstrumentsForTakes(db, [take.id]);
+    expect(map.has(take.id)).toBe(false);
+  });
+});
+
 describe("takes.create atomicity", () => {
   let db: Db;
   let songId: string;

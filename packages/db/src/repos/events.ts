@@ -54,21 +54,11 @@ export async function getByIds(db: Db, ids: string[]): Promise<Event[]> {
 
 export interface ListRecentOptions {
   limit?: number;
-  /** Restrict to these kinds — e.g. the archive's "rehearsals only" filter. */
-  kind?: EventKind[];
 }
 
 /** Newest first — this ordering is the default everywhere events appear. */
 export async function listRecent(db: Db, options: ListRecentOptions = {}): Promise<Event[]> {
-  const hasKindFilter = options.kind !== undefined && options.kind.length > 0;
-  const query = hasKindFilter
-    ? db
-        .select()
-        .from(events)
-        // biome-ignore lint/style/noNonNullAssertion: guarded by hasKindFilter above
-        .where(inArray(events.kind, options.kind!))
-        .orderBy(desc(events.heldAt))
-    : db.select().from(events).orderBy(desc(events.heldAt));
+  const query = db.select().from(events).orderBy(desc(events.heldAt));
   if (options.limit !== undefined) {
     return query.limit(options.limit);
   }
@@ -79,14 +69,23 @@ export interface EventWithTakeCount extends Event {
   takeCount: number;
 }
 
+export interface ListRecentWithTakeCountsOptions {
+  limit?: number;
+  /** Restrict to these kinds — e.g. the archive's "rehearsals only" filter. */
+  kind?: EventKind[];
+}
+
 /**
  * `listRecent` plus how many takes were recorded that day — the archive
  * list shows this so a member can tell a well-documented rehearsal from an
- * empty placeholder before opening it.
+ * empty placeholder before opening it. This (not `listRecent`) is the
+ * archive's actual backing query, so the kind filter lives on its own
+ * options type rather than on `listRecent`, which has no caller that needs
+ * it.
  */
 export async function listRecentWithTakeCounts(
   db: Db,
-  options: ListRecentOptions = {},
+  options: ListRecentWithTakeCountsOptions = {},
 ): Promise<EventWithTakeCount[]> {
   const hasKindFilter = options.kind !== undefined && options.kind.length > 0;
   const base = db

@@ -44,27 +44,6 @@ describe("events repo", () => {
     expect(list.length).toBe(2);
   });
 
-  it("listRecent filters by kind", async () => {
-    const rehearsal = await events.create(db, {
-      kind: "rehearsal",
-      heldAt: 1000,
-      createdAt: 1000,
-      updatedAt: 1000,
-    });
-    const concert = await events.create(db, {
-      kind: "concert",
-      heldAt: 2000,
-      createdAt: 2000,
-      updatedAt: 2000,
-    });
-
-    const concertsOnly = await events.listRecent(db, { kind: ["concert"] });
-    expect(concertsOnly.map((e) => e.id)).toEqual([concert.id]);
-
-    const both = await events.listRecent(db, { kind: ["concert", "rehearsal"] });
-    expect(both.map((e) => e.id)).toEqual([concert.id, rehearsal.id]);
-  });
-
   it("listRecent with no kind filter returns every kind, newest first", async () => {
     await events.create(db, { kind: "rehearsal", heldAt: 1000, createdAt: 1000, updatedAt: 1000 });
     await events.create(db, { kind: "concert", heldAt: 2000, createdAt: 2000, updatedAt: 2000 });
@@ -109,5 +88,47 @@ describe("events repo", () => {
 
     const [result] = await events.listRecentWithTakeCounts(db);
     expect(result?.takeCount).toBe(2);
+  });
+
+  // This — not listRecent — is the archive page's actual backing query, so
+  // the kind filter and the ordering are pinned here, not just on the
+  // simpler function nothing in production calls anymore.
+  it("listRecentWithTakeCounts filters by kind", async () => {
+    const rehearsal = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const concert = await events.create(db, {
+      kind: "concert",
+      heldAt: 2000,
+      createdAt: 2000,
+      updatedAt: 2000,
+    });
+
+    const concertsOnly = await events.listRecentWithTakeCounts(db, { kind: ["concert"] });
+    expect(concertsOnly.map((e) => e.id)).toEqual([concert.id]);
+
+    const both = await events.listRecentWithTakeCounts(db, { kind: ["concert", "rehearsal"] });
+    expect(both.map((e) => e.id)).toEqual([concert.id, rehearsal.id]);
+  });
+
+  it("listRecentWithTakeCounts returns newest first", async () => {
+    const older = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const newer = await events.create(db, {
+      kind: "concert",
+      heldAt: 2000,
+      createdAt: 2000,
+      updatedAt: 2000,
+    });
+
+    const list = await events.listRecentWithTakeCounts(db);
+    expect(list.map((e) => e.id)).toEqual([newer.id, older.id]);
   });
 });

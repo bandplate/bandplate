@@ -8,6 +8,7 @@ import {
   songs,
   takes,
 } from "../schema/sqlite/index.js";
+import { escapeLikePattern } from "./like-pattern.js";
 import * as takesRepo from "./takes.js";
 
 export type Song = typeof songs.$inferSelect;
@@ -111,20 +112,6 @@ export interface ListWithStatsOptions {
    */
   instrumentIds?: string[];
   sort?: SongSort;
-}
-
-/**
- * SQLite LIKE's metacharacters (`%` any run, `_` any single char) are not
- * escaped by default — a search for a literal `%` or `_` would otherwise
- * match everything (or fail to match a title that actually contains one).
- * Escaping them (and the escape character itself) and pairing that with an
- * explicit `ESCAPE` clause makes `%`/`_` in the *search term* literal again;
- * this is purely a correctness fix for what counts as a match — the query
- * is already parameterized (drizzle's `sql` template binds interpolated
- * values), so there was never an injection risk here.
- */
-function escapeLikePattern(s: string): string {
-  return s.replace(/[\\%_]/g, "\\$&");
 }
 
 /**

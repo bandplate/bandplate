@@ -8,3 +8,8 @@ dist/
 .superpowers/
 .claude/
 .remember/
+.data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal

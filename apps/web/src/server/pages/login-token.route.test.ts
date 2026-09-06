@@ -9,12 +9,20 @@
 // Mutation testing confirmed the gap: swapping `[token].astro`'s GET
 // branch to call `consume()` instead of `peekView()` passed the entire
 // suite. The routing of method -> function is the property under test
-// here, so this spins up the real `astro dev` server (routing, middleware,
-// and all) against a scratch database and drives it over HTTP.
+// here, so this drives the real HTTP route against a scratch database.
 //
 // This also closes the "no test asserts redirect status + Location, so no
 // PRG redirect is covered" gap noted separately: the POST-success
 // assertion below checks both explicitly.
+//
+// Drives the BUILT server (`pnpm build` then `node dist/start.mjs`), never
+// `astro dev` — same rationale as `songs-events.route.test.ts`: the dev
+// server and the Node adapter resolve request origin differently, a
+// divergence invisible to typecheck/lint/unit-tests/build that already
+// shipped one Critical in this project (the CSRF origin check this very
+// route's POST exercises). This file used to be the one route test still
+// spawning `astro dev`, silently exempting the login flow's own POST from
+// that coverage.
 import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -88,35 +96,28 @@ async function seedMemberAndToken(): Promise<string> {
   return token;
 }
 
-function startDevServer(): ChildProcess {
-  return spawn(
-    process.execPath,
-    [
-      join(process.cwd(), "node_modules", "astro", "astro.js"),
-      "dev",
-      "--port",
-      String(PORT),
-      // Without an explicit --host, astro dev's "Local" URL prints as
-      // `localhost` but only actually binds the IPv6 loopback (`::1`) in
-      // this environment — a plain `127.0.0.1` connection is refused. Pin
-      // it explicitly so `waitForServer`'s IPv4 fetch can reach it.
-      "--host",
-      "127.0.0.1",
-    ],
-    {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        BANDLIB_DATABASE_URL: `file:${dbPath}`,
-        BANDLIB_BOOTSTRAP_TOKEN: "route-test-bootstrap-token",
-        BANDLIB_APP_ORIGIN: ORIGIN,
-        BANDLIB_ALLOW_DEV_MAILER: "true",
-        BANDLIB_COOKIE_SECURE: "false",
-        NODE_ENV: "test",
-      },
-      stdio: "ignore",
+/** `pnpm build` (astro build + the `dist/start.mjs` bundling step) — see `package.json`. */
+async function buildApp(): Promise<void> {
+  await execFileAsync("pnpm", ["run", "build"], { cwd: process.cwd() });
+}
+
+/** The real production entry point (`node dist/start.mjs`), never `astro dev`. */
+function startBuiltServer(): ChildProcess {
+  return spawn(process.execPath, [join(process.cwd(), "dist", "start.mjs")], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      HOST: "127.0.0.1",
+      BANDLIB_DATABASE_URL: `file:${dbPath}`,
+      BANDLIB_BOOTSTRAP_TOKEN: "route-test-bootstrap-token",
+      BANDLIB_APP_ORIGIN: ORIGIN,
+      BANDLIB_ALLOW_DEV_MAILER: "true",
+      BANDLIB_COOKIE_SECURE: "false",
+      NODE_ENV: "test",
     },
-  );
+    stdio: "ignore",
+  });
 }
 
 describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", () => {
@@ -125,9 +126,10 @@ describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", (
     dbPath = join(dbDir, "db.sqlite");
     rawToken = await seedMemberAndToken();
 
-    child = startDevServer();
+    await buildApp();
+    child = startBuiltServer();
     await waitForServer(`${ORIGIN}/login`, 30_000);
-  }, 45_000);
+  }, 90_000);
 
   afterAll(async () => {
     if (child && !child.killed) {

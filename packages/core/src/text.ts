@@ -13,6 +13,28 @@ const COMBINING_MARKS = /\p{M}/gu;
 const WHITESPACE_RUN = /\s+/g;
 
 /**
+ * Strip diacritics via NFKD decomposition + combining-mark removal, with no
+ * other normalization (no lowercasing, no take-suffix stripping, no
+ * whitespace collapsing). Shared by `normalizeTitle` and `slugify` below,
+ * and by anything else that needs diacritic-insensitive matching without
+ * also inheriting title-specific semantics like the trailing "(take N)"
+ * strip — see `apps/web/src/server/song-text.ts`'s `normalizeLabel`, which
+ * needs diacritic folding for matching section labels ("Refrén"/"Refren")
+ * but must NOT strip a trailing number the way `normalizeTitle` strips a
+ * take suffix, since a label's trailing number ("Verse 2") is meaningful
+ * verse-numbering, handled separately.
+ *
+ * Total and deterministic — safe on empty strings, punctuation-only input,
+ * or diacritics-only input.
+ */
+export function stripDiacritics(s: string): string {
+  if (!s) {
+    return "";
+  }
+  return s.normalize("NFKD").replace(COMBINING_MARKS, "");
+}
+
+/**
  * Normalize a song/take title for matching and search:
  * lowercase, diacritics stripped (NFKD), internal whitespace collapsed,
  * trimmed, and a trailing take/version suffix removed.
@@ -25,7 +47,7 @@ export function normalizeTitle(s: string): string {
     return "";
   }
 
-  let out = s.normalize("NFKD").replace(COMBINING_MARKS, "");
+  let out = stripDiacritics(s);
   out = out.replace(TRAILING_TAKE_SUFFIX, "");
   out = out.toLowerCase();
   out = out.replace(WHITESPACE_RUN, " ").trim();
@@ -43,9 +65,7 @@ const LEADING_TRAILING_HYPHENS = /^-+|-+$/g;
  * falls back to "item" if nothing alphanumeric survives.
  */
 export function slugify(s: string): string {
-  const base = s
-    .normalize("NFKD")
-    .replace(COMBINING_MARKS, "")
+  const base = stripDiacritics(s)
     .toLowerCase()
     .replace(NON_SLUG_CHARS, "-")
     .replace(LEADING_TRAILING_HYPHENS, "");

@@ -19,9 +19,11 @@
 // lyrics, blank lines intact) via `buildSongChart`'s `"raw"` result — see
 // there for why a re-run of the labeled/paired logic on unrecognized text
 // is actively worse, not just unhelpful.
-import { normalizeTitle } from "@bandlib/core";
+import { stripDiacritics } from "@bandlib/core";
 
-const SECTION_WORDS = new Set([
+// Words that mean ONLY "section of a song" — safe to trust as a label the
+// moment they appear alone on a line, no corroboration needed.
+const STRONG_SECTION_WORDS = new Set([
   "intro",
   "verse",
   "chorus",
@@ -35,22 +37,33 @@ const SECTION_WORDS = new Set([
   "tag",
   "breakdown",
   // Czech — this band's actual language. Diacritics are handled by
-  // `normalizeLabel` reusing `normalizeTitle`'s NFKD stripping below, so
-  // e.g. "předehra" and "predehra" both normalize to this one ASCII entry
-  // ("ř" decomposes to "r" + a combining caron, which is then dropped) —
-  // no need to list an accented and unaccented form separately.
+  // `normalizeLabel` reusing `stripDiacritics` below, so e.g. "předehra"
+  // and "predehra" both normalize to this one ASCII entry ("ř" decomposes
+  // to "r" + a combining caron, which is then dropped) — no need to list
+  // an accented and unaccented form separately.
   "sloka", // verse
   "refren", // chorus ("refrén")
-  "most", // bridge
   "bridz", // bridge, alt ("bridž")
   "mezihra", // interlude
   "predehra", // intro ("předehra")
   "dohra", // outro
-  "solo", // solo ("sólo")
+]);
+
+// Words that ALSO occur as ordinary English words ("most", "solo", "coda"
+// are all everyday vocabulary, not just chord-chart jargon) — see
+// task-5-report.md "Fix round 3" #1 for the regression this caused: a lyric
+// line that is just the word "Most" (as in the English sense, not the Czech
+// "bridge") got promoted to a section heading. These are only trusted as
+// labels when corroborated — see `isSectionLabel`.
+const AMBIGUOUS_SECTION_WORDS = new Set([
+  "most", // bridge (Czech) / ordinary English word
+  "solo", // solo ("sólo") / ordinary English word
   "coda",
 ]);
 
-/** Strips a trailing verse/chorus number ("Verse 2" -> "verse") and normalizes for matching a lyric section to a chord section that covers every repeat of that part — lowercased AND diacritic-stripped via `normalizeTitle` (NFKD), reused rather than re-implemented, so "Sloka 1" and "Refrén" match the same way "Verse 1" and "Chorus" do. */
+const SECTION_WORDS = new Set([...STRONG_SECTION_WORDS, ...AMBIGUOUS_SECTION_WORDS]);
+
+/** Strips a trailing verse/chorus number ("Verse 2" -> "verse") and normalizes for matching a lyric section to a chord section that covers every repeat of that part — lowercased AND diacritic-stripped (NFKD), so "Sloka 1" and "Refrén" match the same way "Verse 1" and "Chorus" do. Deliberately does NOT go through `normalizeTitle`: that also strips a trailing "(take N)"/"- take N" suffix, which is take-matching semantics that have nothing to do with section-label matching — see task-5-report.md "Fix round 3" #3. */
 function normalizeLabel(label: string | undefined): string | undefined {
   if (!label) {
     return undefined;
@@ -59,16 +72,63 @@ function normalizeLabel(label: string | undefined): string | undefined {
   if (stripped.length === 0) {
     return undefined;
   }
-  const normalized = normalizeTitle(stripped);
+  const normalized = stripDiacritics(stripped).trim().toLowerCase();
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function isSectionLabel(candidate: string): boolean {
+/**
+ * A label is trusted immediately if it's one of the unambiguous chord-chart
+ * words. An ambiguous word (see `AMBIGUOUS_SECTION_WORDS`) is only trusted
+ * when `ambiguousAllowed` says the rest of the song corroborates it —
+ * computed by the caller, either from the chord side already having a
+ * recognized label, or from this same text using ≥2 distinct section words
+ * (see `hasAmbiguousCorroboration`).
+ */
+function isSectionLabel(candidate: string, ambiguousAllowed: boolean): boolean {
   const trimmed = candidate.trim();
   if (!trimmed || trimmed.length > 24) {
     return false;
   }
-  return SECTION_WORDS.has(normalizeLabel(trimmed) ?? "");
+  const normalized = normalizeLabel(trimmed);
+  if (normalized === undefined) {
+    return false;
+  }
+  if (STRONG_SECTION_WORDS.has(normalized)) {
+    return true;
+  }
+  return ambiguousAllowed && AMBIGUOUS_SECTION_WORDS.has(normalized);
+}
+
+/**
+ * Self-corroboration for a single field: does this text alone contain ≥2
+ * distinct recognized section words? If so, an ambiguous word like "Most"
+ * appearing in the same text is very likely intentional structure, not a
+ * coincidental ordinary word — a lone "Most" with nothing else section-like
+ * around it is exactly the false-positive case this guards against.
+ * `extractCandidate` pulls the label-shaped part out of a line: the whole
+ * line for lyrics, the part before the colon for chords.
+ */
+function hasAmbiguousCorroboration(
+  text: string,
+  extractCandidate: (line: string) => string,
+): boolean {
+  const found = new Set<string>();
+  for (const line of text.split("\n")) {
+    const candidate = extractCandidate(line).trim();
+    if (!candidate || candidate.length > 24) {
+      continue;
+    }
+    const normalized = normalizeLabel(candidate);
+    if (normalized !== undefined && SECTION_WORDS.has(normalized)) {
+      found.add(normalized);
+    }
+  }
+  return found.size >= 2;
+}
+
+function chordLabelCandidate(line: string): string {
+  const colonIndex = line.indexOf(":");
+  return colonIndex === -1 ? "" : line.slice(0, colonIndex);
 }
 
 export interface TextSection {
@@ -81,13 +141,22 @@ export interface TextSection {
  * lines, stanzas separated by a blank line. The blank line is structural
  * (a separator), not a rendered lyric, so it's dropped rather than kept as
  * an empty line in the section's content.
+ *
+ * `ambiguousAllowed` gates whether a bare ambiguous word ("Most", "Solo",
+ * "Coda") is trusted as a label — defaults to this text's own
+ * self-corroboration (≥2 distinct section words already in these lyrics)
+ * when the caller doesn't have outside context; `buildSongChart` passes an
+ * explicit value informed by the chord side too.
  */
-export function splitLyricsIntoSections(lyrics: string): TextSection[] {
+export function splitLyricsIntoSections(
+  lyrics: string,
+  ambiguousAllowed: boolean = hasAmbiguousCorroboration(lyrics, (line) => line),
+): TextSection[] {
   const sections: TextSection[] = [];
   let current: TextSection | undefined;
 
   for (const line of lyrics.split("\n")) {
-    if (isSectionLabel(line)) {
+    if (isSectionLabel(line, ambiguousAllowed)) {
       current = { label: line.trim(), lines: [] };
       sections.push(current);
       continue;
@@ -110,8 +179,14 @@ export function splitLyricsIntoSections(lyrics: string): TextSection[] {
  * (the seed's convention — "Verse: Am - F - C - G (x2)"). A line with no
  * recognized label continues the previous section (or starts an unlabeled
  * one, for chord text that doesn't follow the convention at all).
+ *
+ * `ambiguousAllowed` — see `splitLyricsIntoSections` — defaults to this
+ * text's own self-corroboration.
  */
-export function splitChordsIntoSections(chords: string): TextSection[] {
+export function splitChordsIntoSections(
+  chords: string,
+  ambiguousAllowed: boolean = hasAmbiguousCorroboration(chords, chordLabelCandidate),
+): TextSection[] {
   const sections: TextSection[] = [];
 
   for (const line of chords.split("\n")) {
@@ -120,7 +195,7 @@ export function splitChordsIntoSections(chords: string): TextSection[] {
     }
     const colonIndex = line.indexOf(":");
     const candidateLabel = colonIndex === -1 ? "" : line.slice(0, colonIndex);
-    if (colonIndex !== -1 && isSectionLabel(candidateLabel)) {
+    if (colonIndex !== -1 && isSectionLabel(candidateLabel, ambiguousAllowed)) {
       const body = line.slice(colonIndex + 1).trim();
       sections.push({ label: candidateLabel.trim(), lines: body ? [body] : [] });
       continue;
@@ -149,16 +224,22 @@ export interface ChartSection {
  *   pairing chords to lyrics by label means something. Rendered as the
  *   interleaved chart (one heading, chords above their matching lyrics,
  *   section by section).
- * - `"raw"` — nothing was recognized on EITHER side (a song in a language,
- *   or a convention, `SECTION_WORDS` doesn't cover). Pairing has nothing to
- *   align by here, and the section splitters both treat a blank line as a
- *   stanza separator to be dropped — exactly right for a real chart, but
- *   destructive for plain text that was never meant to be split at all. A
- *   song like this must degrade to the ORIGINAL two-block layout (raw text
- *   verbatim, so blank lines survive; chords above lyrics; separate
- *   "Chords"/"Lyrics" headings), not to something worse than what it
- *   replaced — see task-5-report.md "Fix round 2" for the Czech input that
- *   found this.
+ * - `"raw"` — the chord side isn't confidently recognized: either chord
+ *   text is present but names no recognized section at all (an
+ *   unlabeled/bare progression — pairing has no chord-side structure to
+ *   align lyric sections to), or neither side recognized anything (a song
+ *   in a language/convention `SECTION_WORDS` doesn't cover). Pairing has
+ *   nothing to align by here, and the section splitters both treat a blank
+ *   line as a stanza separator to be dropped — exactly right for a real
+ *   chart, but destructive for plain text that was never meant to be split
+ *   at all. A song like this must degrade to the ORIGINAL two-block layout
+ *   (raw text verbatim, so blank lines survive; chords above lyrics;
+ *   separate "Chords"/"Lyrics" headings), not to something worse than what
+ *   it replaced — see task-5-report.md "Fix round 2" for the Czech input
+ *   that found this, and "Fix round 3" #1 for the unlabeled-chords and
+ *   partial-recognition gaps closed later. Chords being simply ABSENT (no
+ *   chord text at all) does NOT fall to raw — a labeled lyrics-only sheet
+ *   still gets its headings, via the unpaired branch below.
  * - `"none"` — both fields empty; nothing to render.
  */
 export type SongChart =
@@ -174,8 +255,8 @@ export type SongChart =
  *
  * Falls back to chord sections and lyric sections side by side, unpaired,
  * when only one field is empty (nothing to interleave against), and to the
- * raw two-block layout when NEITHER field has a recognized section label at
- * all (nothing to interleave BY) — see `SongChart` above.
+ * raw two-block layout whenever pairing wouldn't mean anything — see
+ * `SongChart` above for the two cases that fall to raw.
  */
 export function buildSongChart(
   chordText: string | null | undefined,
@@ -189,12 +270,36 @@ export function buildSongChart(
   }
 
   const chordSections = hasChordText ? splitChordsIntoSections(chordText as string) : [];
-  const lyricSections = hasLyricsText ? splitLyricsIntoSections(lyricsText as string) : [];
-
   const chordsRecognized = chordSections.some((c) => c.label !== undefined);
+
+  // Section labels are primarily a property of the CHORD chart convention
+  // ("Label: changes"); a lyric section label only means something when
+  // there's a chord section to pair it with. So an ambiguous word in the
+  // lyrics (see AMBIGUOUS_SECTION_WORDS) is trusted unconditionally once the
+  // chords already have a recognized label — no need for lyrics-only
+  // self-corroboration in that case.
+  const lyricsAmbiguousAllowed =
+    chordsRecognized || hasAmbiguousCorroboration(lyricsText ?? "", (line) => line);
+  const lyricSections = hasLyricsText
+    ? splitLyricsIntoSections(lyricsText as string, lyricsAmbiguousAllowed)
+    : [];
   const lyricsRecognized = lyricSections.some((l) => l.label !== undefined);
 
-  if (!chordsRecognized && !lyricsRecognized) {
+  // Raw two-block fallback in two situations, both "structure isn't
+  // confidently recognized":
+  //  - chord text is PRESENT but produced no recognized label at all — an
+  //    unlabeled/bare progression. Pairing has no chord-side structure to
+  //    align lyric sections to, so trying anyway either appends the whole
+  //    chord block after all the lyrics with no heading (labeled lyrics,
+  //    unlabeled chords) or silently swallows any lyric label word that
+  //    ISN'T recognized into the previous section's content (partial
+  //    recognition) — see task-5-report.md "Fix round 3" #1 for both.
+  //  - NEITHER side recognized anything (the original "Fix round 2" case:
+  //    a song in a language/convention SECTION_WORDS doesn't cover).
+  // Chords being simply ABSENT (no chord text at all) is not this case —
+  // that's the legitimate "lyrics only" shape, handled by the unpaired
+  // branch below so a labeled lyric sheet still gets its headings.
+  if (!chordsRecognized && (hasChordText || !lyricsRecognized)) {
     return {
       kind: "raw",
       chordText: hasChordText ? (chordText as string) : undefined,

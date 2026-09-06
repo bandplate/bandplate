@@ -215,4 +215,128 @@ describe("buildSongChart", () => {
       lyricsText: undefined,
     });
   });
+
+  // Fix round 3 #1: "most"/"solo"/"coda" are ordinary English words, not
+  // just Czech/chord-chart jargon. An English song with unlabeled chords
+  // and a lyric line that just happens to be "Most" must NOT get promoted
+  // into a fake "sections" chart (heading lost, order inverted, blank
+  // lines stripped) — it must fall back to the safe raw two-block layout.
+  it("does not treat a bare 'Most' lyric line as a section label without corroboration (unlabeled chords)", () => {
+    const chords = ["Am F C G", "Am F G"].join("\n");
+    const lyrics = [
+      "I gave you all I had",
+      "",
+      "Most",
+      "of what I never said",
+      "",
+      "and the rest stayed home",
+    ].join("\n");
+
+    const chart = buildSongChart(chords, lyrics);
+
+    expect(chart).toEqual({ kind: "raw", chordText: chords, lyricsText: lyrics });
+  });
+
+  it("does not treat a bare 'Solo' lyric line as a label without corroboration, even standalone", () => {
+    // Called directly (no chord-side context at all): self-corroboration
+    // requires >=2 distinct section words in this same text. Only one
+    // ambiguous word appears (and nothing else section-like), so it's not
+    // trusted as a label.
+    const sections = splitLyricsIntoSections(
+      ["Solo", "guitar takes it away", "", "and then it fades"].join("\n"),
+    );
+    expect(sections).toEqual([
+      {
+        label: undefined,
+        lines: ["Solo", "guitar takes it away", "and then it fades"],
+      },
+    ]);
+  });
+
+  it("DOES trust two distinct ambiguous words together as self-corroborating", () => {
+    // "Solo" and "Coda" are each individually ambiguous, but two distinct
+    // section words appearing in the same text is exactly the
+    // self-corroboration signal — a coincidence of one ordinary word is
+    // plausible, a coincidence of two different ones in section-label
+    // position is not.
+    const sections = splitLyricsIntoSections(
+      ["Solo", "guitar takes it away", "", "Coda", "and then it fades"].join("\n"),
+    );
+    expect(sections).toEqual([
+      { label: "Solo", lines: ["guitar takes it away"] },
+      { label: "Coda", lines: ["and then it fades"] },
+    ]);
+  });
+
+  it("trusts an ambiguous word once the chord side already recognized a label", () => {
+    // Chords use a real, unambiguous label ("Verse"), so a "Most" lyric
+    // line is corroborated as intentional structure (the Czech sense),
+    // even though "Most" alone in the lyrics wouldn't self-corroborate.
+    const chords = ["Verse: Am F C G", "Most: F C G Am"].join("\n");
+    const lyrics = ["Verse 1", "line a", "", "Most", "line b"].join("\n");
+
+    const chart = buildSongChart(chords, lyrics);
+
+    expect(chart).toEqual({
+      kind: "sections",
+      sections: [
+        { label: "Verse 1", chordLines: ["Am F C G"], lyricLines: ["line a"] },
+        { label: "Most", chordLines: ["F C G Am"], lyricLines: ["line b"] },
+      ],
+    });
+  });
+
+  // Fix round 3 #1, pre-existing gap 1: unlabeled chords + labeled lyrics.
+  // Previously this appended the whole chord block after all the lyrics
+  // with no label and no "Chords" heading (`chordSections.length !== 0` and
+  // `lyricSections.length !== 0`, so it never hit the old raw-fallback
+  // guard, which required BOTH sides unrecognized). Must now fall back to
+  // the raw two-block layout instead.
+  it("falls back to raw when chords are unlabeled even though the lyrics have recognized section labels", () => {
+    const chords = ["Am F C G", "F C G Am"].join("\n");
+    const lyrics = ["Verse 1", "line a", "", "Chorus", "line b"].join("\n");
+
+    const chart = buildSongChart(chords, lyrics);
+
+    expect(chart).toEqual({ kind: "raw", chordText: chords, lyricsText: lyrics });
+  });
+
+  // Fix round 3 #1, pre-existing gap 2: partial recognition. A
+  // Polish-style song where only "Refren" is a recognized word swallowed
+  // "Zwrotka 2"/"Trzecia linia" into the Refren section's lyrics, since an
+  // unrecognized label-shaped line is treated as ordinary content. With
+  // unlabeled chords (a very plausible real case — a bare progression
+  // pasted alongside properly-annotated lyrics), this must now fall back
+  // to raw rather than scrambling the structure.
+  it("falls back to raw on partial recognition instead of swallowing unrecognized labels into the wrong section", () => {
+    const chords = ["Am E F C"].join("\n");
+    const lyrics = [
+      "Refren",
+      "linia refrenu",
+      "",
+      "Zwrotka 2",
+      "druga linia",
+      "",
+      "Trzecia linia",
+    ].join("\n");
+
+    const chart = buildSongChart(chords, lyrics);
+
+    expect(chart).toEqual({ kind: "raw", chordText: chords, lyricsText: lyrics });
+  });
+
+  it("still interleaves a real Czech chart with a recognized (unambiguous) chord side", () => {
+    const chords = ["Sloka: Dm C", "Refren: Bb A"].join("\n");
+    const lyrics = ["Sloka 1", "radek jedna", "", "Refren", "radek dva"].join("\n");
+
+    const chart = buildSongChart(chords, lyrics);
+
+    expect(chart).toEqual({
+      kind: "sections",
+      sections: [
+        { label: "Sloka 1", chordLines: ["Dm C"], lyricLines: ["radek jedna"] },
+        { label: "Refren", chordLines: ["Bb A"], lyricLines: ["radek dva"] },
+      ],
+    });
+  });
 });

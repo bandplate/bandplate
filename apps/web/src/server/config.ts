@@ -47,6 +47,17 @@ const NON_NEGATIVE_INT_STRING = z
 const EnvSchema = z
   .object({
     NODE_ENV: z.string().optional(),
+    // Deliberately requires exactly this name, with NO `DATABASE_URL`
+    // fallback — unlike `@bandlib/db`'s `resolveDatabaseUrl` (used by
+    // `packages/db/scripts/migrate.ts` and `packages/db/seed/run.ts`),
+    // which accepts either name for convenience across ad-hoc tooling
+    // invocations. The app's composition root is the opposite case: one
+    // process, one deploy config, and this schema already fails fast with
+    // the offending variable named in the error (see the class doc above)
+    // — accepting a second spelling here would just be a second way to
+    // misconfigure the same thing silently. Keep the two in sync only in
+    // spirit (both read `BANDLIB_DATABASE_URL` first); do not merge them
+    // into one resolver. See task-5-report.md "Fix round 3" #2.
     BANDLIB_DATABASE_URL: z.string().trim().min(1, "is required"),
     // Parsed as a URL, not just a non-empty string: a trailing slash or a
     // stray path (e.g. "https://bandlib.example/") is a value the browser's

@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { schema } from "../src/client.js";
+import { resolveDatabaseUrl } from "../src/database-url.js";
 import * as assetsRepo from "../src/repos/assets.js";
 import * as eventsRepo from "../src/repos/events.js";
 import * as favoritesRepo from "../src/repos/favorites.js";
@@ -21,7 +22,6 @@ import * as votesRepo from "../src/repos/votes.js";
 import instrumentsConfig from "./instruments.json" with { type: "json" };
 
 const MIGRATIONS_FOLDER = new URL("../migrations/sqlite", import.meta.url).pathname;
-const DEFAULT_DB_PATH = new URL("../.data/dev.db", import.meta.url).pathname;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const now = Date.now();
@@ -50,11 +50,13 @@ function seededDurationMs(clientRef: string): number {
 }
 
 async function main() {
-  // Match `scripts/migrate.ts`: `BANDLIB_DATABASE_URL` is the name the app
-  // itself uses, so seeding and running must agree on it or the seed
-  // silently populates a database nothing else opens.
-  const url =
-    process.env.BANDLIB_DATABASE_URL ?? process.env.DATABASE_URL ?? `file:${DEFAULT_DB_PATH}`;
+  // Shares `scripts/migrate.ts`'s resolver (see `../src/database-url.ts`):
+  // `BANDLIB_DATABASE_URL` is the name the app itself uses, `DATABASE_URL`
+  // is the bare fallback, and — critically — neither being set is now a
+  // loud failure here too, not a silent default to a local file that
+  // nothing else opens (that silent default was the bug: the seed reported
+  // success with real row counts against a database the app never reads).
+  const url = resolveDatabaseUrl(process.env, "running the seed");
   if (url.startsWith("file:")) {
     await mkdir(dirname(url.slice("file:".length)), { recursive: true });
   }

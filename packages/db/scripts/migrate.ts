@@ -2,14 +2,16 @@
 // Standalone migration runner — Node tooling (not part of the runtime
 // library), used by operators on first run and by CI/deploy scripts.
 // Reads `BANDLIB_DATABASE_URL` (matching `apps/web`'s env var) with a
-// fallback to the bare `DATABASE_URL` `seed/run.ts` already used, so both
-// names work.
+// fallback to the bare `DATABASE_URL`, via the shared `resolveDatabaseUrl` —
+// see `../src/database-url.ts` — so this and `seed/run.ts` can't drift
+// again the way they did before (task-5-report.md "Fix round 3" #2).
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { schema } from "../src/client.js";
+import { resolveDatabaseUrl } from "../src/database-url.js";
 
 const MIGRATIONS_FOLDER = new URL("../migrations/sqlite", import.meta.url).pathname;
 
@@ -33,10 +35,7 @@ function redactUrl(url: string): string {
 }
 
 async function main() {
-  const url = process.env.BANDLIB_DATABASE_URL ?? process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("Set BANDLIB_DATABASE_URL (or DATABASE_URL) before running migrations.");
-  }
+  const url = resolveDatabaseUrl(process.env, "running migrations");
   if (url.startsWith("file:")) {
     await mkdir(dirname(url.slice("file:".length)), { recursive: true });
   }

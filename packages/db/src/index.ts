@@ -1,6 +1,7 @@
 // @bandlib/db — runtime-agnostic (no node:* imports, no Node-only globals).
 // Must run unmodified on Cloudflare Workers (increment 7).
 export * from "./client.js";
+export * from "./database-url.js";
 export * from "./schema/sqlite/index.js";
 
 export * as membersRepo from "./repos/members.js";

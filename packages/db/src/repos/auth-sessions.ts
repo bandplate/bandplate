@@ -1,5 +1,5 @@
 import { uuidv7 } from "@bandlib/core";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { authSessions, members } from "../schema/sqlite/index.js";
 
@@ -84,6 +84,20 @@ export async function createFromLogin(db: Db, input: CreateFromLoginInput): Prom
   }
 
   return row;
+}
+
+/**
+ * Every session a member has ever had (active, expired, and revoked alike —
+ * `/me` shows status per row rather than hiding history), most recently
+ * active first. Not filtered to "still valid" — that's `resolveSession`'s
+ * job for auth decisions; this is a display listing.
+ */
+export async function listByMember(db: Db, memberId: string): Promise<Session[]> {
+  return db
+    .select()
+    .from(authSessions)
+    .where(eq(authSessions.memberId, memberId))
+    .orderBy(desc(authSessions.lastSeenAt));
 }
 
 export async function getByHash(db: Db, tokenHash: string): Promise<Session | undefined> {

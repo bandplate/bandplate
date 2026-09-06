@@ -1,8 +1,16 @@
-import { uuidv7 } from "@bandlib/core";
-import { asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { normalizeTitle, uuidv7 } from "@bandlib/core";
+import { type SQL, and, asc, desc, eq, gte, inArray, lte, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
-import { instruments, takeInstruments, takes } from "../schema/sqlite/index.js";
+import {
+  instruments,
+  songAliases,
+  songs,
+  takeInstruments,
+  takes,
+  votes,
+} from "../schema/sqlite/index.js";
 import type { Instrument } from "./instruments.js";
+import { escapeLikePattern } from "./like-pattern.js";
 
 export type Take = typeof takes.$inferSelect;
 export type TakeState = Take["state"];
@@ -76,6 +84,14 @@ export async function getById(db: Db, id: string): Promise<Take | undefined> {
   return row;
 }
 
+/** Batch lookup — avoids one round trip per row when rendering a mixed list (favorites, votes). */
+export async function getByIds(db: Db, ids: string[]): Promise<Take[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return db.select().from(takes).where(inArray(takes.id, ids));
+}
+
 export async function listBySong(db: Db, songId: string): Promise<Take[]> {
   return db.select().from(takes).where(eq(takes.songId, songId)).orderBy(desc(takes.recordedAt));
 }
@@ -97,6 +113,43 @@ export async function listByEvent(
 ): Promise<Take[]> {
   const direction = options.order === "asc" ? asc(takes.recordedAt) : desc(takes.recordedAt);
   return db.select().from(takes).where(eq(takes.eventId, eventId)).orderBy(direction);
+}
+
+/**
+ * Batch version of `listByEvent` for the home page's "recent events, each
+ * with their takes" section — one query for every event in the list rather
+ * than one `listByEvent` round trip per event. Callers must dedupe
+ * `eventIds` themselves, matching `listInstrumentsForTakes`/`listByInstruments`.
+ * Grouped in JS (a single `ORDER BY` can't express "ordered per group"
+ * cleanly in SQLite without a window function), but the actual data
+ * transfer is still the one query this function issues.
+ */
+export async function listByEvents(
+  db: Db,
+  eventIds: string[],
+  options: ListByEventOptions = {},
+): Promise<Map<string, Take[]>> {
+  const result = new Map<string, Take[]>();
+  if (eventIds.length === 0) {
+    return result;
+  }
+
+  const direction = options.order === "asc" ? asc(takes.recordedAt) : desc(takes.recordedAt);
+  const rows = await db
+    .select()
+    .from(takes)
+    .where(inArray(takes.eventId, eventIds))
+    .orderBy(direction);
+
+  for (const row of rows) {
+    const existing = result.get(row.eventId);
+    if (existing) {
+      existing.push(row);
+    } else {
+      result.set(row.eventId, [row]);
+    }
+  }
+  return result;
 }
 
 /**
@@ -164,4 +217,110 @@ export async function listInstrumentsForTakes(
     }
   }
   return result;
+}
+
+/**
+ * The home page's "needs your vote" section: published takes this member
+ * has not cast a vote on yet, newest first (the same default ordering as
+ * every other take listing). `NOT IN (SELECT take_id FROM votes WHERE
+ * member_id = ...)` rather than a post-fetch JS filter — the votes table
+ * can grow without bound, so filtering it out in SQL is the only version of
+ * this that stays cheap as the archive grows.
+ */
+export interface ListUnvotedByMemberOptions {
+  limit?: number;
+}
+
+export async function listUnvotedByMember(
+  db: Db,
+  memberId: string,
+  options: ListUnvotedByMemberOptions = {},
+): Promise<Take[]> {
+  const votedTakeIds = db
+    .select({ takeId: votes.takeId })
+    .from(votes)
+    .where(eq(votes.memberId, memberId));
+
+  const query = db
+    .select()
+    .from(takes)
+    .where(and(eq(takes.state, "published"), notInArray(takes.id, votedTakeIds)))
+    .orderBy(desc(takes.recordedAt));
+
+  return options.limit !== undefined ? query.limit(options.limit) : query;
+}
+
+/**
+ * `/search`'s backing query: every filter is optional and they all combine
+ * with AND (an empty `SearchFilters` returns every take, newest first — the
+ * same default the search page relies on for an unfiltered visit).
+ *
+ * The instrument filter reuses `listByInstruments`' AND-semantics subquery
+ * rather than re-deriving it — same reasoning `songsRepo.listWithStats`
+ * already uses for its own instrument filter (delegate to the one place
+ * that logic is tested). The free-text filter matches a song's title OR any
+ * of its aliases (manual or ingest-created), normalized/escaped the same
+ * way `songsRepo.listWithStats` does its own title search.
+ */
+export interface SearchFilters {
+  /** AND semantics — a take must carry every one of these. Caller must dedupe. */
+  instrumentIds?: string[];
+  /** `recordedAt >=` this (inclusive), epoch ms. */
+  dateFrom?: number;
+  /** `recordedAt <=` this (inclusive), epoch ms. */
+  dateTo?: number;
+  /** `ratingScore >=` this (0..1). */
+  minRating?: number;
+  /** Restrict to these states — empty/omitted means every state. */
+  states?: TakeState[];
+  /** Case/diacritic-insensitive substring match against song title or alias. */
+  search?: string;
+}
+
+export async function search(db: Db, filters: SearchFilters = {}): Promise<Take[]> {
+  const conditions: SQL[] = [];
+
+  if (filters.instrumentIds && filters.instrumentIds.length > 0) {
+    const matching = await listByInstruments(db, filters.instrumentIds);
+    const ids = matching.map((t) => t.id);
+    if (ids.length === 0) {
+      return [];
+    }
+    conditions.push(inArray(takes.id, ids));
+  }
+
+  if (filters.search) {
+    const pattern = `%${escapeLikePattern(normalizeTitle(filters.search))}%`;
+    const bySongTitle = await db
+      .select({ id: songs.id })
+      .from(songs)
+      .where(sql`${songs.titleNorm} LIKE ${pattern} ESCAPE '\\'`);
+    const byAlias = await db
+      .select({ songId: songAliases.songId })
+      .from(songAliases)
+      .where(sql`${songAliases.aliasNorm} LIKE ${pattern} ESCAPE '\\'`);
+    const songIds = [
+      ...new Set([...bySongTitle.map((r) => r.id), ...byAlias.map((r) => r.songId)]),
+    ];
+    if (songIds.length === 0) {
+      return [];
+    }
+    conditions.push(inArray(takes.songId, songIds));
+  }
+
+  if (filters.dateFrom !== undefined) {
+    conditions.push(gte(takes.recordedAt, filters.dateFrom));
+  }
+  if (filters.dateTo !== undefined) {
+    conditions.push(lte(takes.recordedAt, filters.dateTo));
+  }
+  if (filters.minRating !== undefined) {
+    conditions.push(gte(takes.ratingScore, filters.minRating));
+  }
+  if (filters.states && filters.states.length > 0) {
+    conditions.push(inArray(takes.state, filters.states));
+  }
+
+  const base = db.select().from(takes).orderBy(desc(takes.recordedAt));
+  return conditions.length > 0 ? base.where(and(...conditions)) : base;
 }

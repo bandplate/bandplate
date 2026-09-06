@@ -5,8 +5,10 @@ import type { Db } from "../client.js";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as events from "./events.js";
 import * as instruments from "./instruments.js";
+import * as members from "./members.js";
 import * as songs from "./songs.js";
 import * as takes from "./takes.js";
+import * as votes from "./votes.js";
 
 describe("takes.listByInstruments", () => {
   let db: Db;
@@ -353,5 +355,536 @@ describe("takes.create atomicity", () => {
 
     const rows = await db.select().from(schema.takes).where(eq(schema.takes.clientRef, clientRef));
     expect(rows).toEqual([]);
+  });
+});
+
+describe("takes.getByIds", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  it("returns only the requested takes, in no particular guaranteed order", async () => {
+    const now = Date.now();
+    const song = await songs.create(db, {
+      title: "GetByIds Song",
+      slug: "getbyids-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const a = await takes.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const b = await takes.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await takes.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const result = await takes.getByIds(db, [a.id, b.id]);
+    expect(result.map((t) => t.id).sort()).toEqual([a.id, b.id].sort());
+  });
+
+  it("returns an empty array for an empty id list", async () => {
+    expect(await takes.getByIds(db, [])).toEqual([]);
+  });
+});
+
+describe("takes.listByEvents", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  it("groups takes by event and orders each group newest-first by default", async () => {
+    const now = Date.now();
+    const song = await songs.create(db, {
+      title: "ListByEvents Song",
+      slug: "listbyevents-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const eventA = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const eventB = await events.create(db, {
+      kind: "concert",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await takes.create(db, {
+      songId: song.id,
+      eventId: eventA.id,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await takes.create(db, {
+      songId: song.id,
+      eventId: eventA.id,
+      recordedAt: 3000,
+      createdAt: 3000,
+      updatedAt: 3000,
+    });
+    await takes.create(db, {
+      songId: song.id,
+      eventId: eventB.id,
+      recordedAt: 2000,
+      createdAt: 2000,
+      updatedAt: 2000,
+    });
+
+    const result = await takes.listByEvents(db, [eventA.id, eventB.id]);
+    expect(result.get(eventA.id)?.map((t) => t.recordedAt)).toEqual([3000, 1000]);
+    expect(result.get(eventB.id)?.map((t) => t.recordedAt)).toEqual([2000]);
+  });
+
+  it("returns an empty map for an empty eventIds list", async () => {
+    const result = await takes.listByEvents(db, []);
+    expect(result.size).toBe(0);
+  });
+
+  it("an event with no takes has no entry in the map", async () => {
+    const now = Date.now();
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const result = await takes.listByEvents(db, [event.id]);
+    expect(result.has(event.id)).toBe(false);
+  });
+});
+
+describe("takes.listUnvotedByMember", () => {
+  let db: Db;
+  let songId: string;
+  let eventId: string;
+  let memberId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    const song = await songs.create(db, {
+      title: "Unvoted Song",
+      slug: "unvoted-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    songId = song.id;
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    eventId = event.id;
+    const member = await members.create(db, {
+      displayName: "Voter",
+      slug: "voter",
+      email: "voter@example.com",
+      createdAt: now,
+    });
+    memberId = member.id;
+  });
+
+  it("includes a published take the member has never voted on", async () => {
+    const now = Date.now();
+    const take = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+
+    const result = await takes.listUnvotedByMember(db, memberId);
+    expect(result.map((t) => t.id)).toContain(take.id);
+  });
+
+  it("excludes a published take the member has already voted on", async () => {
+    const now = Date.now();
+    const take = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+    await votes.castVote(db, { takeId: take.id, memberId, keeper: true, now });
+
+    const result = await takes.listUnvotedByMember(db, memberId);
+    expect(result.map((t) => t.id)).not.toContain(take.id);
+  });
+
+  it("does not include an unpublished (new) take, even if unvoted", async () => {
+    const now = Date.now();
+    const take = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "new",
+    });
+
+    const result = await takes.listUnvotedByMember(db, memberId);
+    expect(result.map((t) => t.id)).not.toContain(take.id);
+  });
+
+  it("does not exclude a take another member voted on", async () => {
+    const now = Date.now();
+    const other = await members.create(db, {
+      displayName: "Other Voter",
+      slug: "other-voter",
+      email: "other-voter@example.com",
+      createdAt: now,
+    });
+    const take = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+    await votes.castVote(db, { takeId: take.id, memberId: other.id, keeper: true, now });
+
+    const result = await takes.listUnvotedByMember(db, memberId);
+    expect(result.map((t) => t.id)).toContain(take.id);
+  });
+
+  it("returns an empty array when everything published has been voted on", async () => {
+    const now = Date.now();
+    const take = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+    await votes.castVote(db, { takeId: take.id, memberId, keeper: true, now });
+
+    const result = await takes.listUnvotedByMember(db, memberId);
+    expect(result).toEqual([]);
+  });
+});
+
+describe("takes.search", () => {
+  let db: Db;
+  let eventId: string;
+  let bassId: string;
+  let drumsId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    eventId = event.id;
+    bassId = (await instruments.create(db, { slug: "bass", label: "Bass" })).id;
+    drumsId = (await instruments.create(db, { slug: "drums", label: "Drums" })).id;
+  });
+
+  it("with no filters, returns every take newest first", async () => {
+    const song = await songs.create(db, {
+      title: "Search Song",
+      slug: "search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const older = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const newer = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 2000,
+      createdAt: 2000,
+      updatedAt: 2000,
+    });
+
+    const result = await takes.search(db);
+    expect(result.map((t) => t.id)).toEqual([newer.id, older.id]);
+  });
+
+  it("filters by instrument AND semantics — a take with only bass does not match {bass, drums}", async () => {
+    const song = await songs.create(db, {
+      title: "Instrument Search Song",
+      slug: "instrument-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const bassOnly = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+      instrumentIds: [bassId],
+    });
+    const both = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+      instrumentIds: [bassId, drumsId],
+    });
+
+    const bassAndDrums = await takes.search(db, { instrumentIds: [bassId, drumsId] });
+    expect(bassAndDrums.map((t) => t.id)).toEqual([both.id]);
+    expect(bassAndDrums.map((t) => t.id)).not.toContain(bassOnly.id);
+
+    const bassOnlyFilter = await takes.search(db, { instrumentIds: [bassId] });
+    expect(bassOnlyFilter.map((t) => t.id).sort()).toEqual([bassOnly.id, both.id].sort());
+  });
+
+  it("filters by date range, inclusive on both ends", async () => {
+    const song = await songs.create(db, {
+      title: "Date Search Song",
+      slug: "date-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const early = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const mid = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 2000,
+      createdAt: 2000,
+      updatedAt: 2000,
+    });
+    const late = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 3000,
+      createdAt: 3000,
+      updatedAt: 3000,
+    });
+
+    const inRange = await takes.search(db, { dateFrom: 1500, dateTo: 2500 });
+    expect(inRange.map((t) => t.id)).toEqual([mid.id]);
+
+    const inclusiveEnds = await takes.search(db, { dateFrom: 1000, dateTo: 3000 });
+    expect(inclusiveEnds.map((t) => t.id).sort()).toEqual([early.id, mid.id, late.id].sort());
+  });
+
+  it("filters by minimum rating", async () => {
+    const song = await songs.create(db, {
+      title: "Rating Search Song",
+      slug: "rating-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const member = await members.create(db, {
+      displayName: "Rater",
+      slug: "rater",
+      email: "rater@example.com",
+      createdAt: 1000,
+    });
+    const highRated = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const unrated = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await votes.castVote(db, {
+      takeId: highRated.id,
+      memberId: member.id,
+      keeper: true,
+      now: 1000,
+    });
+
+    const result = await takes.search(db, { minRating: 0.5 });
+    expect(result.map((t) => t.id)).toEqual([highRated.id]);
+    expect(result.map((t) => t.id)).not.toContain(unrated.id);
+  });
+
+  it("filters by state", async () => {
+    const song = await songs.create(db, {
+      title: "State Search Song",
+      slug: "state-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const published = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+      state: "published",
+    });
+    const rejected = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+      state: "rejected",
+    });
+
+    const result = await takes.search(db, { states: ["published"] });
+    expect(result.map((t) => t.id)).toEqual([published.id]);
+    expect(result.map((t) => t.id)).not.toContain(rejected.id);
+  });
+
+  it("free-text search matches the song title", async () => {
+    const song = await songs.create(db, {
+      title: "Neon Skyline",
+      slug: "neon-skyline-search",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const other = await songs.create(db, {
+      title: "Wildfire",
+      slug: "wildfire-search",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const match = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const noMatch = await takes.create(db, {
+      songId: other.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    const result = await takes.search(db, { search: "skyline" });
+    expect(result.map((t) => t.id)).toEqual([match.id]);
+    expect(result.map((t) => t.id)).not.toContain(noMatch.id);
+  });
+
+  it("free-text search matches a song alias, not just its title", async () => {
+    const song = await songs.create(db, {
+      title: "Official Title",
+      slug: "alias-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await songs.addAlias(db, song.id, "Nickname Version", "manual");
+    const take = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    const result = await takes.search(db, { search: "nickname" });
+    expect(result.map((t) => t.id)).toEqual([take.id]);
+  });
+
+  it("combines filters with AND — instrument plus state, neither alone is enough", async () => {
+    const song = await songs.create(db, {
+      title: "Combined Search Song",
+      slug: "combined-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const matches = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+      state: "published",
+      instrumentIds: [bassId],
+    });
+    // Right instrument, wrong state.
+    await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+      state: "rejected",
+      instrumentIds: [bassId],
+    });
+    // Right state, wrong instrument.
+    await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+      state: "published",
+      instrumentIds: [drumsId],
+    });
+
+    const result = await takes.search(db, { instrumentIds: [bassId], states: ["published"] });
+    expect(result.map((t) => t.id)).toEqual([matches.id]);
+  });
+
+  it("returns an empty array, not an error, when nothing matches", async () => {
+    await songs.create(db, {
+      title: "Unrelated Song",
+      slug: "unrelated-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    const result = await takes.search(db, { search: "no-such-title-exists" });
+    expect(result).toEqual([]);
   });
 });

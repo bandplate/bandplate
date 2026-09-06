@@ -129,6 +129,69 @@ describe("auth-sessions repo", () => {
     expect(c?.revokedAt).toBeNull();
   });
 
+  describe("listByMember", () => {
+    it("lists only that member's sessions, most recently active first", async () => {
+      const other = await members.create(db, {
+        displayName: "Sam",
+        slug: "sam",
+        email: "sam@example.com",
+        createdAt: 1_000,
+      });
+
+      const older = await authSessions.create(db, {
+        memberId,
+        tokenHash: "hash-older",
+        createdAt: 1_000,
+        expiresAt: 9_000,
+      });
+      await authSessions.touch(db, older.id, { lastSeenAt: 2_000, expiresAt: 9_000 });
+      const newer = await authSessions.create(db, {
+        memberId,
+        tokenHash: "hash-newer",
+        createdAt: 1_000,
+        expiresAt: 9_000,
+      });
+      await authSessions.touch(db, newer.id, { lastSeenAt: 5_000, expiresAt: 9_000 });
+      await authSessions.create(db, {
+        memberId: other.id,
+        tokenHash: "hash-other-member",
+        createdAt: 1_000,
+        expiresAt: 9_000,
+      });
+
+      const result = await authSessions.listByMember(db, memberId);
+
+      expect(result.map((s) => s.id)).toEqual([newer.id, older.id]);
+    });
+
+    it("includes a revoked session (a display listing, not an auth check)", async () => {
+      const session = await authSessions.create(db, {
+        memberId,
+        tokenHash: "hash-revoked",
+        createdAt: 1_000,
+        expiresAt: 9_000,
+      });
+      await authSessions.revoke(db, session.id, 3_000);
+
+      const result = await authSessions.listByMember(db, memberId);
+
+      expect(result.map((s) => s.id)).toContain(session.id);
+    });
+
+    it("returns an empty array for a member with no sessions", async () => {
+      const untouched = await members.create(db, {
+        displayName: "Never Logged In",
+        slug: "never-listbymember",
+        email: "never-listbymember@example.com",
+        createdAt: 1_000,
+      });
+
+      const result = await authSessions.listByMember(db, untouched.id);
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe("getLastSeenAtByMember", () => {
     it("returns the max lastSeenAt per member across multiple sessions, excluding members with none", async () => {
       const other = await members.create(db, {

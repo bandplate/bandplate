@@ -1,6 +1,7 @@
 import type { AuthDeps, Clock, Mailer, RateLimiter, Sleep } from "@bandlib/core";
 import type { Db } from "@bandlib/db";
 import { Hono } from "hono";
+import { errorResponse } from "./errors.js";
 import { originCheckMiddleware } from "./middleware/origin.js";
 import { principalMiddleware } from "./middleware/principal.js";
 import { GuardedRouter, assertEveryRouteIsGuarded, publicRoute } from "./route-registry.js";
@@ -50,6 +51,21 @@ export interface AppDeps {
 export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: GuardedRouter } {
   const app = new Hono<AppEnv>();
   const router = new GuardedRouter(app);
+
+  // Both of these are Hono instance-level handlers, not routes — they
+  // don't appear in `app.routes` and so aren't (and don't need to be)
+  // covered by `assertEveryRouteIsGuarded`. Without them, an unmatched
+  // path falls through to Hono's plain-text "404 Not Found" instead of
+  // the app's `{error:{code,message}}` shape, and an unhandled throw
+  // falls through to Hono's default handler — a generic 500, but with the
+  // exception text (a driver error string, potentially) reaching the
+  // client and/or an unfiltered `err` reaching logs. Neither ever
+  // includes raw exception text in the response.
+  app.notFound((c) => errorResponse(c, 404, "not_found", "Not found."));
+  app.onError((err, c) => {
+    console.error("[api] unhandled error", err);
+    return errorResponse(c, 500, "internal_error", "An unexpected error occurred.");
+  });
 
   const auth: AuthDeps = {
     db: deps.db,

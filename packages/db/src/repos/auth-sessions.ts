@@ -1,5 +1,5 @@
 import { uuidv7 } from "@bandlib/core";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { authSessions, members } from "../schema/sqlite/index.js";
 
@@ -30,6 +30,31 @@ export async function create(db: Db, input: CreateSessionInput): Promise<Session
   const row = buildRow(input);
   await db.insert(authSessions).values(row);
   return row;
+}
+
+/**
+ * Builds (but does not execute) a guarded session insert — `INSERT ...
+ * SELECT ... WHERE EXISTS (SELECT 1 FROM members WHERE id = ?)` — for use
+ * inside a `db.batch([...])` alongside a guarded member insert. Returning
+ * the unexecuted statement (a `RunnableQuery`, same shape `db.batch`
+ * already accepts for `db.insert(...)`/`db.update(...)` builders) is what
+ * lets `bootstrapAdmin` land the member row and its very first session in
+ * one atomic batch: if the member insert didn't happen (guarded elsewhere
+ * against a non-empty table), this row's own `memberId` never exists
+ * either, so this guarded insert is a no-op in the same batch — no
+ * orphaned session can result.
+ */
+export function buildCreateIfMemberExistsStatement(
+  db: Db,
+  input: CreateSessionInput,
+): { session: Session; statement: ReturnType<Db["run"]> } {
+  const row = buildRow(input);
+  const statement = db.run(sql`
+    insert into auth_sessions (id, member_id, token_hash, created_at, last_seen_at, expires_at, user_agent, revoked_at)
+    select ${row.id}, ${row.memberId}, ${row.tokenHash}, ${row.createdAt}, ${row.lastSeenAt}, ${row.expiresAt}, ${row.userAgent}, null
+    where exists (select 1 from members where id = ${row.memberId})
+  `);
+  return { session: row, statement };
 }
 
 export interface CreateFromLoginInput extends CreateSessionInput {

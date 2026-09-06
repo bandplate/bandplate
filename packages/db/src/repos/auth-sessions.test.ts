@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "../client.js";
+import { members as membersTable } from "../schema/sqlite/index.js";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as authSessions from "./auth-sessions.js";
 import * as members from "./members.js";
@@ -126,5 +127,48 @@ describe("auth-sessions repo", () => {
     expect(a?.revokedAt).toBe(5_000);
     expect(b?.revokedAt).toBe(5_000);
     expect(c?.revokedAt).toBeNull();
+  });
+
+  describe("buildCreateIfMemberExistsStatement", () => {
+    it("inserts the session when the referenced member exists", async () => {
+      const { statement } = authSessions.buildCreateIfMemberExistsStatement(db, {
+        memberId,
+        tokenHash: "hash-guarded",
+        createdAt: 1_000,
+        expiresAt: 2_000,
+      });
+      await statement;
+
+      const session = await authSessions.getByHash(db, "hash-guarded");
+      expect(session).not.toBeUndefined();
+      expect(session?.memberId).toBe(memberId);
+    });
+
+    it("is a no-op when the referenced member does not exist", async () => {
+      const { statement } = authSessions.buildCreateIfMemberExistsStatement(db, {
+        memberId: "00000000-0000-0000-0000-000000000000",
+        tokenHash: "hash-orphan",
+        createdAt: 1_000,
+        expiresAt: 2_000,
+      });
+      await statement;
+
+      const session = await authSessions.getByHash(db, "hash-orphan");
+      expect(session).toBeUndefined();
+    });
+
+    it("works as one of multiple statements inside a single db.batch", async () => {
+      const { statement } = authSessions.buildCreateIfMemberExistsStatement(db, {
+        memberId,
+        tokenHash: "hash-batched",
+        createdAt: 1_000,
+        expiresAt: 2_000,
+      });
+
+      await db.batch([statement, db.select().from(membersTable)]);
+
+      const session = await authSessions.getByHash(db, "hash-batched");
+      expect(session).not.toBeUndefined();
+    });
   });
 });

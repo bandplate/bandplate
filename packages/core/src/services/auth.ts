@@ -402,11 +402,23 @@ export interface BootstrapAdminResult {
 /**
  * Create the very first member (admin/active) and hand back a session
  * directly — deliberately not by email, so a misconfigured mailer can't
- * lock the operator out of a fresh deploy. The insert is guarded against
- * concurrent bootstrap races by `membersRepo.createIfEmpty`'s `WHERE NOT
- * EXISTS`; the bootstrap token comparison hashes both sides first so
- * `timingSafeEqualHex`'s equal-length requirement holds regardless of the
- * raw token lengths, and so length itself doesn't leak via an early return.
+ * lock the operator out of a fresh deploy. The bootstrap token comparison
+ * hashes both sides first so `timingSafeEqualHex`'s equal-length
+ * requirement holds regardless of the raw token lengths, and so length
+ * itself doesn't leak via an early return.
+ *
+ * The member insert and the first session insert land in a single
+ * `db.batch` — not two independent round trips. Each is its own guarded
+ * `INSERT ... SELECT ... WHERE ...`: the member insert only fires if the
+ * table is still empty (`membersRepo.buildCreateIfEmptyStatement`), and
+ * the session insert only fires if a member with the generated id exists
+ * (`authSessionsRepo.buildCreateIfMemberExistsStatement`) — which, since
+ * the id is freshly generated for this call, is true exactly when *this
+ * call's own* member insert just landed. That's what keeps a race against
+ * a concurrent bootstrap safe without an interactive transaction: either
+ * both writes land for the winner, or neither does — never a member with
+ * no session (the lockout the direct-session design exists to avoid), and
+ * never a session pointing at a member that was never created.
  */
 export async function bootstrapAdmin(
   deps: AuthDeps,
@@ -423,26 +435,35 @@ export async function bootstrapAdmin(
   }
 
   const now = deps.clock.now();
-  const member = await membersRepo.createIfEmpty(deps.db, {
-    displayName: input.displayName,
-    slug: slugify(input.displayName),
-    email: input.email,
-    createdAt: now,
-    emailVerifiedAt: now,
-  });
-
-  if (!member) {
-    return { ok: false, reason: "already-bootstrapped" };
-  }
+  const { id: memberId, statement: memberStatement } = membersRepo.buildCreateIfEmptyStatement(
+    deps.db,
+    {
+      displayName: input.displayName,
+      slug: slugify(input.displayName),
+      email: input.email,
+      createdAt: now,
+      emailVerifiedAt: now,
+    },
+  );
 
   const rawSessionToken = generateToken();
   const sessionTokenHash = await hashToken(rawSessionToken);
-  await authSessionsRepo.create(deps.db, {
-    memberId: member.id,
-    tokenHash: sessionTokenHash,
-    createdAt: now,
-    expiresAt: now + sessionTtl(deps),
-  });
+  const { statement: sessionStatement } = authSessionsRepo.buildCreateIfMemberExistsStatement(
+    deps.db,
+    {
+      memberId,
+      tokenHash: sessionTokenHash,
+      createdAt: now,
+      expiresAt: now + sessionTtl(deps),
+    },
+  );
+
+  await deps.db.batch([memberStatement, sessionStatement]);
+
+  const member = await membersRepo.getById(deps.db, memberId);
+  if (!member) {
+    return { ok: false, reason: "already-bootstrapped" };
+  }
 
   let testEmailSent = false;
   try {

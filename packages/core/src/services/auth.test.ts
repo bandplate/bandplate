@@ -475,6 +475,36 @@ describe("auth service", () => {
       expect(await membersRepo.count(db)).toBe(1);
     });
 
+    it("creates the member and its first session together — never one without the other", async () => {
+      // The member insert and the session insert are batched together
+      // (db.batch), each guarded so the session insert is a no-op unless
+      // this call's own member insert just landed. A losing/second
+      // bootstrap attempt must therefore leave behind exactly the winner's
+      // one member and one session — never an orphaned session pointing at
+      // a member that was never created, and never a member stuck with no
+      // session (the exact lockout the direct-session bootstrap design
+      // exists to avoid).
+      const first = await bootstrapAdmin(deps, {
+        bootstrapToken: "correct-horse-battery-staple",
+        displayName: "Root Admin",
+        email: "admin@example.com",
+      });
+      expect(first.ok).toBe(true);
+
+      const second = await bootstrapAdmin(deps, {
+        bootstrapToken: "correct-horse-battery-staple",
+        displayName: "Someone Else",
+        email: "someone@example.com",
+      });
+      expect(second.ok).toBe(false);
+
+      const memberRows = await db.select().from(schema.members);
+      const sessionRows = await db.select().from(schema.authSessions);
+      expect(memberRows).toHaveLength(1);
+      expect(sessionRows).toHaveLength(1);
+      expect(sessionRows[0]?.memberId).toBe(memberRows[0]?.id);
+    });
+
     it("rejects a wrong bootstrap token and creates no member", async () => {
       const result = await bootstrapAdmin(deps, {
         bootstrapToken: "wrong-token",

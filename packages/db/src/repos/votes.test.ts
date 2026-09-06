@@ -65,10 +65,22 @@ describe("votes.castVote", () => {
   });
 
   it("the zero-vote case yields ratingScore 0, not null", async () => {
+    // castVote's upsert always precedes the aggregate UPDATE in the same
+    // batch, so the zero-vote branch is unreachable through castVote itself
+    // (there is always at least one vote row by the time the UPDATE runs).
+    // Exercise the aggregate statement directly, against a take with an
+    // empty votes table, to prove the COALESCE in
+    // votes.buildAggregateUpdate is load-bearing: SUM/COUNT over zero rows
+    // is NULL, and ratingScore is NOT NULL.
     const take = await seedTake(db);
-    expect(take.ratingScore).toBe(0);
-    expect(take.totalVotes).toBe(0);
-    expect(take.keeperVotes).toBe(0);
+
+    await db.batch([votes.buildAggregateUpdate(db, take.id, Date.now())]);
+
+    const row = await takes.getById(db, take.id);
+    expect(row?.ratingScore).toBe(0);
+    expect(row?.ratingScore).not.toBeNull();
+    expect(row?.totalVotes).toBe(0);
+    expect(row?.keeperVotes).toBe(0);
   });
 
   it("a second vote by the same member updates rather than duplicating", async () => {

@@ -575,6 +575,12 @@ a.bl-btn {
 }
 
 .bl-shell-wordmark {
+  /* Touch target, not a font-size change — measured at 33px tall before,
+     under the 44px floor (brief §6); the wordmark itself stays the same
+     visual size, just vertically centered in a taller box. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-family: var(--bl-font-display);
   font-weight: 800;
   font-size: 1.375rem;
@@ -1144,6 +1150,13 @@ a.bl-btn {
 }
 
 .bl-take-label {
+  /* inline-flex + min-height, not just a taller line-height — this is a
+     44px TOUCH TARGET (brief §6), not a visual size change: the text stays
+     its normal size, vertically centered in a taller invisible box, rather
+     than being rendered larger. Measured at 375px: 19px before, 44px after. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-weight: 600;
   font-size: 0.9375rem;
   color: var(--bl-color-fg);
@@ -1180,6 +1193,14 @@ a.bl-btn {
 }
 
 .bl-take-event-link {
+  /* Same 44px touch-target technique as `.bl-take-label` — a taller
+     invisible box, not larger text. `align-items: center` on the parent
+     `.bl-take-row-line` keeps the badge next to it vertically centered
+     against this now-taller link rather than pinned to its own top edge.
+     Measured at 375px: 19.5px before, 44px after. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-family: var(--bl-font-body);
   color: var(--bl-color-muted);
   text-decoration: underline;

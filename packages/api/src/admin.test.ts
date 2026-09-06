@@ -142,7 +142,7 @@ describe("admin tokens routes", () => {
     const createRes = await testApp.app.request("/admin/tokens", {
       method: "POST",
       headers: authedHeaders,
-      body: JSON.stringify({ label: "ingest bot", scopes: ["ingest:write"] }),
+      body: JSON.stringify({ label: "token admin bot", scopes: ["tokens:admin"] }),
     });
     expect(createRes.status).toBe(201);
     const created = await createRes.json();
@@ -157,10 +157,18 @@ describe("admin tokens routes", () => {
     expect(listedToken.rawToken).toBeUndefined();
     expect(listedToken.tokenHash).toBeUndefined();
 
-    const authWithNewToken = await testApp.app.request("/health", {
+    // Proves the freshly issued raw token actually authenticates and
+    // carries the granted scope, against a real scope-gated route —
+    // `/health` (public) would return 200 for any bearer, valid or
+    // garbage, and wouldn't prove anything about this specific token.
+    const authWithNewToken = await testApp.app.request("/admin/tokens", {
       headers: { authorization: `Bearer ${created.token.rawToken}` },
     });
     expect(authWithNewToken.status).toBe(200);
+    const bodyWithNewToken = await authWithNewToken.json();
+    expect(bodyWithNewToken.tokens.some((t: { id: string }) => t.id === created.token.id)).toBe(
+      true,
+    );
   });
 
   it("rejects an unknown scope on creation", async () => {
@@ -184,9 +192,15 @@ describe("admin tokens routes", () => {
     const createRes = await testApp.app.request("/admin/tokens", {
       method: "POST",
       headers: authedHeaders,
-      body: JSON.stringify({ label: "ingest bot", scopes: ["ingest:write"] }),
+      body: JSON.stringify({ label: "token admin bot", scopes: ["tokens:admin"] }),
     });
     const created = await createRes.json();
+    const tokenHeaders = { authorization: `Bearer ${created.token.rawToken}` };
+
+    // Before the patch: the freshly issued token can reach the
+    // scope-gated route it was granted (`tokens:admin`).
+    const beforePatch = await testApp.app.request("/admin/tokens", { headers: tokenHeaders });
+    expect(beforePatch.status).toBe(200);
 
     const patchRes = await testApp.app.request(`/admin/tokens/${created.token.id}`, {
       method: "PATCH",
@@ -197,21 +211,23 @@ describe("admin tokens routes", () => {
     const patched = await patchRes.json();
     expect(patched.token.scopes.sort()).toEqual(["ingest:write", "takes:read"].sort());
 
+    // The patch actually changed what the token can do, not just what the
+    // response body says: having lost `tokens:admin`, it can no longer
+    // reach the very route it could reach a moment ago.
+    const afterPatch = await testApp.app.request("/admin/tokens", { headers: tokenHeaders });
+    expect(afterPatch.status).toBe(403);
+
     const deleteRes = await testApp.app.request(`/admin/tokens/${created.token.id}`, {
       method: "DELETE",
       headers: authedHeaders,
     });
     expect(deleteRes.status).toBe(200);
 
-    const afterRevoke = await testApp.app.request("/health", {
-      headers: { authorization: `Bearer ${created.token.rawToken}` },
-    });
-    // Revoked bearer resolves to no principal; /health is public so still 200,
-    // but /auth/me should now show unauthenticated.
-    expect(afterRevoke.status).toBe(200);
-    const meRes = await testApp.app.request("/auth/me", {
-      headers: { authorization: `Bearer ${created.token.rawToken}` },
-    });
+    // Revoked bearer resolves to no principal at all — distinct from "has
+    // a principal but lacks the scope" above. /auth/me only ever returns
+    // data for a resolved principal, so this can only pass post-revoke if
+    // resolution itself now fails.
+    const meRes = await testApp.app.request("/auth/me", { headers: tokenHeaders });
     expect(meRes.status).toBe(401);
   });
 });

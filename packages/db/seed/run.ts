@@ -29,11 +29,16 @@ const daysAgo = (n: number) => now - n * DAY_MS;
 
 /**
  * Deterministic pseudo-random duration in [3min, 4min), derived from the
- * take's clientRef via FNV-1a rather than Math.random(). Two fresh seeds
- * must produce byte-identical data (this is asserted in the task-2
- * verification), which Math.random() cannot guarantee. FNV-1a's avalanche
- * behavior avoids the near-linear output you'd get from a naive polynomial
- * hash on clientRefs that differ only in a trailing digit.
+ * take's clientRef via FNV-1a rather than Math.random(). This is what
+ * "deterministic" actually means here: two fresh seeds are NOT
+ * byte-identical (each row gets its own uuidv7 id, and every `daysAgo(...)`
+ * timestamp is anchored to `Date.now()` at seed time — see `now` above), but
+ * every value that's *derived from the seed's own content* — this duration,
+ * every relationship between rows, every relative ordering — comes out the
+ * same on every run, rather than drifting the way `Math.random()` would.
+ * FNV-1a's avalanche behavior also avoids the near-linear output you'd get
+ * from a naive polynomial hash on clientRefs that differ only in a trailing
+ * digit.
  */
 function seededDurationMs(clientRef: string): number {
   let hash = 0x811c9dc5;

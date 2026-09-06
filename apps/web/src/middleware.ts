@@ -21,7 +21,7 @@ import { defineMiddleware } from "astro:middleware";
 import { getAppDeps, getAuthDeps } from "./server/app.js";
 import { SESSION_COOKIE_NAME } from "./server/cookies.js";
 import { isSameOrigin } from "./server/csrf.js";
-import { guardAdminPath, guardMemberPath } from "./server/guard.js";
+import { guardAdminPath, guardMemberPath, normalizePathname } from "./server/guard.js";
 import { resolvePrincipalFromCookie } from "./server/principal.js";
 
 const FORBIDDEN_HTML = `<!doctype html>
@@ -58,9 +58,19 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * reject legitimate service-token API calls that carry no `Origin` header
  * at all. A future hand-written `.ts` endpoint anywhere else under
  * `src/pages/` is NOT excluded and gets the same check as an `.astro` page.
+ *
+ * Normalized the same way as `guardAdminPath`/`guardMemberPath`'s checks
+ * next to this one (`server/guard.ts#normalizePathname`, reused rather
+ * than reimplemented) — a bare string check here would be safe in the
+ * current direction (a `//api/...` request would just fail this exemption
+ * and get the origin check applied, not skip it), but the asymmetry
+ * invites the next reader to assume normalization is applied everywhere
+ * page-routing decisions are made, when it wasn't. See task-5-report.md
+ * "Fix round 3" #3.
  */
 function isApiRoute(pathname: string): boolean {
-  return pathname === "/api" || pathname.startsWith("/api/");
+  const path = normalizePathname(pathname);
+  return path === "/api" || path.startsWith("/api/");
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {

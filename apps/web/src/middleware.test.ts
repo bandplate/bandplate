@@ -263,4 +263,17 @@ describe("middleware onRequest — structural CSRF backstop", () => {
     expect(next).toHaveBeenCalledTimes(1);
     expect(response).toBe(nextResponse);
   });
+
+  // Fix round 3 #3: the /api/* exemption check is now normalized the same
+  // way the admin/member path guards are (collapsing repeated slashes),
+  // for consistency — a //-prefixed API path still counts as /api/* rather
+  // than falling through to this middleware's own origin check.
+  it("still recognizes a //-prefixed API path as /api/*, consistent with the normalized admin/member guards", async () => {
+    const context = makeContext("//api/admin/members", { method: "POST" });
+
+    const response = await onRequest(context, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(response).toBe(nextResponse);
+  });
 });

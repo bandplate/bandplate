@@ -28,7 +28,7 @@ const ADMIN_SCOPE = "members:admin" as const;
 // though Astro's own router still resolves the double-slash path to the
 // same page a single slash would. Normalizing once, here, closes both
 // holes the same way rather than patching `isPublicPath` alone.
-function normalizePathname(pathname: string): string {
+export function normalizePathname(pathname: string): string {
   return pathname.replace(/\/{2,}/g, "/");
 }
 

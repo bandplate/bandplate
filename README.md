@@ -59,7 +59,18 @@ pnpm build
    BANDLIB_DATABASE_URL=file:./apps/web/.data/bandlib.db \
      pnpm --filter @bandlib/db run migrate
    ```
-3. **Build and start the app.** For local dev, `pnpm --filter web dev` is
+3. **(Optional) Seed example data** — a generic demo band lineup (songs,
+   events, takes, votes), useful for trying the app or for local dev.
+   **Skip this against a real deployment's database.** It reads the same
+   `BANDLIB_DATABASE_URL` as the migration step above (or the bare
+   `DATABASE_URL`, accepted as a fallback) and now fails loudly, naming the
+   variable, if neither is set — it will NOT silently write to some default
+   local file if you forget it:
+   ```sh
+   BANDLIB_DATABASE_URL=file:./apps/web/.data/bandlib.db \
+     pnpm --filter @bandlib/db run seed
+   ```
+4. **Build and start the app.** For local dev, `pnpm --filter web dev` is
    fine. For a real deployment, build (`pnpm --filter web build`) and start
    with **`pnpm --filter web start`** — NOT `astro preview` (dev-only) and
    NOT `node dist/server/entry.mjs` directly. `start` runs `node
@@ -89,7 +100,7 @@ pnpm build
    you're signed in as the first admin and told whether the mail self-test
    succeeded, so a broken mailer is caught here rather than by the first
    member who can't log in.
-4. From `/admin/members`, add the rest of the band. Each member signs in by
+5. From `/admin/members`, add the rest of the band. Each member signs in by
    requesting a link at `/login` with their email — there is no password.
 
 ## Workspace layout

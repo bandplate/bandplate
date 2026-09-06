@@ -18,7 +18,10 @@
     "tailwindcss": "^4.0.0",
     "@bandlib/api": "workspace:*",
     "@bandlib/core": "workspace:*",
-    "@bandlib/ui": "workspace:*"
+    "@bandlib/db": "workspace:*",
+    "@bandlib/mail": "workspace:*",
+    "@bandlib/ui": "workspace:*",
+    "@libsql/client": "0.14.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",

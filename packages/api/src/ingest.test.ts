@@ -791,6 +791,346 @@ describe("ingest API", () => {
     });
   });
 
+  describe("fix round 1 — review findings", () => {
+    async function declareEventForFix(testApp: TestApp, auth: HeadersInit, clientRef: string) {
+      const res = await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef,
+          kind: "rehearsal",
+          heldAt: "2026-09-05T19:30:00+02:00",
+        }),
+      });
+      return res.json();
+    }
+
+    it("CRITICAL: a re-rendered published take's master converges back to playable across two full commit loops", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      await declareEventForFix(testApp, auth, "proj-rerender");
+
+      async function declareTake(bytes: Uint8Array) {
+        const res = await testApp.app.request("/ingest/v1/takes", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify({
+            clientRef: "take-rerender",
+            eventClientRef: "proj-rerender",
+            song: { title: "Rerendered Song", createIfMissing: true },
+            recordedAt: "2026-09-05T20:14:33+02:00",
+            instruments: [],
+            assets: [
+              {
+                kind: "master",
+                tier: "lossy",
+                format: "opus",
+                bytes: bytes.length,
+                sha256: sha256Hex(bytes),
+              },
+            ],
+          }),
+        });
+        return res.json();
+      }
+
+      // Loop 1: declare, upload, publish.
+      const v1 = new TextEncoder().encode("master render one");
+      const first = await declareTake(v1);
+      const upload1 = first.uploads[0];
+      await fetch(upload1.url, { method: "PUT", headers: upload1.headers, body: v1 });
+      const commit1 = await testApp.app.request(`/ingest/v1/takes/${first.takeId}/commit`, {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({ publish: true }),
+      });
+      expect((await commit1.json()).state).toBe("published");
+
+      // Loop 2: the band re-renders the master (same take, changed hash) —
+      // the take is already published when this second declare happens.
+      const v2 = new TextEncoder().encode("master render two, re-rendered and longer");
+      const second = await declareTake(v2);
+      expect(second.state).toBe("published"); // declare doesn't change take state
+      const masterAssetAfterRedeclare = await assetsRepo.getById(
+        testApp.db,
+        second.uploads[0].assetId,
+      );
+      expect(masterAssetAfterRedeclare?.status).toBe("pending"); // reset, per asset-sync
+
+      const upload2 = second.uploads[0];
+      await fetch(upload2.url, { method: "PUT", headers: upload2.headers, body: v2 });
+
+      // Committing the still-"published" take must sweep the reset asset
+      // back to ready — this is the Critical fix: previously the
+      // already-published short-circuit returned 200 without ever HEADing
+      // the pending master, stranding it at pending/readyAt=NULL forever.
+      const commit2 = await testApp.app.request(`/ingest/v1/takes/${second.takeId}/commit`, {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({ publish: true }),
+      });
+      const commit2Json = await commit2.json();
+      expect(commit2.status, JSON.stringify(commit2Json)).toBe(200);
+      expect(commit2Json.state).toBe("published");
+      expect(commit2Json.assets.every((a: { status: string }) => a.status === "ready")).toBe(true);
+
+      const finalAsset = await assetsRepo.getById(testApp.db, second.uploads[0].assetId);
+      expect(finalAsset?.status).toBe("ready");
+      expect(finalAsset?.readyAt).not.toBeNull();
+      expect(finalAsset?.sha256).toBe(sha256Hex(v2));
+
+      const playable = await assetsRepo.listPlayableMastersByTakeIds(testApp.db, [second.takeId]);
+      expect(playable.get(second.takeId)?.id).toBe(finalAsset?.id);
+
+      const take = await takesRepo.getById(testApp.db, second.takeId);
+      expect(take?.state).toBe("published");
+    });
+
+    it("re-declaring peaks with a different tier does not 500 and reuses the existing row", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      await declareEventForFix(testApp, auth, "proj-peaks-tier");
+
+      const peaksBytes = new TextEncoder().encode(JSON.stringify([0, 1, 2]));
+
+      async function declare(tier: "lossy" | "lossless") {
+        return testApp.app.request("/ingest/v1/takes", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify({
+            clientRef: "take-peaks-tier",
+            eventClientRef: "proj-peaks-tier",
+            song: { title: "Peaks Tier Song", createIfMissing: true },
+            recordedAt: "2026-09-05T20:14:33+02:00",
+            instruments: [],
+            assets: [
+              { kind: "peaks", tier, format: "json", bytes: peaksBytes.length },
+              { kind: "master", tier: "lossy", format: "opus", bytes: 10 },
+            ],
+          }),
+        });
+      }
+
+      const firstRes = await declare("lossy");
+      expect(firstRes.status).toBe(200);
+      const first = await firstRes.json();
+
+      // Re-declare with a DIFFERENT tier on peaks — this must not 500.
+      const secondRes = await declare("lossless");
+      const second = await secondRes.json();
+      expect(secondRes.status, JSON.stringify(second)).toBe(200);
+      expect(second.takeId).toBe(first.takeId);
+
+      const assets = await assetsRepo.listByTake(testApp.db, first.takeId);
+      const peaksRows = assets.filter((a) => a.kind === "peaks");
+      expect(peaksRows).toHaveLength(1);
+      expect(peaksRows[0]?.tier).toBe("lossless");
+    });
+
+    it("a format change on a re-declared master supersedes the old object: one playable master, no orphan in the bucket", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      await declareEventForFix(testApp, auth, "proj-format-change");
+
+      async function declare(format: "opus" | "mp3", bytes: Uint8Array) {
+        const res = await testApp.app.request("/ingest/v1/takes", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify({
+            clientRef: "take-format-change",
+            eventClientRef: "proj-format-change",
+            song: { title: "Format Change Song", createIfMissing: true },
+            recordedAt: "2026-09-05T20:14:33+02:00",
+            instruments: [],
+            assets: [
+              {
+                kind: "master",
+                tier: "lossy",
+                format,
+                bytes: bytes.length,
+                sha256: sha256Hex(bytes),
+              },
+            ],
+          }),
+        });
+        return res.json();
+      }
+
+      const opusBytes = new TextEncoder().encode("opus master bytes");
+      const first = await declare("opus", opusBytes);
+      const opusUpload = first.uploads[0];
+      const opusKey = opusUpload.storageKey;
+      await fetch(opusUpload.url, { method: "PUT", headers: opusUpload.headers, body: opusBytes });
+      await testApp.app.request(`/ingest/v1/takes/${first.takeId}/commit`, {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({ publish: true }),
+      });
+      expect(await testApp.storage.head(opusKey)).not.toBeNull();
+
+      // Re-declare the SAME slot (same tier) as mp3 instead of opus.
+      const mp3Bytes = new TextEncoder().encode("mp3 master bytes, re-encoded");
+      const second = await declare("mp3", mp3Bytes);
+      const mp3Upload = second.uploads[0];
+      expect(mp3Upload.storageKey).not.toBe(opusKey);
+      await fetch(mp3Upload.url, { method: "PUT", headers: mp3Upload.headers, body: mp3Bytes });
+      await testApp.app.request(`/ingest/v1/takes/${second.takeId}/commit`, {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({ publish: true }),
+      });
+
+      const assets = await assetsRepo.listByTake(testApp.db, first.takeId);
+      const masters = assets.filter((a) => a.kind === "master");
+      expect(masters).toHaveLength(1); // not two — same row, reset in place
+      expect(masters[0]?.format).toBe("mp3");
+      expect(masters[0]?.status).toBe("ready");
+
+      // The old opus object is gone from the bucket, not orphaned.
+      expect(await testApp.storage.head(opusKey)).toBeNull();
+
+      const playable = await assetsRepo.listPlayableMastersByTakeIds(testApp.db, [first.takeId]);
+      expect(playable.size).toBe(1);
+      expect(playable.get(first.takeId)?.format).toBe("mp3");
+    });
+
+    it("a peaks-only take (no master/stem) cannot be committed even once its peaks upload is ready — targets the `!hasMasterOrStem` mutation at takes.ts", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      await declareEventForFix(testApp, auth, "proj-peaks-only");
+
+      const peaksBytes = new TextEncoder().encode(JSON.stringify([0, 1, 2]));
+      const takeRes = await testApp.app.request("/ingest/v1/takes", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "take-peaks-only",
+          eventClientRef: "proj-peaks-only",
+          song: { title: "Peaks Only Song", createIfMissing: true },
+          recordedAt: "2026-09-05T20:14:33+02:00",
+          instruments: [],
+          assets: [{ kind: "peaks", tier: "lossy", format: "json", bytes: peaksBytes.length }],
+        }),
+      });
+      const takeJson = await takeRes.json();
+      const upload = takeJson.uploads[0];
+      await fetch(upload.url, { method: "PUT", headers: upload.headers, body: peaksBytes });
+
+      const commitRes = await testApp.app.request(`/ingest/v1/takes/${takeJson.takeId}/commit`, {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({ publish: true }),
+      });
+      expect(commitRes.status).toBe(409);
+      const commitJson = await commitRes.json();
+      expect(commitJson.error.code).toBe("assets_incomplete");
+
+      const take = await takesRepo.getById(testApp.db, takeJson.takeId);
+      expect(take?.state).toBe("uploading");
+    });
+
+    it("a same-size, different-sha256 retry still resets the slot — targets the sha256-vs-bytes-only mutation at asset-sync.ts", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      await declareEventForFix(testApp, auth, "proj-samesize");
+
+      // Same length, different content/hash.
+      const v1 = new TextEncoder().encode("AAAAAAAAAAAAAAAAAAAA");
+      const v2 = new TextEncoder().encode("BBBBBBBBBBBBBBBBBBBB");
+      expect(v1.length).toBe(v2.length);
+      expect(sha256Hex(v1)).not.toBe(sha256Hex(v2));
+
+      async function declare(bytes: Uint8Array) {
+        const res = await testApp.app.request("/ingest/v1/takes", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify({
+            clientRef: "take-samesize",
+            eventClientRef: "proj-samesize",
+            song: { title: "Same Size Song", createIfMissing: true },
+            recordedAt: "2026-09-05T20:14:33+02:00",
+            instruments: [],
+            assets: [
+              {
+                kind: "master",
+                tier: "lossy",
+                format: "opus",
+                bytes: bytes.length,
+                sha256: sha256Hex(bytes),
+              },
+            ],
+          }),
+        });
+        return res.json();
+      }
+
+      const first = await declare(v1);
+      const upload1 = first.uploads[0];
+      await fetch(upload1.url, { method: "PUT", headers: upload1.headers, body: v1 });
+      await testApp.app.request(`/ingest/v1/takes/${first.takeId}/commit`, {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({ publish: true }),
+      });
+
+      const second = await declare(v2);
+      // Bytes length is identical to v1's; only the hash differs. A
+      // bytes-only match would wrongly report this as already "ready".
+      expect(second.uploads[0].status).toBe("pending");
+      expect(second.uploads[0].url).toBeTruthy();
+
+      const asset = await assetsRepo.getById(testApp.db, second.uploads[0].assetId);
+      expect(asset?.status).toBe("pending");
+      expect(asset?.sha256).toBe(sha256Hex(v2));
+    });
+
+    it("two titles that normalize the same cannot create two permanent duplicate songs, even under a concurrent race", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      await declareEventForFix(testApp, auth, "proj-song-race");
+
+      function takeBody(clientRef: string, title: string) {
+        return {
+          clientRef,
+          eventClientRef: "proj-song-race",
+          song: { title, createIfMissing: true },
+          recordedAt: "2026-09-05T20:14:33+02:00",
+          instruments: [],
+          assets: [
+            { kind: "master" as const, tier: "lossy" as const, format: "opus" as const, bytes: 10 },
+          ],
+        };
+      }
+
+      // "Přítel (take 3)" and "Přítel - take 5" both normalize to "pritel"
+      // (normalizeTitle strips the trailing take/version marker) but slugify
+      // does NOT strip it, so they'd get distinct slugs — the race this
+      // guards against.
+      const [resA, resB] = await Promise.all([
+        testApp.app.request("/ingest/v1/takes", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify(takeBody("take-race-a", "Přítel (take 3)")),
+        }),
+        testApp.app.request("/ingest/v1/takes", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify(takeBody("take-race-b", "Přítel - take 5")),
+        }),
+      ]);
+      const bodyA = await resA.json();
+      const bodyB = await resB.json();
+      expect(resA.status, JSON.stringify(bodyA)).toBe(200);
+      expect(resB.status, JSON.stringify(bodyB)).toBe(200);
+
+      expect(bodyA.songId).toBe(bodyB.songId);
+
+      const allSongs = await songsRepo.list(testApp.db);
+      const matching = allSongs.filter((s) => s.titleNorm === "pritel");
+      expect(matching).toHaveLength(1);
+    });
+  });
+
   describe("DELETE /ingest/v1/takes/:id (contract v1 §8)", () => {
     it("deletes a take while uploading, including its assets", async () => {
       const testApp = await buildTestApp();

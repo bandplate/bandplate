@@ -3,10 +3,10 @@ import { hasAllScopes } from "./principal.js";
 import { SCOPES, scopesForRole } from "./scopes.js";
 
 describe("scopesForRole", () => {
-  it("gives members every :read scope plus votes:write, nothing else", () => {
+  it("gives members every :read scope plus votes:write and favorites:write, nothing else", () => {
     const scopes = scopesForRole("member");
     expect(scopes.sort()).toEqual(
-      ["songs:read", "takes:read", "events:read", "votes:write"].sort(),
+      ["songs:read", "takes:read", "events:read", "votes:write", "favorites:write"].sort(),
     );
   });
 
@@ -15,10 +15,10 @@ describe("scopesForRole", () => {
     expect(scopes.sort()).toEqual([...SCOPES].sort());
   });
 
-  it("never gives a member a :write scope other than votes:write", () => {
+  it("never gives a member a :write scope other than votes:write/favorites:write", () => {
     const scopes = scopesForRole("member");
     const writeScopes = scopes.filter((s) => s.endsWith(":write"));
-    expect(writeScopes).toEqual(["votes:write"]);
+    expect(writeScopes.sort()).toEqual(["votes:write", "favorites:write"].sort());
   });
 });
 

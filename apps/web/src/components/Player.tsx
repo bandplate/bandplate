@@ -76,7 +76,17 @@ function syncButtons(track: PlayerTrack | null, playing: boolean): void {
     const isActiveSource =
       track !== null && track.takeId === data.takeId && track.sourceAssetId === data.assetId;
     const isActivePlaying = isActiveSource && playing;
-    el.setAttribute("aria-pressed", String(isActivePlaying));
+    // `aria-pressed` means different things for the two roles this
+    // delegated handler drives: a "source-select" chip (the Solo drawer)
+    // is a SELECTOR, so its pressed state is "is this the selected
+    // source" — playback state is irrelevant to it, and reporting
+    // `isActivePlaying` there meant a paused-but-selected chip announced
+    // as unpressed to a screen reader, indistinguishable from an
+    // unselected one (review: fix round 1, item 3). The default "toggle"
+    // role (play/pause buttons) keeps the play/pause semantics, where
+    // pressed correctly means "currently playing".
+    const ariaPressed = data.role === "source-select" ? isActiveSource : isActivePlaying;
+    el.setAttribute("aria-pressed", String(ariaPressed));
     el.classList.toggle("is-active", isActiveSource);
     el.classList.toggle("is-playing", isActivePlaying);
     if (data.role !== "source-select") {
@@ -89,6 +99,7 @@ export default function Player() {
   const track = useStore(currentTrack);
   const playing = useStore(isPlaying);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   // A source switch on the take already playing must preserve
   // `currentTime` — `loadedmetadata` for the NEW source is the first
   // point `currentTime` can be legally set, so the seek (and any pending
@@ -157,6 +168,8 @@ export default function Player() {
       const action = decidePlayerClickAction(currentTrack.get(), data);
 
       switch (action.kind) {
+        case "noop":
+          break;
         case "toggle-playback":
           if (audio.paused) {
             void audio.play();
@@ -209,6 +222,40 @@ export default function Player() {
     return () => document.removeEventListener("astro:page-load", onPageLoad);
   }, []);
 
+  // Keeps `--bl-player-height` (declared on `.bl-shell`, consumed by
+  // `.bl-shell-main`'s reserved bottom padding — see components.css) equal
+  // to this bar's REAL rendered height, rather than a hand-copied number
+  // that can silently drift out of sync with it (exactly what happened
+  // before: a declared 76px vs. a measured 109px, occluding the bottom of
+  // every page at >=1024px). `.bl-shell` itself is replaced on every
+  // ClientRouter navigation (this island is the one thing that persists —
+  // see the header comment), so it's re-queried fresh each time rather
+  // than cached in a ref. Skipped while the player is `[hidden]` (no track
+  // yet loaded): its real height is then 0, and the static fallback
+  // declared in CSS is what should apply until a track actually loads.
+  useEffect(() => {
+    const playerEl = playerRef.current;
+    if (!playerEl) {
+      return;
+    }
+    const applyHeight = () => {
+      const height = playerEl.getBoundingClientRect().height;
+      if (height <= 0) {
+        return;
+      }
+      const shell = document.querySelector<HTMLElement>(".bl-shell");
+      shell?.style.setProperty("--bl-player-height", `${height}px`);
+    };
+    const observer = new ResizeObserver(applyHeight);
+    observer.observe(playerEl);
+    document.addEventListener("astro:page-load", applyHeight);
+    applyHeight();
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("astro:page-load", applyHeight);
+    };
+  }, []);
+
   const announced =
     track && track.sourceLabel !== "Master"
       ? `Now playing: ${track.title} — ${track.sourceLabel}`
@@ -217,7 +264,7 @@ export default function Player() {
         : "";
 
   return (
-    <div class="bl-player" hidden={!track} data-testid="bl-player">
+    <div class="bl-player" hidden={!track} data-testid="bl-player" ref={playerRef}>
       {/* Track-change-only announcements — never touched by a timeupdate
           handler (there isn't one), which is what keeps this from
           spamming a screen reader on every second of playback. */}

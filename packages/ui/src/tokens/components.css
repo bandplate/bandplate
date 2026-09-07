@@ -609,8 +609,17 @@ a.bl-btn {
   /* Referenced by `.bl-player` (its own vertical placement) AND
      `.bl-shell-main` (reserved bottom padding so page content never sits
      underneath the fixed player bar) — one number, one place, so the two
-     can't drift out of sync. */
-  --bl-player-height: 4.75rem;
+     can't drift out of sync.
+     This is a SAFE UPPER-BOUND FALLBACK only, used before JS has measured
+     anything (first paint, or with no JS at all) and while no track has
+     ever loaded (the player bar is `[hidden]`, so it has no real height to
+     measure yet — see its own comment). Once a track loads, `Player.tsx`
+     overwrites this value on this exact element via a `ResizeObserver` on
+     the real rendered `.bl-player`, so the reserved space always matches
+     actual height rather than a number that silently drifts out of sync
+     with it (measured 109px rendered vs. a stale 76px declared here is
+     exactly the bug this self-correction exists to prevent). */
+  --bl-player-height: 7rem;
 }
 
 .bl-shell-header {
@@ -702,12 +711,17 @@ a.bl-btn {
 /* `transition:persist`ed across navigation (see `Player.tsx`'s header     */
 /* comment). Sits ABOVE the tab bar on phones (its own fixed element,      */
 /* not part of the tab bar), full-width at the very bottom past `lg`       */
-/* (no tab bar there to stack above). Always in the DOM at a fixed         */
-/* height (see `--bl-player-height` on `.bl-shell`) — only `[hidden]`      */
-/* toggles when nothing is loaded, so `.bl-shell-main`'s reserved bottom   */
-/* padding above never has to change at runtime (a JS-computed layout      */
-/* shift is exactly the kind of thing that has caused a real horizontal-   */
-/* scroll bug on this project before).                                    */
+/* (no tab bar there to stack above). Always in the DOM; only `[hidden]`   */
+/* toggles when nothing is loaded. Its height (`--bl-player-height` on     */
+/* `.bl-shell`, consumed by `.bl-shell-main`'s reserved bottom padding)    */
+/* is kept in sync with `Player.tsx`'s own `ResizeObserver`, not just a    */
+/* number copy-pasted between two rules — see that variable's comment on  */
+/* `.bl-shell` for why. This differs from the "no JS-computed layout"     */
+/* rule elsewhere on this project (which is about WIDTH — the actual      */
+/* cause of a real horizontal-scroll bug here before): this is a CSS      */
+/* custom property carrying a height, applied to a `position: fixed`      */
+/* element that is never part of document flow, so it cannot itself       */
+/* trigger that class of bug.                                             */
 /*                                                                          */
 /* Contrast (WCAG relative luminance, computed for this task — every       */
 /* combination this component actually paints):                           */
@@ -731,7 +745,11 @@ a.bl-btn {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  /* The tab bar (`.bl-tabbar`) is 57px tall, not 56: `.bl-tabbar-item`'s
+     56px min-height PLUS the tab bar's own 1px `border-top`. Matching only
+     the 56px left that border's top pixel sitting under this bar instead
+     of above it. */
+  bottom: calc(57px + env(safe-area-inset-bottom, 0px));
   z-index: 42; /* above the tab bar's 40 */
   min-height: var(--bl-player-height);
   box-sizing: border-box;
@@ -860,9 +878,20 @@ a.bl-btn {
   cursor: pointer;
 }
 
+/* Selection is carried by more than border/text colour alone (WCAG 1.4.1
+   — colour as the sole means): a leading checkmark and bold weight, so the
+   selected chip is identifiable even without colour perception. Reviewed
+   in fix round 1, item 3, alongside the `aria-pressed` fix in
+   `Player.tsx`'s `syncButtons`. */
 .bl-solo-chip.is-active {
   border-color: var(--bl-component-accent-success);
   color: var(--bl-component-accent-success);
+  font-weight: 700;
+}
+
+.bl-solo-chip.is-active::before {
+  content: "✓";
+  margin-right: 0.375rem;
 }
 
 @media (min-width: 1024px) {

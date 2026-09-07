@@ -2,6 +2,7 @@ import { uuidv7 } from "@bandlib/core";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { authSessions, members } from "../schema/sqlite/index.js";
+import { assertColumnCount } from "./column-order-guard.js";
 
 export type Session = typeof authSessions.$inferSelect;
 
@@ -49,6 +50,11 @@ export async function create(db: Db, input: CreateSessionInput): Promise<Session
  * query-builder's `_prepare()` produces), even though libSQL tolerated it.
  */
 export function buildCreateIfMemberExistsStatement(db: Db, input: CreateSessionInput) {
+  // 8 values below (id, memberId, tokenHash, createdAt, lastSeenAt,
+  // expiresAt, userAgent, revokedAt) must match `authSessions`' column
+  // count and order — see `column-order-guard.ts` for why this is
+  // checked explicitly rather than left implicit.
+  assertColumnCount(authSessions, 8);
   const row = buildRow(input);
   const statement = db.insert(authSessions).select(sql`
     select ${row.id}, ${row.memberId}, ${row.tokenHash}, ${row.createdAt}, ${row.lastSeenAt}, ${row.expiresAt}, ${row.userAgent}, null

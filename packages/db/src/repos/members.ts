@@ -2,6 +2,7 @@ import { uuidv7 } from "@bandlib/core";
 import { eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { instruments, memberInstruments, members } from "../schema/sqlite/index.js";
+import { assertColumnCount } from "./column-order-guard.js";
 import type { Instrument } from "./instruments.js";
 
 export type MemberRole = (typeof members.$inferSelect)["role"];
@@ -125,6 +126,11 @@ export interface CreateIfEmptyInput {
  * `SQLiteInsertBuilder.select`'s `select(selectQuery: SQL)` signature.
  */
 export function buildCreateIfEmptyStatement(db: Db, input: CreateIfEmptyInput) {
+  // 8 values below (id, displayName, slug, email, role, status, createdAt,
+  // emailVerifiedAt) must match `members`' column count and order — see
+  // `column-order-guard.ts` for why this is checked explicitly rather
+  // than left implicit.
+  assertColumnCount(members, 8);
   const id = uuidv7();
   const statement = db.insert(members).select(sql`
     select ${id}, ${input.displayName}, ${input.slug}, ${normalizeEmail(input.email)}, 'admin', 'active', ${input.createdAt}, ${input.emailVerifiedAt ?? null}

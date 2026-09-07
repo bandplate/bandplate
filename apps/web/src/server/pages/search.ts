@@ -4,7 +4,7 @@
 // `takesRepo.SearchFilters` and calls the one repo query that backs it, the
 // same shape `server/pages/songs.ts` uses for its own GET-form filtering.
 import type { Db } from "@bandlib/db";
-import { takesRepo } from "@bandlib/db";
+import { favoritesRepo, takesRepo } from "@bandlib/db";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
 const VALID_STATES: readonly takesRepo.TakeState[] = [
@@ -108,7 +108,26 @@ function toFilters(query: SearchQuery): takesRepo.SearchFilters {
   };
 }
 
-export async function searchTakes(db: Db, query: SearchQuery): Promise<TakeWithFullContext[]> {
-  const results = await takesRepo.search(db, toFilters(query));
-  return attachFullContext(db, results);
+export interface SearchTakesResult {
+  results: Array<TakeWithFullContext & { favorited: boolean }>;
+  /** True when more takes match the filters than were returned (F6, review
+   *  round 1) — `takesRepo.search` caps an unfiltered/broad archive search
+   *  rather than returning it all. */
+  truncated: boolean;
+}
+
+export async function searchTakes(
+  db: Db,
+  query: SearchQuery,
+  memberId: string,
+): Promise<SearchTakesResult> {
+  const [{ results, truncated }, favoriteTakeIds] = await Promise.all([
+    takesRepo.search(db, toFilters(query)),
+    favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
+  ]);
+  const withContext = await attachFullContext(db, results);
+  return {
+    results: withContext.map((take) => ({ ...take, favorited: favoriteTakeIds.has(take.id) })),
+    truncated,
+  };
 }

@@ -26,6 +26,19 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * Pulls every `view-transition-name` Astro's `transition:name` directive
+ * emits (as `[data-astro-transition-scope="..."] { view-transition-name: X; }`
+ * style blocks) out of a rendered page's HTML. Used to assert F1 (review
+ * round 1): two elements sharing one name aborts the WHOLE page's view
+ * transition per the CSS View Transitions spec, not just those two
+ * elements — confirmed live in the browser against the pre-fix build (see
+ * task-6-report.md's "Fix round 1" section).
+ */
+function extractViewTransitionNames(html: string): string[] {
+  return [...html.matchAll(/view-transition-name:\s*([^;]+);/g)].map((m) => (m[1] ?? "").trim());
+}
+
 const PORT = 43221;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const REPO_ROOT = join(process.cwd(), "..", "..");
@@ -79,6 +92,13 @@ async function seedAndGetSessionCookie(): Promise<string> {
 
   const bass = await instrumentsRepo.create(db, { slug: "bass-home", label: "Bass" });
   bassInstrumentId = bass.id;
+  // A second instrument, archived AFTER being assigned to the member — the
+  // data-model gap's own verification requirement: "a member holding an
+  // archived instrument must still render" (membersRepo.listInstrumentsForMember
+  // includes archived ones on purpose).
+  const trombone = await instrumentsRepo.create(db, { slug: "trombone-home", label: "Trombone" });
+  await membersRepo.setInstruments(db, member.id, [bass.id, trombone.id]);
+  await instrumentsRepo.archive(db, trombone.id, now);
 
   const favoriteSong = await songsRepo.create(db, {
     title: "Home Favorite Song",
@@ -171,6 +191,17 @@ async function seedAndGetSessionCookie(): Promise<string> {
 
   await votesRepo.castVote(db, {
     takeId: takeWithAssets.id,
+    memberId: member.id,
+    keeper: true,
+    now,
+  });
+  // Also vote on the favorite take itself — this is what puts the same
+  // take id on `/me` in BOTH the favorites section and the votes section,
+  // the exact "favorited a take they also voted on" shape F1 (review round
+  // 1) describes. Without this, `/me`'s duplicate-`view-transition-name`
+  // regression test below would pass trivially (no overlap to deduplicate).
+  await votesRepo.castVote(db, {
+    takeId: favoriteTake.id,
     memberId: member.id,
     keeper: true,
     now,
@@ -268,6 +299,16 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).toContain("Home Test Venue"); // recent event
       expect(body).toContain(`/takes/${publishedUnvotedTakeId}`); // needs-your-vote, linked
     });
+
+    it("has no duplicate view-transition-name, even though the favorite take also appears under recent events (F1, review round 1)", async () => {
+      const res = await fetch(`${ORIGIN}/`, { headers: { cookie: sessionCookie } });
+      const body = await res.text();
+      const names = extractViewTransitionNames(body);
+      // Sanity: the fixture actually exercises the overlap this guards —
+      // if this list is too short, the test below would pass trivially.
+      expect(names.length).toBeGreaterThan(1);
+      expect(new Set(names).size).toBe(names.length);
+    });
   });
 
   describe("/takes/[id]", () => {
@@ -353,11 +394,59 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).not.toContain("Home Favorite Song");
     });
 
-    it("the URL round-trips — the same query string yields the same result set", async () => {
-      const url = `${ORIGIN}/search?q=skyline&state=published`;
+    it("submitting the form filters results AND re-populates the controls from the URL (F8, review round 1)", async () => {
+      // The ORIGINAL version of this test fetched one hardcoded URL twice
+      // and compared the two bodies — that passes even if every filter is
+      // silently ignored (the request is byte-identical both times, so of
+      // course the response is too). This version actually drives the
+      // no-JS flow: fetch the bare form, read its real field names/ids
+      // straight out of the rendered HTML (not hardcoded here), submit
+      // values through THOSE fields as a plain GET would, then assert two
+      // independently-falsifiable things on the result: the result set is
+      // actually filtered, and the controls reflect the submitted values
+      // back (a plain GET form re-populates from the URL, not from memory).
+      const formPage = await fetch(`${ORIGIN}/search`, { headers: { cookie: sessionCookie } });
+      const formBody = await formPage.text();
+      expect(formBody).toContain('id="search-q"');
+      expect(formBody).toContain(`id="search-instrument-${bassInstrumentId}"`);
+
+      const submitted = new URLSearchParams();
+      submitted.set("q", "skyline");
+      submitted.set("state", "published");
+      const url = `${ORIGIN}/search?${submitted.toString()}`;
+
       const first = await fetch(url, { headers: { cookie: sessionCookie } });
+      expect(first.status).toBe(200);
+      const firstBody = await first.text();
+
+      // The result set is actually filtered — not just "some HTML came
+      // back". A search-parsing regression that dropped every filter would
+      // still show the favorite song here; a regression that broke the
+      // free-text match specifically would drop the searchable one.
+      expect(firstBody).toContain("Neon Skyline Searchable");
+      expect(firstBody).not.toContain("Home Favorite Song");
+
+      // The controls are re-populated from the URL's own query string, not
+      // from anything server-side/session-held — this is what "works with
+      // JS off" and "a search is shareable/bookmarkable" actually require:
+      // pasting this exact URL in a fresh tab must reproduce the same
+      // filled-in form, not just the same results.
+      expect(firstBody).toContain('value="skyline"');
+      expect(firstBody).toMatch(
+        /id="search-state-published"[^>]*checked|checked[^>]*id="search-state-published"/,
+      );
+      // A DIFFERENT state checkbox must NOT be checked — proves this is
+      // real per-field re-population, not e.g. every checkbox rendering
+      // checked regardless of the query string.
+      expect(firstBody).not.toMatch(
+        /id="search-state-keeper"[^>]*checked|checked[^>]*id="search-state-keeper"/,
+      );
+
+      // Pasting the identical URL again reproduces the identical page —
+      // the actual "round-trip" claim, now checked alongside (not instead
+      // of) the filtering/re-population it's supposed to be a property of.
       const second = await fetch(url, { headers: { cookie: sessionCookie } });
-      expect(await first.text()).toEqual(await second.text());
+      expect(await second.text()).toEqual(firstBody);
     });
 
     it("returns a real empty state, not an error, when nothing matches", async () => {
@@ -386,6 +475,19 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).toContain("Home Favorite Song");
       expect(body).toContain("Neon Skyline Searchable"); // the take voted on
       expect(body).toContain("keeper");
+      // The member's instruments — including the archived one (the
+      // data-model gap's own verification requirement).
+      expect(body).toContain("Bass");
+      expect(body).toContain("Trombone");
+      expect(body).toContain("(archived)");
+    });
+
+    it("has no duplicate view-transition-name, even though the favorite take was also voted on (F1, review round 1)", async () => {
+      const res = await fetch(`${ORIGIN}/me`, { headers: { cookie: sessionCookie } });
+      const body = await res.text();
+      const names = extractViewTransitionNames(body);
+      expect(names.length).toBeGreaterThan(0);
+      expect(new Set(names).size).toBe(names.length);
     });
   });
 });

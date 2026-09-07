@@ -5,7 +5,14 @@
 // `packages/db/src/repos/takes.test.ts` — this covers the page-specific
 // parsing/wiring layer instead of re-deriving that coverage.
 import type { Db } from "@bandlib/db";
-import { eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
+import {
+  eventsRepo,
+  favoritesRepo,
+  instrumentsRepo,
+  membersRepo,
+  songsRepo,
+  takesRepo,
+} from "@bandlib/db";
 import { createTestDb } from "@bandlib/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { hasAnyFilter, parseSearchQuery, searchTakes } from "./search.js";
@@ -82,14 +89,27 @@ describe("hasAnyFilter", () => {
 
 describe("searchTakes", () => {
   let db: Db;
+  let memberId: string;
 
   beforeEach(async () => {
     db = await createTestDb();
+    const member = await membersRepo.create(db, {
+      displayName: "Search Test Member",
+      slug: "search-test-member",
+      email: "search-test-member@example.com",
+      createdAt: Date.now(),
+    });
+    memberId = member.id;
   });
 
   it("returns an empty array, not a throw, on a fresh database", async () => {
-    const result = await searchTakes(db, parseSearchQuery(new URLSearchParams()));
-    expect(result).toEqual([]);
+    const { results, truncated } = await searchTakes(
+      db,
+      parseSearchQuery(new URLSearchParams()),
+      memberId,
+    );
+    expect(results).toEqual([]);
+    expect(truncated).toBe(false);
   });
 
   it("attaches song, event, and instruments to each result", async () => {
@@ -116,11 +136,44 @@ describe("searchTakes", () => {
       instrumentIds: [bass.id],
     });
 
-    const result = await searchTakes(db, parseSearchQuery(new URLSearchParams()));
-    expect(result.map((t) => t.id)).toEqual([take.id]);
-    expect(result[0]?.song?.slug).toBe("search-composition-song");
-    expect(result[0]?.event?.id).toBe(event.id);
-    expect(result[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
+    const { results } = await searchTakes(db, parseSearchQuery(new URLSearchParams()), memberId);
+    expect(results.map((t) => t.id)).toEqual([take.id]);
+    expect(results[0]?.song?.slug).toBe("search-composition-song");
+    expect(results[0]?.event?.id).toBe(event.id);
+    expect(results[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
+    expect(results[0]?.favorited).toBe(false);
+  });
+
+  it("marks a result as favorited when the requesting member has favorited it", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Search Favorited Song",
+      slug: "search-favorited-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const take = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "take",
+      targetId: take.id,
+      createdAt: now,
+    });
+
+    const { results } = await searchTakes(db, parseSearchQuery(new URLSearchParams()), memberId);
+    expect(results.find((t) => t.id === take.id)?.favorited).toBe(true);
   });
 
   it("applies the date-range filter end to end (query string -> ms boundaries -> real results)", async () => {
@@ -152,10 +205,10 @@ describe("searchTakes", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("dateFrom=2026-01-01&dateTo=2026-01-31"));
-    const result = await searchTakes(db, query);
+    const { results } = await searchTakes(db, query, memberId);
 
-    expect(result.map((t) => t.id)).toContain(inRange.id);
-    expect(result.map((t) => t.id)).not.toContain(outOfRange.id);
+    expect(results.map((t) => t.id)).toContain(inRange.id);
+    expect(results.map((t) => t.id)).not.toContain(outOfRange.id);
   });
 
   it("dateTo is inclusive through the end of that day, not midnight", async () => {
@@ -180,8 +233,8 @@ describe("searchTakes", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("dateTo=2026-01-31"));
-    const result = await searchTakes(db, query);
+    const { results } = await searchTakes(db, query, memberId);
 
-    expect(result.map((t) => t.id)).toContain(lateInDay.id);
+    expect(results.map((t) => t.id)).toContain(lateInDay.id);
   });
 });

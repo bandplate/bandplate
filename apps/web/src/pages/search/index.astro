@@ -35,8 +35,8 @@ const appDeps = await getAppDeps();
 const query = parseSearchQuery(Astro.url.searchParams);
 const filtersApplied = hasAnyFilter(query);
 
-const [results, instruments] = await Promise.all([
-  searchTakes(appDeps.db, query),
+const [{ results, truncated }, instruments] = await Promise.all([
+  searchTakes(appDeps.db, query, principal.memberId),
   instrumentsRepo.list(appDeps.db),
 ]);
 
@@ -173,6 +173,13 @@ const resultsLabel = filtersApplied
       <div class="bl-search-results">
         <p class="bl-field-hint bl-m0">{resultsLabel}</p>
         {
+          truncated && (
+            <p class="bl-field-hint bl-m0">
+              Showing the first {results.length} matches — narrow your filters to see the rest.
+            </p>
+          )
+        }
+        {
           results.length === 0 ? (
             <div class="bl-empty-state">
               <p>
@@ -188,6 +195,7 @@ const resultsLabel = filtersApplied
                   take={take}
                   instruments={take.instruments}
                   context={{ kind: "full", song: take.song, event: take.event }}
+                  favorited={take.favorited}
                 />
               ))}
             </div>

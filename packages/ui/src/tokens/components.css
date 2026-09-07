@@ -27,8 +27,22 @@
  *     light: #334f14 vs sand bg    -> 8.06:1 / vs surface -> 8.71:1
  *     dark:  #808f66 vs espresso bg -> 5.14:1 / vs surface -> 4.76:1
  *
- *   --bl-component-accent-gold (Task 6: gold's first use — the favorite
- *     marker on `/`, `/search`, `/me`, and `/takes/[id]`) has the OPPOSITE
+ *   --bl-component-accent-gold (Task 6: gold's first use — see
+ *     `.bl-take-favorite-mark` below for what it marks. A PER-ROW favorite
+ *     marker on `TakeRow` and the `/takes/[id]` hero, shown only when that
+ *     specific song/take is one of the member's favorites — not a
+ *     decorative icon glued to a "Your favorites" heading that already
+ *     says the word (an earlier version did exactly that; review round 1
+ *     correctly called it out as carrying no information — a star next to
+ *     text already reading "favorites" tells you nothing the text didn't).
+ *     Appears on `/` (recent-events / needs-your-vote rows), `/search`
+ *     (result rows), `/me` (the votes list, when a voted take is ALSO a
+ *     favorite), and `/takes/[id]` — every place a take might or might not
+ *     be a favorite, never on a list already scoped to favorites alone
+ *     (there, every row would show it, the same no-information problem the
+ *     heading star had).
+ *
+ *     Color-wise it has the OPPOSITE
  *     problem from rust/olive: raw gold (#f6aa1c) is a light, high-luminance
  *     color, so it reads fine against the dark espresso ground but nearly
  *     vanishes against the light sand one:
@@ -1075,6 +1089,15 @@ a.bl-btn {
   max-width: 5rem;
 }
 
+/* Admin roster's per-member instrument multi-select (Task 6 review round 1
+   — the member<->instrument data-model gap). A native `<select multiple>`,
+   not a checkbox fieldset — the option list is the same instrument
+   vocabulary `/admin/instruments` already manages, and this keeps the row
+   compact in a table cell. */
+.bl-instrument-multiselect {
+  min-width: 9rem;
+}
+
 /* Auth pages (login, the login-token page, setup) — one narrow centered
    column, one display headline. */
 .bl-auth-main {
@@ -1347,6 +1370,25 @@ a.bl-btn {
   text-decoration-color: currentColor;
 }
 
+/* The gold favorite marker — see this file's header comment for the
+   derived light-mode token/ratios and why this is per-row, not a heading
+   decoration. Fill/border use only, per the accent-token rule: the icon
+   reinforces real per-row information (this take/song IS a favorite), it
+   is never the sole way that's conveyed (a `title` attribute plus
+   `sr-only` text both say so too, for WCAG 1.4.1/1.1.1). Shared by
+   `TakeRow.astro` (`.bl-take-favorite-mark` sizes/positions it next to the
+   label) and `/me`'s votes list (`.bl-vote-row-song` positions it inline). */
+.bl-favorite-mark {
+  display: inline-flex;
+  align-items: center;
+  color: var(--bl-component-accent-gold);
+  flex-shrink: 0;
+}
+
+.bl-take-favorite-mark {
+  margin-left: 0.375rem;
+}
+
 .bl-take-sublabel {
   display: block;
   font-family: var(--bl-font-body);
@@ -1577,27 +1619,15 @@ a.bl-btn {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Home (Task 6) — favorites (gold's first use — see this file's header    */
-/* for the derived, dark-mode-aware token and both ratios), recent events  */
-/* with their takes, and "needs your vote". Display only: no favorite      */
-/* toggle, no vote control (both land in increment 5) — this section adds  */
-/* no interactive-control CSS of its own, only the gold marker and the     */
-/* event-group spacing the layout needs.                                  */
+/* Home (Task 6) — favorites, recent events with their takes, and "needs   */
+/* your vote". Display only: no favorite toggle, no vote control (both     */
+/* land in increment 5) — this section adds no interactive-control CSS of  */
+/* its own, only the event-group spacing the layout needs. The gold        */
+/* favorite marker itself (`.bl-favorite-mark`/`.bl-take-favorite-mark`)   */
+/* is defined once, in the take-row block below, and reused everywhere it  */
+/* appears — see this file's header comment for why it's per-row now, not  */
+/* on this section's heading.                                             */
 /* ---------------------------------------------------------------------- */
-
-.bl-section-title-favorite {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* Fill/border use only, per the accent-token rule — this is a small
-   decorative icon reinforcing the "Your favorites" heading text that's
-   already there, never the sole way that section is identified. */
-.bl-favorite-mark {
-  color: var(--bl-component-accent-gold);
-  flex-shrink: 0;
-}
 
 .bl-home-event-group {
   display: flex;
@@ -1677,14 +1707,40 @@ a.bl-btn {
   font-weight: 600;
 }
 
+/* F2 (review round 1): used to be one string joined with " · " —
+   `format · tier · size[ · status]`, the exact "middle-dot meta string"
+   the brief's own forbidden-tells list names. Each value is now its own
+   inline item with a vertical-rule border between items instead of a text
+   glyph — the same information, laid out like the badge/tag rows already
+   used elsewhere in this file rather than a generated-design cliché. */
 .bl-asset-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   color: var(--bl-color-muted);
   font-size: 0.8125rem;
 }
 
+.bl-asset-row-meta-item {
+  padding-inline: 0.5rem;
+}
+
+.bl-asset-row-meta-item:first-child {
+  padding-inline-start: 0;
+}
+
+.bl-asset-row-meta-item + .bl-asset-row-meta-item {
+  border-inline-start: 1px solid var(--bl-color-border);
+}
+
 /* ---------------------------------------------------------------------- */
-/* /me (Task 6) — sessions and vote history. Flat rows, same vocabulary as */
-/* the take/event rows above rather than a third list treatment.          */
+/* /me (Task 6, revised in review round 1 for F3) — sessions and vote      */
+/* history. Flat rows, same vocabulary as the take/event rows above rather */
+/* than a third list treatment. Past `lg`, both lists become the same      */
+/* 2-column grid `.bl-take-list--wide` already uses (favorites' own take   */
+/* list gets that exact class) — `/me` used to be identical at 375/1440,   */
+/* just wider single-column rows; this is what actually makes it a real    */
+/* desktop layout instead of a phone layout stretched wide.                */
 /* ---------------------------------------------------------------------- */
 
 .bl-session-list,
@@ -1693,6 +1749,15 @@ a.bl-btn {
   margin: 0;
   padding: 0;
   border-top: 1px solid var(--bl-color-border);
+}
+
+@media (min-width: 1024px) {
+  .bl-session-list,
+  .bl-vote-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1.5rem;
+  }
 }
 
 .bl-session-row,
@@ -1713,9 +1778,34 @@ a.bl-btn {
   flex-direction: column;
   gap: 0.25rem;
   min-width: 0;
+  /* Explicit basis (not just `min-width: 0`) so this shrinks predictably
+     against its row's other child instead of the row wrapping the OTHER
+     child onto its own line — see `.bl-session-row-agent`/
+     `.bl-session-row-action` just below for the fix this was paired with
+     (F3: "Sign out" was orphaning onto its own line at every width). */
+  flex: 1 1 12rem;
+}
+
+/* F3: a long mono user-agent string used to force `.bl-session-row` (which
+   wraps) to push the "Sign out" form onto its own line at BOTH 375px and
+   1440px — not a width bug, a content-can't-shrink bug. Truncating this one
+   line instead of letting it grow is what lets the row's flexbox actually
+   shrink it, so the button stays on the same line as the row's own
+   content whenever there's room for it. */
+.bl-session-row-agent {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.bl-session-row-action {
+  flex-shrink: 0;
 }
 
 .bl-vote-row-song {
+  display: inline-flex;
+  align-items: center;
   font-weight: 600;
   color: var(--bl-color-fg);
   text-decoration: underline;

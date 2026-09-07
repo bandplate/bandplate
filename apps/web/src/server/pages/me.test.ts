@@ -6,6 +6,7 @@ import {
   authSessionsRepo,
   eventsRepo,
   favoritesRepo,
+  instrumentsRepo,
   membersRepo,
   songsRepo,
   takesRepo,
@@ -129,5 +130,80 @@ describe("getMeData", () => {
     expect(data?.votes[0]?.vote.keeper).toBe(true);
     expect(data?.votes[0]?.vote.comment).toBe("nice");
     expect(data?.votes[0]?.take?.song?.slug).toBe("voted-song");
+  });
+
+  // Data-model gap, closed via `memberInstruments` — see its schema comment.
+  it("returns the member's instruments, including an archived one", async () => {
+    const drums = await instrumentsRepo.create(db, { slug: "drums", label: "Drums" });
+    const trombone = await instrumentsRepo.create(db, { slug: "trombone", label: "Trombone" });
+    await membersRepo.setInstruments(db, memberId, [drums.id, trombone.id]);
+    await instrumentsRepo.archive(db, trombone.id, Date.now());
+
+    const data = await getMeData(db, memberId, undefined);
+    expect(data?.instruments.map((i) => i.id)).toEqual([drums.id, trombone.id]);
+    expect(data?.instruments.find((i) => i.id === trombone.id)?.archivedAt).not.toBeNull();
+  });
+
+  // F4 (review round 1): the gold favorite marker on the votes list is
+  // real per-row information — whether the voted-on take is ALSO one of
+  // this member's favorites, independent of the vote itself.
+  it("marks a voted take as favorited when it is also one of this member's favorites", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Voted And Favorited Song",
+      slug: "voted-and-favorited-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const take = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await votesRepo.castVote(db, { takeId: take.id, memberId, keeper: true, now });
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "take",
+      targetId: take.id,
+      createdAt: now,
+    });
+
+    const data = await getMeData(db, memberId, undefined);
+    expect(data?.votes[0]?.favorited).toBe(true);
+  });
+
+  it("does not mark a voted take as favorited when it isn't one", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Voted Only Song",
+      slug: "voted-only-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const take = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await votesRepo.castVote(db, { takeId: take.id, memberId, keeper: true, now });
+
+    const data = await getMeData(db, memberId, undefined);
+    expect(data?.votes[0]?.favorited).toBe(false);
   });
 });

@@ -1,12 +1,22 @@
 ---
-// The signed-in member's own page: name, sessions (sign out of THIS one —
-// reusing the existing `POST /logout`, not a new endpoint), favorites, and
-// votes so far. Replaces Task 5's placeholder.
+// The signed-in member's own page: name, instruments, sessions (sign out of
+// THIS one — reusing the existing `POST /logout`, not a new endpoint),
+// favorites, and votes so far. Replaces Task 5's placeholder.
 //
-// No "their instruments" field — see server/pages/me.ts's header comment:
-// there is no member<->instrument relation anywhere in the schema, so this
-// is a gap between the brief and the data model, not something to paper
-// over with fabricated data.
+// Instruments (Task 6 review round 1's data-model gap, now closed via the
+// `memberInstruments` join table — see its schema comment): rendered as
+// plain tags, same visual vocabulary `.bl-take-instrument-tag` already
+// established for a take's instruments, INCLUDING archived ones (a member
+// who plays an instrument the band has since dropped still sees it here —
+// see `membersRepo.listInstrumentsForMember`).
+//
+// `transitionName`/`claimTakeTransition`: see F1 in the review — a take
+// that's BOTH a favorite and voted-on would otherwise get the same
+// `view-transition-name` twice on this one page (favorites' TakeRow AND
+// the votes list's own link), which aborts the page's view transition
+// entirely per the CSS View Transitions spec. Only the first occurrence of
+// a given take id keeps the name; later ones simply don't get one (the
+// link/row still works, it just isn't the View Transitions morph target).
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -26,7 +36,7 @@ if (!data) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { member, sessions, favorites, votes } = data;
+const { member, instruments, sessions, favorites, votes } = data;
 const now = appDeps.clock.now();
 
 function sessionStatus(session: (typeof sessions)[number]): "active" | "revoked" | "expired" {
@@ -40,6 +50,18 @@ function sessionStatus(session: (typeof sessions)[number]): "active" | "revoked"
 }
 
 const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
+
+const usedTakeTransitionIds = new Set<string>();
+/** First call for a given take id gets the real name; every later call on
+ *  this same page render gets `null` (no `transition:name` at all) — see
+ *  this file's header comment (F1). */
+function claimTakeTransition(takeId: string): string | null {
+  if (usedTakeTransitionIds.has(takeId)) {
+    return null;
+  }
+  usedTakeTransitionIds.add(takeId);
+  return `take-${takeId}`;
+}
 ---
 
 <AppLayout title="Me" principal={principal} current="me">
@@ -54,6 +76,16 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
           {member.role}
         </span>
       </p>
+      {instruments.length > 0 && (
+        <div class="bl-take-instruments">
+          {instruments.map((instrument) => (
+            <span class="bl-take-instrument-tag">
+              {instrument.label}
+              {instrument.archivedAt !== null && " (archived)"}
+            </span>
+          ))}
+        </div>
+      )}
       {member.role === "admin" && (
         <p>
           <a href="/admin" class="bl-btn bl-btn-secondary bl-btn-sm">
@@ -72,7 +104,9 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
             return (
               <li class="bl-session-row">
                 <div class="bl-session-row-main">
-                  <p class="bl-mono bl-m0">{session.userAgent ?? "Unknown device"}</p>
+                  <p class="bl-mono bl-session-row-agent bl-m0">
+                    {session.userAgent ?? "Unknown device"}
+                  </p>
                   <p class="bl-field-hint bl-m0">
                     Signed in {formatTimestamp(session.createdAt)} — last active{" "}
                     {formatTimestamp(session.lastSeenAt)}
@@ -83,7 +117,7 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
                   </span>
                 </div>
                 {session.isCurrent && (
-                  <form method="post" action="/logout">
+                  <form method="post" action="/logout" class="bl-session-row-action">
                     <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">
                       Sign out
                     </button>
@@ -101,7 +135,10 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
       {
         !hasFavorites ? (
           <div class="bl-empty-state">
-            <p>Nothing pinned yet — favorite a song or a take to see it here.</p>
+            <p>
+              Nothing pinned yet — favoriting is coming soon. In the meantime,{" "}
+              <a href="/search">browse the archive</a>.
+            </p>
           </div>
         ) : (
           <div class="bl-stack bl-stack-tight">
@@ -117,12 +154,13 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
               </div>
             )}
             {favorites.takes.length > 0 && (
-              <div class="bl-take-list">
+              <div class="bl-take-list bl-take-list--wide">
                 {favorites.takes.map((take) => (
                   <TakeRow
                     take={take}
                     instruments={take.instruments}
                     context={{ kind: "full", song: take.song, event: take.event }}
+                    transitionName={claimTakeTransition(take.id)}
                   />
                 ))}
               </div>
@@ -141,12 +179,30 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
           </div>
         ) : (
           <ul class="bl-vote-list">
-            {votes.map(({ vote, take }) => (
+            {votes.map(({ vote, take, favorited }) => (
               <li class="bl-vote-row">
                 <div class="bl-vote-row-main">
                   {take ? (
-                    <a href={`/takes/${take.id}`} class="bl-vote-row-song">
+                    <a
+                      href={`/takes/${take.id}`}
+                      class="bl-vote-row-song"
+                      transition:name={claimTakeTransition(take.id) ?? undefined}
+                    >
                       {take.song?.title ?? "Untitled take"}
+                      {favorited && (
+                        <span class="bl-favorite-mark" title="Also one of your favorites">
+                          <svg
+                            aria-hidden="true"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                          >
+                            <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
+                          </svg>
+                          <span class="sr-only">, also a favorite</span>
+                        </span>
+                      )}
                     </a>
                   ) : (
                     <span class="bl-vote-row-song">A take that's since been removed</span>

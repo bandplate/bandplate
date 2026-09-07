@@ -1,8 +1,17 @@
 import { type AuthDeps, systemClock } from "@bandlib/core";
+import { instrumentsRepo } from "@bandlib/db";
 import { createTestDb } from "@bandlib/db/testing";
 import { createNullMailer } from "@bandlib/mail";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createMember, listMembers, revokeMemberSessions, updateMember } from "./admin-members.js";
+import {
+  createMember,
+  listAllInstruments,
+  listMembers,
+  listMembersWithLastSeen,
+  revokeMemberSessions,
+  updateMember,
+  updateMemberInstruments,
+} from "./admin-members.js";
 
 function formData(fields: Record<string, string>): FormData {
   const fd = new FormData();
@@ -198,5 +207,63 @@ describe("admin members page logic", () => {
       "00000000-0000-0000-0000-000000000000",
     );
     expect(result.kind).toBe("not_found");
+  });
+
+  describe("member instruments (Task 6 review round 1's data-model gap)", () => {
+    it("updateMemberInstruments sets the roster's instrumentIds for that member only", async () => {
+      await createMember(
+        auth.db,
+        1_000,
+        formData({ displayName: "Bailey", email: "b@example.com" }),
+      );
+      await createMember(auth.db, 1_000, formData({ displayName: "Cass", email: "c@example.com" }));
+      const [bailey, cass] = await listMembers(auth.db);
+      if (!bailey || !cass) throw new Error("expected both members");
+      const drums = await instrumentsRepo.create(auth.db, { slug: "drums", label: "Drums" });
+
+      const fd = new FormData();
+      fd.set("memberId", bailey.id);
+      fd.append("instrumentIds", drums.id);
+      await updateMemberInstruments(auth.db, bailey.id, fd);
+
+      const roster = await listMembersWithLastSeen(auth.db);
+      expect(roster.find((m) => m.id === bailey.id)?.instrumentIds).toEqual([drums.id]);
+      expect(roster.find((m) => m.id === cass.id)?.instrumentIds).toEqual([]);
+    });
+
+    it("updateMemberInstruments with no instrumentIds fields clears the set", async () => {
+      await createMember(
+        auth.db,
+        1_000,
+        formData({ displayName: "Bailey", email: "b@example.com" }),
+      );
+      const [bailey] = await listMembers(auth.db);
+      if (!bailey) throw new Error("expected a member");
+      const drums = await instrumentsRepo.create(auth.db, { slug: "drums", label: "Drums" });
+      await updateMemberInstruments(
+        auth.db,
+        bailey.id,
+        (() => {
+          const fd = new FormData();
+          fd.set("memberId", bailey.id);
+          fd.append("instrumentIds", drums.id);
+          return fd;
+        })(),
+      );
+
+      await updateMemberInstruments(auth.db, bailey.id, formData({ memberId: bailey.id }));
+
+      const roster = await listMembersWithLastSeen(auth.db);
+      expect(roster.find((m) => m.id === bailey.id)?.instrumentIds).toEqual([]);
+    });
+
+    it("listAllInstruments includes archived instruments (so the multi-select doesn't drop them)", async () => {
+      const drums = await instrumentsRepo.create(auth.db, { slug: "drums", label: "Drums" });
+      await instrumentsRepo.archive(auth.db, drums.id, 2_000);
+
+      const all = await listAllInstruments(auth.db);
+      expect(all.map((i) => i.id)).toContain(drums.id);
+      expect(all.find((i) => i.id === drums.id)?.archivedAt).not.toBeNull();
+    });
   });
 });

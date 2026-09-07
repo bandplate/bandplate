@@ -7,8 +7,10 @@ import { isSameOrigin } from "../../../server/csrf.js";
 import { formatTimestamp } from "../../../server/format.js";
 import {
   createMember,
+  listAllInstruments,
   listMembersWithLastSeen,
   updateMember,
+  updateMemberInstruments,
 } from "../../../server/pages/admin-members.js";
 
 const principal = Astro.locals.principal;
@@ -54,11 +56,18 @@ if (Astro.request.method === "POST") {
       } else {
         formError = "Couldn't update that member — reload and try again.";
       }
+    } else if (intent === "instruments") {
+      const id = String(formData.get("memberId") ?? "");
+      await updateMemberInstruments(appDeps.db, id, formData);
+      return Astro.redirect("/admin/members?updated=1");
     }
   }
 }
 
-const members = await listMembersWithLastSeen(appDeps.db);
+const [members, allInstruments] = await Promise.all([
+  listMembersWithLastSeen(appDeps.db),
+  listAllInstruments(appDeps.db),
+]);
 const justCreated = Astro.url.searchParams.get("created") === "1";
 const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justRevoked = Astro.url.searchParams.get("revoked") === "1";
@@ -111,6 +120,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
               <th scope="col">Email</th>
               <th scope="col">Role</th>
               <th scope="col">Status</th>
+              <th scope="col">Instruments</th>
               <th scope="col">Last seen</th>
               <th scope="col">Actions</th>
             </tr>
@@ -130,6 +140,35 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                     {member.status}
                   </span>
                 </td>
+                <td data-label="Instruments">
+                  <form method="post" class="bl-inline-form">
+                    <input type="hidden" name="intent" value="instruments" />
+                    <input type="hidden" name="memberId" value={member.id} />
+                    <label class="sr-only" for={`instruments-${member.id}`}>
+                      Instruments for {member.displayName}
+                    </label>
+                    <select
+                      class="bl-select bl-input-compact bl-instrument-multiselect"
+                      id={`instruments-${member.id}`}
+                      name="instrumentIds"
+                      multiple
+                      size={Math.min(allInstruments.length, 4) || 1}
+                    >
+                      {
+                        allInstruments.map((instrument) => (
+                          <option
+                            value={instrument.id}
+                            selected={member.instrumentIds.includes(instrument.id)}
+                          >
+                            {instrument.label}
+                            {instrument.archivedAt !== null ? " (archived)" : ""}
+                          </option>
+                        ))
+                      }
+                    </select>
+                    <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
+                  </form>
+                </td>
                 <td data-label="Last seen" class="bl-mono">{formatTimestamp(member.lastSeenAt)}</td>
                 <td data-label="Actions">
                   <div class="bl-table-actions">
@@ -139,7 +178,9 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                       // self-demotion guard), but hiding the controls
                       // means there's no dead-end control to click in the
                       // first place, and no way to lock yourself out via
-                      // this row at all.
+                      // this row at all. Instruments aren't a
+                      // self-demotion concern, so that form (above) is
+                      // still shown for this row.
                       <p class="bl-field-hint bl-m0">This is you.</p>
                     ) : (
                       <form method="post" class="bl-inline-form">

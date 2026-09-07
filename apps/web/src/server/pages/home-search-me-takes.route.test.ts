@@ -526,6 +526,25 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       const body = await res.text();
       expect(body).not.toContain(TAKE_TRANSITION_RETARGET_MARKER);
     });
+
+    it("TakeRow itself renders a play control only for a take WITH a ready master, not a disabled one for a take without (fix round 1, item 4)", async () => {
+      // The pre-existing "no play control" coverage was only on
+      // `/takes/[id]`, which has its OWN `playableMaster &&` conditional
+      // around a bare `<PlayToggleButton>` — a mutation that made TakeRow
+      // itself always render a play control (regardless of
+      // `playableAssetId`) survived every test in the suite because
+      // nothing exercised a TakeRow-rendered LIST, which is what every
+      // other page (this one included) actually uses. `/search` with no
+      // filters lists both `takeWithAssetsId` (a ready master) and
+      // `takeWithNoAssetsId` (no assets at all) side by side via TakeRow.
+      const res = await fetch(`${ORIGIN}/search`, { headers: { cookie: sessionCookie } });
+      expect(res.status).toBe(200);
+      const body = await res.text();
+      expect(body).toMatch(new RegExp(`data-audio-source[^>]*data-take-id="${takeWithAssetsId}"`));
+      expect(body).not.toMatch(
+        new RegExp(`data-audio-source[^>]*data-take-id="${takeWithNoAssetsId}"`),
+      );
+    });
   });
 
   describe("/me", () => {

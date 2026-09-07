@@ -157,7 +157,32 @@ async function main(): Promise<void> {
       await generateTone(asset.format, frequencyHz, outPath);
       const bytes = await readFile(outPath);
 
-      await storage.put(asset.storageKey, new Uint8Array(bytes), asset.contentType);
+      // A presigned PUT, exactly the path the real ingest pipeline (and
+      // any real upload) will use — never `storage.put()`, which the
+      // `Storage` port's own doc comment marks as "an escape hatch for
+      // small, non-audio writes (e.g. a generated peaks.json)", never
+      // audio (fix round 1, item 10). This also means this script
+      // exercises the exact same signing/enforcement path
+      // `packages/storage`'s conformance suite asserts against (matching
+      // content-type, matching length), rather than a shortcut that could
+      // silently drift from what a real upload actually has to satisfy.
+      const uploadUrl = await storage.signedUploadUrl(asset.storageKey, {
+        contentType: asset.contentType,
+        contentLength: bytes.byteLength,
+        expiresIn: 300,
+      });
+      const putRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "content-type": asset.contentType },
+        body: new Uint8Array(bytes),
+      });
+      if (!putRes.ok) {
+        throw new Error(
+          `dev-upload-audio: presigned PUT for ${asset.storageKey} failed: ` +
+            `${putRes.status} ${await putRes.text()}`,
+        );
+      }
+
       await assetsRepo.updateAudioMeta(db, asset.id, {
         bytes: bytes.byteLength,
         durationMs: DURATION_SECONDS * 1000,

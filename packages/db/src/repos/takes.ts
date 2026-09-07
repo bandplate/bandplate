@@ -92,8 +92,30 @@ export async function getByIds(db: Db, ids: string[]): Promise<Take[]> {
   return db.select().from(takes).where(inArray(takes.id, ids));
 }
 
+/**
+ * Safety cap for `listBySong`/`listUnvotedByMember`'s default (unrequested)
+ * limit — review round 1's F6. Neither listing has a UI for paging past it
+ * today (a song's own take count, and one member's unvoted queue, are both
+ * naturally small in practice), so this is a defensive ceiling rather than
+ * a real pagination feature the way `search`'s `SEARCH_LIMIT` is — but the
+ * review is right that "no LIMIT at all" is still wrong even for a listing
+ * that's SUPPOSED to stay small.
+ */
+const DEFAULT_TAKE_LIST_CAP = 500;
+
 export async function listBySong(db: Db, songId: string): Promise<Take[]> {
-  return db.select().from(takes).where(eq(takes.songId, songId)).orderBy(desc(takes.recordedAt));
+  return (
+    db
+      .select()
+      .from(takes)
+      .where(eq(takes.songId, songId))
+      // `recordedAt` alone is not unique — two takes recorded at the same
+      // instant (or, in a test fixture, given the same literal timestamp)
+      // would otherwise have non-contractual relative order. `id` (uuidv7,
+      // itself roughly time-ordered) is a real, deterministic tie-break.
+      .orderBy(desc(takes.recordedAt), desc(takes.id))
+      .limit(DEFAULT_TAKE_LIST_CAP)
+  );
 }
 
 export interface ListByEventOptions {
@@ -241,13 +263,16 @@ export async function listUnvotedByMember(
     .from(votes)
     .where(eq(votes.memberId, memberId));
 
-  const query = db
-    .select()
-    .from(takes)
-    .where(and(eq(takes.state, "published"), notInArray(takes.id, votedTakeIds)))
-    .orderBy(desc(takes.recordedAt));
-
-  return options.limit !== undefined ? query.limit(options.limit) : query;
+  return (
+    db
+      .select()
+      .from(takes)
+      .where(and(eq(takes.state, "published"), notInArray(takes.id, votedTakeIds)))
+      // See `listBySong`'s comment on `desc(takes.id)` as a deterministic
+      // tie-break for takes sharing a `recordedAt`.
+      .orderBy(desc(takes.recordedAt), desc(takes.id))
+      .limit(options.limit ?? DEFAULT_TAKE_LIST_CAP)
+  );
 }
 
 /**
@@ -277,14 +302,42 @@ export interface SearchFilters {
   search?: string;
 }
 
-export async function search(db: Db, filters: SearchFilters = {}): Promise<Take[]> {
+export interface SearchOptions {
+  /** Override for tests — production callers should leave this at `SEARCH_LIMIT`. */
+  limit?: number;
+}
+
+/**
+ * Hard cap on `search`'s result set (review round 1's F6): an unfiltered
+ * `/search` used to have no LIMIT at all, returning literally every take in
+ * the archive. Unlike `listBySong`/`listUnvotedByMember` (naturally small,
+ * per-song/per-member listings — see `DEFAULT_TAKE_LIST_CAP`), an
+ * unfiltered archive-wide search is exactly the case that keeps growing, so
+ * this one surfaces a real `truncated` flag rather than just capping
+ * silently.
+ */
+export const SEARCH_LIMIT = 200;
+
+export interface SearchResult {
+  results: Take[];
+  /** True when more takes match than were returned — narrow the filters (or
+   *  free-text search) to see the rest. */
+  truncated: boolean;
+}
+
+export async function search(
+  db: Db,
+  filters: SearchFilters = {},
+  options: SearchOptions = {},
+): Promise<SearchResult> {
+  const limit = options.limit ?? SEARCH_LIMIT;
   const conditions: SQL[] = [];
 
   if (filters.instrumentIds && filters.instrumentIds.length > 0) {
     const matching = await listByInstruments(db, filters.instrumentIds);
     const ids = matching.map((t) => t.id);
     if (ids.length === 0) {
-      return [];
+      return { results: [], truncated: false };
     }
     conditions.push(inArray(takes.id, ids));
   }
@@ -303,7 +356,7 @@ export async function search(db: Db, filters: SearchFilters = {}): Promise<Take[
       ...new Set([...bySongTitle.map((r) => r.id), ...byAlias.map((r) => r.songId)]),
     ];
     if (songIds.length === 0) {
-      return [];
+      return { results: [], truncated: false };
     }
     conditions.push(inArray(takes.songId, songIds));
   }
@@ -321,6 +374,18 @@ export async function search(db: Db, filters: SearchFilters = {}): Promise<Take[
     conditions.push(inArray(takes.state, filters.states));
   }
 
-  const base = db.select().from(takes).orderBy(desc(takes.recordedAt));
-  return conditions.length > 0 ? base.where(and(...conditions)) : base;
+  // Fetch one row past the limit — if it comes back, there are more matches
+  // than `limit` and the caller should say so, rather than the member
+  // silently seeing a partial archive with no indication it's partial.
+  const query =
+    conditions.length > 0
+      ? db
+          .select()
+          .from(takes)
+          .where(and(...conditions))
+      : db.select().from(takes);
+  const rows = await query.orderBy(desc(takes.recordedAt), desc(takes.id)).limit(limit + 1);
+
+  const truncated = rows.length > limit;
+  return { results: truncated ? rows.slice(0, limit) : rows, truncated };
 }

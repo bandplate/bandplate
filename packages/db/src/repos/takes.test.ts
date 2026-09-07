@@ -208,6 +208,32 @@ describe("takes.listBySong ordering", () => {
     const result = await takes.listBySong(db, songId);
     expect(result.map((t) => t.recordedAt)).toEqual([3000, 2000, 1000]);
   });
+
+  // F6 (review round 1): no deterministic tie-break for takes sharing a
+  // `recordedAt`.
+  it("breaks a tie on recordedAt deterministically (by id, descending)", async () => {
+    const same = 9000;
+    const a = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: same,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const b = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: same,
+      createdAt: 2,
+      updatedAt: 2,
+    });
+
+    const first = await takes.listBySong(db, songId);
+    const second = await takes.listBySong(db, songId);
+    const tied = first.filter((t) => t.recordedAt === same).map((t) => t.id);
+    expect(tied).toEqual(second.filter((t) => t.recordedAt === same).map((t) => t.id));
+    expect(tied).toEqual([a.id, b.id].sort().reverse());
+  });
 });
 
 describe("takes.listInstrumentsForTakes", () => {
@@ -598,6 +624,33 @@ describe("takes.listUnvotedByMember", () => {
     const result = await takes.listUnvotedByMember(db, memberId);
     expect(result).toEqual([]);
   });
+
+  // F6 (review round 1): no deterministic tie-break for takes sharing a
+  // `recordedAt`.
+  it("breaks a tie on recordedAt deterministically (by id, descending)", async () => {
+    const same = 9000;
+    const a = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: same,
+      createdAt: 1,
+      updatedAt: 1,
+      state: "published",
+    });
+    const b = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: same,
+      createdAt: 2,
+      updatedAt: 2,
+      state: "published",
+    });
+
+    const first = await takes.listUnvotedByMember(db, memberId);
+    const second = await takes.listUnvotedByMember(db, memberId);
+    expect(first.map((t) => t.id)).toEqual(second.map((t) => t.id));
+    expect(first.map((t) => t.id)).toEqual([a.id, b.id].sort().reverse());
+  });
 });
 
 describe("takes.search", () => {
@@ -642,7 +695,7 @@ describe("takes.search", () => {
       updatedAt: 2000,
     });
 
-    const result = await takes.search(db);
+    const { results: result } = await takes.search(db);
     expect(result.map((t) => t.id)).toEqual([newer.id, older.id]);
   });
 
@@ -670,11 +723,11 @@ describe("takes.search", () => {
       instrumentIds: [bassId, drumsId],
     });
 
-    const bassAndDrums = await takes.search(db, { instrumentIds: [bassId, drumsId] });
+    const { results: bassAndDrums } = await takes.search(db, { instrumentIds: [bassId, drumsId] });
     expect(bassAndDrums.map((t) => t.id)).toEqual([both.id]);
     expect(bassAndDrums.map((t) => t.id)).not.toContain(bassOnly.id);
 
-    const bassOnlyFilter = await takes.search(db, { instrumentIds: [bassId] });
+    const { results: bassOnlyFilter } = await takes.search(db, { instrumentIds: [bassId] });
     expect(bassOnlyFilter.map((t) => t.id).sort()).toEqual([bassOnly.id, both.id].sort());
   });
 
@@ -707,10 +760,10 @@ describe("takes.search", () => {
       updatedAt: 3000,
     });
 
-    const inRange = await takes.search(db, { dateFrom: 1500, dateTo: 2500 });
+    const { results: inRange } = await takes.search(db, { dateFrom: 1500, dateTo: 2500 });
     expect(inRange.map((t) => t.id)).toEqual([mid.id]);
 
-    const inclusiveEnds = await takes.search(db, { dateFrom: 1000, dateTo: 3000 });
+    const { results: inclusiveEnds } = await takes.search(db, { dateFrom: 1000, dateTo: 3000 });
     expect(inclusiveEnds.map((t) => t.id).sort()).toEqual([early.id, mid.id, late.id].sort());
   });
 
@@ -748,7 +801,7 @@ describe("takes.search", () => {
       now: 1000,
     });
 
-    const result = await takes.search(db, { minRating: 0.5 });
+    const { results: result } = await takes.search(db, { minRating: 0.5 });
     expect(result.map((t) => t.id)).toEqual([highRated.id]);
     expect(result.map((t) => t.id)).not.toContain(unrated.id);
   });
@@ -777,7 +830,7 @@ describe("takes.search", () => {
       state: "rejected",
     });
 
-    const result = await takes.search(db, { states: ["published"] });
+    const { results: result } = await takes.search(db, { states: ["published"] });
     expect(result.map((t) => t.id)).toEqual([published.id]);
     expect(result.map((t) => t.id)).not.toContain(rejected.id);
   });
@@ -810,7 +863,7 @@ describe("takes.search", () => {
       updatedAt: 1000,
     });
 
-    const result = await takes.search(db, { search: "skyline" });
+    const { results: result } = await takes.search(db, { search: "skyline" });
     expect(result.map((t) => t.id)).toEqual([match.id]);
     expect(result.map((t) => t.id)).not.toContain(noMatch.id);
   });
@@ -831,7 +884,7 @@ describe("takes.search", () => {
       updatedAt: 1000,
     });
 
-    const result = await takes.search(db, { search: "nickname" });
+    const { results: result } = await takes.search(db, { search: "nickname" });
     expect(result.map((t) => t.id)).toEqual([take.id]);
   });
 
@@ -872,7 +925,10 @@ describe("takes.search", () => {
       instrumentIds: [drumsId],
     });
 
-    const result = await takes.search(db, { instrumentIds: [bassId], states: ["published"] });
+    const { results: result } = await takes.search(db, {
+      instrumentIds: [bassId],
+      states: ["published"],
+    });
     expect(result.map((t) => t.id)).toEqual([matches.id]);
   });
 
@@ -884,7 +940,85 @@ describe("takes.search", () => {
       updatedAt: 1000,
     });
 
-    const result = await takes.search(db, { search: "no-such-title-exists" });
+    const { results: result } = await takes.search(db, { search: "no-such-title-exists" });
     expect(result).toEqual([]);
+  });
+
+  // F6 (review round 1): no LIMIT and no secondary sort key.
+  it("breaks a tie on recordedAt deterministically (by id, descending) rather than leaving it undefined", async () => {
+    const song = await songs.create(db, {
+      title: "Tie Break Search Song",
+      slug: "tie-break-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const same = 5000;
+    const a = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: same,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const b = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: same,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    const { results: first } = await takes.search(db, { search: "tie break" });
+    const { results: second } = await takes.search(db, { search: "tie break" });
+    expect(first.map((t) => t.id)).toEqual(second.map((t) => t.id));
+    // Deterministic AND matches the documented tie-break (id, descending).
+    const expectedOrder = [a.id, b.id].sort().reverse();
+    expect(first.map((t) => t.id)).toEqual(expectedOrder);
+  });
+
+  it("truncates at SEARCH_LIMIT and reports truncated: true when more takes match", async () => {
+    const song = await songs.create(db, {
+      title: "Truncation Search Song",
+      slug: "truncation-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const limit = 3;
+    for (let i = 0; i < limit + 2; i++) {
+      await takes.create(db, {
+        songId: song.id,
+        eventId,
+        recordedAt: 1000 + i,
+        createdAt: 1000 + i,
+        updatedAt: 1000 + i,
+      });
+    }
+
+    const { results, truncated } = await takes.search(db, {}, { limit });
+    expect(results).toHaveLength(limit);
+    expect(truncated).toBe(true);
+  });
+
+  it("reports truncated: false when the result count is exactly at the limit", async () => {
+    const song = await songs.create(db, {
+      title: "Exact Limit Search Song",
+      slug: "exact-limit-search-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const limit = 3;
+    for (let i = 0; i < limit; i++) {
+      await takes.create(db, {
+        songId: song.id,
+        eventId,
+        recordedAt: 1000 + i,
+        createdAt: 1000 + i,
+        updatedAt: 1000 + i,
+      });
+    }
+
+    const { results, truncated } = await takes.search(db, {}, { limit });
+    expect(results).toHaveLength(limit);
+    expect(truncated).toBe(false);
   });
 });

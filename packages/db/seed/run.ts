@@ -6,7 +6,7 @@ import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { masterStorageKey, normalizeTitle, peaksStorageKey, stemStorageKey } from "@bandlib/core";
 import { createClient } from "@libsql/client";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { schema } from "../src/client.js";
@@ -657,18 +657,64 @@ async function main() {
   // master; seed-take-9 and a handful of others get only a lossy master
   // (no stems).
   // ---------------------------------------------------------------------
+  // Idempotency is keyed on the *slot* (`assets_slot_idx`:
+  // take_id/kind/instrument_id/tier/format is where the table's own unique
+  // index lives), not on `storageKey`. A DB seeded before this task's
+  // canonical `takes/{id}/{kind}/{tier}.{ext}` layout (and its opus→mp3
+  // lossy-tier switch) has rows occupying these same slots under the old
+  // flat keys/format — matching on storageKey alone would miss them and
+  // try to INSERT a second row into the same slot, which the unique index
+  // (correctly) rejects. So: look up by slot; if a row is already there but
+  // under the old storageKey/format, migrate it in place instead of
+  // inserting a duplicate. This keeps re-seeding an old-layout database
+  // idempotent and convergent rather than crashing mid-run.
   async function ensureAsset(
     storageKey: string,
     input: Omit<assetsRepo.CreateAssetInput, "storageKey">,
   ) {
+    const instrumentId = input.instrumentId ?? null;
     const [existing] = await db
       .select()
       .from(schema.assets)
-      .where(eq(schema.assets.storageKey, storageKey))
+      .where(
+        and(
+          eq(schema.assets.takeId, input.takeId),
+          eq(schema.assets.kind, input.kind),
+          instrumentId === null
+            ? isNull(schema.assets.instrumentId)
+            : eq(schema.assets.instrumentId, instrumentId),
+          eq(schema.assets.tier, input.tier),
+        ),
+      )
       .limit(1);
+
     if (existing) {
-      return existing;
+      if (existing.storageKey === storageKey && existing.format === input.format) {
+        return existing;
+      }
+      // Old-layout row in this slot — migrate to the canonical
+      // storageKey/format rather than inserting a second row that would
+      // collide with assets_slot_idx (same format) or leave a stale
+      // duplicate "ready" asset behind for the take (different format).
+      const [migrated] = await db
+        .update(schema.assets)
+        .set({
+          storageKey,
+          format: input.format,
+          contentType: input.contentType,
+          bytes: input.bytes,
+          status: input.status ?? existing.status,
+          durationMs: input.durationMs ?? existing.durationMs,
+          readyAt: input.readyAt ?? existing.readyAt,
+        })
+        .where(eq(schema.assets.id, existing.id))
+        .returning();
+      if (!migrated) {
+        throw new Error(`seed: failed to migrate asset ${existing.id} to ${storageKey}`);
+      }
+      return migrated;
     }
+
     const [created] = await assetsRepo.createMany(db, [{ ...input, storageKey }]);
     if (!created) {
       throw new Error(`seed: failed to create asset ${storageKey}`);

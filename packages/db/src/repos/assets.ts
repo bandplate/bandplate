@@ -89,7 +89,7 @@ export async function updateAudioMeta(
 /**
  * Batch-fetches, for each of the given takes, the ONE master asset a play
  * control should link to — the reason `TakeRow`'s leading slot needs this
- * (see `apps/web/src/server/pages/playable.ts`): a take with no ready
+ * (see `apps/web/src/components/TakeRow.astro`): a take with no ready
  * master asset gets no play control at all, not a disabled one, so every
  * list of takes needs to know which ones qualify before rendering.
  *

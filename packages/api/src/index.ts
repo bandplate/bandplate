@@ -10,7 +10,9 @@ import { registerAdminMemberRoutes } from "./routes/admin-members.js";
 import { registerAdminTokenRoutes } from "./routes/admin-tokens.js";
 import { registerAudioRoutes } from "./routes/audio.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerFavoriteRoutes } from "./routes/favorites.js";
 import { registerSetupRoutes } from "./routes/setup.js";
+import { registerVoteRoutes } from "./routes/votes.js";
 import type { AppEnv } from "./types.js";
 
 export interface AppConfig {
@@ -109,6 +111,8 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
   registerAdminInstrumentRoutes(router, { db: deps.db, clock: deps.clock });
   registerAdminTokenRoutes(router, { db: deps.db, auth });
   registerAudioRoutes(router, { db: deps.db, storage: deps.storage });
+  registerVoteRoutes(router, { db: deps.db, clock: deps.clock });
+  registerFavoriteRoutes(router, { db: deps.db, clock: deps.clock });
 
   // The structural backstop: fails app construction itself if any route on
   // the live Hono instance doesn't correspond to a GuardedRouter

@@ -27,20 +27,17 @@
  *     light: #334f14 vs sand bg    -> 8.06:1 / vs surface -> 8.71:1
  *     dark:  #808f66 vs espresso bg -> 5.14:1 / vs surface -> 4.76:1
  *
- *   --bl-component-accent-gold (Task 6: gold's first use — see
- *     `.bl-take-favorite-mark` below for what it marks. A PER-ROW favorite
- *     marker on `TakeRow` and the `/takes/[id]` hero, shown only when that
- *     specific song/take is one of the member's favorites — not a
- *     decorative icon glued to a "Your favorites" heading that already
- *     says the word (an earlier version did exactly that; review round 1
- *     correctly called it out as carrying no information — a star next to
- *     text already reading "favorites" tells you nothing the text didn't).
- *     Appears on `/` (recent-events / needs-your-vote rows), `/search`
- *     (result rows), `/me` (the votes list, when a voted take is ALSO a
- *     favorite), and `/takes/[id]` — every place a take might or might not
- *     be a favorite, never on a list already scoped to favorites alone
- *     (there, every row would show it, the same no-information problem the
- *     heading star had).
+ *   --bl-component-accent-gold (Task 6: gold's first use, per-row on
+ *     `TakeRow`/`/takes/[id]` rather than a decorative icon glued onto a
+ *     "Your favorites" heading that already says the word — review round 1
+ *     correctly called that out as carrying no information. Task 8 turns
+ *     the per-row marker into `.bl-favorite-toggle` (a real control, filled
+ *     gold when pressed) — see the "vote toggle, favorite toggle, toast"
+ *     block further down for that component's own contrast notes. Now
+ *     shown on EVERY row (including a list already scoped to favorites,
+ *     e.g. `/me`'s own favorites section) rather than only favorited ones,
+ *     because it's a toggle a member can act on there too (unfavorite),
+ *     not a passive marker with nothing left to say.
  *
  *     Color-wise it has the OPPOSITE
  *     problem from rust/olive: raw gold (#f6aa1c) is a light, high-luminance
@@ -544,6 +541,14 @@ a.bl-btn {
   justify-content: flex-end;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/* `/takes/[id]`'s admin keeper/reject actions — same `.bl-dialog-actions`
+   layout, left-aligned (there's no dialog framing it here) with a little
+   top margin to separate it from the hint paragraph above. */
+.bl-admin-take-actions {
+  justify-content: flex-start;
+  margin-top: 0.75rem;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1357,19 +1362,34 @@ a.bl-btn {
   border-top: 1px solid var(--bl-color-border);
 }
 
+/* Task 8: `.bl-song-row` used to BE the `<a>` — the whole row was one
+   link. `FavoriteToggle` renders a `<form>+<button>`, and a `<form>` inside
+   an `<a>` is invalid HTML (interactive content can't nest), so the row is
+   now a plain container with the link as one child (`.bl-song-row-link`,
+   carrying the old link styling) and the favorite toggle as a sibling —
+   same visual result, `:hover`/border/padding unchanged, just moved from
+   the `<a>` onto the row it's still visually indistinguishable from. */
 .bl-song-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
   min-height: 44px;
   padding: 1rem 0.25rem;
   border-bottom: 1px solid var(--bl-color-border);
-  text-decoration: none;
-  color: var(--bl-color-fg);
 }
 
 .bl-song-row:hover {
   background: var(--bl-color-surface);
+}
+
+.bl-song-row-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--bl-color-fg);
 }
 
 .bl-song-row-main {
@@ -1446,17 +1466,18 @@ a.bl-btn {
   }
 }
 
+/* Task 8: same restructuring as `.bl-song-row` above (see its comment) —
+   `.bl-event-row` is now a plain container, `.bl-event-row-link` carries
+   the old link styling, `FavoriteToggle` sits as a sibling. */
 .bl-event-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
   min-height: 44px;
   padding: 1rem 1.125rem;
   border: 1px solid var(--bl-color-border);
   border-left: 4px solid var(--bl-color-muted);
   border-radius: 0.375rem;
-  text-decoration: none;
-  color: var(--bl-color-fg);
 }
 
 .bl-event-row:hover {
@@ -1469,6 +1490,16 @@ a.bl-btn {
 
 .bl-event-row--session {
   border-left-color: var(--bl-component-accent-success);
+}
+
+.bl-event-row-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--bl-color-fg);
 }
 
 .bl-event-row-main {
@@ -1568,6 +1599,22 @@ a.bl-btn {
 
 .bl-take-row {
   display: flex;
+  /* `flex-wrap: wrap` (Task 8 fix round 1): `.bl-take-row-main{flex:1}` has
+     a `flex-basis` of `0%`, so when the row's CONTENT overflows (a narrow
+     2-column grid cell, e.g. `.bl-take-list--wide` on `/`, plus a wide
+     `VoteToggle` in the trailing column), the flexbox shrink algorithm —
+     which distributes negative space in proportion to `basis × shrink` —
+     assigns `.bl-take-row-main` a ZERO share of that shrink (its basis is
+     already 0) and dumps the entire overflow onto `.bl-take-row-trailing`
+     instead, which then refuses to shrink below its own unconstrained
+     content width. Net effect: `.bl-take-row-main` collapsed to a
+     measured 0px and "Neon Skyline" wrapped one character per line. Same
+     underlying class of narrow-2-col-grid overflow bug `.bl-take-row-line`
+     already had (see its own comment) and the same fix: let the row wrap
+     onto a second line — `.bl-take-row-trailing` (right-aligned via its
+     own `align-items: flex-end`) drops below the label/meta instead of
+     squeezing it to nothing. */
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.875rem;
   min-height: 44px;
@@ -1576,7 +1623,11 @@ a.bl-btn {
 }
 
 .bl-take-row-main {
-  flex: 1;
+  /* Explicit basis, not just `flex: 1` (whose implicit `flex-basis: 0%` is
+     what let this collapse to 0 before `.bl-take-row` grew `flex-wrap` —
+     see that rule's comment) — same fix `.bl-session-row-main`/
+     `.bl-vote-row-main` already use for the identical reason. */
+  flex: 1 1 10rem;
   min-width: 0;
 }
 
@@ -1604,23 +1655,17 @@ a.bl-btn {
   text-decoration-color: currentColor;
 }
 
-/* The gold favorite marker — see this file's header comment for the
-   derived light-mode token/ratios and why this is per-row, not a heading
-   decoration. Fill/border use only, per the accent-token rule: the icon
-   reinforces real per-row information (this take/song IS a favorite), it
-   is never the sole way that's conveyed (a `title` attribute plus
-   `sr-only` text both say so too, for WCAG 1.4.1/1.1.1). Shared by
-   `TakeRow.astro` (`.bl-take-favorite-mark` sizes/positions it next to the
-   label) and `/me`'s votes list (`.bl-vote-row-song` positions it inline). */
-.bl-favorite-mark {
+/* Positions `FavoriteToggle` (Task 8) next to a title/label it's marking —
+   the gold fill itself is `.bl-favorite-toggle`'s own concern (see the
+   "vote toggle, favorite toggle, toast" block below); this class is purely
+   layout, the same spot the Task 6 static marker it replaced used to sit
+   in. Shared by `TakeRow.astro`, `/songs/[slug]`, `/events/[id]`, and
+   `/takes/[id]`'s heroes. */
+.bl-take-favorite-mark {
   display: inline-flex;
   align-items: center;
-  color: var(--bl-component-accent-gold);
-  flex-shrink: 0;
-}
-
-.bl-take-favorite-mark {
   margin-left: 0.375rem;
+  flex-shrink: 0;
 }
 
 .bl-take-sublabel {
@@ -1684,16 +1729,27 @@ a.bl-btn {
   white-space: nowrap;
 }
 
-/* Wraps the duration plus increment 5's (empty today) `trailing` slot — see
-   TakeRow.astro's header comment. A bare wrapper, not a new visual
-   treatment: `.bl-take-row-duration`'s own rules are unchanged, and an
-   empty `<slot>` contributes no box, so this renders identically to before
-   until increment 5 fills the slot. */
+/* Wraps the duration plus the `trailing` slot's `VoteToggle` (Task 8) — see
+   TakeRow.astro's header comment. `flex-wrap` and `align-items: flex-start`
+   let the vote buttons wrap onto their own line under the duration at
+   narrow widths without the row overflowing (`VoteToggle`'s own tally text
+   already wraps onto its own line via `flex-basis: 100%`, so this just
+   needs to not fight that). */
 .bl-take-row-trailing {
   display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0.625rem;
+  flex-direction: column;
+  align-items: flex-end;
+  /* `min-width: 0` overrides the flex default of `auto`, which pins a flex
+     item to its content's max-content width and refuses to shrink below
+     it — the classic flexbox trap, and the exact bug this was shipping
+     with (Fix round, this task): `.bl-vote-toggle` inside had nothing
+     bounding its width, so it rendered at its own unconstrained
+     "everything on one line" width and pushed `.bl-take-row-main` to 0,
+     wrapping "Neon Skyline" onto two 1-character-wide lines. `flex-shrink`
+     stays implicit (1, the default) so this column actually gives up width
+     to `.bl-take-row-main` when the row is narrow. */
+  min-width: 0;
+  gap: 0.375rem;
 }
 
 .bl-take-row-duration {
@@ -1853,14 +1909,11 @@ a.bl-btn {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Home (Task 6) — favorites, recent events with their takes, and "needs   */
-/* your vote". Display only: no favorite toggle, no vote control (both     */
-/* land in increment 5) — this section adds no interactive-control CSS of  */
-/* its own, only the event-group spacing the layout needs. The gold        */
-/* favorite marker itself (`.bl-favorite-mark`/`.bl-take-favorite-mark`)   */
-/* is defined once, in the take-row block below, and reused everywhere it  */
-/* appears — see this file's header comment for why it's per-row now, not  */
-/* on this section's heading.                                             */
+/* Home (Task 6/8) — favorites, recent events with their takes, and       */
+/* "needs your vote". The vote/favorite controls themselves (Task 8) are   */
+/* defined once, in the take-row/vote-toggle/favorite-toggle blocks below, */
+/* and reused everywhere they appear — this section adds no interactive-   */
+/* control CSS of its own, only the event-group spacing the layout needs.  */
 /* ---------------------------------------------------------------------- */
 
 .bl-home-event-group {
@@ -2049,4 +2102,212 @@ a.bl-btn {
 
 .bl-vote-row-song:hover {
   text-decoration-color: currentColor;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Task 8 — vote toggle, favorite toggle, toast. `VoteToggle.astro`/       */
+/* `FavoriteToggle.astro` render the markup below; `VoteFavorite.tsx`      */
+/* toggles `aria-pressed`/text content on it after a submit, exactly the   */
+/* way `Player.tsx` already toggles `.bl-play-toggle`'s own state.         */
+/*                                                                          */
+/* Contrast (WCAG relative luminance, computed for this task):             */
+/*   Resting vote button: border `--bl-color-fg`, text `--bl-color-fg`,    */
+/*   background `--bl-color-surface` — same combination `.bl-btn-secondary`*/
+/*   already uses; `--bl-color-fg` is ~15:1 against both `--bl-color-bg`   */
+/*   and `--bl-color-surface` in both themes (see roost.css's header).     */
+/*                                                                          */
+/*   Pressed vote button: text STAYS `--bl-color-fg` (~15:1) — border and  */
+/*   a tinted background switch to the accent family instead of the text   */
+/*   color, deliberately mirroring `.bl-btn-danger`'s existing pattern     */
+/*   rather than `.bl-solo-chip.is-active`'s (which sets `color` directly  */
+/*   to `--bl-component-accent-success`). `--bl-component-accent-success`  */
+/*   text would have been fine (8.06:1/8.71:1 light, 5.14:1/4.76:1 dark —  */
+/*   all >=4.5:1, per this file's header) but                              */
+/*   `--bl-component-accent-strong` (used for "Not a keeper") is NOT:      */
+/*   9.21:1/9.96:1 in light mode, but only 4.41:1/4.08:1 in dark mode —    */
+/*   BELOW the 4.5:1 normal-text floor at this button's 0.875rem/14px size */
+/*   (not "large text" under WCAG 1.4.3 even at bold weight, which needs   */
+/*   >=14pt/18.66px bold or 18pt/24px regular). Using it as border/tinted- */
+/*   fill instead keeps every accent use at the 3:1 non-text-UI floor      */
+/*   both families already clear in both themes (accent-strong's dark      */
+/*   4.41:1/4.08:1 numbers, while too low for text, are well above 3:1),   */
+/*   and avoids a SIXTH contrast defect in this exact "accent token as     */
+/*   text/fill" spot the project has gotten wrong five times before.       */
+/*   Selection also carries a non-colour affordance (bold weight plus a    */
+/*   leading check/cross mark via `::before` — same technique              */
+/*   `.bl-solo-chip.is-active` already uses), not colour alone (WCAG       */
+/*   1.4.1).                                                               */
+/*                                                                          */
+/*   Favorite star: filled (pressed) uses `--bl-component-accent-gold` as  */
+/*   an ICON FILL (not text) — already verified in this file's header      */
+/*   (3.45:1/3.73:1 light, 9.10:1/8.42:1 dark, clearing the 3:1 non-text   */
+/*   floor). Unfilled (outline) uses `--bl-color-muted` (4.65:1/6.93:1 —   */
+/*   see roost.css), comfortably clearing 3:1 too. Filled vs. outline is   */
+/*   itself the non-colour affordance — a different SHAPE, not just a      */
+/*   different colour on the same shape.                                  */
+/*                                                                          */
+/*   Toast: `--bl-color-fg` text on `--bl-color-surface`, border           */
+/*   `--bl-color-fg` — the exact combination `Player.tsx`'s own bar         */
+/*   already uses and documents (16.84:1 light / 14.41:1 dark).            */
+/* ---------------------------------------------------------------------- */
+
+.bl-vote-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bl-vote-toggle-form {
+  display: contents;
+}
+
+.bl-vote-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 2px solid var(--bl-color-fg);
+  background: var(--bl-color-surface);
+  color: var(--bl-color-fg);
+  font-family: var(--bl-font-body);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.bl-vote-btn-keeper[aria-pressed="true"] {
+  border-color: var(--bl-component-accent-success);
+  background: color-mix(in srgb, var(--bl-component-accent-success) 14%, var(--bl-color-surface));
+  font-weight: 700;
+}
+
+.bl-vote-btn-keeper[aria-pressed="true"]::before {
+  content: "✓ ";
+}
+
+.bl-vote-btn-not-keeper[aria-pressed="true"] {
+  border-color: var(--bl-component-accent-strong);
+  background: color-mix(in srgb, var(--bl-component-accent-strong) 12%, var(--bl-color-surface));
+  font-weight: 700;
+}
+
+.bl-vote-btn-not-keeper[aria-pressed="true"]::before {
+  content: "✕ ";
+}
+
+.bl-vote-tally {
+  font-family: var(--bl-font-mono);
+  font-size: 0.75rem;
+  color: var(--bl-color-muted);
+  flex-basis: 100%;
+}
+
+.bl-vote-toggle-lg .bl-vote-btn {
+  min-height: 48px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+}
+
+.bl-vote-toggle-lg .bl-vote-tally {
+  font-size: 0.8125rem;
+}
+
+.bl-favorite-toggle-form {
+  display: inline-flex;
+}
+
+.bl-favorite-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--bl-color-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.bl-favorite-toggle .bl-star-filled {
+  display: none;
+  color: var(--bl-component-accent-gold);
+}
+
+.bl-favorite-toggle[aria-pressed="true"] .bl-star-outline {
+  display: none;
+}
+
+.bl-favorite-toggle[aria-pressed="true"] .bl-star-filled {
+  display: inline;
+}
+
+.bl-favorite-toggle-form-lg .bl-favorite-toggle {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.bl-favorite-toggle-form-lg .bl-star-outline,
+.bl-favorite-toggle-form-lg .bl-star-filled {
+  width: 20px;
+  height: 20px;
+}
+
+/* Toast region — top-right, deliberately NOT near the bottom of the
+   viewport: this project has twice shipped a fixed-position/reserved-space
+   element that occluded something else near the bottom (the player bar,
+   the tab bar) — see `.bl-shell`'s own comment. A toast anchored at the
+   top avoids that whole class of bug rather than needing a third height
+   negotiation with the player bar and tab bar. `role="status"`
+   (`VoteFavorite.tsx`) gives it an implicit `aria-live="polite"` region;
+   nothing here ever calls `.focus()` on it — a toast must not steal focus
+   from whatever the member was doing when it appeared. */
+.bl-toast-region {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 150; /* above the player (42) and tab bar (40), below the route-progress bar's 200 and the skip-link's 100 only when focused */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(20rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.bl-toast {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--bl-color-fg);
+  border-radius: 0.375rem;
+  background: var(--bl-color-surface);
+  color: var(--bl-color-fg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+  animation: bl-toast-in 0.15s ease;
+}
+
+@keyframes bl-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-toast {
+    animation: none;
+  }
 }

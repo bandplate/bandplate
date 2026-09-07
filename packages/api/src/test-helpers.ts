@@ -37,8 +37,51 @@ export interface TestApp {
   clock: FakeClock;
   config: AppConfig;
   storage: Storage;
-  /** Stops the in-memory storage fake's backing HTTP server. Call in `afterEach` for a test file that exercises the audio route. */
+  /** Stops the in-memory storage fake's backing HTTP server, if one was ever actually started (see `createLazyInMemoryStorage` below) — safe to call even for a test that never touched storage at all. Call in `afterEach` for a test file that exercises the audio route. */
   closeStorage: () => Promise<void>;
+}
+
+/**
+ * `InMemoryStorage` starts a real `node:http` server (see its own header
+ * comment on why: it has to be conformance-testable against the exact
+ * same assertions as real MinIO). `buildTestApp` is called ~65 times
+ * across 8 test files, but only `audio.test.ts` — the one file that
+ * actually exercises the audio route — ever needs a real storage backend;
+ * the other 7 never call anything on `TestApp.storage` and never call
+ * `closeStorage` either. Eagerly starting a server on every call leaked
+ * one live listening socket per test in those files (fix round 1, item
+ * 7). Deferring the real `createInMemoryStorage()` call until the first
+ * actual `Storage` method invocation means those 7 files never start a
+ * server at all — nothing to leak — while `audio.test.ts` (and anything
+ * else that legitimately calls into storage) behaves identically to
+ * before, module the one-time lazy-init cost on first use.
+ */
+function createLazyInMemoryStorage(): { storage: Storage; close: () => Promise<void> } {
+  type Handle = Awaited<ReturnType<typeof createInMemoryStorage>>;
+  let handlePromise: Promise<Handle> | undefined;
+  function ensure(): Promise<Handle> {
+    if (!handlePromise) {
+      handlePromise = createInMemoryStorage();
+    }
+    return handlePromise;
+  }
+  const storage: Storage = {
+    signedUploadUrl: async (...args) => (await ensure()).storage.signedUploadUrl(...args),
+    signedDownloadUrl: async (...args) => (await ensure()).storage.signedDownloadUrl(...args),
+    head: async (...args) => (await ensure()).storage.head(...args),
+    delete: async (...args) => (await ensure()).storage.delete(...args),
+    put: async (...args) => (await ensure()).storage.put(...args),
+  };
+  return {
+    storage,
+    close: async () => {
+      if (!handlePromise) {
+        return;
+      }
+      const handle = await handlePromise;
+      await handle.close();
+    },
+  };
 }
 
 export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<TestApp> {
@@ -58,7 +101,7 @@ export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<
   // themselves are already covered thoroughly by
   // `@bandlib/storage`'s own conformance suite; this just needs a
   // working default.
-  const storageHandle = await createInMemoryStorage();
+  const storageHandle = createLazyInMemoryStorage();
   const config: AppConfig = {
     appOrigin: TEST_APP_ORIGIN,
     bootstrapToken: TEST_BOOTSTRAP_TOKEN,

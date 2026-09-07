@@ -108,6 +108,28 @@ describe("GET /assets/:id/audio", () => {
     expect(res.status).toBe(403);
   });
 
+  it("MUTATION CHECK: GET /assets/:id/audio is declared with takes:read specifically, not some other scope", async () => {
+    // Every real member gets `takes:read` via `scopesForRole` (like every
+    // other read scope), so — same trap `favorites.test.ts`'s identically
+    // named check documents — no request-level probe with a member
+    // session can distinguish "requires takes:read" from "requires any
+    // other scope every member also holds": a route guarded by the wrong
+    // read scope would still 302 for a logged-in member and still 403 for
+    // an anonymous one, exactly like the tests above already pass. This
+    // was flagged (increment 7 fix round, I4) as coverage that was never
+    // actually extended to this route despite the vitest-pool-workers run
+    // re-executing this whole file. Assert the declaration itself,
+    // against the same registry `assertEveryRouteIsGuarded` cross-checks
+    // against the live Hono app (see route-registry.test.ts) — this is
+    // the one thing that actually decides which scope is required.
+    testApp = await buildTestApp();
+    const route = testApp.router.registry.find(
+      (r) => r.method === "GET" && r.path === "/assets/:id/audio",
+    );
+    expect(route).toBeDefined();
+    expect(route?.guard).toEqual({ scopes: ["takes:read"] });
+  });
+
   it("404s for an asset that does not exist", async () => {
     testApp = await buildTestApp();
     const cookie = await loginAsMember(testApp);

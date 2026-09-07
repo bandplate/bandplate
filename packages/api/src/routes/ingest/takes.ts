@@ -155,6 +155,7 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
 
     const assetRows = await syncDeclaredAssets(
       deps.db,
+      deps.storage,
       now,
       takeId,
       input.assets,
@@ -220,28 +221,19 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
         return errorResponse(c, 404, "not_found", "Take not found.");
       }
 
-      // Commit is safe to retry (contract v1 §4): once published, a later
-      // commit call — even one asking for `publish: false` — is a no-op
-      // that reports the current state rather than un-publishing it.
-      if (take.state === "published") {
-        const assets = await assetsRepo.listByTake(deps.db, takeId);
-        return c.json(
-          {
-            takeId,
-            state: take.state,
-            assets: assets
-              .filter((a) => a.status === "ready")
-              .map((a) => ({ assetId: a.id, status: a.status, bytes: a.bytes })),
-          },
-          200,
-        );
-      }
-
       const now = deps.clock.now();
       const assets = await assetsRepo.listByTake(deps.db, takeId);
 
       // HEAD every pending asset; flip anything whose object matches its
-      // declared size to `ready` (contract v1 §4 "Phase 3 — commit").
+      // declared size to `ready` (contract v1 §4 "Phase 3 — commit"). This
+      // sweep runs unconditionally, even for an already-published take:
+      // `POST /takes` resets a changed-hash slot to `pending` regardless of
+      // take state (a re-rendered master on a published take), and if this
+      // sweep only ran for a not-yet-published take, that reset would never
+      // get cleared — the take stays "published" in name while its master
+      // asset is stranded at `pending` forever, unplayable. Running the
+      // sweep first, then branching on state, is what makes a changed-hash
+      // re-declaration on a published take converge back to playable.
       for (const asset of assets) {
         if (asset.status === "ready") {
           continue;
@@ -252,6 +244,24 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
           asset.status = "ready";
           asset.readyAt = now;
         }
+      }
+
+      // Commit is safe to retry (contract v1 §4): once published, a later
+      // commit call — even one asking for `publish: false` — is a no-op
+      // that reports the current state rather than un-publishing it. The
+      // sweep above already ran, so any asset a re-declaration reset to
+      // `pending` and that has since been re-uploaded is reflected here.
+      if (take.state === "published") {
+        return c.json(
+          {
+            takeId,
+            state: take.state,
+            assets: assets
+              .filter((a) => a.status === "ready")
+              .map((a) => ({ assetId: a.id, status: a.status, bytes: a.bytes })),
+          },
+          200,
+        );
       }
 
       const notReady = assets.filter((a) => a.status !== "ready");

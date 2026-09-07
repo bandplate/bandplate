@@ -20,7 +20,15 @@ runStorageConformanceSuite<Fixture>(
   async () => {
     const clock = createFakeClock(Date.now());
     const handle = await createInMemoryStorage({ clock });
-    return { storage: handle.storage, clock, close: handle.close };
+    return {
+      storage: handle.storage,
+      clock,
+      close: handle.close,
+      // `InMemoryStorage`'s signed URLs carry a bare absolute epoch-second
+      // `expires` param — see `in-memory.ts`'s `signedDownloadUrl`.
+      parseSignedExpiryEpochSeconds: (url: string) =>
+        Number(new URL(url).searchParams.get("expires")),
+    };
   },
   async (fixture) => {
     await fixture.close();

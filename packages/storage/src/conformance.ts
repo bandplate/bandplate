@@ -13,6 +13,18 @@ export interface ConformanceFixture {
   storage: Storage;
   /** A working `Clock` the fixture's `storage` was built against — the suite advances/rewinds it to test quantisation and expiry deterministically. */
   clock: FakeClock;
+  /**
+   * Given a URL from this implementation's own `signedDownloadUrl`,
+   * returns the absolute epoch-second instant it's signed to expire at.
+   * Each `Storage` implementation encodes this differently (S3-compatible
+   * signing: `X-Amz-Date` + `X-Amz-Expires`, a duration; `InMemoryStorage`:
+   * a bare absolute `expires` epoch-seconds param) — this is the one
+   * fixture-specific hook the suite needs to assert padding/expiry math
+   * WITHOUT a real network round trip (see the padding test below for
+   * why that matters: a real fetch can't be made deterministic against
+   * where in an hour the suite happens to run).
+   */
+  parseSignedExpiryEpochSeconds: (url: string) => number;
 }
 
 export interface FakeClock extends Clock {
@@ -164,6 +176,37 @@ export function runStorageConformanceSuite<F extends ConformanceFixture>(
         const url = await storage.signedDownloadUrl(key, { expiresIn: 300 });
         const res = await fetch(url);
         expect(res.ok).toBe(true);
+      });
+    });
+
+    it("expiresIn is padded by one full quantisation window — real-world remaining validity is >= expiresIn from ANY point in a bucket, not just a lucky one (fix round 1, item 6)", async () => {
+      // The previous version of this guarantee was checked by signing
+      // near real "now" (wherever in the current hour that happened to
+      // be) and just fetching — with the padding removed, that only
+      // actually caught the regression when the suite ran outside the
+      // first `expiresIn` seconds of an hour (55/60 of the time for
+      // expiresIn=300s against a 1-hour bucket). Signing against a REAL
+      // remote server means we can't deterministically control what wall
+      // time the request is validated at, so instead this asserts the
+      // padding math directly off the parsed signed expiry (no fetch,
+      // fully deterministic) at the one clock position that makes the
+      // guarantee non-trivial: signing 59m59s into the bucket, the
+      // maximum possible quantisation backdating (see
+      // task-7-report.md §2's own "59m59s in -> 5h00m01s left"
+      // enumeration for the same reasoning applied to the brief's real
+      // 1h/6h numbers).
+      await withFixture(async ({ storage, clock, parseSignedExpiryEpochSeconds }) => {
+        const key = `conformance/${label}/padding-math-${Date.now()}`;
+        const bucketStart = Date.parse("2025-06-01T10:00:00.000Z");
+        const signAtMs = bucketStart + 59 * 60 * 1000 + 59 * 1000; // 10:59:59, worst case
+        clock.set(signAtMs);
+
+        const expiresIn = 300;
+        const url = await storage.signedDownloadUrl(key, { expiresIn });
+        const expiryEpochSeconds = parseSignedExpiryEpochSeconds(url);
+        const remainingValiditySeconds = expiryEpochSeconds - Math.floor(signAtMs / 1000);
+
+        expect(remainingValiditySeconds).toBeGreaterThanOrEqual(expiresIn);
       });
     });
 

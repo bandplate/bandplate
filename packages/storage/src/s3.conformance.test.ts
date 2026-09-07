@@ -21,6 +21,40 @@ import {
 } from "./conformance.js";
 import { createS3Storage } from "./s3.js";
 
+/**
+ * Reverses `s3.ts`'s `toAmzDatetime` (`YYYYMMDDTHHMMSSZ`) back to epoch
+ * seconds — needed to parse `X-Amz-Date` out of a signed URL for the
+ * padding-math conformance test (see `parseSignedExpiryEpochSeconds`
+ * below and `conformance.ts`'s fix-round-1 item 6 test).
+ */
+function parseAmzDateToEpochSeconds(amzDate: string): number {
+  const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(amzDate);
+  if (!match) {
+    throw new Error(`unexpected X-Amz-Date format: ${amzDate}`);
+  }
+  const [, year, month, day, hour, minute, second] = match;
+  return (
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    ) / 1000
+  );
+}
+
+function parseSignedExpiryEpochSeconds(url: string): number {
+  const parsed = new URL(url);
+  const amzDate = parsed.searchParams.get("X-Amz-Date");
+  const amzExpires = parsed.searchParams.get("X-Amz-Expires");
+  if (!amzDate || !amzExpires) {
+    throw new Error(`signed URL missing X-Amz-Date/X-Amz-Expires: ${url}`);
+  }
+  return parseAmzDateToEpochSeconds(amzDate) + Number(amzExpires);
+}
+
 const CONTAINER_NAME = "bandlib-storage-conformance-test-minio";
 const BUCKET = "bandlib-test";
 const ACCESS_KEY_ID = "minioadmin";
@@ -130,7 +164,7 @@ describe.skipIf(!hasDocker)("Storage conformance: S3Storage (MinIO)", () => {
       secretAccessKey: SECRET_ACCESS_KEY,
       clock,
     });
-    return { storage, clock };
+    return { storage, clock, parseSignedExpiryEpochSeconds };
   });
 });
 

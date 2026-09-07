@@ -72,14 +72,28 @@ export async function markReady(db: Db, id: string, readyAt: number): Promise<vo
 }
 
 /**
- * Looks up the asset occupying one "slot" on a take — the same
- * `(takeId, kind, coalesce(instrumentId,''), tier, format)` tuple the
- * schema's `assets_slot_idx` unique index enforces. Ingest re-declares
- * take+assets on every retry (contract v1 §3/§4) and needs to find the
- * existing row for a slot, if any, to decide whether to reuse it
- * (matching hash → already `ready`, skip) or reset it to `pending` (hash
- * changed → re-upload, same storage key, overwriting rather than
- * orphaning).
+ * Looks up the asset occupying one "slot" on a take — identity is
+ * `(takeId, kind, coalesce(instrumentId,''), tier)` for a master/stem, and
+ * `(takeId, kind)` for peaks. Ingest re-declares take+assets on every retry
+ * (contract v1 §3/§4) and needs to find the existing row for a slot, if
+ * any, to decide whether to reuse it (matching hash → already `ready`,
+ * skip) or reset it to `pending` (hash/format changed → re-upload,
+ * overwriting rather than orphaning).
+ *
+ * `format` is deliberately NOT part of slot identity: it's a property of
+ * whatever currently occupies the slot, not part of what names the slot.
+ * A re-declaration with a different format is still the same slot (e.g.
+ * the lossy master, re-rendered as mp3 instead of opus) — the caller resets
+ * the row in place (new storageKey/format included) rather than inserting
+ * a second row that would leave the old object orphaned in the bucket
+ * (contract v1 §3 "re-running must converge").
+ *
+ * `tier` is likewise ignored for `kind === 'peaks'`: a bridge mirrors its
+ * master's tier onto peaks purely as metadata (contract v1 §5 doesn't
+ * assign it meaning), so a peaks re-declaration with a different tier value
+ * must still find the one existing peaks row for this take — matching on
+ * tier too would miss it and collide with `storage_key`'s UNIQUE
+ * constraint instead, since `peaksStorageKey` doesn't vary by tier.
  */
 export async function getBySlot(
   db: Db,
@@ -87,22 +101,21 @@ export async function getBySlot(
   kind: AssetKind,
   instrumentId: string | null,
   tier: AssetTier,
-  format: AssetFormat,
 ): Promise<Asset | undefined> {
+  const conditions = [
+    eq(assets.takeId, takeId),
+    eq(assets.kind, kind),
+    instrumentId === null
+      ? sql`${assets.instrumentId} IS NULL`
+      : eq(assets.instrumentId, instrumentId),
+  ];
+  if (kind !== "peaks") {
+    conditions.push(eq(assets.tier, tier));
+  }
   const [row] = await db
     .select()
     .from(assets)
-    .where(
-      and(
-        eq(assets.takeId, takeId),
-        eq(assets.kind, kind),
-        instrumentId === null
-          ? sql`${assets.instrumentId} IS NULL`
-          : eq(assets.instrumentId, instrumentId),
-        eq(assets.tier, tier),
-        eq(assets.format, format),
-      ),
-    )
+    .where(and(...conditions))
     .limit(1);
   return row;
 }
@@ -114,14 +127,25 @@ export interface ResetForReuploadInput {
   durationMs?: number | null;
   sampleRate?: number | null;
   channels?: number | null;
+  /**
+   * The freshly-declared storage key/tier/format, when they differ from
+   * the row's current ones (a format or a peaks tier change — see
+   * `getBySlot`). Omitted when the re-declaration only changed the
+   * hash/bytes and the slot's key/tier/format are unchanged.
+   */
+  storageKey?: string;
+  tier?: AssetTier;
+  format?: AssetFormat;
 }
 
 /**
  * Resets an existing asset slot back to `pending` ahead of a re-upload —
- * the "hash differs" branch of the contract's retry semantics (v1 §4): the
- * storage key is unchanged (declared deterministically from `takeId` and
- * the slot), so the eventual re-upload overwrites the same object rather
- * than orphaning a new one.
+ * the "hash differs" branch of the contract's retry semantics (v1 §4). By
+ * default the storage key is unchanged (declared deterministically from
+ * `takeId` and the slot), so the eventual re-upload overwrites the same
+ * object rather than orphaning a new one. When `storageKey` IS given (a
+ * format change, or a peaks tier update), the caller is responsible for
+ * deleting the OLD object from the bucket — this only updates the row.
  */
 export async function resetForReupload(
   db: Db,
@@ -139,6 +163,9 @@ export async function resetForReupload(
       sampleRate: input.sampleRate ?? null,
       channels: input.channels ?? null,
       readyAt: null,
+      ...(input.storageKey !== undefined ? { storageKey: input.storageKey } : {}),
+      ...(input.tier !== undefined ? { tier: input.tier } : {}),
+      ...(input.format !== undefined ? { format: input.format } : {}),
     })
     .where(eq(assets.id, id));
 }

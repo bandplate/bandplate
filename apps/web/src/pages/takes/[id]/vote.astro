@@ -1,0 +1,80 @@
+---
+// POST-only: casts (or changes) the signed-in member's keeper/not-keeper
+// vote on this take, as themselves — `principal.memberId`, never a form
+// field (see `server/pages/votes.ts`). Two callers hit this exact URL:
+//
+//   - `VoteToggle.astro`'s plain `<form method="post">` — works with no JS
+//     at all, and redirects back to wherever the member was voting from
+//     (see `safeRedirectPath` — the `Referer` header, not a hardcoded
+//     destination, since this control renders on `/`, `/search`, a song
+//     page, an event page, and `/me`).
+//   - The `VoteFavorite` island's `fetch`, once hydrated — same URL, same
+//     validation, same authorization, just `Accept: application/json` so
+//     it gets the fresh tally back instead of a redirect, to update every
+//     matching control/tally on the page without a full navigation.
+//
+// A GET here (e.g. someone bookmarks the action URL) just bounces to the
+// take detail page, same as `logout.astro` bounces home on a GET.
+import { getAppDeps } from "../../../server/app.js";
+import { isSameOrigin } from "../../../server/csrf.js";
+import { castVoteFromForm } from "../../../server/pages/votes.js";
+import { safeRedirectPath } from "../../../server/safe-redirect.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const takeId = Astro.params.id;
+if (!takeId) {
+  return Astro.redirect("/");
+}
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(`/takes/${takeId}`);
+}
+
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("application/json");
+
+// Primary CSRF check for this page's own POST handler — the API's
+// `originCheckMiddleware` is a separate backstop for the JSON surface
+// (`packages/api/src/routes/votes.ts`), not what this route goes through.
+if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+  return new Response("Origin check failed.", { status: 403 });
+}
+
+const formData = await Astro.request.formData();
+const result = await castVoteFromForm(
+  appDeps.db,
+  principal.memberId,
+  takeId,
+  formData,
+  appDeps.clock.now(),
+);
+
+if (isFetch) {
+  if (result.kind !== "ok") {
+    const status = result.kind === "not_found" ? 404 : 400;
+    return new Response(JSON.stringify({ error: result.kind }), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  return new Response(JSON.stringify({ keeper: result.keeper, tally: result.tally }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+if (result.kind === "not_found") {
+  return new Response("Take not found.", { status: 404 });
+}
+return Astro.redirect(
+  safeRedirectPath(
+    Astro.request.headers.get("referer"),
+    appDeps.config.appOrigin,
+    `/takes/${takeId}`,
+  ),
+);
+---

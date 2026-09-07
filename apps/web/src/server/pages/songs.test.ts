@@ -51,7 +51,7 @@ describe("listSongsForLibrary / getSongDetail", () => {
   });
 
   it("getSongDetail returns undefined for an unknown slug (a 404, not a throw)", async () => {
-    const result = await getSongDetail(db, "does-not-exist");
+    const result = await getSongDetail(db, "does-not-exist", "member-1");
     expect(result).toBeUndefined();
   });
 
@@ -65,7 +65,7 @@ describe("listSongsForLibrary / getSongDetail", () => {
       updatedAt: now,
     });
 
-    const detail = await getSongDetail(db, "stub-song");
+    const detail = await getSongDetail(db, "stub-song", "member-1");
     expect(detail?.takes).toEqual([]);
     expect(detail?.song.isStub).toBe(true);
   });
@@ -103,7 +103,7 @@ describe("listSongsForLibrary / getSongDetail", () => {
       instrumentIds: [bass.id],
     });
 
-    const detail = await getSongDetail(db, "detail-song");
+    const detail = await getSongDetail(db, "detail-song", "member-1");
     expect(detail?.takes.map((t) => t.id)).toEqual([newer.id, older.id]);
     expect(detail?.takes[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
     expect(detail?.takes[0]?.event?.id).toBe(event.id);
@@ -154,7 +154,7 @@ describe("listSongsForLibrary / getSongDetail", () => {
       updatedAt: now,
     });
 
-    const detail = await getSongDetail(db, "playable-song");
+    const detail = await getSongDetail(db, "playable-song", "member-1");
     const playableTake = detail?.takes.find((t) => t.id === playable.id);
     const silentTake = detail?.takes.find((t) => t.id === silent.id);
     expect(playableTake?.playableAssetId).toBe(masterAsset?.id);

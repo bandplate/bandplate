@@ -27,6 +27,8 @@ export interface SearchQuery {
   dateFrom?: string;
   dateTo?: string;
   rating?: SearchRating;
+  /** Defaults to `"recent"` — see `takesRepo.TakeSort`'s own comment for why `"rating"` isn't just `ratingScore DESC`. */
+  sort: takesRepo.TakeSort;
   states: takesRepo.TakeState[];
 }
 
@@ -79,8 +81,10 @@ export function parseSearchQuery(searchParams: URLSearchParams): SearchQuery {
         .filter((s): s is takesRepo.TakeState => (VALID_STATES as readonly string[]).includes(s)),
     ),
   ];
+  const rawSort = searchParams.get("sort");
+  const sort: takesRepo.TakeSort = rawSort === "rating" ? "rating" : "recent";
 
-  return { search, instrumentIds, dateFrom, dateTo, rating, states };
+  return { search, instrumentIds, dateFrom, dateTo, rating, sort, states };
 }
 
 export function hasAnyFilter(query: SearchQuery): boolean {
@@ -122,10 +126,10 @@ export async function searchTakes(
   memberId: string,
 ): Promise<SearchTakesResult> {
   const [{ results, truncated }, favoriteTakeIds] = await Promise.all([
-    takesRepo.search(db, toFilters(query)),
+    takesRepo.search(db, toFilters(query), { sort: query.sort }),
     favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
   ]);
-  const withContext = await attachFullContext(db, results);
+  const withContext = await attachFullContext(db, results, memberId);
   return {
     results: withContext.map((take) => ({ ...take, favorited: favoriteTakeIds.has(take.id) })),
     truncated,

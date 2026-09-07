@@ -1,7 +1,14 @@
 // `/events` and `/events/[id]` page logic. Read-only, same shape as
 // `server/pages/songs.ts`.
 import { type Db, assetsRepo } from "@bandlib/db";
-import { eventsRepo, type instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
+import {
+  eventsRepo,
+  favoritesRepo,
+  type instrumentsRepo,
+  songsRepo,
+  takesRepo,
+  votesRepo,
+} from "@bandlib/db";
 
 export type EventListItem = eventsRepo.EventWithTakeCount;
 
@@ -28,10 +35,15 @@ export interface TakeWithContext extends takesRepo.Take {
   song: songsRepo.Song | undefined;
   /** See `assetsRepo.listPlayableMastersByTakeIds` — undefined means "no play control", not "disabled". */
   playableAssetId: string | undefined;
+  /** `undefined` means this member hasn't voted on this take yet — see `TakeRow`'s own `myVote` prop. */
+  myVote: boolean | undefined;
+  favorited: boolean;
 }
 
 export interface EventDetail {
   event: eventsRepo.Event;
+  /** Whether THIS member has favorited the event itself — drives the hero's `FavoriteToggle`. */
+  eventFavorited: boolean;
   takes: TakeWithContext[];
 }
 
@@ -41,29 +53,42 @@ export interface EventDetail {
  * that ordering differs, since it's reconstructing what happened during a
  * single session), each with its song and instruments batch-fetched.
  */
-export async function getEventDetail(db: Db, id: string): Promise<EventDetail | undefined> {
+export async function getEventDetail(
+  db: Db,
+  id: string,
+  memberId: string,
+): Promise<EventDetail | undefined> {
   const event = await eventsRepo.getById(db, id);
   if (!event) {
     return undefined;
   }
 
-  const takes = await takesRepo.listByEvent(db, event.id, { order: "asc" });
+  const [takes, eventFavorited] = await Promise.all([
+    takesRepo.listByEvent(db, event.id, { order: "asc" }),
+    favoritesRepo.isFavorited(db, memberId, "event", event.id),
+  ]);
   const takeIds = takes.map((t) => t.id);
   const songIds = [...new Set(takes.map((t) => t.songId))];
-  const [instrumentsByTake, songs, playableByTakeId] = await Promise.all([
-    takesRepo.listInstrumentsForTakes(db, takeIds),
-    songsRepo.getByIds(db, songIds),
-    assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
-  ]);
+  const [instrumentsByTake, songs, playableByTakeId, myVoteByTakeId, favoriteTakeIds] =
+    await Promise.all([
+      takesRepo.listInstrumentsForTakes(db, takeIds),
+      songsRepo.getByIds(db, songIds),
+      assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
+      votesRepo.listByMemberForTakes(db, memberId, takeIds),
+      favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
+    ]);
   const songById = new Map(songs.map((s) => [s.id, s]));
 
   return {
     event,
+    eventFavorited,
     takes: takes.map((take) => ({
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],
       song: songById.get(take.songId),
       playableAssetId: playableByTakeId.get(take.id)?.id,
+      myVote: myVoteByTakeId.get(take.id),
+      favorited: favoriteTakeIds.has(take.id),
     })),
   };
 }

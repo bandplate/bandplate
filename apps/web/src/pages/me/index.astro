@@ -22,13 +22,15 @@
 // that moves the claimed name onto whichever occurrence the member
 // actually clicks, so the transition morphs from the right place on
 // screen. See that component's own header comment.
+import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import TakeTransitionRetarget from "../../components/TakeTransitionRetarget.astro";
+import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { SESSION_COOKIE_NAME } from "../../server/cookies.js";
-import { formatTimestamp } from "../../server/format.js";
+import { eventLabel, formatLongDate, formatTimestamp } from "../../server/format.js";
 import { getMeData } from "../../server/pages/me.js";
 
 const principal = Astro.locals.principal;
@@ -56,7 +58,13 @@ function sessionStatus(session: (typeof sessions)[number]): "active" | "revoked"
   return "active";
 }
 
-const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
+const hasFavorites =
+  favorites.songs.length > 0 || favorites.takes.length > 0 || favorites.events.length > 0;
+const favoriteKindCount = [
+  favorites.songs.length > 0,
+  favorites.events.length > 0,
+  favorites.takes.length > 0,
+].filter(Boolean).length;
 
 const usedTakeTransitionIds = new Set<string>();
 /** First call for a given take id gets the real name; every later call on
@@ -144,34 +152,76 @@ function claimTakeTransition(takeId: string): string | null {
         !hasFavorites ? (
           <div class="bl-empty-state">
             <p>
-              Nothing pinned yet — favoriting is coming soon. In the meantime,{" "}
-              <a href="/search">browse the archive</a>.
+              Nothing pinned yet — tap the star on a song, take, or event to pin it here.{" "}
+              <a href="/search">Browse the archive</a>.
             </p>
           </div>
         ) : (
           <div class="bl-stack bl-stack-tight">
             {favorites.songs.length > 0 && (
-              <div class="bl-song-list">
-                {favorites.songs.map((song) => (
-                  <a href={`/songs/${song.slug}`} class="bl-song-row">
-                    <div class="bl-song-row-main">
-                      <p class="bl-song-title bl-m0">{song.title}</p>
+              <div>
+                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Songs</p>}
+                <div class="bl-song-list">
+                  {favorites.songs.map((song) => (
+                    <div class="bl-song-row">
+                      <a href={`/songs/${song.slug}`} class="bl-song-row-link">
+                        <div class="bl-song-row-main">
+                          <p class="bl-song-title bl-m0">{song.title}</p>
+                        </div>
+                      </a>
+                      <FavoriteToggle
+                        targetType="song"
+                        targetId={song.id}
+                        favorited={true}
+                        label={song.title}
+                      />
                     </div>
-                  </a>
-                ))}
+                  ))}
+                </div>
+              </div>
+            )}
+            {favorites.events.length > 0 && (
+              <div>
+                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Events</p>}
+                <div class="bl-event-list">
+                  {favorites.events.map((event) => (
+                    <div class={`bl-event-row bl-event-row--${event.kind}`}>
+                      <a href={`/events/${event.id}`} class="bl-event-row-link">
+                        <div class="bl-event-row-main">
+                          <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
+                          <p class="bl-event-row-venue bl-m0">
+                            <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+                            {eventLabel(event) && ` ${eventLabel(event)}`}
+                          </p>
+                        </div>
+                      </a>
+                      <FavoriteToggle
+                        targetType="event"
+                        targetId={event.id}
+                        favorited={true}
+                        label={eventLabel(event) || `this ${event.kind}`}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {favorites.takes.length > 0 && (
-              <div class="bl-take-list bl-take-list--wide">
-                {favorites.takes.map((take) => (
-                  <TakeRow
-                    take={take}
-                    instruments={take.instruments}
-                    context={{ kind: "full", song: take.song, event: take.event }}
-                    transitionName={claimTakeTransition(take.id)}
-                    playableAssetId={take.playableAssetId}
-                  />
-                ))}
+              <div>
+                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Takes</p>}
+                <div class="bl-take-list bl-take-list--wide">
+                  {favorites.takes.map((take) => (
+                    <TakeRow
+                      take={take}
+                      instruments={take.instruments}
+                      context={{ kind: "full", song: take.song, event: take.event }}
+                      transitionName={claimTakeTransition(take.id)}
+                      favorited={true}
+                      playableAssetId={take.playableAssetId}
+                      myVote={take.myVote}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -199,36 +249,36 @@ function claimTakeTransition(takeId: string): string | null {
                     />
                   )}
                   {take ? (
-                    <a
-                      href={`/takes/${take.id}`}
-                      class="bl-vote-row-song"
-                      transition:name={claimTakeTransition(take.id) ?? undefined}
-                      data-take-id={take.id}
-                    >
-                      {take.song?.title ?? "Untitled take"}
-                      {favorited && (
-                        <span class="bl-favorite-mark" title="Also one of your favorites">
-                          <svg
-                            aria-hidden="true"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 16 16"
-                            fill="currentColor"
-                          >
-                            <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
-                          </svg>
-                          <span class="sr-only">, also a favorite</span>
-                        </span>
-                      )}
-                    </a>
+                    <>
+                      <a
+                        href={`/takes/${take.id}`}
+                        class="bl-vote-row-song"
+                        transition:name={claimTakeTransition(take.id) ?? undefined}
+                        data-take-id={take.id}
+                      >
+                        {take.song?.title ?? "Untitled take"}
+                      </a>
+                      <FavoriteToggle
+                        targetType="take"
+                        targetId={take.id}
+                        favorited={favorited}
+                        label={take.song?.title ?? "this take"}
+                      />
+                    </>
                   ) : (
                     <span class="bl-vote-row-song">A take that's since been removed</span>
                   )}
                   {vote.comment && <p class="bl-field-hint bl-m0">&ldquo;{vote.comment}&rdquo;</p>}
                 </div>
-                <span class={`bl-badge ${vote.keeper ? "bl-badge-keeper" : ""}`}>
-                  {vote.keeper ? "keeper" : "not a keeper"}
-                </span>
+                {take && (
+                  <VoteToggle
+                    takeId={take.id}
+                    keeperVotes={take.keeperVotes}
+                    totalVotes={take.totalVotes}
+                    ratingScore={take.ratingScore}
+                    myVote={vote.keeper}
+                  />
+                )}
               </li>
             ))}
           </ul>

@@ -11,6 +11,7 @@ import { ClientRouter } from "astro:transitions";
 import type { MemberPrincipal } from "@bandlib/core";
 import NavIcon from "../components/NavIcon.astro";
 import Player from "../components/Player.tsx";
+import VoteFavorite from "../components/VoteFavorite.tsx";
 import Layout from "./Layout.astro";
 
 export interface Props {
@@ -91,6 +92,7 @@ const navItems = [
       }
     </nav>
     <Player client:load transition:persist="bl-player" />
+    <VoteFavorite client:load transition:persist="bl-vote-favorite" />
   </div>
 </Layout>
 

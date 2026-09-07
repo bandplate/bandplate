@@ -18,6 +18,7 @@ import {
   type instrumentsRepo,
   songsRepo,
   takesRepo,
+  votesRepo,
 } from "@bandlib/db";
 
 export interface TakeDetail {
@@ -28,6 +29,8 @@ export interface TakeDetail {
   assets: assetsRepo.Asset[];
   hasLossless: boolean;
   favorited: boolean;
+  /** `undefined` means this member hasn't voted on this take yet — see `TakeRow`'s own `myVote` prop. */
+  myVote: boolean | undefined;
 }
 
 export async function getTakeDetail(
@@ -40,14 +43,16 @@ export async function getTakeDetail(
     return undefined;
   }
 
-  const [song, event, instrumentsByTake, assets, hasLossless, favoriteTakeIds] = await Promise.all([
-    songsRepo.getById(db, take.songId),
-    eventsRepo.getById(db, take.eventId),
-    takesRepo.listInstrumentsForTakes(db, [take.id]),
-    assetsRepo.listByTake(db, take.id),
-    assetsRepo.takeHasLossless(db, take.id),
-    favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
-  ]);
+  const [song, event, instrumentsByTake, assets, hasLossless, favoriteTakeIds, myVoteByTakeId] =
+    await Promise.all([
+      songsRepo.getById(db, take.songId),
+      eventsRepo.getById(db, take.eventId),
+      takesRepo.listInstrumentsForTakes(db, [take.id]),
+      assetsRepo.listByTake(db, take.id),
+      assetsRepo.takeHasLossless(db, take.id),
+      favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
+      votesRepo.listByMemberForTakes(db, memberId, [take.id]),
+    ]);
 
   return {
     take,
@@ -57,5 +62,6 @@ export async function getTakeDetail(
     assets,
     hasLossless,
     favorited: favoriteTakeIds.has(take.id),
+    myVote: myVoteByTakeId.get(take.id),
   };
 }

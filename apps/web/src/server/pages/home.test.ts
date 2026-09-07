@@ -35,8 +35,28 @@ describe("getHomeData", () => {
     const data = await getHomeData(db, memberId);
     expect(data.favorites.songs).toEqual([]);
     expect(data.favorites.takes).toEqual([]);
+    expect(data.favorites.events).toEqual([]);
     expect(data.recentEvents).toEqual([]);
     expect(data.unvotedTakes).toEqual([]);
+  });
+
+  it("includes a favorited event in favorites.events — the brief's DoD requires it on / and /me", async () => {
+    const event = await eventsRepo.create(db, {
+      kind: "concert",
+      heldAt: Date.now(),
+      venue: "Favorited Venue",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "event",
+      targetId: event.id,
+      createdAt: Date.now(),
+    });
+
+    const data = await getHomeData(db, memberId);
+    expect(data.favorites.events.map((e) => e.id)).toEqual([event.id]);
   });
 
   it("splits favorites into songs and takes, preserving newest-first order, and ignores a favorited event", async () => {

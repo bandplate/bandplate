@@ -1,4 +1,5 @@
 ---
+import { hasAllScopes } from "@bandlib/core";
 // Take detail — the song (linked), the event and date (linked), duration,
 // label, instruments recorded, state, and the current vote tally. Then the
 // take's assets: the master, stems by instrument, and whether a lossless
@@ -26,7 +27,9 @@
 // instead, so that one morphs a date into a title — still a smooth shared
 // transition, just not a pixel-identical one. See task-6-report.md.
 import type { assetsRepo } from "@bandlib/db";
+import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
+import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { formatBytes, formatDuration, formatLongDate } from "../../server/format.js";
@@ -49,8 +52,9 @@ if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { take, song, event, instruments, assets, hasLossless, favorited } = detail;
+const { take, song, event, instruments, assets, hasLossless, favorited, myVote } = detail;
 const instrumentLabelById = new Map(instruments.map((i) => [i.id, i.label]));
+const isAdmin = hasAllScopes(principal, ["members:admin"]);
 
 // `peaks` assets are waveform data for the future player, not something a
 // member browses as a "recording" — the brief's own enumeration ("master,
@@ -84,11 +88,6 @@ function assetLabel(asset: assetsRepo.Asset): string {
   }
   return instrumentLabelById.get(asset.instrumentId ?? "") ?? "Unknown instrument";
 }
-
-const voteTallyText =
-  take.totalVotes === 0
-    ? "No votes yet."
-    : `${take.keeperVotes} of ${take.totalVotes} ${take.totalVotes === 1 ? "vote says" : "votes say"} keeper (${Math.round(take.ratingScore * 100)}%).`;
 ---
 
 <AppLayout title={song ? song.title : "Take"} principal={principal} current="home">
@@ -104,26 +103,28 @@ const voteTallyText =
             >
               {song.title}
             </a>
-            {favorited && (
-              <span class="bl-favorite-mark bl-take-favorite-mark" title="One of your favorites">
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
-                </svg>
-                <span class="sr-only">, one of your favorites</span>
-              </span>
-            )}
+            <span class="bl-take-favorite-mark">
+              <FavoriteToggle
+                targetType="take"
+                targetId={take.id}
+                favorited={favorited}
+                label={song.title}
+                size="lg"
+              />
+            </span>
           </h1>
         ) : (
           <h1 class="bl-hero-title" transition:name={`take-${take.id}`}>
             Take
-            {favorited && (
-              <span class="bl-favorite-mark bl-take-favorite-mark" title="One of your favorites">
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
-                </svg>
-                <span class="sr-only">, one of your favorites</span>
-              </span>
-            )}
+            <span class="bl-take-favorite-mark">
+              <FavoriteToggle
+                targetType="take"
+                targetId={take.id}
+                favorited={favorited}
+                label="this take"
+                size="lg"
+              />
+            </span>
           </h1>
         )
       }
@@ -221,10 +222,54 @@ const voteTallyText =
         </dd>
       </div>
       <div>
-        <dt>Vote tally</dt>
-        <dd>{voteTallyText}</dd>
+        <dt>Your vote</dt>
+        <dd>
+          <VoteToggle
+            takeId={take.id}
+            keeperVotes={take.keeperVotes}
+            totalVotes={take.totalVotes}
+            ratingScore={take.ratingScore}
+            myVote={myVote}
+            size="lg"
+          />
+        </dd>
       </div>
     </dl>
+
+    {
+      isAdmin && (take.state === "published" || take.state === "new") && (
+        <section class="bl-card">
+          <h2 class="bl-section-title">Admin</h2>
+          <p class="bl-field-hint bl-m0">
+            Votes only inform this — promoting or rejecting is a deliberate call, not automatic.
+          </p>
+          <div class="bl-dialog-actions bl-admin-take-actions">
+            <a
+              href={`/admin/takes/${take.id}/keeper`}
+              class="bl-btn bl-btn-primary bl-btn-sm"
+              data-confirm
+              data-confirm-title={`Promote ${heroTitle} to keeper?`}
+              data-confirm-body="This take will be marked keeper — the band's pick for this song at this event."
+              data-confirm-action={`/admin/takes/${take.id}/keeper`}
+              data-confirm-cta="Promote to keeper"
+            >
+              Promote to keeper
+            </a>
+            <a
+              href={`/admin/takes/${take.id}/keeper?reject=1`}
+              class="bl-btn bl-btn-danger bl-btn-sm"
+              data-confirm
+              data-confirm-title={`Reject ${heroTitle}?`}
+              data-confirm-body="This take will be marked rejected and dropped from 'needs your vote'. It stays in the archive."
+              data-confirm-action={`/admin/takes/${take.id}/keeper?reject=1`}
+              data-confirm-cta="Reject"
+            >
+              Reject
+            </a>
+          </div>
+        </section>
+      )
+    }
 
     <section>
       <h2 class="bl-section-title">Assets</h2>

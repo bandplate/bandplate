@@ -8,10 +8,11 @@
 // event plus every take that day, with instruments and songs batch-fetched)
 // ran at ~0.5-0.7ms against seeded data — see task-5-report.md. Nothing
 // here is deferred.
+import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { formatLongDate } from "../../server/format.js";
+import { eventLabel, formatLongDate } from "../../server/format.js";
 import { getEventDetail } from "../../server/pages/events.js";
 
 const principal = Astro.locals.principal;
@@ -25,12 +26,12 @@ if (!id) {
 }
 
 const appDeps = await getAppDeps();
-const detail = await getEventDetail(appDeps.db, id);
+const detail = await getEventDetail(appDeps.db, id, principal.memberId);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { event, takes } = detail;
+const { event, eventFavorited, takes } = detail;
 const kindLabel =
   event.kind === "rehearsal" ? "Rehearsal" : event.kind === "concert" ? "Concert" : "Session";
 ---
@@ -39,7 +40,18 @@ const kindLabel =
   <div class="bl-stack">
     <div>
       <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
-      <h1 class="bl-hero-date">{formatLongDate(event.heldAt)}</h1>
+      <h1 class="bl-hero-date">
+        {formatLongDate(event.heldAt)}
+        <span class="bl-take-favorite-mark">
+          <FavoriteToggle
+            targetType="event"
+            targetId={event.id}
+            favorited={eventFavorited}
+            label={eventLabel(event) || `this ${event.kind}`}
+            size="lg"
+          />
+        </span>
+      </h1>
       {/* Not .bl-mono — that's for technical data (chord progressions,
       timestamps, durations), not a human title, and its word-break: break-all
       would mangle a long venue-derived title with no real word boundaries
@@ -73,6 +85,8 @@ const kindLabel =
                 instruments={take.instruments}
                 context={{ kind: "event", song: take.song }}
                 playableAssetId={take.playableAssetId}
+                favorited={take.favorited}
+                myVote={take.myVote}
               />
             ))}
           </div>

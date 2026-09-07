@@ -2,6 +2,8 @@
 // The event archive — rehearsals and concerts together, newest first,
 // filterable by kind. The kind filter is a plain GET form (checkboxes),
 // same JS-off approach as /songs.
+import { favoritesRepo } from "@bandlib/db";
+import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { eventLabel, formatLongDate } from "../../server/format.js";
@@ -14,7 +16,10 @@ if (!principal) {
 
 const appDeps = await getAppDeps();
 const kindFilter = parseEventsListKindFilter(Astro.url.searchParams);
-const events = await listEventsForArchive(appDeps.db, kindFilter);
+const [events, favoriteEventIds] = await Promise.all([
+  listEventsForArchive(appDeps.db, kindFilter),
+  favoritesRepo.listTargetIdsByMember(appDeps.db, principal.memberId, "event"),
+]);
 
 const KIND_OPTIONS = [
   { value: "rehearsal", label: "Rehearsals" },
@@ -67,21 +72,29 @@ const KIND_OPTIONS = [
       ) : (
         <div class="bl-event-list">
           {events.map((event) => (
-            <a href={`/events/${event.id}`} class={`bl-event-row bl-event-row--${event.kind}`}>
-              <div class="bl-event-row-main">
-                <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
-                <p class="bl-event-row-venue bl-m0">
-                  <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
-                  {eventLabel(event) && ` ${eventLabel(event)}`}
-                  <span class="bl-event-row-count">
-                    {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
-                  </span>
-                </p>
-              </div>
-              <div class="bl-event-row-stats">
-                {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
-              </div>
-            </a>
+            <div class={`bl-event-row bl-event-row--${event.kind}`}>
+              <a href={`/events/${event.id}`} class="bl-event-row-link">
+                <div class="bl-event-row-main">
+                  <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
+                  <p class="bl-event-row-venue bl-m0">
+                    <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+                    {eventLabel(event) && ` ${eventLabel(event)}`}
+                    <span class="bl-event-row-count">
+                      {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+                    </span>
+                  </p>
+                </div>
+                <div class="bl-event-row-stats">
+                  {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+                </div>
+              </a>
+              <FavoriteToggle
+                targetType="event"
+                targetId={event.id}
+                favorited={favoriteEventIds.has(event.id)}
+                label={eventLabel(event) || `this ${event.kind}`}
+              />
+            </div>
           ))}
         </div>
       )

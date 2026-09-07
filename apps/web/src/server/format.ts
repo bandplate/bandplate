@@ -70,6 +70,25 @@ export function formatBytes(bytes: number): string {
   return `${bytes} B`;
 }
 
+/**
+ * The vote-tally sentence — shared by `/takes/[id]`'s own metadata row and
+ * `VoteToggle.astro`'s compact row display, so the two never drift apart
+ * in wording. `VoteFavorite.tsx`'s client-side re-render (after a
+ * successful optimistic vote, before the next full navigation) mirrors
+ * this exact wording by hand, since it runs in the browser rather than
+ * importing this module — see that file's own comment.
+ */
+export function formatVoteTally(
+  keeperVotes: number,
+  totalVotes: number,
+  ratingScore: number,
+): string {
+  if (totalVotes === 0) {
+    return "No votes yet.";
+  }
+  return `${keeperVotes} of ${totalVotes} ${totalVotes === 1 ? "vote says" : "votes say"} keeper (${Math.round(ratingScore * 100)}%).`;
+}
+
 /** `durationMs` as `m:ss` (or `h:mm:ss` past an hour) — takes are minutes long, never sub-second. */
 export function formatDuration(ms: number | undefined | null): string {
   if (ms === undefined || ms === null) {

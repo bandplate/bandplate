@@ -402,9 +402,17 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       // markup and no `data-audio-source` referencing this take's id
       // anywhere on the page (the persistent player's own always-present
       // `<audio>` element is fine — see the previous test's comment — but
-      // nothing should point AT this take).
+      // nothing should point AT this take). `data-take-id` alone is no
+      // longer a reliable proxy for "has a play control" — Task 8's
+      // `VoteToggle`/the take-label link legitimately carry it too, for an
+      // unrelated purpose (which take a vote/favorite is about), so a take
+      // with no playable asset still has plenty of `data-take-id`
+      // attributes on its own detail page; the play-control-specific
+      // `data-audio-source` pairing is the real signal.
       expect(body).not.toContain("bl-play-toggle");
-      expect(body).not.toContain(`data-take-id="${takeWithNoAssetsId}"`);
+      expect(body).not.toMatch(
+        new RegExp(`data-audio-source[^>]*data-take-id="${takeWithNoAssetsId}"`),
+      );
     });
 
     it("404s for an unknown take id", async () => {

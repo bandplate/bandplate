@@ -69,7 +69,7 @@ describe("listEventsForArchive / getEventDetail", () => {
   });
 
   it("getEventDetail returns undefined for an unknown id (a 404, not a throw)", async () => {
-    const result = await getEventDetail(db, "00000000-0000-0000-0000-000000000000");
+    const result = await getEventDetail(db, "00000000-0000-0000-0000-000000000000", "member-1");
     expect(result).toBeUndefined();
   });
 
@@ -81,7 +81,7 @@ describe("listEventsForArchive / getEventDetail", () => {
       updatedAt: 1000,
     });
 
-    const detail = await getEventDetail(db, event.id);
+    const detail = await getEventDetail(db, event.id, "member-1");
     expect(detail?.takes).toEqual([]);
   });
 
@@ -116,7 +116,7 @@ describe("listEventsForArchive / getEventDetail", () => {
       updatedAt: 2000,
     });
 
-    const detail = await getEventDetail(db, event.id);
+    const detail = await getEventDetail(db, event.id, "member-1");
     expect(detail?.takes.map((t) => t.id)).toEqual([first.id, second.id]);
     expect(detail?.takes[0]?.song?.slug).toBe("session-song");
     expect(detail?.takes[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
@@ -159,7 +159,7 @@ describe("listEventsForArchive / getEventDetail", () => {
       },
     ]);
 
-    const detail = await getEventDetail(db, event.id);
+    const detail = await getEventDetail(db, event.id, "member-1");
     expect(detail?.takes[0]?.playableAssetId).toBe(masterAsset?.id);
   });
 });

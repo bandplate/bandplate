@@ -6,7 +6,8 @@
 // There is nothing here for JS to progressively enhance without shipping a
 // script this page doesn't otherwise need — see task-5-report.md's
 // "instrument filter" section for why that trade was made deliberately.
-import { instrumentsRepo } from "@bandlib/db";
+import { favoritesRepo, instrumentsRepo } from "@bandlib/db";
+import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { formatShortDate } from "../../server/format.js";
@@ -20,9 +21,10 @@ if (!principal) {
 const appDeps = await getAppDeps();
 const query = parseSongsListQuery(Astro.url.searchParams);
 
-const [songs, instruments] = await Promise.all([
+const [songs, instruments, favoriteSongIds] = await Promise.all([
   listSongsForLibrary(appDeps.db, query),
   instrumentsRepo.list(appDeps.db),
+  favoritesRepo.listTargetIdsByMember(appDeps.db, principal.memberId, "song"),
 ]);
 
 const sort = query.sort ?? "title";
@@ -122,28 +124,36 @@ const resultsLabel =
       ) : (
         <div class="bl-song-list">
           {songs.map((song) => (
-            <a href={`/songs/${song.slug}`} class="bl-song-row">
-              <div class="bl-song-row-main">
-                <p class={`bl-song-title ${song.isStub ? "bl-song-title-stub" : ""}`}>
-                  {song.title}
-                </p>
-                <p class="bl-song-meta">
-                  {[song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined]
-                    .filter(Boolean)
-                    .join(", ") || "No key or tempo set"}
-                </p>
-              </div>
-              <div class="bl-song-row-stats">
-                <span>
-                  <span class="bl-song-row-stat-value">{song.takeCount}</span>
-                  {song.takeCount === 1 ? "take" : "takes"}
-                </span>
-                <span>
-                  <span class="bl-song-row-stat-value">{formatShortDate(song.lastPlayedAt)}</span>
-                  last played
-                </span>
-              </div>
-            </a>
+            <div class="bl-song-row">
+              <a href={`/songs/${song.slug}`} class="bl-song-row-link">
+                <div class="bl-song-row-main">
+                  <p class={`bl-song-title ${song.isStub ? "bl-song-title-stub" : ""}`}>
+                    {song.title}
+                  </p>
+                  <p class="bl-song-meta">
+                    {[song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined]
+                      .filter(Boolean)
+                      .join(", ") || "No key or tempo set"}
+                  </p>
+                </div>
+                <div class="bl-song-row-stats">
+                  <span>
+                    <span class="bl-song-row-stat-value">{song.takeCount}</span>
+                    {song.takeCount === 1 ? "take" : "takes"}
+                  </span>
+                  <span>
+                    <span class="bl-song-row-stat-value">{formatShortDate(song.lastPlayedAt)}</span>
+                    last played
+                  </span>
+                </div>
+              </a>
+              <FavoriteToggle
+                targetType="song"
+                targetId={song.id}
+                favorited={favoriteSongIds.has(song.id)}
+                label={song.title}
+              />
+            </div>
           ))}
         </div>
       )

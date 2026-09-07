@@ -9,6 +9,7 @@
 // events, all batch-fetched) runs in ~0.5-1.3ms locally — nowhere near the
 // ~150ms bar for a Server Island, so nothing on this page is deferred. See
 // task-5-report.md for the full measurement.
+import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -26,12 +27,12 @@ if (!slug) {
 }
 
 const appDeps = await getAppDeps();
-const detail = await getSongDetail(appDeps.db, slug);
+const detail = await getSongDetail(appDeps.db, slug, principal.memberId);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { song, aliases, instrumentNotes, takes } = detail;
+const { song, songFavorited, aliases, instrumentNotes, takes } = detail;
 const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined].filter(
   Boolean,
 );
@@ -47,7 +48,18 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
 <AppLayout title={song.title} principal={principal} current="songs">
   <div class="bl-stack">
     <div>
-      <h1 class="bl-hero-title">{song.title}</h1>
+      <h1 class="bl-hero-title">
+        {song.title}
+        <span class="bl-take-favorite-mark">
+          <FavoriteToggle
+            targetType="song"
+            targetId={song.id}
+            favorited={songFavorited}
+            label={song.title}
+            size="lg"
+          />
+        </span>
+      </h1>
       {song.isStub && <p class="bl-field-hint bl-m0">Stub — not a full song entry yet.</p>}
       {metaParts.length > 0 && <p class="bl-mono bl-m0">{metaParts.join(", ")}</p>}
     </div>
@@ -152,6 +164,8 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
                   instruments={take.instruments}
                   context={{ kind: "song", event: take.event }}
                   playableAssetId={take.playableAssetId}
+                  favorited={take.favorited}
+                  myVote={take.myVote}
                 />
               ))}
             </div>

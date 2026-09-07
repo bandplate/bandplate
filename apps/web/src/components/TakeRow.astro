@@ -34,24 +34,29 @@
 // always phrased as "View this rehearsal/concert/session", never a repeat
 // of the take's own label.
 //
-// --- The seam for increments 4 and 5 --------------------------------
+// --- The seam for increments 4 and 5 (both now filled) -----------------
 //
-// Two named slots, empty today, are the extension points increments 4 and
-// 5 live in — NOT a fourth prop each, and not a fork of this component:
+// Two named slots are the extension points increments 4 and 5 live in —
+// NOT a fourth prop each, and not a fork of this component:
 //
 //   - `leading`  — increment 4's play/pause affordance, rendered before the
-//     take's own label. Unfilled today, so nothing renders there (an empty
-//     `<slot>` emits no markup at all) — satisfying the brief's "no fake
-//     play affordance" rule by construction, not by a conditional the next
-//     increment has to remember to remove.
-//   - `trailing` — increment 5's vote control (cast/change a keeper vote),
-//     rendered in the same trailing column as the duration, so a take row
-//     ends with "how long" and "what the room thinks" side by side.
+//     take's own label. Filled with `PlayToggleButton` when `playableAssetId`
+//     is given; omitted entirely (an empty `<slot>` emits no markup at all)
+//     when it isn't — satisfying the brief's "no fake play affordance" rule
+//     by construction, not by a conditional a caller has to remember.
+//   - `trailing` — Task 8's vote control, rendered in the same trailing
+//     column as the duration, so a take row ends with "how long" and "what
+//     the room thinks" side by side. Filled with `VoteToggle`, driven by
+//     `take.keeperVotes`/`totalVotes`/`ratingScore` (already on `take`) plus
+//     the new `myVote` prop.
 //
-// Neither slot needs a new prop, a new fork, or a change to `context` —
-// increments 4/5 fill them from the caller (`<TakeRow ...><Fragment
-// slot="leading">...</Fragment></TakeRow>`), and every existing call site
-// (song/event/full) keeps working unchanged.
+// Both slots default to that content rather than requiring every caller to
+// pass a `<Fragment slot="...">` — a caller only needs to opt OUT (an
+// explicit empty `<Fragment slot="trailing" />`) in the one case that needs
+// to, never opt in. Neither slot needed a new prop shape, a fork, or a
+// change to `context` to hold two real controls — see task-8-report.md's
+// "did the TakeRow slots hold" section for the one place they didn't quite
+// (the favorite mark below, which was never a slot to begin with).
 //
 // `TakeRowContext` itself (and its two ref types) lives in the sibling
 // `take-row-context.ts`, not exported from here — see that file's header
@@ -71,14 +76,24 @@
 // and it defaults to `take-${take.id}`; pass `null` to suppress the
 // attribute entirely for a take id the same page render already used once.
 //
-// --- `favorited` (Task 6 review round 1, F4) --------------------------
+// --- `favorited` (Task 6 review round 1, F4; interactive since Task 8) --
 //
 // Gold's only prior use was a decorative star next to a "Your favorites"
 // heading that already said the word "favorites" — no information. This
-// prop puts the same star per-row instead, shown only when THIS row's take
-// is one of the current member's favorites — real, row-specific
-// information on pages that mix favorited and non-favorited takes (`/`'s
+// prop drives a per-row star instead, filled when THIS row's take is one
+// of the current member's favorites — real, row-specific information on
+// pages that mix favorited and non-favorited takes (`/`'s
 // recent-events/needs-your-vote sections, `/search`, `/takes/[id]`'s hero).
+//
+// Task 8 turns that static marker into `FavoriteToggle` (a real control,
+// always rendered — an unfavorited row now shows an outline star, not
+// nothing). This did NOT need a third named slot: the marker was never a
+// slot in the first place (unlike `leading`/`trailing`), just markup
+// TakeRow always owned and conditionally showed — swapping its innards
+// from a `<span>` to a `<form>+<button>` is an internal change, not a
+// structural one. It sits next to the label as a sibling of the `<a>`
+// (never nested inside it — a `<form>` inside an `<a>` is invalid HTML),
+// which is exactly the current markup shape.
 //
 // --- `data-take-id` (Task 6, Fix round 3) ------------------------------
 //
@@ -91,7 +106,9 @@
 import type { instrumentsRepo, takesRepo } from "@bandlib/db";
 import { formatDuration, formatShortDate } from "../server/format.js";
 import { TAKE_STATE_LABEL } from "../server/take-state.js";
+import FavoriteToggle from "./FavoriteToggle.astro";
 import PlayToggleButton from "./PlayToggleButton.astro";
+import VoteToggle from "./VoteToggle.astro";
 import type { TakeRowContext } from "./take-row-context.js";
 
 export interface Props {
@@ -116,6 +133,14 @@ export interface Props {
    * "omit it".
    */
   playableAssetId?: string;
+  /**
+   * Task 8's vote control (see this file's header comment on the
+   * `trailing` slot). `undefined` (the default) means "this member hasn't
+   * voted on this take yet" — the same undefined-means-no-opinion contract
+   * `votesRepo.listByMemberForTakes` returns, so every caller can pass its
+   * `Map.get(take.id)` result straight through.
+   */
+  myVote?: boolean;
 }
 
 const {
@@ -125,6 +150,7 @@ const {
   transitionName,
   favorited = false,
   playableAssetId,
+  myVote,
 } = Astro.props;
 const resolvedTransitionName =
   transitionName === null ? undefined : (transitionName ?? `take-${take.id}`);
@@ -172,14 +198,14 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
     >
       {primaryLabel}
     </a>
-    {favorited && (
-      <span class="bl-favorite-mark bl-take-favorite-mark" title="One of your favorites">
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
-        </svg>
-        <span class="sr-only">, one of your favorites</span>
-      </span>
-    )}
+    <span class="bl-take-favorite-mark">
+      <FavoriteToggle
+        targetType="take"
+        targetId={take.id}
+        favorited={favorited}
+        label={primaryLabel}
+      />
+    </span>
     {take.label && <span class="bl-take-meta bl-take-sublabel">{take.label}</span>}
     <div class="bl-take-meta bl-take-row-line">
       <span class={`bl-badge ${take.state === "keeper" ? "bl-badge-keeper" : ""}`}>
@@ -202,6 +228,14 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
   </div>
   <div class="bl-take-row-trailing">
     <span class="bl-take-row-duration">{formatDuration(take.durationMs)}</span>
-    <slot name="trailing" />
+    <slot name="trailing">
+      <VoteToggle
+        takeId={take.id}
+        keeperVotes={take.keeperVotes}
+        totalVotes={take.totalVotes}
+        ratingScore={take.ratingScore}
+        myVote={myVote}
+      />
+    </slot>
   </div>
 </div>

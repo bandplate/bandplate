@@ -63,7 +63,7 @@ async function getVotes(
   const votes = await votesRepo.listByMember(db, memberId);
   const takeIds = votes.map((v) => v.takeId);
   const takes = await takesRepo.getByIds(db, takeIds);
-  const withContext = await attachFullContext(db, takes);
+  const withContext = await attachFullContext(db, takes, memberId);
   const byTakeId = new Map(withContext.map((t) => [t.id, t]));
   return votes.map((vote) => ({ vote, take: byTakeId.get(vote.takeId) }));
 }

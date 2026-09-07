@@ -1,0 +1,67 @@
+---
+// The keeper/not-keeper vote control — a two-position toggle (per the
+// brief's §1: "The vote is a keeper / not-keeper toggle", not a single
+// button that also has to represent "no opinion yet" as a third visual
+// state). Renders as TWO plain `<form method="post">`s, each posting a
+// fixed `keeper` value to `/takes/[id]/vote` — one tap, works with no JS
+// at all. Once `VoteFavorite.tsx` hydrates, it intercepts both forms'
+// `submit` (delegated from `document`, same reasoning `Player.tsx` and
+// `ConfirmDialog.tsx` already use — see their header comments) for an
+// optimistic update with rollback instead of a full-page round trip.
+//
+// `aria-pressed` reflects the member's own recorded vote (`myVote`),
+// nothing about hover/focus/recent activity — the exact bug class the
+// brief calls out from the player's solo chips. Selection also carries a
+// non-colour affordance (a leading check mark, via CSS `::before` — see
+// components.css), same technique the solo chips already use.
+//
+// `data-astro-reload` (fix round 1, found via the manual browser
+// walkthrough): `AppLayout.astro`'s `<ClientRouter />` intercepts EVERY
+// same-origin `<form>` submission for its own view-transition soft
+// navigation, exactly like it intercepts `<a>` clicks — completely
+// independent of `VoteFavorite.tsx`'s own delegated `submit` listener.
+// Without this attribute, ONE click fired TWO POSTs: ClientRouter's own
+// (no `Accept` header, expects/gets a full HTML page back, silently
+// discarded) racing `VoteFavorite.tsx`'s (the real one, JSON). Whichever
+// request the server's read-then-write `favoritesRepo.toggle` processed
+// SECOND flipped the state right back, so a tap looked like it worked
+// (the optimistic UI updated) and then silently reverted a few hundred ms
+// later — exactly the kind of bug `verification-before-completion` exists
+// to catch, and only surfaced by actually clicking the button in a real
+// browser, not by unit/integration tests that call each endpoint in
+// isolation. `data-astro-reload` is Astro's own documented escape hatch
+// (same attribute `<a>` uses) telling `<ClientRouter />` to leave this
+// element's submissions alone; `VoteFavorite.tsx`'s listener is registered
+// directly on `document`, independent of ClientRouter, so it still runs.
+import { formatVoteTally } from "../server/format.js";
+
+export interface Props {
+  takeId: string;
+  keeperVotes: number;
+  totalVotes: number;
+  ratingScore: number;
+  /** `undefined` when this member hasn't voted on this take yet. */
+  myVote: boolean | undefined;
+  /** `"lg"` is the take-detail hero's own, roomier rendering. Defaults to the compact row size. */
+  size?: "sm" | "lg";
+}
+
+const { takeId, keeperVotes, totalVotes, ratingScore, myVote, size = "sm" } = Astro.props;
+const tallyText = formatVoteTally(keeperVotes, totalVotes, ratingScore);
+---
+
+<div class={`bl-vote-toggle ${size === "lg" ? "bl-vote-toggle-lg" : ""}`} role="group" aria-label="Your vote">
+  <form method="post" action={`/takes/${takeId}/vote`} class="bl-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
+    <input type="hidden" name="keeper" value="true" />
+    <button type="submit" class="bl-vote-btn bl-vote-btn-keeper" aria-pressed={myVote === true ? "true" : "false"}>
+      Keeper
+    </button>
+  </form>
+  <form method="post" action={`/takes/${takeId}/vote`} class="bl-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
+    <input type="hidden" name="keeper" value="false" />
+    <button type="submit" class="bl-vote-btn bl-vote-btn-not-keeper" aria-pressed={myVote === false ? "true" : "false"}>
+      Not a keeper
+    </button>
+  </form>
+  <span class="bl-vote-tally" data-vote-tally-for={takeId}>{tallyText}</span>
+</div>

@@ -33,7 +33,7 @@ if (!principal) {
 
 const appDeps = await getAppDeps();
 const query = parseSearchQuery(Astro.url.searchParams);
-const filtersApplied = hasAnyFilter(query);
+const filtersApplied = hasAnyFilter(query) || query.sort !== "recent";
 
 const [{ results, truncated }, instruments] = await Promise.all([
   searchTakes(appDeps.db, query, principal.memberId),
@@ -135,6 +135,16 @@ const resultsLabel = truncated
           </div>
 
           <div class="bl-field">
+            <label class="bl-field-label" for="search-sort">Sort by</label>
+            <select class="bl-select" id="search-sort" name="sort">
+              <option value="recent" selected={query.sort === "recent"}>Most recent</option>
+              <option value="rating" selected={query.sort === "rating"}>
+                Most keeper votes
+              </option>
+            </select>
+          </div>
+
+          <div class="bl-field">
             <label class="bl-field-label" for="search-rating">Minimum rating</label>
             <select class="bl-select" id="search-rating" name="rating">
               <option value="" selected={!query.rating}>Any rating</option>
@@ -204,6 +214,7 @@ const resultsLabel = truncated
                   context={{ kind: "full", song: take.song, event: take.event }}
                   favorited={take.favorited}
                   playableAssetId={take.playableAssetId}
+                  myVote={take.myVote}
                 />
               ))}
             </div>

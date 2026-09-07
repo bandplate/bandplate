@@ -1,0 +1,59 @@
+---
+// The favorite/pin toggle — one tap, a single `<form method="post">`
+// posting to `/favorites` (works with no JS at all; `VoteFavorite.tsx`
+// intercepts it once hydrated for an optimistic update). Extends the gold
+// "favorite" treatment `TakeRow.astro` already established (a filled gold
+// star marks a favorite) rather than inventing a second visual language —
+// see `components.css`'s `.bl-favorite-mark` — but turns it into a real,
+// always-rendered control instead of a conditional, read-only marker: an
+// unfavorited row now shows an outline star (the same shape, unfilled),
+// not nothing.
+//
+// `data-astro-reload`: see `VoteToggle.astro`'s header comment — without
+// it, `AppLayout.astro`'s `<ClientRouter />` independently intercepts this
+// `<form>`'s submission for its own soft-navigation (no `Accept` header,
+// so a different, silently-discarded request racing `VoteFavorite.tsx`'s
+// real one), and whichever the server's read-then-write toggle processes
+// second flips the state back — a tap that looks like it worked, then
+// quietly reverts.
+export interface Props {
+  targetType: "song" | "take" | "event";
+  targetId: string;
+  favorited: boolean;
+  /** The object's own name, for the accessible label — "Add Neon Skyline to favorites" / "Remove Neon Skyline from favorites". */
+  label: string;
+  /** `"lg"` for a detail-page hero; defaults to the compact row size. */
+  size?: "sm" | "lg";
+}
+
+const { targetType, targetId, favorited, label, size = "sm" } = Astro.props;
+const actionLabel = `${favorited ? "Remove" : "Add"} ${label} ${favorited ? "from" : "to"} favorites`;
+---
+
+<form
+  method="post"
+  action="/favorites"
+  class={`bl-favorite-toggle-form ${size === "lg" ? "bl-favorite-toggle-form-lg" : ""}`}
+  data-favorite-form
+  data-target-type={targetType}
+  data-target-id={targetId}
+  data-astro-reload
+>
+  <input type="hidden" name="targetType" value={targetType} />
+  <input type="hidden" name="targetId" value={targetId} />
+  <button
+    type="submit"
+    class="bl-favorite-toggle"
+    aria-pressed={favorited ? "true" : "false"}
+    aria-label={actionLabel}
+    title={actionLabel}
+    data-label={label}
+  >
+    <svg class="bl-star-outline" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+      <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
+    </svg>
+    <svg class="bl-star-filled" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
+    </svg>
+  </button>
+</form>

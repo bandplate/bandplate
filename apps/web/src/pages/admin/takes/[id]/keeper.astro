@@ -1,0 +1,76 @@
+---
+// No-JS fallback confirm page for promoting a take to `state='keeper'` —
+// same pattern as `admin/instruments/[id]/archive.astro` (see that file's
+// header comment). `?reject=1` reverses the direction, reached from the
+// take detail page's "Reject" trigger — see that page for why both share
+// this one file rather than two near-identical copies (the confirmation
+// copy and target state are the only things that differ).
+//
+// Guarded structurally: this whole page lives under `/admin/*`, which
+// `middleware.ts`'s `guardAdminPath` already gates on the `members:admin`
+// scope before this frontmatter ever runs (redirect if anonymous, 403 if
+// signed in but not an admin) — the same reason `archive.astro` has no
+// explicit scope check of its own.
+import ConfirmActionPage from "@bandlib/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { formatLongDate } from "../../../../server/format.js";
+import { getTakeForAdminAction, setTakeState } from "../../../../server/pages/admin-takes.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/");
+}
+
+const rejecting = Astro.url.searchParams.get("reject") === "1";
+const targetState = rejecting ? "rejected" : "keeper";
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const { kind } = await setTakeState(appDeps.db, id, targetState, appDeps.clock.now());
+  if (isFetch) {
+    return new Response(kind === "ok" ? "ok" : "not found", { status: kind === "ok" ? 200 : 404 });
+  }
+  return Astro.redirect(`/takes/${id}?${rejecting ? "rejected=1" : "promoted=1"}`);
+}
+
+const detail = await getTakeForAdminAction(appDeps.db, id);
+if (!detail) {
+  return new Response("Take not found.", { status: 404 });
+}
+const { take, song } = detail;
+const takeLabel = `${song ? song.title : "Untitled take"} — ${formatLongDate(take.recordedAt)}${take.label ? ` (${take.label})` : ""}`;
+---
+
+<Layout title={rejecting ? "Reject take" : "Promote to keeper"}>
+  <ConfirmActionPage
+    bannerTitle={rejecting ? `Reject ${takeLabel}?` : `Promote ${takeLabel} to keeper?`}
+    cta={rejecting ? "Reject" : "Promote to keeper"}
+    cancelHref={`/takes/${id}`}
+  >
+    {
+      rejecting ? (
+        <>
+          This take will be marked <strong>rejected</strong> and dropped from "needs your vote" —
+          the band has decided it isn't the one. It stays in the archive and can still be found by
+          search.
+        </>
+      ) : (
+        <>
+          This take will be marked <strong>keeper</strong> — the band's pick for this song at this
+          event. That's a real decision the votes only inform, not an automatic threshold.
+        </>
+      )
+    }
+  </ConfirmActionPage>
+</Layout>

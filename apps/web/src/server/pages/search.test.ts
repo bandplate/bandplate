@@ -26,6 +26,7 @@ describe("parseSearchQuery", () => {
       dateFrom: undefined,
       dateTo: undefined,
       rating: undefined,
+      sort: "recent",
       states: [],
     });
   });
@@ -40,8 +41,15 @@ describe("parseSearchQuery", () => {
       dateFrom: "2026-01-01",
       dateTo: "2026-02-01",
       rating: "75",
+      sort: "recent",
       states: ["published", "keeper"],
     });
+  });
+
+  it("parses sort=rating, defaults anything else to 'recent'", () => {
+    expect(parseSearchQuery(new URLSearchParams("sort=rating")).sort).toBe("rating");
+    expect(parseSearchQuery(new URLSearchParams("sort=nonsense")).sort).toBe("recent");
+    expect(parseSearchQuery(new URLSearchParams()).sort).toBe("recent");
   });
 
   it("dedupes repeated instrument ids — takes.search's AND filter returns nothing for duplicates", () => {

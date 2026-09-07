@@ -1,0 +1,58 @@
+---
+// POST-only: toggles the signed-in member's favorite on a song, take, or
+// event, as themselves — `principal.memberId`, never a form field (see
+// `server/pages/favorites.ts`). One generic endpoint rather than nested
+// under `/songs`, `/takes`, `/events` because `FavoriteToggle.astro`
+// renders on all three kinds of row/detail page, plus `/` and `/me` — see
+// `pages/takes/[id]/vote.astro`'s header comment for the identical
+// no-JS-form / JS-`fetch` split this route also serves.
+import { getAppDeps } from "../server/app.js";
+import { isSameOrigin } from "../server/csrf.js";
+import { toggleFavoriteFromForm } from "../server/pages/favorites.js";
+import { safeRedirectPath } from "../server/safe-redirect.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect("/");
+}
+
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("application/json");
+
+if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+  return new Response("Origin check failed.", { status: 403 });
+}
+
+const formData = await Astro.request.formData();
+const result = await toggleFavoriteFromForm(
+  appDeps.db,
+  principal.memberId,
+  formData,
+  appDeps.clock.now(),
+);
+
+if (isFetch) {
+  if (result.kind !== "ok") {
+    const status = result.kind === "not_found" ? 404 : 400;
+    return new Response(JSON.stringify({ error: result.kind }), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  return new Response(JSON.stringify({ favorited: result.favorited }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+if (result.kind === "not_found") {
+  return new Response("Not found.", { status: 404 });
+}
+return Astro.redirect(
+  safeRedirectPath(Astro.request.headers.get("referer"), appDeps.config.appOrigin, "/"),
+);
+---

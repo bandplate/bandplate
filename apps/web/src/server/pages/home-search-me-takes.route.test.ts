@@ -39,6 +39,19 @@ function extractViewTransitionNames(html: string): string[] {
   return [...html.matchAll(/view-transition-name:\s*([^;]+);/g)].map((m) => (m[1] ?? "").trim());
 }
 
+/**
+ * `TakeTransitionRetarget.astro`'s inline script reads every take row's
+ * `data-astro-transition-scope` (Astro's own per-element scope id) as the
+ * "off" name when un-naming an occurrence — see that component's header
+ * comment (Fix round 3). `astroTransitionScope` is a real JS property
+ * access (`el.dataset.astroTransitionScope`), not a string literal, so
+ * esbuild's default minifier never renames it away — a stable, script-only
+ * marker that isn't also present just because a take row (which always
+ * carries the `data-astro-transition-scope` ATTRIBUTE, script or no
+ * script) is on the page.
+ */
+const TAKE_TRANSITION_RETARGET_MARKER = "astroTransitionScope";
+
 const PORT = 43221;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const REPO_ROOT = join(process.cwd(), "..", "..");
@@ -309,6 +322,16 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(names.length).toBeGreaterThan(1);
       expect(new Set(names).size).toBe(names.length);
     });
+
+    it("marks every take row with data-take-id and ships the transition-retarget script (Fix round 3)", async () => {
+      const res = await fetch(`${ORIGIN}/`, { headers: { cookie: sessionCookie } });
+      const body = await res.text();
+      // The clicked-row-retargeting script needs a stable hook to find
+      // both occurrences of a duplicated take by id — see
+      // `TakeRow.astro`'s `data-take-id`.
+      expect(body).toContain(`data-take-id="${favoriteTakeId}"`);
+      expect(body).toContain(TAKE_TRANSITION_RETARGET_MARKER);
+    });
   });
 
   describe("/takes/[id]", () => {
@@ -333,6 +356,14 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       // "display" itself would trip).
       expect(body).not.toContain("<audio");
       expect(body).not.toContain("bl-btn-play");
+    });
+
+    it("never ships the take-transition retarget script (a take-detail hero can't be duplicated on its own page)", async () => {
+      const res = await fetch(`${ORIGIN}/takes/${takeWithAssetsId}`, {
+        headers: { cookie: sessionCookie },
+      });
+      const body = await res.text();
+      expect(body).not.toContain(TAKE_TRANSITION_RETARGET_MARKER);
     });
 
     it("renders a real empty state for a take with no assets, not an error", async () => {
@@ -457,6 +488,12 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       const body = await res.text();
       expect(body).toContain("No takes match those filters");
     });
+
+    it("never ships the take-transition retarget script (its results list can't repeat a take)", async () => {
+      const res = await fetch(`${ORIGIN}/search`, { headers: { cookie: sessionCookie } });
+      const body = await res.text();
+      expect(body).not.toContain(TAKE_TRANSITION_RETARGET_MARKER);
+    });
   });
 
   describe("/me", () => {
@@ -488,6 +525,13 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       const names = extractViewTransitionNames(body);
       expect(names.length).toBeGreaterThan(0);
       expect(new Set(names).size).toBe(names.length);
+    });
+
+    it("marks every take row with data-take-id and ships the transition-retarget script (Fix round 3)", async () => {
+      const res = await fetch(`${ORIGIN}/me`, { headers: { cookie: sessionCookie } });
+      const body = await res.text();
+      expect(body).toContain(`data-take-id="${favoriteTakeId}"`);
+      expect(body).toContain(TAKE_TRANSITION_RETARGET_MARKER);
     });
   });
 });

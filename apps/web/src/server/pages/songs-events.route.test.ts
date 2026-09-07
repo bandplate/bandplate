@@ -223,6 +223,15 @@ describe("member browsing routes over real HTTP", () => {
     expect(body).toContain("Route Test Song");
   });
 
+  it("never ships the take-transition retarget script (a song page can't repeat a take, Fix round 3)", async () => {
+    const res = await fetch(`${ORIGIN}/songs/${songSlug}`, { headers: { cookie: sessionCookie } });
+    const body = await res.text();
+    // See `home-search-me-takes.route.test.ts`'s own definition of this
+    // marker for why it's a reliable, minification-proof way to detect
+    // `TakeTransitionRetarget.astro`'s inline script specifically.
+    expect(body).not.toContain("astroTransitionScope");
+  });
+
   it("renders a real empty state for a song with no takes, not an error", async () => {
     const res = await fetch(`${ORIGIN}/songs/${songSlugNoTakes}`, {
       headers: { cookie: sessionCookie },
@@ -251,6 +260,12 @@ describe("member browsing routes over real HTTP", () => {
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toContain("Route Test Song");
+  });
+
+  it("never ships the take-transition retarget script (an event page can't repeat a take, Fix round 3)", async () => {
+    const res = await fetch(`${ORIGIN}/events/${eventId}`, { headers: { cookie: sessionCookie } });
+    const body = await res.text();
+    expect(body).not.toContain("astroTransitionScope");
   });
 
   it("renders a real empty state for an event with no takes, not an error", async () => {

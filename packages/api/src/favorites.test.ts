@@ -152,25 +152,30 @@ describe("POST /favorites", () => {
     expect(res.status).toBe(403);
   });
 
-  it("a member holding only votes:write (not favorites:write) is rejected — the scopes are independent", async () => {
+  it("MUTATION CHECK: POST /favorites is declared with favorites:write specifically, not some other scope", async () => {
+    // Every real member gets both `votes:write` and `favorites:write` via
+    // `scopesForRole`, and a service token is rejected outright before
+    // scopes are even consulted (`principal?.kind !== "member"` above) —
+    // so no request-level probe (an out-of-scope service token, a
+    // deliberately mis-scoped member session) can distinguish "requires
+    // favorites:write" from "requires votes:write" or any other scope:
+    // every such request 403s the same way for a different reason. That
+    // made the previous version of this test (hitting the route with a
+    // votes:write-only service token and asserting 403) vacuous: it still
+    // passed after mutating the route's `requireScopes(...)` call to a
+    // wrong scope, or even to `requireScopes("songs:read")`, because the
+    // service-token check fires first regardless.
+    //
+    // Assert the declaration itself, against the same registry
+    // `assertEveryRouteIsGuarded` cross-checks against the live Hono app
+    // (see route-registry.test.ts) — this is a change to the one thing
+    // that actually decides which scope is required.
     const testApp = await buildTestApp();
-    const songId = await seedSong(testApp);
-    // Every real member gets both scopes via `scopesForRole` — this proves
-    // the route actually enforces `favorites:write` specifically (not just
-    // "any signed-in member") by hitting it with a service token that
-    // deliberately holds the OTHER scope only.
-    const created = await createServiceToken(
-      { db: testApp.db, mailer: testApp.mailer, clock: testApp.clock },
-      { label: "votes-only-bot", scopes: ["votes:write"] },
+    const route = testApp.router.registry.find(
+      (r) => r.method === "POST" && r.path === "/favorites",
     );
-
-    const res = await testApp.app.request("/favorites", {
-      method: "POST",
-      headers: { ...jsonHeaders, authorization: `Bearer ${created.rawToken}` },
-      body: JSON.stringify({ targetType: "song", targetId: songId }),
-    });
-
-    expect(res.status).toBe(403);
+    expect(route).toBeDefined();
+    expect(route?.guard).toEqual({ scopes: ["favorites:write"] });
   });
 
   it("favoriting a nonexistent song is 404, not a silent no-op", async () => {

@@ -171,6 +171,20 @@ describe("POST /votes", () => {
     expect(res.status).toBe(403);
   });
 
+  it("MUTATION CHECK: POST /votes is declared with votes:write specifically, not some other scope", async () => {
+    // See the equivalent test in favorites.test.ts for why a request-level
+    // probe (an out-of-scope service token, say) can't distinguish "this
+    // route requires votes:write" from "requires some other scope" — the
+    // `principal?.kind !== "member"` check above rejects every service
+    // token the same way regardless of which scope it holds. Assert the
+    // declaration itself against the registry `assertEveryRouteIsGuarded`
+    // cross-checks against the live Hono app.
+    const testApp = await buildTestApp();
+    const route = testApp.router.registry.find((r) => r.method === "POST" && r.path === "/votes");
+    expect(route).toBeDefined();
+    expect(route?.guard).toEqual({ scopes: ["votes:write"] });
+  });
+
   it("a cross-origin POST (no matching Origin header) is rejected by the origin-check backstop", async () => {
     const testApp = await buildTestApp();
     const takeId = await seedTake(testApp);

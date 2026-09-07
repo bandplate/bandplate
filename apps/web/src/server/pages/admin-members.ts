@@ -33,14 +33,21 @@ export interface MemberWithLastSeen extends Member {
 }
 
 export async function listMembersWithLastSeen(db: Db): Promise<MemberWithLastSeen[]> {
-  const [members, lastSeenByMember] = await Promise.all([
-    membersRepo.list(db),
+  // `listInstrumentsForMembers` needs the member ids, so it can't start
+  // before `members` resolves — but `getLastSeenAtByMember` doesn't depend
+  // on `members` at all, and previously waited behind it in a
+  // `Promise.all` anyway before the instruments query even started
+  // (members/lastSeen concurrently, THEN instruments serially after both
+  // finished). Fetching members first and running the other two queries
+  // concurrently against it is what batching was meant to achieve here.
+  const members = await membersRepo.list(db);
+  const [lastSeenByMember, instrumentsByMember] = await Promise.all([
     authSessionsRepo.getLastSeenAtByMember(db),
+    membersRepo.listInstrumentsForMembers(
+      db,
+      members.map((m) => m.id),
+    ),
   ]);
-  const instrumentsByMember = await membersRepo.listInstrumentsForMembers(
-    db,
-    members.map((m) => m.id),
-  );
   return members.map((member) => ({
     ...member,
     lastSeenAt: lastSeenByMember.get(member.id),
@@ -58,23 +65,55 @@ export async function listAllInstruments(db: Db): Promise<instrumentsRepo.Instru
   return instrumentsRepo.list(db, { includeArchived: true });
 }
 
+export type UpdateMemberInstrumentsResult =
+  | { kind: "ok" }
+  | { kind: "not_found" }
+  | { kind: "invalid" };
+
 /**
  * Replace-all write for one member's instruments — a separate form/intent
  * from `updateMember`'s role/status guard, since which instruments a member
  * plays isn't a self-demotion/last-admin concern and an admin should be
  * able to edit their own (unlike role/status, see the page's "This is you"
  * case).
+ *
+ * Validates `id` and every `instrumentIds` value against the database and
+ * returns a typed result the page renders as a Banner — same shape as
+ * `updateMember`'s sibling guard, rather than letting a tampered
+ * `memberId`/`instrumentIds` fall through to `setInstruments`' FK
+ * constraint as an unhandled 500. `db.batch([...])` inside `setInstruments`
+ * still rolls the delete+insert back together on any failure, so this
+ * validation is a defense-in-depth/UX improvement, not what keeps the data
+ * consistent.
  */
 export async function updateMemberInstruments(
   db: Db,
   id: string,
   formData: FormData,
-): Promise<void> {
+): Promise<UpdateMemberInstrumentsResult> {
+  const member = await membersRepo.getById(db, id);
+  if (!member) {
+    return { kind: "not_found" };
+  }
+
   const instrumentIds = formData
     .getAll("instrumentIds")
     .map((v) => String(v))
     .filter(Boolean);
+
+  if (instrumentIds.length > 0) {
+    // Archived instruments are valid selections (the admin UI lists and
+    // pre-selects them, see `listAllInstruments`'s comment) — only an id
+    // that doesn't exist at all is invalid.
+    const allInstruments = await instrumentsRepo.list(db, { includeArchived: true });
+    const validIds = new Set(allInstruments.map((instrument) => instrument.id));
+    if (instrumentIds.some((instrumentId) => !validIds.has(instrumentId))) {
+      return { kind: "invalid" };
+    }
+  }
+
   await membersRepo.setInstruments(db, id, instrumentIds);
+  return { kind: "ok" };
 }
 
 export type CreateMemberField = "displayName" | "email";

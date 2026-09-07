@@ -265,5 +265,54 @@ describe("admin members page logic", () => {
       expect(all.map((i) => i.id)).toContain(drums.id);
       expect(all.find((i) => i.id === drums.id)?.archivedAt).not.toBeNull();
     });
+
+    // Fix round 2, item 3: `updateMemberInstruments` used to validate
+    // nothing, so a tampered `memberId`/`instrumentIds` fell through to
+    // `setInstruments`' FK constraint as an unhandled 500 instead of the
+    // typed result the page renders as a Banner (same pattern
+    // `updateMember` already follows).
+    it("reports not_found for an unknown memberId, rather than letting the FK violation surface as a 500", async () => {
+      const drums = await instrumentsRepo.create(auth.db, { slug: "drums", label: "Drums" });
+      const fd = new FormData();
+      fd.set("memberId", "00000000-0000-0000-0000-000000000000");
+      fd.append("instrumentIds", drums.id);
+
+      const result = await updateMemberInstruments(
+        auth.db,
+        "00000000-0000-0000-0000-000000000000",
+        fd,
+      );
+      expect(result.kind).toBe("not_found");
+    });
+
+    it("reports invalid for a bogus instrumentIds value, and leaves the member's existing instruments unchanged", async () => {
+      await createMember(
+        auth.db,
+        1_000,
+        formData({ displayName: "Bailey", email: "b@example.com" }),
+      );
+      const [bailey] = await listMembers(auth.db);
+      if (!bailey) throw new Error("expected a member");
+      const drums = await instrumentsRepo.create(auth.db, { slug: "drums", label: "Drums" });
+      await updateMemberInstruments(
+        auth.db,
+        bailey.id,
+        (() => {
+          const fd = new FormData();
+          fd.set("memberId", bailey.id);
+          fd.append("instrumentIds", drums.id);
+          return fd;
+        })(),
+      );
+
+      const fd = new FormData();
+      fd.set("memberId", bailey.id);
+      fd.append("instrumentIds", "not-a-real-instrument-id");
+      const result = await updateMemberInstruments(auth.db, bailey.id, fd);
+      expect(result.kind).toBe("invalid");
+
+      const roster = await listMembersWithLastSeen(auth.db);
+      expect(roster.find((m) => m.id === bailey.id)?.instrumentIds).toEqual([drums.id]);
+    });
   });
 });

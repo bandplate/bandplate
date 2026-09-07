@@ -58,8 +58,15 @@ if (Astro.request.method === "POST") {
       }
     } else if (intent === "instruments") {
       const id = String(formData.get("memberId") ?? "");
-      await updateMemberInstruments(appDeps.db, id, formData);
-      return Astro.redirect("/admin/members?updated=1");
+      const result = await updateMemberInstruments(appDeps.db, id, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect("/admin/members?updated=1");
+      }
+      if (result.kind === "not_found") {
+        formError = "Couldn't find that member — reload and try again.";
+      } else {
+        formError = "That instrument selection didn't look right — reload and try again.";
+      }
     }
   }
 }

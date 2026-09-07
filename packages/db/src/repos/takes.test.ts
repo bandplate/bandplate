@@ -8,7 +8,50 @@ import * as instruments from "./instruments.js";
 import * as members from "./members.js";
 import * as songs from "./songs.js";
 import * as takes from "./takes.js";
+import type { TakeState } from "./takes.js";
 import * as votes from "./votes.js";
+
+/**
+ * Inserts a take with a caller-chosen id, bypassing `takes.create`'s own
+ * uuidv7 generation. uuidv7 ids rise monotonically with insertion order, so
+ * a fixture built with `takes.create` alone can never tell a real
+ * `ORDER BY ..., id DESC` apart from SQLite's incidental tie order — both
+ * happen to agree when ids are assigned in insertion order. The three
+ * `desc(takes.id)` tie-break tests below need id lexical order to run
+ * OPPOSITE insertion order (a row inserted first gets the lexically LARGER
+ * id) so only the real tie-break can produce the asserted order — see each
+ * test's own comment for the discriminating fixture this proves.
+ */
+async function insertTakeWithId(
+  db: Db,
+  id: string,
+  input: {
+    songId: string;
+    eventId: string;
+    recordedAt: number;
+    state?: TakeState;
+  },
+): Promise<void> {
+  const now = input.recordedAt;
+  await db.insert(schema.takes).values({
+    id,
+    songId: input.songId,
+    eventId: input.eventId,
+    label: null,
+    recordedAt: input.recordedAt,
+    durationMs: null,
+    state: input.state ?? "uploading",
+    keeperVotes: 0,
+    totalVotes: 0,
+    ratingScore: 0,
+    clientRef: null,
+    notes: null,
+    createdAt: now,
+    updatedAt: now,
+    publishedAt: null,
+    purgedAt: null,
+  });
+}
 
 describe("takes.listByInstruments", () => {
   let db: Db;
@@ -211,28 +254,30 @@ describe("takes.listBySong ordering", () => {
 
   // F6 (review round 1): no deterministic tie-break for takes sharing a
   // `recordedAt`.
+  //
+  // Fix round 2, item 1: `takes.create`'s uuidv7 ids rise monotonically
+  // with insertion order, so a fixture built with it can't distinguish the
+  // real `desc(takes.id)` tie-break from SQLite's incidental tie order —
+  // both agree when ids are assigned in insertion order, so the old
+  // `[a.id, b.id].sort().reverse()` assertion passed even with
+  // `desc(takes.id)` deleted from `listBySong`. Here `"zzz-take"` is
+  // inserted FIRST and `"aaa-take"` SECOND — id lexical order is the
+  // reverse of insertion order — so only the real `ORDER BY ..., id DESC`
+  // can produce `["zzz-take", "aaa-take"]`; the incidental tie order (rows
+  // sharing an indexed `recordedAt`, no secondary key) does not. Confirmed
+  // by temporarily stripping `desc(takes.id)` from `listBySong`'s query:
+  // this test goes red (actual order becomes `["aaa-take", "zzz-take"]`),
+  // then passes again once restored.
   it("breaks a tie on recordedAt deterministically (by id, descending)", async () => {
     const same = 9000;
-    const a = await takes.create(db, {
-      songId,
-      eventId,
-      recordedAt: same,
-      createdAt: 1,
-      updatedAt: 1,
-    });
-    const b = await takes.create(db, {
-      songId,
-      eventId,
-      recordedAt: same,
-      createdAt: 2,
-      updatedAt: 2,
-    });
+    await insertTakeWithId(db, "zzz-take", { songId, eventId, recordedAt: same });
+    await insertTakeWithId(db, "aaa-take", { songId, eventId, recordedAt: same });
 
     const first = await takes.listBySong(db, songId);
     const second = await takes.listBySong(db, songId);
     const tied = first.filter((t) => t.recordedAt === same).map((t) => t.id);
     expect(tied).toEqual(second.filter((t) => t.recordedAt === same).map((t) => t.id));
-    expect(tied).toEqual([a.id, b.id].sort().reverse());
+    expect(tied).toEqual(["zzz-take", "aaa-take"]);
   });
 });
 
@@ -627,29 +672,32 @@ describe("takes.listUnvotedByMember", () => {
 
   // F6 (review round 1): no deterministic tie-break for takes sharing a
   // `recordedAt`.
+  //
+  // Fix round 2, item 1: see `listBySong`'s identical comment above — a
+  // `takes.create`-only fixture can't distinguish the real tie-break from
+  // SQLite's incidental order. `"zzz-take"` inserted first, `"aaa-take"`
+  // second (id lexical order reversed from insertion order). Confirmed by
+  // temporarily stripping `desc(takes.id)` from `listUnvotedByMember`'s
+  // query: this test goes red, then passes again once restored.
   it("breaks a tie on recordedAt deterministically (by id, descending)", async () => {
     const same = 9000;
-    const a = await takes.create(db, {
+    await insertTakeWithId(db, "zzz-take", {
       songId,
       eventId,
       recordedAt: same,
-      createdAt: 1,
-      updatedAt: 1,
       state: "published",
     });
-    const b = await takes.create(db, {
+    await insertTakeWithId(db, "aaa-take", {
       songId,
       eventId,
       recordedAt: same,
-      createdAt: 2,
-      updatedAt: 2,
       state: "published",
     });
 
     const first = await takes.listUnvotedByMember(db, memberId);
     const second = await takes.listUnvotedByMember(db, memberId);
     expect(first.map((t) => t.id)).toEqual(second.map((t) => t.id));
-    expect(first.map((t) => t.id)).toEqual([a.id, b.id].sort().reverse());
+    expect(first.map((t) => t.id)).toEqual(["zzz-take", "aaa-take"]);
   });
 });
 
@@ -945,6 +993,13 @@ describe("takes.search", () => {
   });
 
   // F6 (review round 1): no LIMIT and no secondary sort key.
+  //
+  // Fix round 2, item 1: see `listBySong`'s identical comment above — a
+  // `takes.create`-only fixture can't distinguish the real tie-break from
+  // SQLite's incidental order. `"zzz-take"` inserted first, `"aaa-take"`
+  // second (id lexical order reversed from insertion order). Confirmed by
+  // temporarily stripping `desc(takes.id)` from `search`'s query: this test
+  // goes red, then passes again once restored.
   it("breaks a tie on recordedAt deterministically (by id, descending) rather than leaving it undefined", async () => {
     const song = await songs.create(db, {
       title: "Tie Break Search Song",
@@ -953,27 +1008,14 @@ describe("takes.search", () => {
       updatedAt: 1000,
     });
     const same = 5000;
-    const a = await takes.create(db, {
-      songId: song.id,
-      eventId,
-      recordedAt: same,
-      createdAt: 1000,
-      updatedAt: 1000,
-    });
-    const b = await takes.create(db, {
-      songId: song.id,
-      eventId,
-      recordedAt: same,
-      createdAt: 1000,
-      updatedAt: 1000,
-    });
+    await insertTakeWithId(db, "zzz-take", { songId: song.id, eventId, recordedAt: same });
+    await insertTakeWithId(db, "aaa-take", { songId: song.id, eventId, recordedAt: same });
 
     const { results: first } = await takes.search(db, { search: "tie break" });
     const { results: second } = await takes.search(db, { search: "tie break" });
     expect(first.map((t) => t.id)).toEqual(second.map((t) => t.id));
     // Deterministic AND matches the documented tie-break (id, descending).
-    const expectedOrder = [a.id, b.id].sort().reverse();
-    expect(first.map((t) => t.id)).toEqual(expectedOrder);
+    expect(first.map((t) => t.id)).toEqual(["zzz-take", "aaa-take"]);
   });
 
   it("truncates at SEARCH_LIMIT and reports truncated: true when more takes match", async () => {

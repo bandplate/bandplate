@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import cloudflare from "@astrojs/cloudflare";
 import node from "@astrojs/node";
 import preact from "@astrojs/preact";
@@ -26,7 +27,31 @@ const adapter =
 export default defineConfig({
   output: "server",
   adapter,
-  integrations: [preact({ compat: true })],
+  integrations: [
+    preact({ compat: true }),
+    // CRITICAL: without this, the entire server bundle (`dist/_worker.js/`
+    // — auth logic, SQL, CSRF handling, admin handlers) uploads as PUBLIC
+    // STATIC ASSETS on every Workers deploy, served *before* the Worker
+    // itself gets a chance to run. Astro's Cloudflare adapter emits
+    // `dist/_routes.json` (Pages-mode routing metadata) but no
+    // `.assetsignore`, and `wrangler`'s asset-upload ignore list is
+    // hard-coded to `.assetsignore`/`_redirects`/`_headers` only — so
+    // `_worker.js/**` and `_routes.json` get uploaded and served as plain
+    // files unless something tells Wrangler not to. This writes that file
+    // as part of the build itself so it can't be forgotten by a
+    // self-deployer. Verified: `GET /_worker.js/index.js` and
+    // `GET /_routes.json` both 404 under `wrangler dev --local` with this
+    // in place (previously both returned 200 with real source/JSON), and
+    // the app still serves every route correctly.
+    adapterKind === "cloudflare" && {
+      name: "bandlib-cloudflare-assetsignore",
+      hooks: {
+        "astro:build:done": async ({ dir }) => {
+          await writeFile(new URL(".assetsignore", dir), "_worker.js\n_routes.json\n");
+        },
+      },
+    },
+  ].filter(Boolean),
   vite: {
     plugins: [
       tailwindcss(),

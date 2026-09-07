@@ -1,8 +1,8 @@
-// Resolves the `bl_session` cookie to a principal — a thin wrapper around
-// `@bandlib/core`'s `resolveSession` so it's trivially testable without
+// Resolves the `bp_session` cookie to a principal — a thin wrapper around
+// `@bandplate/core`'s `resolveSession` so it's trivially testable without
 // needing Astro's cookie jar or the `astro:middleware` virtual module.
-import type { AuthDeps, MemberPrincipal } from "@bandlib/core";
-import { resolveSession } from "@bandlib/core";
+import type { AuthDeps, MemberPrincipal } from "@bandplate/core";
+import { resolveSession } from "@bandplate/core";
 
 export async function resolvePrincipalFromCookie(
   authDeps: AuthDeps,

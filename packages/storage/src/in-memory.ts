@@ -9,7 +9,7 @@
 //
 // This is the one deliberate `node:*` import in any EXPORTED entry point
 // under `packages/storage` — confined to this file, reachable only from
-// the package's `./testing` subpath (mirroring `@bandlib/db`'s
+// the package's `./testing` subpath (mirroring `@bandplate/db`'s
 // `./testing` export), never from the main barrel a Workers build would
 // pull in. `S3Storage` itself (the thing that actually ships) stays
 // Web-Crypto/`fetch`-only — see `barrel-is-workers-safe.test.ts`, which
@@ -27,8 +27,8 @@ import type {
   SignedUploadUrlOptions,
   Storage,
   StoredObject,
-} from "@bandlib/core";
-import { systemClock } from "@bandlib/core";
+} from "@bandplate/core";
+import { systemClock } from "@bandplate/core";
 import { QUANTISE_BUCKET_MS, quantiseToHourBucket } from "./quantise.js";
 
 interface StoredEntry {

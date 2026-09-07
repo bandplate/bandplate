@@ -1,4 +1,4 @@
-import { membersRepo, schema } from "@bandlib/db";
+import { membersRepo, schema } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
   TEST_APP_ORIGIN,
@@ -144,7 +144,7 @@ describe("POST /auth/login/:token", () => {
     expect(res.status).toBe(404);
   });
 
-  it("sets the bl_session cookie with exactly the required attributes", async () => {
+  it("sets the bp_session cookie with exactly the required attributes", async () => {
     const testApp = await buildTestApp();
     const token = await issueToken(testApp);
 
@@ -155,7 +155,7 @@ describe("POST /auth/login/:token", () => {
 
     const setCookie = res.headers.get("set-cookie");
     expect(setCookie).toMatch(
-      /^bl_session=[A-Za-z0-9_-]+; Max-Age=31536000; Path=\/; HttpOnly; Secure; SameSite=Lax$/,
+      /^bp_session=[A-Za-z0-9_-]+; Max-Age=31536000; Path=\/; HttpOnly; Secure; SameSite=Lax$/,
     );
   });
 
@@ -170,7 +170,7 @@ describe("POST /auth/login/:token", () => {
 
     const setCookie = res.headers.get("set-cookie");
     expect(setCookie).toMatch(
-      /^bl_session=[A-Za-z0-9_-]+; Max-Age=31536000; Path=\/; HttpOnly; SameSite=Lax$/,
+      /^bp_session=[A-Za-z0-9_-]+; Max-Age=31536000; Path=\/; HttpOnly; SameSite=Lax$/,
     );
     expect(setCookie).not.toMatch(/Secure/);
   });
@@ -203,7 +203,7 @@ describe("session lifecycle", () => {
     const cookie = await login(testApp);
 
     const res = await testApp.app.request("/auth/me", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -216,12 +216,12 @@ describe("session lifecycle", () => {
 
     const logout = await testApp.app.request("/auth/logout", {
       method: "POST",
-      headers: { origin: TEST_APP_ORIGIN, cookie: `bl_session=${cookie}` },
+      headers: { origin: TEST_APP_ORIGIN, cookie: `bp_session=${cookie}` },
     });
     expect(logout.status).toBe(200);
 
     const me = await testApp.app.request("/auth/me", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     expect(me.status).toBe(401);
   });
@@ -232,7 +232,7 @@ describe("session lifecycle", () => {
     const loginAt = testApp.clock.now();
 
     testApp.clock.advance(60 * 60 * 1000); // 1h
-    await testApp.app.request("/auth/me", { headers: { cookie: `bl_session=${cookie}` } });
+    await testApp.app.request("/auth/me", { headers: { cookie: `bp_session=${cookie}` } });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const rows = await testApp.db.select().from(schema.authSessions);
@@ -244,7 +244,7 @@ describe("session lifecycle", () => {
     const cookie = await login(testApp);
 
     testApp.clock.advance(24 * 60 * 60 * 1000 + 1);
-    await testApp.app.request("/auth/me", { headers: { cookie: `bl_session=${cookie}` } });
+    await testApp.app.request("/auth/me", { headers: { cookie: `bp_session=${cookie}` } });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const rows = await testApp.db.select().from(schema.authSessions);

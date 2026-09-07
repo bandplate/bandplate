@@ -1,4 +1,4 @@
-import { assetsRepo, eventsRepo, membersRepo, songsRepo, takesRepo } from "@bandlib/db";
+import { assetsRepo, eventsRepo, membersRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   TEST_APP_ORIGIN,
@@ -88,7 +88,7 @@ describe("GET /assets/:id/audio", () => {
     const asset = await seedReadyAsset(testApp);
 
     const res = await testApp.app.request(`/assets/${asset.id}/audio`, {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
       redirect: "manual",
     });
 
@@ -135,7 +135,7 @@ describe("GET /assets/:id/audio", () => {
     const cookie = await loginAsMember(testApp);
 
     const res = await testApp.app.request("/assets/does-not-exist/audio", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
       redirect: "manual",
     });
 
@@ -183,7 +183,7 @@ describe("GET /assets/:id/audio", () => {
     }
 
     const res = await testApp.app.request(`/assets/${pendingAsset.id}/audio`, {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
       redirect: "manual",
     });
 
@@ -239,7 +239,7 @@ describe("GET /assets/:id/audio", () => {
     }
 
     const res = await testApp.app.request(`/assets/${peaksAsset.id}/audio`, {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
       redirect: "manual",
     });
 
@@ -259,7 +259,7 @@ describe("GET /assets/:id/audio", () => {
       );
 
       const res = await testApp.app.request(`/assets/${asset.id}/audio`, {
-        headers: { cookie: `bl_session=${cookie}` },
+        headers: { cookie: `bp_session=${cookie}` },
         redirect: "manual",
       });
       const location = res.headers.get("location");

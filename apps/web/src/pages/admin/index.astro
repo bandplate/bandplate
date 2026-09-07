@@ -22,21 +22,21 @@ const activeTokens = tokens.filter((t) => t.revokedAt === null);
 ---
 
 <AdminLayout title="Overview" principal={principal} current="overview">
-  <div class="bl-stat-grid">
-    <a href="/admin/members" class="bl-card bl-card-link">
-      <p class="bl-field-hint bl-m0">Members</p>
-      <p class="bl-stat-value">{members.length}</p>
-      <p class="bl-m0">Manage the band roster, roles and status.</p>
+  <div class="bp-stat-grid">
+    <a href="/admin/members" class="bp-card bp-card-link">
+      <p class="bp-field-hint bp-m0">Members</p>
+      <p class="bp-stat-value">{members.length}</p>
+      <p class="bp-m0">Manage the band roster, roles and status.</p>
     </a>
-    <a href="/admin/instruments" class="bl-card bl-card-link">
-      <p class="bl-field-hint bl-m0">Instruments</p>
-      <p class="bl-stat-value">{activeInstruments.length}</p>
-      <p class="bl-m0">{instruments.length - activeInstruments.length} archived.</p>
+    <a href="/admin/instruments" class="bp-card bp-card-link">
+      <p class="bp-field-hint bp-m0">Instruments</p>
+      <p class="bp-stat-value">{activeInstruments.length}</p>
+      <p class="bp-m0">{instruments.length - activeInstruments.length} archived.</p>
     </a>
-    <a href="/admin/tokens" class="bl-card bl-card-link">
-      <p class="bl-field-hint bl-m0">Service tokens</p>
-      <p class="bl-stat-value">{activeTokens.length}</p>
-      <p class="bl-m0">{tokens.length - activeTokens.length} revoked.</p>
+    <a href="/admin/tokens" class="bp-card bp-card-link">
+      <p class="bp-field-hint bp-m0">Service tokens</p>
+      <p class="bp-stat-value">{activeTokens.length}</p>
+      <p class="bp-m0">{tokens.length - activeTokens.length} revoked.</p>
     </a>
   </div>
 </AdminLayout>

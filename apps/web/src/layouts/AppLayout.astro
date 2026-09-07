@@ -8,7 +8,7 @@ import { ClientRouter } from "astro:transitions";
 // navigation (with a progress bar — see the inline script below) without
 // any page needing its own client-side JS; it respects
 // `prefers-reduced-motion` itself (Astro's built-in behavior).
-import type { MemberPrincipal } from "@bandlib/core";
+import type { MemberPrincipal } from "@bandplate/core";
 import NavIcon from "../components/NavIcon.astro";
 import Player from "../components/Player.tsx";
 import VoteFavorite from "../components/VoteFavorite.tsx";
@@ -36,31 +36,31 @@ const navItems = [
 <Layout title={title}>
   <ClientRouter />
   <div
-    class="bl-route-progress"
+    class="bp-route-progress"
     id="route-progress"
     aria-hidden="true"
     transition:persist="route-progress"
   ></div>
-  <div class="bl-shell">
-    <header class="bl-shell-header">
-      <a href="/" class="bl-shell-wordmark">bandlib</a>
+  <div class="bp-shell">
+    <header class="bp-shell-header">
+      <a href="/" class="bp-shell-wordmark">bandplate</a>
       <form method="post" action="/logout">
-        <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Sign out</button>
+        <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Sign out</button>
       </form>
     </header>
-    <div class="bl-shell-body">
-      <nav class="bl-sidebar" aria-label="Main">
-        <a href="/" class="bl-shell-wordmark">bandlib</a>
-        <ul class="bl-sidebar-nav">
+    <div class="bp-shell-body">
+      <nav class="bp-sidebar" aria-label="Main">
+        <a href="/" class="bp-shell-wordmark">bandplate</a>
+        <ul class="bp-sidebar-nav">
           {
             navItems.map((item) => (
               <li>
                 <a
                   href={item.href}
-                  class="bl-sidebar-item"
+                  class="bp-sidebar-item"
                   aria-current={item.key === current ? "page" : undefined}
                 >
-                  <span class="bl-sidebar-icon">
+                  <span class="bp-sidebar-icon">
                     <NavIcon name={item.key} />
                   </span>
                   {item.label}
@@ -69,21 +69,21 @@ const navItems = [
             ))
           }
         </ul>
-        <form method="post" action="/logout" class="bl-sidebar-footer">
-          <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">
+        <form method="post" action="/logout" class="bp-sidebar-footer">
+          <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">
             Sign out ({principal.role})
           </button>
         </form>
       </nav>
-      <main id="main" class="bl-shell-main">
+      <main id="main" class="bp-shell-main">
         <slot />
       </main>
     </div>
-    <nav class="bl-tabbar" aria-label="Main">
+    <nav class="bp-tabbar" aria-label="Main">
       {
         navItems.map((item) => (
-          <a href={item.href} class="bl-tabbar-item" aria-current={item.key === current ? "page" : undefined}>
-            <span class="bl-tabbar-icon">
+          <a href={item.href} class="bp-tabbar-item" aria-current={item.key === current ? "page" : undefined}>
+            <span class="bp-tabbar-icon">
               <NavIcon name={item.key} />
             </span>
             {item.label}
@@ -91,14 +91,14 @@ const navItems = [
         ))
       }
     </nav>
-    <Player client:load transition:persist="bl-player" />
-    <VoteFavorite client:load transition:persist="bl-vote-favorite" />
+    <Player client:load transition:persist="bp-player" />
+    <VoteFavorite client:load transition:persist="bp-vote-favorite" />
   </div>
 </Layout>
 
 <script>
   // Progress bar for View Transitions navigation — see components.css's
-  // ".bl-route-progress" for the actual animation and its
+  // ".bp-route-progress" for the actual animation and its
   // prefers-reduced-motion override. Astro fires these events on
   // `document` around every ClientRouter-driven navigation; a plain <a>
   // click that ClientRouter intercepts goes through this same lifecycle.

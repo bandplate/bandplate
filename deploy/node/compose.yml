@@ -1,6 +1,6 @@
 # Local development stack: the app (source-mounted, running `astro dev`)
 # plus MinIO, the S3-compatible bucket the audio storage port
-# (`@bandlib/storage`'s `S3Storage`) talks to. `minio-init` creates the
+# (`@bandplate/storage`'s `S3Storage`) talks to. `minio-init` creates the
 # bucket on first run, so `docker compose up` alone is enough — no manual
 # `mc` step.
 #
@@ -31,11 +31,11 @@
 #   cd deploy/node
 #   docker compose up
 #   # then, in another terminal, seed real audio behind the seeded takes:
-#   BANDLIB_DATABASE_URL=file:../../apps/web/.data/bandlib.db \
+#   BANDPLATE_DATABASE_URL=file:../../apps/web/.data/bandplate.db \
 #     S3_ENDPOINT=http://localhost:9000 S3_PUBLIC_ENDPOINT=http://localhost:9000 \
-#     S3_BUCKET=bandlib S3_REGION=auto \
-#     S3_ACCESS_KEY_ID=bandlib-dev S3_SECRET_ACCESS_KEY=bandlib-dev-secret \
-#     pnpm --filter @bandlib/db run dev:upload-audio
+#     S3_BUCKET=bandplate S3_REGION=auto \
+#     S3_ACCESS_KEY_ID=bandplate-dev S3_SECRET_ACCESS_KEY=bandplate-dev-secret \
+#     pnpm --filter @bandplate/db run dev:upload-audio
 #   # visit http://localhost:4321
 
 services:
@@ -46,10 +46,10 @@ services:
       - "9000:9000" # S3 API — also what S3_PUBLIC_ENDPOINT points the browser at
       - "9001:9001" # Web console, optional (http://localhost:9001)
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-bandlib-dev}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-bandlib-dev-secret}
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-bandplate-dev}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-bandplate-dev-secret}
     volumes:
-      - bandlib-minio-data:/data
+      - bandplate-minio-data:/data
     # No HEALTHCHECK here: the official `minio/minio` image ships neither
     # `curl` nor `mc` (a `docker run --entrypoint sh minio/minio -c "which
     # curl mc"` comes back empty), so there's nothing to run a `CMD`
@@ -69,10 +69,10 @@ services:
     entrypoint: >
       /bin/sh -c "
       for i in $(seq 1 30); do
-        mc alias set local http://minio:9000 ${S3_ACCESS_KEY_ID:-bandlib-dev} ${S3_SECRET_ACCESS_KEY:-bandlib-dev-secret} && break;
+        mc alias set local http://minio:9000 ${S3_ACCESS_KEY_ID:-bandplate-dev} ${S3_SECRET_ACCESS_KEY:-bandplate-dev-secret} && break;
         sleep 1;
       done &&
-      mc mb --ignore-existing local/${S3_BUCKET:-bandlib}
+      mc mb --ignore-existing local/${S3_BUCKET:-bandplate}
       "
 
   app:
@@ -91,25 +91,25 @@ services:
       # Named volumes for node_modules so the container's own
       # (Linux) native deps (esbuild, libsql) don't get shadowed by
       # whatever the host already installed for its own platform.
-      - bandlib-node-modules:/repo/node_modules
-      - bandlib-web-node-modules:/repo/apps/web/node_modules
+      - bandplate-node-modules:/repo/node_modules
+      - bandplate-web-node-modules:/repo/apps/web/node_modules
     environment:
-      BANDLIB_DATABASE_URL: file:/repo/apps/web/.data/bandlib.db
-      BANDLIB_APP_ORIGIN: http://localhost:4321
-      BANDLIB_BOOTSTRAP_TOKEN: ${BANDLIB_BOOTSTRAP_TOKEN:-dev-bootstrap-token-change-me}
-      BANDLIB_ALLOW_DEV_MAILER: "true"
+      BANDPLATE_DATABASE_URL: file:/repo/apps/web/.data/bandplate.db
+      BANDPLATE_APP_ORIGIN: http://localhost:4321
+      BANDPLATE_BOOTSTRAP_TOKEN: ${BANDPLATE_BOOTSTRAP_TOKEN:-dev-bootstrap-token-change-me}
+      BANDPLATE_ALLOW_DEV_MAILER: "true"
       # Internal vs public endpoint — see the file header comment.
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: http://localhost:9000
-      S3_BUCKET: ${S3_BUCKET:-bandlib}
+      S3_BUCKET: ${S3_BUCKET:-bandplate}
       S3_REGION: auto
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-bandlib-dev}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-bandlib-dev-secret}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-bandplate-dev}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-bandplate-dev-secret}
     depends_on:
       minio-init:
         condition: service_completed_successfully
 
 volumes:
-  bandlib-minio-data:
-  bandlib-node-modules:
-  bandlib-web-node-modules:
+  bandplate-minio-data:
+  bandplate-node-modules:
+  bandplate-web-node-modules:

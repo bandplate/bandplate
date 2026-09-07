@@ -1,4 +1,4 @@
-// `/admin/members` page logic. Calls the exact same `@bandlib/core`
+// `/admin/members` page logic. Calls the exact same `@bandplate/core`
 // functions `packages/api/src/routes/admin-members.ts` calls for
 // validation (`createMemberSchema`/`patchMemberSchema`) and for the
 // self-demotion/last-admin guard (`updateMemberWithGuards`) — this is the
@@ -7,16 +7,16 @@
 // task-4-report.md "Fix round 2": the API route used to have no
 // self-demotion/last-admin guard of its own at all, which this shared
 // function structurally rules out going forward.
-import type { AuthDeps } from "@bandlib/core";
+import type { AuthDeps } from "@bandplate/core";
 import {
   createMemberSchema,
   patchMemberSchema,
   revokeAllSessionsForMember,
   slugify,
   updateMemberWithGuards,
-} from "@bandlib/core";
-import type { Db } from "@bandlib/db";
-import { authSessionsRepo, instrumentsRepo, membersRepo } from "@bandlib/db";
+} from "@bandplate/core";
+import type { Db } from "@bandplate/db";
+import { authSessionsRepo, instrumentsRepo, membersRepo } from "@bandplate/db";
 
 type Member = membersRepo.Member;
 
@@ -175,7 +175,7 @@ export async function updateMember(
     return { kind: "invalid" };
   }
 
-  // Self-demotion and last-admin lockout rules live in `@bandlib/core`
+  // Self-demotion and last-admin lockout rules live in `@bandplate/core`
   // now, shared with `packages/api`'s identical PATCH route — see this
   // module's header comment.
   const result = await updateMemberWithGuards(db, id, actingMemberId, parsed.data);

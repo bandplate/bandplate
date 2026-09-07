@@ -77,7 +77,7 @@ describe("UNVOTED_LIST_EMPTY_STATE_HTML", () => {
     );
   });
 
-  it("is a single <p>, matching the shape `.bl-empty-state > p` styling in components.css expects", () => {
+  it("is a single <p>, matching the shape `.bp-empty-state > p` styling in components.css expects", () => {
     expect(UNVOTED_LIST_EMPTY_STATE_HTML.match(/<p>/g)).toHaveLength(1);
     expect(UNVOTED_LIST_EMPTY_STATE_HTML.startsWith("<p>")).toBe(true);
     expect(UNVOTED_LIST_EMPTY_STATE_HTML.endsWith("</p>")).toBe(true);

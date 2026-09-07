@@ -8,9 +8,9 @@
 // is best-effort deleted so the take never ends up with two masters. A
 // peaks tier change updates the row in place without touching the key
 // (`peaksStorageKey` doesn't vary by tier — see `getBySlot`).
-import { masterStorageKey, peaksStorageKey, stemStorageKey } from "@bandlib/core";
-import type { Storage } from "@bandlib/core";
-import { type Db, assetsRepo } from "@bandlib/db";
+import { masterStorageKey, peaksStorageKey, stemStorageKey } from "@bandplate/core";
+import type { Storage } from "@bandplate/core";
+import { type Db, assetsRepo } from "@bandplate/db";
 import type { AssetInput } from "./schemas.js";
 import { UPLOAD_URL_TTL_SECONDS, contentTypeForFormat, hexSha256ToBase64 } from "./support.js";
 

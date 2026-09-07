@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Standalone migration runner — Node tooling (not part of the runtime
 // library), used by operators on first run and by CI/deploy scripts.
-// Reads `BANDLIB_DATABASE_URL` (matching `apps/web`'s env var) with a
+// Reads `BANDPLATE_DATABASE_URL` (matching `apps/web`'s env var) with a
 // fallback to the bare `DATABASE_URL`, via the shared `resolveDatabaseUrl` —
 // see `../src/database-url.ts` — so this and `seed/run.ts` can't drift
 // again the way they did before (task-5-report.md "Fix round 3" #2).
@@ -54,7 +54,7 @@ main().catch((err) => {
   // full URL back. Never dump the raw error; log only its name/message
   // with the URL itself redacted, plus the (credential-free) database host
   // for context.
-  const url = process.env.BANDLIB_DATABASE_URL ?? process.env.DATABASE_URL;
+  const url = process.env.BANDPLATE_DATABASE_URL ?? process.env.DATABASE_URL;
   const message = err instanceof Error ? err.message : String(err);
   const redactedMessage = url ? message.split(url).join(redactUrl(url)) : message;
   console.error(

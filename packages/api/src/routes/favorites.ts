@@ -1,14 +1,14 @@
 // `POST /favorites` — the JSON API surface for toggling a favorite/pin on a
 // song, take, or event, scope-gated through `GuardedRouter` on the
-// `favorites:write` scope (see `@bandlib/core`'s `scopes.ts` for why that's
+// `favorites:write` scope (see `@bandplate/core`'s `scopes.ts` for why that's
 // a distinct scope from `votes:write`). Same relationship to the
 // member-facing app as `routes/votes.ts`: the browser's own forms/island
 // post to apps/web's Astro page handler (`apps/web/src/pages/favorites.ts`),
-// which calls `@bandlib/db`'s `favoritesRepo.toggle` directly — this route
+// which calls `@bandplate/db`'s `favoritesRepo.toggle` directly — this route
 // is the mirrored, independently-authorized JSON surface for a service
 // token or any future non-browser client.
-import type { Clock } from "@bandlib/core";
-import { type Db, eventsRepo, favoritesRepo, songsRepo, takesRepo } from "@bandlib/db";
+import type { Clock } from "@bandplate/core";
+import { type Db, eventsRepo, favoritesRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { z } from "zod";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";

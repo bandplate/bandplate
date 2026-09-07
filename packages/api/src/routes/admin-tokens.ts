@@ -1,6 +1,6 @@
-import type { AuthDeps } from "@bandlib/core";
-import { createServiceToken, isScope } from "@bandlib/core";
-import { type Db, serviceTokensRepo } from "@bandlib/db";
+import type { AuthDeps } from "@bandplate/core";
+import { createServiceToken, isScope } from "@bandplate/core";
+import { type Db, serviceTokensRepo } from "@bandplate/db";
 import { z } from "zod";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";

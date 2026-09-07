@@ -245,10 +245,10 @@ export function buildIngestOpenApiDocument(router: GuardedRouter): JsonSchema {
   return {
     openapi: "3.1.0",
     info: {
-      title: "bandlib ingest API",
+      title: "bandplate ingest API",
       version: "1.0.0",
       description:
-        "Contract v1 — see docs/ingest-contract-v1.md in the bandlib repo. The interface the Reaper bridge uses to push rendered rehearsal takes into the archive.",
+        "Contract v1 — see docs/ingest-contract-v1.md in the bandplate repo. The interface the Reaper bridge uses to push rendered rehearsal takes into the archive.",
     },
     servers: [{ url: "/api" }],
     paths,
@@ -257,7 +257,7 @@ export function buildIngestOpenApiDocument(router: GuardedRouter): JsonSchema {
         serviceToken: {
           type: "http",
           scheme: "bearer",
-          bearerFormat: "blk_{tokenId}_{secret}",
+          bearerFormat: "bpk_{tokenId}_{secret}",
           description:
             "A service token issued from /admin/tokens, carrying an explicit scope set. " +
             "401 for a missing/malformed/unknown/revoked token; 403 for a valid token missing a required scope.",

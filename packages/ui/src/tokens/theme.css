@@ -1,7 +1,7 @@
 /*
  * Tailwind v4 CSS-first theme.
  * Maps the semantic ROOST custom properties into Tailwind's @theme so
- * utilities (bg-bl-bg, text-bl-fg, font-bl-display, ...) resolve to tokens
+ * utilities (bg-bp-bg, text-bp-fg, font-bp-display, ...) resolve to tokens
  * instead of hardcoded brand values.
  */
 @import "tailwindcss";
@@ -9,17 +9,17 @@
 @import "./fonts.css";
 
 @theme inline {
-  --color-bl-bg: var(--bl-color-bg);
-  --color-bl-fg: var(--bl-color-fg);
-  --color-bl-accent: var(--bl-color-accent);
-  --color-bl-accent-alt: var(--bl-color-accent-alt);
-  --color-bl-accent-gold: var(--bl-color-accent-gold);
-  --color-bl-muted: var(--bl-color-muted);
-  --color-bl-border: var(--bl-color-border);
-  --color-bl-surface: var(--bl-color-surface);
-  --color-bl-overlay: var(--bl-color-overlay);
+  --color-bp-bg: var(--bp-color-bg);
+  --color-bp-fg: var(--bp-color-fg);
+  --color-bp-accent: var(--bp-color-accent);
+  --color-bp-accent-alt: var(--bp-color-accent-alt);
+  --color-bp-accent-gold: var(--bp-color-accent-gold);
+  --color-bp-muted: var(--bp-color-muted);
+  --color-bp-border: var(--bp-color-border);
+  --color-bp-surface: var(--bp-color-surface);
+  --color-bp-overlay: var(--bp-color-overlay);
 
-  --font-bl-display: var(--bl-font-display);
-  --font-bl-body: var(--bl-font-body);
-  --font-bl-mono: var(--bl-font-mono);
+  --font-bp-display: var(--bp-font-display);
+  --font-bp-body: var(--bp-font-body);
+  --font-bp-mono: var(--bp-font-mono);
 }

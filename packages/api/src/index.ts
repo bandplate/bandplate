@@ -1,5 +1,5 @@
-import type { AuthDeps, Clock, Mailer, RateLimiter, Sleep, Storage } from "@bandlib/core";
-import type { Db } from "@bandlib/db";
+import type { AuthDeps, Clock, Mailer, RateLimiter, Sleep, Storage } from "@bandplate/core";
+import type { Db } from "@bandplate/db";
 import { Hono } from "hono";
 import { errorResponse } from "./errors.js";
 import { originCheckMiddleware } from "./middleware/origin.js";
@@ -21,7 +21,7 @@ export interface AppConfig {
   appOrigin: string;
   /** Compared against a bootstrap request's supplied token (see `bootstrapAdmin`). */
   bootstrapToken: string;
-  /** Whether `bl_session` is marked `Secure`. `false` only for non-TLS local dev. */
+  /** Whether `bp_session` is marked `Secure`. `false` only for non-TLS local dev. */
   cookieSecure: boolean;
   /**
    * Number of trusted reverse-proxy hops in front of this app, for
@@ -47,7 +47,7 @@ export interface AppDeps {
   config: AppConfig;
   /**
    * Overrides for `requestLogin`'s timing-side-channel clamp (see
-   * `@bandlib/core`'s `DEFAULT_LOGIN_TIMING_FLOOR_MS`/`Sleep`). Tests
+   * `@bandplate/core`'s `DEFAULT_LOGIN_TIMING_FLOOR_MS`/`Sleep`). Tests
    * inject a fast, non-blocking `sleep` here; production omits both and
    * gets the real defaults (a real wait, floor 300ms).
    */

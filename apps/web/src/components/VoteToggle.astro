@@ -50,18 +50,18 @@ const { takeId, keeperVotes, totalVotes, ratingScore, myVote, size = "sm" } = As
 const tallyText = formatVoteTally(keeperVotes, totalVotes, ratingScore);
 ---
 
-<div class={`bl-vote-toggle ${size === "lg" ? "bl-vote-toggle-lg" : ""}`} role="group" aria-label="Your vote">
-  <form method="post" action={`/takes/${takeId}/vote`} class="bl-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
+<div class={`bp-vote-toggle ${size === "lg" ? "bp-vote-toggle-lg" : ""}`} role="group" aria-label="Your vote">
+  <form method="post" action={`/takes/${takeId}/vote`} class="bp-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
     <input type="hidden" name="keeper" value="true" />
-    <button type="submit" class="bl-vote-btn bl-vote-btn-keeper" aria-pressed={myVote === true ? "true" : "false"}>
+    <button type="submit" class="bp-vote-btn bp-vote-btn-keeper" aria-pressed={myVote === true ? "true" : "false"}>
       Keeper
     </button>
   </form>
-  <form method="post" action={`/takes/${takeId}/vote`} class="bl-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
+  <form method="post" action={`/takes/${takeId}/vote`} class="bp-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
     <input type="hidden" name="keeper" value="false" />
-    <button type="submit" class="bl-vote-btn bl-vote-btn-not-keeper" aria-pressed={myVote === false ? "true" : "false"}>
+    <button type="submit" class="bp-vote-btn bp-vote-btn-not-keeper" aria-pressed={myVote === false ? "true" : "false"}>
       Not a keeper
     </button>
   </form>
-  <span class="bl-vote-tally" data-vote-tally-for={takeId}>{tallyText}</span>
+  <span class="bp-vote-tally" data-vote-tally-for={takeId}>{tallyText}</span>
 </div>

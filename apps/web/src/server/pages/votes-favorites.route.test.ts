@@ -13,7 +13,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { generateToken, hashToken } from "@bandlib/core";
+import { generateToken, hashToken } from "@bandplate/core";
 import {
   createDb,
   eventsRepo,
@@ -23,7 +23,7 @@ import {
   songsRepo,
   takesRepo,
   votesRepo,
-} from "@bandlib/db";
+} from "@bandplate/db";
 import { createClient } from "@libsql/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -90,9 +90,9 @@ async function loginViaLinkAndGetCookie(
 }
 
 async function seed(): Promise<void> {
-  await execFileAsync("pnpm", ["--filter", "@bandlib/db", "run", "migrate"], {
+  await execFileAsync("pnpm", ["--filter", "@bandplate/db", "run", "migrate"], {
     cwd: REPO_ROOT,
-    env: { ...process.env, BANDLIB_DATABASE_URL: `file:${dbPath}` },
+    env: { ...process.env, BANDPLATE_DATABASE_URL: `file:${dbPath}` },
   });
 
   const client = createClient({ url: `file:${dbPath}` });
@@ -181,11 +181,11 @@ function startBuiltServer(): ChildProcess {
       ...process.env,
       PORT: String(PORT),
       HOST: "127.0.0.1",
-      BANDLIB_DATABASE_URL: `file:${dbPath}`,
-      BANDLIB_BOOTSTRAP_TOKEN: "vote-route-bootstrap-token",
-      BANDLIB_APP_ORIGIN: ORIGIN,
-      BANDLIB_ALLOW_DEV_MAILER: "true",
-      BANDLIB_COOKIE_SECURE: "false",
+      BANDPLATE_DATABASE_URL: `file:${dbPath}`,
+      BANDPLATE_BOOTSTRAP_TOKEN: "vote-route-bootstrap-token",
+      BANDPLATE_APP_ORIGIN: ORIGIN,
+      BANDPLATE_ALLOW_DEV_MAILER: "true",
+      BANDPLATE_COOKIE_SECURE: "false",
       S3_ENDPOINT: "http://127.0.0.1:1",
       S3_PUBLIC_ENDPOINT: "http://127.0.0.1:1",
       S3_BUCKET: "unused-in-this-test",
@@ -202,7 +202,7 @@ describe("vote/favorite/admin-keeper routes over real HTTP", () => {
   let db: ReturnType<typeof createDb>;
 
   beforeAll(async () => {
-    dbDir = await mkdtemp(join(tmpdir(), "bandlib-vote-favorites-route-"));
+    dbDir = await mkdtemp(join(tmpdir(), "bandplate-vote-favorites-route-"));
     dbPath = join(dbDir, "db.sqlite");
 
     await buildApp();

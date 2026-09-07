@@ -1,12 +1,12 @@
 // Ingest API — contract v1 (`docs/ingest-contract-v1.md`). Exercises the
 // full three-phase flow end to end against `InMemoryStorage` (a real HTTP
 // server behind the presigned URLs, not a mock — see
-// `@bandlib/storage/testing`'s own header comment), plus every documented
+// `@bandplate/storage/testing`'s own header comment), plus every documented
 // error path and — the actual point of this file, per the ingest brief —
 // idempotency proved by DIFFING DATABASE STATE across a repeated run, not
 // by asserting a status code twice.
 import { createHash } from "node:crypto";
-import { createServiceToken } from "@bandlib/core";
+import { createServiceToken } from "@bandplate/core";
 import {
   assetsRepo,
   eventsRepo,
@@ -14,7 +14,7 @@ import {
   membersRepo,
   songsRepo,
   takesRepo,
-} from "@bandlib/db";
+} from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
   TEST_APP_ORIGIN,
@@ -75,7 +75,7 @@ describe("ingest API", () => {
         { db: testApp.db, mailer: testApp.mailer, clock: testApp.clock },
         { label: "revoked", scopes: ["ingest:write"] },
       );
-      const { serviceTokensRepo } = await import("@bandlib/db");
+      const { serviceTokensRepo } = await import("@bandplate/db");
       await serviceTokensRepo.revoke(testApp.db, created.id, testApp.clock.now());
 
       const res = await testApp.app.request("/ingest/v1/events", {
@@ -129,7 +129,7 @@ describe("ingest API", () => {
 
       const res = await testApp.app.request("/ingest/v1/events", {
         method: "POST",
-        headers: { ...jsonHeaders, origin: TEST_APP_ORIGIN, cookie: `bl_session=${cookie}` },
+        headers: { ...jsonHeaders, origin: TEST_APP_ORIGIN, cookie: `bp_session=${cookie}` },
         body: JSON.stringify({
           clientRef: "x",
           kind: "rehearsal",

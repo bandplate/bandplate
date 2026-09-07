@@ -1,4 +1,4 @@
-import type { Principal } from "@bandlib/core";
+import type { Principal } from "@bandplate/core";
 
 /**
  * Hono's `Env` generic for this app: the one piece of per-request state the

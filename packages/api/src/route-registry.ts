@@ -1,5 +1,5 @@
-import type { Scope } from "@bandlib/core";
-import { hasAllScopes } from "@bandlib/core";
+import type { Scope } from "@bandplate/core";
+import { hasAllScopes } from "@bandplate/core";
 // The mechanism that makes an unguarded route structurally impossible.
 //
 // `createApp` never calls `app.get`/`app.post`/etc. directly for an actual

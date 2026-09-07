@@ -2,10 +2,10 @@
 // — exercised against the real `resolveSession` core service and a real
 // (in-memory) db, not a mock, so this proves the actual cookie -> principal
 // path apps/web wires up, not just that a fake returns what we told it to.
-import { type AuthDeps, generateToken, hashToken, systemClock } from "@bandlib/core";
-import { authSessionsRepo, membersRepo } from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
-import { createNullMailer } from "@bandlib/mail";
+import { type AuthDeps, generateToken, hashToken, systemClock } from "@bandplate/core";
+import { authSessionsRepo, membersRepo } from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
+import { createNullMailer } from "@bandplate/mail";
 import { beforeEach, describe, expect, it } from "vitest";
 import { resolvePrincipalFromCookie } from "./principal.js";
 

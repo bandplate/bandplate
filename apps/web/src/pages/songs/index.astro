@@ -6,7 +6,7 @@
 // There is nothing here for JS to progressively enhance without shipping a
 // script this page doesn't otherwise need — see task-5-report.md's
 // "instrument filter" section for why that trade was made deliberately.
-import { favoritesRepo, instrumentsRepo } from "@bandlib/db";
+import { favoritesRepo, instrumentsRepo } from "@bandplate/db";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -35,14 +35,14 @@ const resultsLabel =
 ---
 
 <AppLayout title="Songs" principal={principal} current="songs">
-  <div class="bl-stack">
-    <h1 class="bl-page-title">Songs</h1>
+  <div class="bp-stack">
+    <h1 class="bp-page-title">Songs</h1>
 
-    <form method="get" class="bl-toolbar">
-      <div class="bl-field">
-        <label class="bl-field-label" for="song-search">Search titles</label>
+    <form method="get" class="bp-toolbar">
+      <div class="bp-field">
+        <label class="bp-field-label" for="song-search">Search titles</label>
         <input
-          class="bl-input"
+          class="bp-input"
           type="search"
           id="song-search"
           name="q"
@@ -51,9 +51,9 @@ const resultsLabel =
         />
       </div>
 
-      <div class="bl-field">
-        <label class="bl-field-label" for="song-sort">Sort by</label>
-        <select class="bl-select" id="song-sort" name="sort">
+      <div class="bp-field">
+        <label class="bp-field-label" for="song-sort">Sort by</label>
+        <select class="bp-select" id="song-sort" name="sort">
           <option value="title" selected={sort === "title"}>Title (A to Z)</option>
           <option value="recent" selected={sort === "recent"}>Recently played</option>
           <option value="takes" selected={sort === "takes"}>Most takes</option>
@@ -71,21 +71,21 @@ const resultsLabel =
         where there's room for it beside search/sort without burying
         anything. */
       }
-      <details class="bl-toolbar-details" open={query.instrumentIds.length > 0}>
-        <summary class="bl-toolbar-details-summary">
+      <details class="bp-toolbar-details" open={query.instrumentIds.length > 0}>
+        <summary class="bp-toolbar-details-summary">
           Filter by instrument
           {query.instrumentIds.length > 0 && ` (${query.instrumentIds.length} selected)`}
         </summary>
-        <fieldset class="bl-checkbox-group">
+        <fieldset class="bp-checkbox-group">
           <legend>
             Instruments
             {query.instrumentIds.length > 1 && (
-              <span class="bl-field-hint">— must have a take with all of these</span>
+              <span class="bp-field-hint">— must have a take with all of these</span>
             )}
           </legend>
           {
             instruments.map((instrument) => (
-              <span class="bl-checkbox-item">
+              <span class="bp-checkbox-item">
                 <input
                   type="checkbox"
                   id={`instrument-${instrument.id}`}
@@ -100,21 +100,21 @@ const resultsLabel =
         </fieldset>
       </details>
 
-      <div class="bl-toolbar-actions">
-        <button type="submit" class="bl-btn bl-btn-primary">Apply filters</button>
+      <div class="bp-toolbar-actions">
+        <button type="submit" class="bp-btn bp-btn-primary">Apply filters</button>
         {(query.search || query.instrumentIds.length > 0 || sort !== "title") && (
-          <a href="/songs" class="bl-btn bl-btn-secondary">
+          <a href="/songs" class="bp-btn bp-btn-secondary">
             Clear
           </a>
         )}
       </div>
     </form>
 
-    <p class="bl-field-hint bl-m0">{resultsLabel}</p>
+    <p class="bp-field-hint bp-m0">{resultsLabel}</p>
 
     {
       songs.length === 0 ? (
-        <div class="bl-empty-state">
+        <div class="bp-empty-state">
           <p>
             {query.search || query.instrumentIds.length > 0
               ? "No songs match that search — try clearing a filter."
@@ -122,27 +122,27 @@ const resultsLabel =
           </p>
         </div>
       ) : (
-        <div class="bl-song-list">
+        <div class="bp-song-list">
           {songs.map((song) => (
-            <div class="bl-song-row">
-              <a href={`/songs/${song.slug}`} class="bl-song-row-link">
-                <div class="bl-song-row-main">
-                  <p class={`bl-song-title ${song.isStub ? "bl-song-title-stub" : ""}`}>
+            <div class="bp-song-row">
+              <a href={`/songs/${song.slug}`} class="bp-song-row-link">
+                <div class="bp-song-row-main">
+                  <p class={`bp-song-title ${song.isStub ? "bp-song-title-stub" : ""}`}>
                     {song.title}
                   </p>
-                  <p class="bl-song-meta">
+                  <p class="bp-song-meta">
                     {[song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined]
                       .filter(Boolean)
                       .join(", ") || "No key or tempo set"}
                   </p>
                 </div>
-                <div class="bl-song-row-stats">
+                <div class="bp-song-row-stats">
                   <span>
-                    <span class="bl-song-row-stat-value">{song.takeCount}</span>
+                    <span class="bp-song-row-stat-value">{song.takeCount}</span>
                     {song.takeCount === 1 ? "take" : "takes"}
                   </span>
                   <span>
-                    <span class="bl-song-row-stat-value">{formatShortDate(song.lastPlayedAt)}</span>
+                    <span class="bp-song-row-stat-value">{formatShortDate(song.lastPlayedAt)}</span>
                     last played
                   </span>
                 </div>

@@ -68,30 +68,30 @@ function claimTakeTransition(takeId: string): string | null {
 
 <AppLayout title="Home" principal={principal} current="home">
   <TakeTransitionRetarget />
-  <div class="bl-stack">
-    <h1 class="bl-page-title">Welcome back</h1>
+  <div class="bp-stack">
+    <h1 class="bp-page-title">Welcome back</h1>
 
     <section>
-      <h2 class="bl-section-title">Your favorites</h2>
+      <h2 class="bp-section-title">Your favorites</h2>
       {
         !hasFavorites ? (
-          <div class="bl-empty-state">
+          <div class="bp-empty-state">
             <p>
               Nothing pinned yet — tap the star on a song, take, or event to pin it here.{" "}
               <a href="/search">Browse the archive</a> for what to listen to next.
             </p>
           </div>
         ) : (
-          <div class="bl-stack bl-stack-tight">
+          <div class="bp-stack bp-stack-tight">
             {favorites.songs.length > 0 && (
               <div>
-                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Songs</p>}
-                <div class="bl-song-list">
+                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Songs</p>}
+                <div class="bp-song-list">
                   {favorites.songs.map((song) => (
-                    <div class="bl-song-row">
-                      <a href={`/songs/${song.slug}`} class="bl-song-row-link">
-                        <div class="bl-song-row-main">
-                          <p class="bl-song-title bl-m0">{song.title}</p>
+                    <div class="bp-song-row">
+                      <a href={`/songs/${song.slug}`} class="bp-song-row-link">
+                        <div class="bp-song-row-main">
+                          <p class="bp-song-title bp-m0">{song.title}</p>
                         </div>
                       </a>
                       <FavoriteToggle
@@ -107,15 +107,15 @@ function claimTakeTransition(takeId: string): string | null {
             )}
             {favorites.events.length > 0 && (
               <div>
-                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Events</p>}
-                <div class="bl-event-list">
+                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Events</p>}
+                <div class="bp-event-list">
                   {favorites.events.map((event) => (
-                    <div class={`bl-event-row bl-event-row--${event.kind}`}>
-                      <a href={`/events/${event.id}`} class="bl-event-row-link">
-                        <div class="bl-event-row-main">
-                          <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
-                          <p class="bl-event-row-venue bl-m0">
-                            <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+                    <div class={`bp-event-row bp-event-row--${event.kind}`}>
+                      <a href={`/events/${event.id}`} class="bp-event-row-link">
+                        <div class="bp-event-row-main">
+                          <p class="bp-event-row-date bp-m0">{formatLongDate(event.heldAt)}</p>
+                          <p class="bp-event-row-venue bp-m0">
+                            <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
                             {eventLabel(event) && ` ${eventLabel(event)}`}
                           </p>
                         </div>
@@ -133,8 +133,8 @@ function claimTakeTransition(takeId: string): string | null {
             )}
             {favorites.takes.length > 0 && (
               <div>
-                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Takes</p>}
-                <div class="bl-take-list bl-take-list--wide">
+                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Takes</p>}
+                <div class="bp-take-list bp-take-list--wide">
                   {favorites.takes.map((take) => (
                     <TakeRow
                       take={take}
@@ -155,32 +155,32 @@ function claimTakeTransition(takeId: string): string | null {
     </section>
 
     <section>
-      <h2 class="bl-section-title">Recent events</h2>
+      <h2 class="bp-section-title">Recent events</h2>
       {
         recentEvents.length === 0 ? (
-          <div class="bl-empty-state">
+          <div class="bp-empty-state">
             <p>
               No events yet. Ask whoever's running the session to log the next rehearsal or show —
               it'll show up here as soon as they do.
             </p>
           </div>
         ) : (
-          <div class="bl-stack">
+          <div class="bp-stack">
             {recentEvents.map(({ event, eventFavorited, takes }) => (
-              <div class="bl-home-event-group">
-                <div class={`bl-event-row bl-event-row--${event.kind}`}>
-                  <a href={`/events/${event.id}`} class="bl-event-row-link">
-                    <div class="bl-event-row-main">
-                      <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
-                      <p class="bl-event-row-venue bl-m0">
-                        <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+              <div class="bp-home-event-group">
+                <div class={`bp-event-row bp-event-row--${event.kind}`}>
+                  <a href={`/events/${event.id}`} class="bp-event-row-link">
+                    <div class="bp-event-row-main">
+                      <p class="bp-event-row-date bp-m0">{formatLongDate(event.heldAt)}</p>
+                      <p class="bp-event-row-venue bp-m0">
+                        <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
                         {eventLabel(event) && ` ${eventLabel(event)}`}
-                        <span class="bl-event-row-count">
+                        <span class="bp-event-row-count">
                           {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
                         </span>
                       </p>
                     </div>
-                    <div class="bl-event-row-stats">
+                    <div class="bp-event-row-stats">
                       {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
                     </div>
                   </a>
@@ -192,7 +192,7 @@ function claimTakeTransition(takeId: string): string | null {
                   />
                 </div>
                 {takes.length > 0 && (
-                  <div class="bl-take-list bl-take-list--wide">
+                  <div class="bp-take-list bp-take-list--wide">
                     {takes.map((take) => (
                       <TakeRow
                         take={take}
@@ -214,17 +214,17 @@ function claimTakeTransition(takeId: string): string | null {
     </section>
 
     <section>
-      <h2 class="bl-section-title">Needs your vote</h2>
+      <h2 class="bp-section-title">Needs your vote</h2>
       {
         unvotedTakes.length === 0 ? (
-          <div class="bl-empty-state">
+          <div class="bp-empty-state">
             <p>
               <strong>You're all caught up.</strong> Every published take has your vote — check back
               once the band records something new.
             </p>
           </div>
         ) : (
-          <div class="bl-take-list bl-take-list--wide" data-unvoted-list>
+          <div class="bp-take-list bp-take-list--wide" data-unvoted-list>
             {unvotedTakes.map((take) => (
               <TakeRow
                 take={take}

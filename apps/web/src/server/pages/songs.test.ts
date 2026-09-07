@@ -1,6 +1,6 @@
-import type { Db } from "@bandlib/db";
-import { assetsRepo, eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
+import type { Db } from "@bandplate/db";
+import { assetsRepo, eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSongDetail, listSongsForLibrary, parseSongsListQuery } from "./songs.js";
 

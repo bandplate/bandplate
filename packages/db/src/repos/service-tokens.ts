@@ -1,4 +1,4 @@
-import { uuidv7 } from "@bandlib/core";
+import { uuidv7 } from "@bandplate/core";
 import { eq } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { serviceTokens } from "../schema/sqlite/index.js";
@@ -15,7 +15,7 @@ export interface CreateServiceTokenInput {
 /**
  * Inserts a service token row and returns it (id generated here, same
  * client-generated-id shape as every other repo's `create`). The caller
- * (the auth service) builds the raw `blk_{id}_{secret}` token string using
+ * (the auth service) builds the raw `bpk_{id}_{secret}` token string using
  * `row.id` from the returned row — the id only needs to exist before the
  * insert commits, not before it's called.
  */

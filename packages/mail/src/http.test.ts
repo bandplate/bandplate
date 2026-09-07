@@ -13,7 +13,7 @@ describe("http-api mailer", () => {
     const mailer = createHttpMailer({
       provider: "resend",
       apiKey: "re_test_key",
-      from: "bandlib@example.com",
+      from: "bandplate@example.com",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
@@ -27,7 +27,7 @@ describe("http-api mailer", () => {
     expect(url).toBe("https://api.resend.com/emails");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer re_test_key");
     const body = JSON.parse(init.body as string);
-    expect(body.from).toBe("bandlib@example.com");
+    expect(body.from).toBe("bandplate@example.com");
     expect(body.to).toEqual(["alex@example.com"]);
     expect(body.html).toContain("Alex");
     expect(body.html).toContain("https://band.example/login/abc");
@@ -38,7 +38,7 @@ describe("http-api mailer", () => {
     const mailer = createHttpMailer({
       provider: "postmark",
       apiKey: "pm_test_token",
-      from: "bandlib@example.com",
+      from: "bandplate@example.com",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
@@ -51,7 +51,7 @@ describe("http-api mailer", () => {
     );
     const body = JSON.parse(init.body as string);
     expect(body.To).toBe("alex@example.com");
-    expect(body.From).toBe("bandlib@example.com");
+    expect(body.From).toBe("bandplate@example.com");
   });
 
   it("respects a custom baseUrl override, for pointing tests at a fake server", async () => {
@@ -59,7 +59,7 @@ describe("http-api mailer", () => {
     const mailer = createHttpMailer({
       provider: "resend",
       apiKey: "k",
-      from: "bandlib@example.com",
+      from: "bandplate@example.com",
       baseUrl: "http://localhost:9000/fake-resend",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
@@ -75,7 +75,7 @@ describe("http-api mailer", () => {
     const mailer = createHttpMailer({
       provider: "resend",
       apiKey: "k",
-      from: "bandlib@example.com",
+      from: "bandplate@example.com",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
@@ -89,7 +89,7 @@ describe("http-api mailer", () => {
     const mailer = createHttpMailer({
       provider: "resend",
       apiKey: "k",
-      from: "bandlib@example.com",
+      from: "bandplate@example.com",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 

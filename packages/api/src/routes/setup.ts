@@ -1,6 +1,6 @@
-import type { AuthDeps } from "@bandlib/core";
-import { bootstrapAdmin } from "@bandlib/core";
-import { type Db, membersRepo } from "@bandlib/db";
+import type { AuthDeps } from "@bandplate/core";
+import { bootstrapAdmin } from "@bandplate/core";
+import { type Db, membersRepo } from "@bandplate/db";
 import { z } from "zod";
 import { setSessionCookie } from "../cookies.js";
 import { errorResponse } from "../errors.js";

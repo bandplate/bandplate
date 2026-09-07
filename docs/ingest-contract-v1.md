@@ -1,11 +1,11 @@
-# bandlib ingest API — contract v1
+# bandplate ingest API — contract v1
 
 **Status: frozen for parallel development.** This document is the interface
 between two independently built projects:
 
-- **bandlib** (this repo) — implements the server side in increment 6.
-- **the Reaper bridge** (separate repo) — renders takes locally and pushes them
-  here.
+- **bandplate** (this repo) — implements the server side in increment 6.
+- **the Reaper bridge**, `bandplate/reapertoire` (separate repo) — renders takes
+  locally and pushes them here.
 
 Either side may be built first. Where this document and an implementation
 disagree, this document wins until it is deliberately revised. Revisions bump the
@@ -24,7 +24,7 @@ requests, so a typed client can be generated rather than hand-written.
 - Cutting the rehearsal recording into takes (Reaper regions).
 - Rendering: one lossy master mix per take, optionally one lossy stem per
   instrument, optionally a lossless master.
-- Mapping messy Reaper track names (`BASS DI 2`, `OH L/R`) onto bandlib
+- Mapping messy Reaper track names (`BASS DI 2`, `OH L/R`) onto bandplate
   instrument slugs. **The server will not guess this** — see §6.
 - Computing waveform peaks (cheap where the raw audio already is; expensive in a
   browser) — see §5.
@@ -46,10 +46,10 @@ the server hands it. It never needs storage credentials.
 All ingest endpoints require a **service token**:
 
 ```
-Authorization: Bearer blk_{tokenId}_{secret}
+Authorization: Bearer bpk_{tokenId}_{secret}
 ```
 
-Tokens are issued from the bandlib admin UI (`/admin/tokens`), carry an explicit
+Tokens are issued from the bandplate admin UI (`/admin/tokens`), carry an explicit
 scope set, and are revocable. The secret is shown **once** at creation and is
 stored only as a hash — if it is lost, issue a new token.
 
@@ -293,7 +293,7 @@ suffix (`(take 3)`, `[take 12]`, `- take 2`).
 ## 7. Instrument vocabulary
 
 `instruments` and each stem's `instrument` are **slugs from the server's
-vocabulary**, which an admin manages in the bandlib UI.
+vocabulary**, which an admin manages in the bandplate UI.
 
 `GET /api/ingest/v1/instruments` returns the live list — use it to build the
 bridge's mapping UI rather than hardcoding.
@@ -301,7 +301,7 @@ bridge's mapping UI rather than hardcoding.
 An unknown slug is rejected with `422` listing the valid ones. This is deliberate:
 Reaper track names are messy, and letting `BASS DI 2` silently become a new
 instrument would corrupt the filter vocabulary within one rehearsal. Ship a
-user-editable mapping file (Reaper track name → bandlib slug) in the bridge.
+user-editable mapping file (Reaper track name → bandplate slug) in the bridge.
 
 ---
 

@@ -19,7 +19,7 @@
 // (see task-4-report.md "Fix round 1"): booting the built server with an
 // empty environment prints "Server listening" and stays up indefinitely;
 // the first `GET /login` against it then 500s with
-// `ConfigError: Invalid configuration: BANDLIB_DATABASE_URL Required`.
+// `ConfigError: Invalid configuration: BANDPLATE_DATABASE_URL Required`.
 //
 // THIS FILE IS NOT THE PRODUCTION ENTRY POINT — `dist/start.mjs` is. Round
 // 1 shipped this as `tsx scripts/start.ts`, run straight from TypeScript
@@ -43,9 +43,9 @@ try {
   loadConfig();
 } catch (err) {
   if (err instanceof ConfigError) {
-    console.error(`bandlib refused to start: ${err.message}`);
+    console.error(`bandplate refused to start: ${err.message}`);
   } else {
-    console.error("bandlib refused to start: unexpected error validating configuration.");
+    console.error("bandplate refused to start: unexpected error validating configuration.");
     console.error(err);
   }
   process.exit(1);

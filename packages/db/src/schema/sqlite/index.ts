@@ -1,4 +1,4 @@
-// Drizzle SQLite schema — single source of truth for the bandlib data
+// Drizzle SQLite schema — single source of truth for the bandplate data
 // model. Runtime-agnostic (no node:* imports); runs on both libSQL
 // (container) and D1 (Workers, increment 7).
 import { sql } from "drizzle-orm";

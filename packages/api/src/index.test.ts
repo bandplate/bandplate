@@ -1,7 +1,7 @@
-import { createInMemoryRateLimiter } from "@bandlib/core";
-import type { Db } from "@bandlib/db";
-import { createCapturingMailer } from "@bandlib/mail";
-import { createInMemoryStorage } from "@bandlib/storage/testing";
+import { createInMemoryRateLimiter } from "@bandplate/core";
+import type { Db } from "@bandplate/db";
+import { createCapturingMailer } from "@bandplate/mail";
+import { createInMemoryStorage } from "@bandplate/storage/testing";
 import { describe, expect, it } from "vitest";
 import { buildRoutedApp } from "./index.js";
 import {

@@ -2,7 +2,7 @@
 // The event archive — rehearsals and concerts together, newest first,
 // filterable by kind. The kind filter is a plain GET form (checkboxes),
 // same JS-off approach as /songs.
-import { favoritesRepo } from "@bandlib/db";
+import { favoritesRepo } from "@bandplate/db";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -29,15 +29,15 @@ const KIND_OPTIONS = [
 ---
 
 <AppLayout title="Events" principal={principal} current="events">
-  <div class="bl-stack">
-    <h1 class="bl-page-title">Events</h1>
+  <div class="bp-stack">
+    <h1 class="bp-page-title">Events</h1>
 
-    <form method="get" class="bl-toolbar">
-      <fieldset class="bl-checkbox-group">
+    <form method="get" class="bp-toolbar">
+      <fieldset class="bp-checkbox-group">
         <legend>Kind</legend>
         {
           KIND_OPTIONS.map((option) => (
-            <span class="bl-checkbox-item">
+            <span class="bp-checkbox-item">
               <input
                 type="checkbox"
                 id={`kind-${option.value}`}
@@ -50,10 +50,10 @@ const KIND_OPTIONS = [
           ))
         }
       </fieldset>
-      <div class="bl-toolbar-actions">
-        <button type="submit" class="bl-btn bl-btn-primary">Apply</button>
+      <div class="bp-toolbar-actions">
+        <button type="submit" class="bp-btn bp-btn-primary">Apply</button>
         {kindFilter.length > 0 && (
-          <a href="/events" class="bl-btn bl-btn-secondary">
+          <a href="/events" class="bp-btn bp-btn-secondary">
             Clear
           </a>
         )}
@@ -62,7 +62,7 @@ const KIND_OPTIONS = [
 
     {
       events.length === 0 ? (
-        <div class="bl-empty-state">
+        <div class="bp-empty-state">
           <p>
             {kindFilter.length > 0
               ? "Nothing of that kind yet — try clearing the filter."
@@ -70,21 +70,21 @@ const KIND_OPTIONS = [
           </p>
         </div>
       ) : (
-        <div class="bl-event-list">
+        <div class="bp-event-list">
           {events.map((event) => (
-            <div class={`bl-event-row bl-event-row--${event.kind}`}>
-              <a href={`/events/${event.id}`} class="bl-event-row-link">
-                <div class="bl-event-row-main">
-                  <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
-                  <p class="bl-event-row-venue bl-m0">
-                    <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+            <div class={`bp-event-row bp-event-row--${event.kind}`}>
+              <a href={`/events/${event.id}`} class="bp-event-row-link">
+                <div class="bp-event-row-main">
+                  <p class="bp-event-row-date bp-m0">{formatLongDate(event.heldAt)}</p>
+                  <p class="bp-event-row-venue bp-m0">
+                    <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
                     {eventLabel(event) && ` ${eventLabel(event)}`}
-                    <span class="bl-event-row-count">
+                    <span class="bp-event-row-count">
                       {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
                     </span>
                   </p>
                 </div>
-                <div class="bl-event-row-stats">
+                <div class="bp-event-row-stats">
                   {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
                 </div>
               </a>

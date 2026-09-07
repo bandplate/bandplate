@@ -1,11 +1,11 @@
 // Principal resolution — step 1 of the middleware chain (see the brief:
 // "1. Principal resolution", before origin check, before scope checks).
-// `Authorization: Bearer blk_...` resolves a service principal;
-// `bl_session` resolves a member principal; neither leaves the caller
+// `Authorization: Bearer bpk_...` resolves a service principal;
+// `bp_session` resolves a member principal; neither leaves the caller
 // anonymous. When both are present, the bearer wins and the cookie is
 // ignored entirely — never both.
-import type { AuthDeps } from "@bandlib/core";
-import { resolveServiceToken, resolveSession } from "@bandlib/core";
+import type { AuthDeps } from "@bandplate/core";
+import { resolveServiceToken, resolveSession } from "@bandplate/core";
 import type { MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
 import { SESSION_COOKIE_NAME } from "../cookies.js";

@@ -5,7 +5,7 @@
 // the same database connection and rate-limiter state rather than each
 // building their own.
 //
-// The SMTP mailer (`@bandlib/mail/smtp`, the only Node-dependent module
+// The SMTP mailer (`@bandplate/mail/smtp`, the only Node-dependent module
 // outside this composition root) is loaded via a dynamic `import()` inside
 // `buildMailer`, not a static top-level import — so a bundler targeting a
 // runtime without SMTP configured never has to include nodemailer just
@@ -14,7 +14,7 @@
 //
 // The Workers profile's composition root is a SEPARATE file,
 // `app.workers.ts` — not a branch in this one — specifically so its
-// module graph never reaches this file's `import("@bandlib/mail/smtp")`
+// module graph never reaches this file's `import("@bandplate/mail/smtp")`
 // at all; see that file's doc comment for why sharing this file would
 // have put nodemailer (and its `node:*` imports) into the deployed
 // Worker bundle even though the branch is runtime-unreachable there.
@@ -22,24 +22,29 @@
 // per build — every caller (`middleware.ts`, every Astro page,
 // `pages/api/[...path].ts`) imports the same `../.../server/app.js`
 // specifier unchanged.
-import { type AppDeps, createApp } from "@bandlib/api";
-import { type AuthDeps, type Mailer, createInMemoryRateLimiter, systemClock } from "@bandlib/core";
-import { createDb } from "@bandlib/db";
-import { createDevMailer } from "@bandlib/mail";
-import { createS3Storage } from "@bandlib/storage";
+import { type AppDeps, createApp } from "@bandplate/api";
+import {
+  type AuthDeps,
+  type Mailer,
+  createInMemoryRateLimiter,
+  systemClock,
+} from "@bandplate/core";
+import { createDb } from "@bandplate/db";
+import { createDevMailer } from "@bandplate/mail";
+import { createS3Storage } from "@bandplate/storage";
 import { createClient } from "@libsql/client";
 import { type RuntimeConfig, loadConfig } from "./config.js";
 
 // `ReturnType<typeof createApp>` rather than importing Hono's own `Hono`
 // type directly — `hono` is only a transitive dependency here (declared by
-// `@bandlib/api`), and apps/web doesn't otherwise need to know its types.
+// `@bandplate/api`), and apps/web doesn't otherwise need to know its types.
 type ApiApp = ReturnType<typeof createApp>;
 
 async function buildMailer(config: RuntimeConfig): Promise<Mailer> {
   if (config.smtp) {
     // Dynamic import: only reached when SMTP is actually configured, and
     // only evaluated the first time this branch runs.
-    const { createSmtpMailer } = await import("@bandlib/mail/smtp");
+    const { createSmtpMailer } = await import("@bandplate/mail/smtp");
     return createSmtpMailer(config.smtp);
   }
   // `loadConfig` already refuses to produce a config with neither SMTP nor
@@ -126,7 +131,7 @@ export async function getAppDeps(): Promise<AppDeps> {
 
 /**
  * The shared `AuthDeps` — used by Astro page handlers that call
- * `@bandlib/core`'s auth services directly (the same functions the JSON API
+ * `@bandplate/core`'s auth services directly (the same functions the JSON API
  * calls), rather than round-tripping through HTTP for their own
  * server-rendered, no-JS-friendly forms.
  */

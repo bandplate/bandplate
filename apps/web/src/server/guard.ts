@@ -1,12 +1,12 @@
 // Page-route guard decisions — pure functions so they're testable without
 // booting Astro. Reuses `hasAllScopes` (the one authorization check, per
-// `@bandlib/core`) rather than branching on `principal.role` — a member
+// `@bandplate/core`) rather than branching on `principal.role` — a member
 // principal simply doesn't carry the `members:admin` scope, so this is the
 // same check the `/admin/*` API routes already make, applied one layer up
 // (before rendering) so the page itself doesn't fetch anything the member
 // isn't allowed to see.
-import type { Principal } from "@bandlib/core";
-import { hasAllScopes } from "@bandlib/core";
+import type { Principal } from "@bandplate/core";
+import { hasAllScopes } from "@bandplate/core";
 
 export type GuardDecision =
   | { kind: "allow" }
@@ -57,7 +57,7 @@ export function guardAdminPath(pathname: string, principal: Principal | undefine
 // The member-facing browsing surface — the song library and event archive
 // (Task 5), and everything else a signed-in member reaches. Unlike
 // `/admin/*`, there is no extra scope check beyond "signed in":
-// `scopesForRole` (in `@bandlib/core`) grants every member `songs:read` and
+// `scopesForRole` (in `@bandplate/core`) grants every member `songs:read` and
 // `events:read` regardless of role, and a principal resolved from the
 // session cookie is always a `MemberPrincipal` (never a `ServicePrincipal` —
 // those only ever come from a bearer token), so `hasAllScopes` here would

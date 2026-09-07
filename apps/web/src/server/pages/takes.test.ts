@@ -1,6 +1,6 @@
 // `/takes/[id]` composition logic — the song, event, instruments, assets,
 // and derived lossless flag, exercised against a real test database.
-import type { Db } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
 import {
   assetsRepo,
   eventsRepo,
@@ -9,8 +9,8 @@ import {
   membersRepo,
   songsRepo,
   takesRepo,
-} from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
+} from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getTakeDetail } from "./takes.js";
 

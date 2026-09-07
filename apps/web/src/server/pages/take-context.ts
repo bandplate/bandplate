@@ -8,8 +8,8 @@
 // Same batching shape as `server/pages/songs.ts#getSongDetail` and
 // `server/pages/events.ts#getEventDetail`: one query per kind of data
 // (songs, events, instruments), never one round trip per take.
-import { type Db, assetsRepo } from "@bandlib/db";
-import { eventsRepo, type instrumentsRepo, songsRepo, takesRepo, votesRepo } from "@bandlib/db";
+import { type Db, assetsRepo } from "@bandplate/db";
+import { eventsRepo, type instrumentsRepo, songsRepo, takesRepo, votesRepo } from "@bandplate/db";
 
 export interface TakeWithFullContext extends takesRepo.Take {
   instruments: instrumentsRepo.Instrument[];

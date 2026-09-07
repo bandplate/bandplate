@@ -2,11 +2,11 @@
 // mailer, fake advanceable clock, in-memory rate limiter, in-memory
 // storage) for `app.request()` tests. Not part of the runtime library
 // surface.
-import { type Clock, type Storage, createInMemoryRateLimiter } from "@bandlib/core";
-import { type Db, createD1Db } from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
-import { type CapturingMailer, createCapturingMailer } from "@bandlib/mail";
-import { createInMemoryStorage } from "@bandlib/storage/testing";
+import { type Clock, type Storage, createInMemoryRateLimiter } from "@bandplate/core";
+import { type Db, createD1Db } from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
+import { type CapturingMailer, createCapturingMailer } from "@bandplate/mail";
+import { createInMemoryStorage } from "@bandplate/storage/testing";
 import type { Hono } from "hono";
 import { type AppConfig, buildRoutedApp } from "./index.js";
 import type { GuardedRouter } from "./route-registry.js";
@@ -55,7 +55,7 @@ export const TEST_BOOTSTRAP_TOKEN = "test-bootstrap-token";
  * `@cloudflare/vitest-pool-workers` pool), false under plain Node/Vitest.
  * A handful of tests use this to skip a specific assertion that's
  * impossible to satisfy under Workers for a structural reason, not a bug:
- * `InMemoryStorage` (`@bandlib/storage/testing`) proves out presigned URLs
+ * `InMemoryStorage` (`@bandplate/storage/testing`) proves out presigned URLs
  * by actually starting a `node:http` server and fetching against it — and
  * a Cloudflare Worker cannot bind a listening socket at all (Workers are
  * request-driven; there is no "accept an inbound TCP connection" API).
@@ -152,7 +152,7 @@ export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<
   // would make every presigned URL this test app hands out already
   // expired by the time a test fetches it. Quantisation/expiry semantics
   // themselves are already covered thoroughly by
-  // `@bandlib/storage`'s own conformance suite; this just needs a
+  // `@bandplate/storage`'s own conformance suite; this just needs a
   // working default.
   const storageHandle = createLazyInMemoryStorage();
   const config: AppConfig = {
@@ -166,7 +166,7 @@ export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<
   // (see `AppDeps.sleep`) — tests inject a no-op `sleep` so HTTP-level
   // login tests stay fast. The clamp's actual behavior (that both branches
   // request at least the floor) is unit-tested directly against
-  // `requestLogin` in `@bandlib/core`, with a `sleep` fake that records
+  // `requestLogin` in `@bandplate/core`, with a `sleep` fake that records
   // the requested duration.
   const { app, router } = buildRoutedApp({
     db,
@@ -202,14 +202,14 @@ export function extractLoginToken(mailer: CapturingMailer): string {
   return token;
 }
 
-/** Extract the `bl_session=...` cookie value from a Set-Cookie header. */
+/** Extract the `bp_session=...` cookie value from a Set-Cookie header. */
 export function extractSessionCookieValue(setCookieHeader: string | null): string {
   if (!setCookieHeader) {
     throw new Error("no Set-Cookie header present");
   }
-  const match = setCookieHeader.match(/bl_session=([^;]+)/);
+  const match = setCookieHeader.match(/bp_session=([^;]+)/);
   if (!match?.[1]) {
-    throw new Error(`no bl_session cookie found in: ${setCookieHeader}`);
+    throw new Error(`no bp_session cookie found in: ${setCookieHeader}`);
   }
   return match[1];
 }

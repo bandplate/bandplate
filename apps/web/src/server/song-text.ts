@@ -19,7 +19,7 @@
 // lyrics, blank lines intact) via `buildSongChart`'s `"raw"` result — see
 // there for why a re-run of the labeled/paired logic on unrecognized text
 // is actively worse, not just unhelpful.
-import { stripDiacritics } from "@bandlib/core";
+import { stripDiacritics } from "@bandplate/core";
 
 // Words that mean ONLY "section of a song" — safe to trust as a label the
 // moment they appear alone on a line, no corroboration needed.

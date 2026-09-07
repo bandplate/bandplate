@@ -1,12 +1,12 @@
-import type { AuthDeps } from "@bandlib/core";
+import type { AuthDeps } from "@bandplate/core";
 import {
   createMemberSchema,
   patchMemberSchema,
   revokeAllSessionsForMember,
   slugify,
   updateMemberWithGuards,
-} from "@bandlib/core";
-import { type Db, membersRepo } from "@bandlib/db";
+} from "@bandplate/core";
+import { type Db, membersRepo } from "@bandplate/db";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";
 

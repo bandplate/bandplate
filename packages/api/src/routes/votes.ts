@@ -4,15 +4,15 @@
 // itself does NOT call this route — its no-JS-first forms and the
 // `VoteFavorite` island both post to apps/web's own Astro page handler
 // (`apps/web/src/pages/takes/[id]/vote.astro`), which calls
-// `@bandlib/db`'s `votesRepo.castVote` directly, the same way
+// `@bandplate/db`'s `votesRepo.castVote` directly, the same way
 // `admin-instruments.ts`'s Astro page mirrors (rather than calls through
 // HTTP to) `packages/api/src/routes/admin-instruments.ts`. This route
 // exists so the same mutation is reachable — with the same authorization
 // rule — from a service token or any future non-browser client, and so
 // "every mutation is scope-gated through GuardedRouter" holds for votes
 // the same way it already does for every other write in this package.
-import type { Clock } from "@bandlib/core";
-import { type Db, takesRepo, votesRepo } from "@bandlib/db";
+import type { Clock } from "@bandplate/core";
+import { type Db, takesRepo, votesRepo } from "@bandplate/db";
 import { z } from "zod";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";

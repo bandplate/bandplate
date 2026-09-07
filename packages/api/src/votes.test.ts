@@ -5,8 +5,8 @@
 // it), a disabled member losing their session (and so their principal)
 // before this route ever runs, and a service token being rejected even
 // when it happens to hold `votes:write`.
-import { createServiceToken } from "@bandlib/core";
-import { eventsRepo, membersRepo, songsRepo, takesRepo, votesRepo } from "@bandlib/db";
+import { createServiceToken } from "@bandplate/core";
+import { eventsRepo, membersRepo, songsRepo, takesRepo, votesRepo } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
   TEST_APP_ORIGIN,
@@ -78,7 +78,7 @@ describe("POST /votes", () => {
 
     const res = await testApp.app.request("/votes", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ takeId, keeper: true }),
     });
 
@@ -122,7 +122,7 @@ describe("POST /votes", () => {
     // vote actually landed as, not just that the request succeeded.
     const res = await testApp.app.request("/votes", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookieB}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookieB}` },
       body: JSON.stringify({ takeId, keeper: true, memberId: memberAId }),
     });
     expect(res.status).toBe(200);
@@ -145,7 +145,7 @@ describe("POST /votes", () => {
 
     const res = await testApp.app.request("/votes", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ takeId, keeper: true }),
     });
 
@@ -197,7 +197,7 @@ describe("POST /votes", () => {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        cookie: `bl_session=${cookie}`,
+        cookie: `bp_session=${cookie}`,
         origin: "https://evil.example",
       },
       body: JSON.stringify({ takeId, keeper: true }),
@@ -215,7 +215,7 @@ describe("POST /votes", () => {
 
     const res = await testApp.app.request("/votes", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ takeId: "not-a-real-take-id", keeper: true }),
     });
 
@@ -232,12 +232,12 @@ describe("POST /votes", () => {
 
     await testApp.app.request("/votes", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ takeId, keeper: true }),
     });
     const second = await testApp.app.request("/votes", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ takeId, keeper: false }),
     });
 

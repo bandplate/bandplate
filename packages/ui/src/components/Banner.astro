@@ -1,6 +1,6 @@
 ---
 // Banner primitive — success/error/info callout. Text always inherits
-// `--bl-color-fg` (set by `.bl-banner`, never an accent color); the accent
+// `--bp-color-fg` (set by `.bp-banner`, never an accent color); the accent
 // only tints the border and background wash. See components.css's file
 // header for the contrast rationale.
 export interface Props {
@@ -14,8 +14,8 @@ const icon = kind === "success" ? "✓" : kind === "error" ? "!" : "i";
 const role = kind === "error" ? "alert" : "status";
 ---
 
-<div class={`bl-banner bl-banner-${kind}`} role={role}>
-  <span class="bl-banner-icon" aria-hidden="true">{icon}</span>
+<div class={`bp-banner bp-banner-${kind}`} role={role}>
+  <span class="bp-banner-icon" aria-hidden="true">{icon}</span>
   <div>
     {title && <strong>{title}</strong>}
     <div><slot /></div>

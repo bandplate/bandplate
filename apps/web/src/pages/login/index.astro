@@ -3,8 +3,8 @@
 // confirmation regardless of whether the address is registered (see
 // `handleLoginPost`/`requestLogin`), so this page has no branch that could
 // leak membership.
-import Banner from "@bandlib/ui/components/Banner.astro";
-import Field from "@bandlib/ui/components/Field.astro";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import Layout from "../../layouts/Layout.astro";
 import { getAppDeps, getAuthDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
@@ -22,7 +22,7 @@ if (Astro.request.method === "POST") {
     // Workers profile only: `Astro.locals.runtime.ctx.waitUntil` schedules
     // the login-link send after the response is already decided, so the
     // mailer's latency never reaches the request/response timing — see
-    // `requestLogin`'s `deferMailSend` doc comment in `@bandlib/core`.
+    // `requestLogin`'s `deferMailSend` doc comment in `@bandplate/core`.
     // `undefined` under the Node adapter (no `locals.runtime`), which
     // makes `handleLoginPost` fall back to its unchanged inline-await
     // behavior there.
@@ -43,8 +43,8 @@ if (Astro.request.method === "POST") {
 ---
 
 <Layout title="Sign in">
-  <main id="main" class="bl-container bl-auth-main">
-    <h1 class="bl-auth-title">bandlib</h1>
+  <main id="main" class="bp-container bp-auth-main">
+    <h1 class="bp-auth-title">bandplate</h1>
 
     {originError && (
       <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
@@ -64,9 +64,9 @@ if (Astro.request.method === "POST") {
 
     {(!result || result.kind === "invalid") && (
       <form method="post" novalidate>
-        {/* mt-0 only — NOT bl-m0 (margin: 0 on both sides). The Task 4
+        {/* mt-0 only — NOT bp-m0 (margin: 0 on both sides). The Task 4
         inline-style-to-class cleanup replaced `style="margin-top: 0"` with
-        `bl-m0`, silently also zeroing the bottom margin the original inline
+        `bp-m0`, silently also zeroing the bottom margin the original inline
         style left alone — a behaviour change smuggled into a mechanical
         cleanup. This restores the original, narrower intent. */}
         <p class="mt-0">Enter your email and we'll send you a link to sign in.</p>
@@ -79,7 +79,7 @@ if (Astro.request.method === "POST") {
           inputmode="email"
           error={result?.kind === "invalid" ? result.error : undefined}
         />
-        <button type="submit" class="bl-btn bl-btn-primary">Send me a link</button>
+        <button type="submit" class="bp-btn bp-btn-primary">Send me a link</button>
       </form>
     )}
   </main>

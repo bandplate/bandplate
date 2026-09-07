@@ -13,7 +13,7 @@ function postRequest(originHeader?: string): Request {
   if (originHeader !== undefined) {
     headers.origin = originHeader;
   }
-  return new Request("https://bandlib.example/admin/members", {
+  return new Request("https://bandplate.example/admin/members", {
     method: "POST",
     headers,
   });
@@ -21,30 +21,30 @@ function postRequest(originHeader?: string): Request {
 
 describe("isSameOrigin", () => {
   it("is true when the Origin header matches the configured app origin exactly", () => {
-    expect(isSameOrigin(postRequest("https://bandlib.example"), "https://bandlib.example")).toBe(
-      true,
-    );
+    expect(
+      isSameOrigin(postRequest("https://bandplate.example"), "https://bandplate.example"),
+    ).toBe(true);
   });
 
   it("is false when the Origin header names a different origin", () => {
-    expect(isSameOrigin(postRequest("https://evil.example"), "https://bandlib.example")).toBe(
+    expect(isSameOrigin(postRequest("https://evil.example"), "https://bandplate.example")).toBe(
       false,
     );
   });
 
   it("is false when the Origin header is missing entirely", () => {
-    expect(isSameOrigin(postRequest(undefined), "https://bandlib.example")).toBe(false);
+    expect(isSameOrigin(postRequest(undefined), "https://bandplate.example")).toBe(false);
   });
 
   it("is false for a same-host mismatch on scheme (http vs https)", () => {
-    expect(isSameOrigin(postRequest("http://bandlib.example"), "https://bandlib.example")).toBe(
+    expect(isSameOrigin(postRequest("http://bandplate.example"), "https://bandplate.example")).toBe(
       false,
     );
   });
 
   it("is false for a same-host mismatch on port", () => {
     expect(
-      isSameOrigin(postRequest("https://bandlib.example:8443"), "https://bandlib.example"),
+      isSameOrigin(postRequest("https://bandplate.example:8443"), "https://bandplate.example"),
     ).toBe(false);
   });
 });

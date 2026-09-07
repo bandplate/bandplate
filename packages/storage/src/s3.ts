@@ -1,5 +1,5 @@
 // S3Storage — the one `Storage` implementation (see the port's doc comment
-// in `@bandlib/core` for why there is deliberately only one). Built on
+// in `@bandplate/core` for why there is deliberately only one). Built on
 // `aws4fetch`: pure Web Crypto + `fetch`, nothing Node-specific, so this
 // same class runs unmodified under the container profile (against MinIO)
 // today and under a future Workers profile (against R2's S3-compatible
@@ -11,8 +11,8 @@ import type {
   SignedUploadUrlOptions,
   Storage,
   StoredObject,
-} from "@bandlib/core";
-import { systemClock } from "@bandlib/core";
+} from "@bandplate/core";
+import { systemClock } from "@bandplate/core";
 import { AwsClient } from "aws4fetch";
 import { QUANTISE_BUCKET_MS, quantiseToHourBucket } from "./quantise.js";
 

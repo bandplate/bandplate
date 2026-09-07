@@ -1,7 +1,7 @@
-import { type AuthDeps, systemClock } from "@bandlib/core";
-import { instrumentsRepo } from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
-import { createNullMailer } from "@bandlib/mail";
+import { type AuthDeps, systemClock } from "@bandplate/core";
+import { instrumentsRepo } from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
+import { createNullMailer } from "@bandplate/mail";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   createMember,

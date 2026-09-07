@@ -1,5 +1,5 @@
 {
-  "name": "@bandlib/db",
+  "name": "@bandplate/db",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,12 +18,12 @@
     "dev:upload-audio": "tsx scripts/dev-upload-audio.ts"
   },
   "dependencies": {
-    "@bandlib/core": "workspace:*",
+    "@bandplate/core": "workspace:*",
     "@libsql/client": "0.14.0",
     "drizzle-orm": "0.38.4"
   },
   "devDependencies": {
-    "@bandlib/storage": "workspace:*",
+    "@bandplate/storage": "workspace:*",
     "@cloudflare/workers-types": "^5.20260907.1",
     "drizzle-kit": "0.30.6",
     "esbuild": "^0.24.0",

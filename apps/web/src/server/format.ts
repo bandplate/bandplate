@@ -1,5 +1,5 @@
 // Formatting helpers shared by the admin pages. Timestamps render in
-// JetBrains Mono (technical data, per the brief) via the `bl-mono` class
+// JetBrains Mono (technical data, per the brief) via the `bp-mono` class
 // wherever these are used — not decoration on ordinary labels.
 const formatter = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",

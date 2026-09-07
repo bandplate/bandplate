@@ -1,6 +1,6 @@
 ---
-import Banner from "@bandlib/ui/components/Banner.astro";
-import Field from "@bandlib/ui/components/Field.astro";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
@@ -58,11 +58,11 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
   {justArchived && <Banner kind="success">Instrument archived. Its past takes still render fine.</Banner>}
   {formError && <Banner kind="error">{formError}</Banner>}
 
-  <section class="bl-card">
-    <h2 class="bl-section-title">Add an instrument</h2>
+  <section class="bp-card">
+    <h2 class="bp-section-title">Add an instrument</h2>
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
-      <div class="bl-form-grid">
+      <div class="bp-form-grid">
         <Field
           label="Slug"
           name="slug"
@@ -78,21 +78,21 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
           error={createErrorField === "label" ? createError : undefined}
         />
       </div>
-      <button type="submit" class="bl-btn bl-btn-primary">Add instrument</button>
+      <button type="submit" class="bp-btn bp-btn-primary">Add instrument</button>
     </form>
   </section>
 
   <section>
     <h2>Instruments</h2>
-    <p class="bl-field-hint">
+    <p class="bp-field-hint">
       Archiving an instrument hides it from new takes but keeps every past take that used it
       rendering correctly.
     </p>
     {instruments.length === 0 ? (
       <p>No instruments yet — add the first one above.</p>
     ) : (
-      <div class="bl-table-wrap">
-        <table class="bl-table">
+      <div class="bp-table-wrap">
+        <table class="bp-table">
           <thead>
             <tr>
               <th scope="col">Label</th>
@@ -106,14 +106,14 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
             {instruments.map((instrument) => (
               <tr>
                 <td data-label="Label">
-                  <form method="post" class="bl-inline-form">
+                  <form method="post" class="bp-inline-form">
                     <input type="hidden" name="intent" value="update" />
                     <input type="hidden" name="instrumentId" value={instrument.id} />
                     <label class="sr-only" for={`label-${instrument.id}`}>
                       Label for {instrument.slug}
                     </label>
                     <input
-                      class="bl-input bl-input-inline-label"
+                      class="bp-input bp-input-inline-label"
                       id={`label-${instrument.id}`}
                       name="label"
                       value={instrument.label}
@@ -122,29 +122,29 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                       Sort order for {instrument.slug}
                     </label>
                     <input
-                      class="bl-input bl-input-inline-number"
+                      class="bp-input bp-input-inline-number"
                       id={`order-${instrument.id}`}
                       name="sortOrder"
                       type="number"
                       value={instrument.sortOrder}
                     />
-                    <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
+                    <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save</button>
                   </form>
                 </td>
-                <td data-label="Slug" class="bl-mono">{instrument.slug}</td>
-                <td data-label="Order" class="bl-mono">{instrument.sortOrder}</td>
+                <td data-label="Slug" class="bp-mono">{instrument.slug}</td>
+                <td data-label="Order" class="bp-mono">{instrument.sortOrder}</td>
                 <td data-label="Status">
-                  <span class="bl-badge">{instrument.archivedAt ? "archived" : "active"}</span>
+                  <span class="bp-badge">{instrument.archivedAt ? "archived" : "active"}</span>
                 </td>
                 <td data-label="Actions">
                   {instrument.archivedAt ? (
                     <form method="post" action={`/admin/instruments/${instrument.id}/archive?unarchive=1`}>
-                      <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Unarchive</button>
+                      <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Unarchive</button>
                     </form>
                   ) : (
                     <a
                       href={`/admin/instruments/${instrument.id}/archive`}
-                      class="bl-btn bl-btn-danger bl-btn-sm"
+                      class="bp-btn bp-btn-danger bp-btn-sm"
                       data-confirm
                       data-confirm-title={`Archive ${instrument.label}?`}
                       data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}

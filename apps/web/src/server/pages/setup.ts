@@ -1,10 +1,10 @@
 // `/setup` page logic — bootstraps the first admin. The page itself 404s
 // once any member exists (checked by the page directly via `membersRepo`,
 // same as the API's `GET /setup`); this module only handles the POST.
-import type { AuthDeps } from "@bandlib/core";
-import { bootstrapAdmin } from "@bandlib/core";
-import type { Db } from "@bandlib/db";
-import { membersRepo } from "@bandlib/db";
+import type { AuthDeps } from "@bandplate/core";
+import { bootstrapAdmin } from "@bandplate/core";
+import type { Db } from "@bandplate/db";
+import { membersRepo } from "@bandplate/db";
 import { z } from "zod";
 
 export async function isBootstrapAvailable(db: Db): Promise<boolean> {

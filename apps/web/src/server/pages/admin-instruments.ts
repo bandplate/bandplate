@@ -2,8 +2,8 @@
 // `packages/api/src/routes/admin-instruments.ts`. Instruments are archived,
 // never deleted, so historical takes keep rendering an instrument the band
 // has dropped (see the schema comment in `packages/db`).
-import type { Db } from "@bandlib/db";
-import { instrumentsRepo } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
+import { instrumentsRepo } from "@bandplate/db";
 import { z } from "zod";
 
 type Instrument = instrumentsRepo.Instrument;

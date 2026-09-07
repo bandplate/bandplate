@@ -26,7 +26,7 @@ import { resolvePrincipalFromCookie } from "./server/principal.js";
 
 const FORBIDDEN_HTML = `<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>Forbidden — bandlib</title>
+<head><meta charset="utf-8"><title>Forbidden — bandplate</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4efe2; color: #2f0c02; margin: 0; padding: 2.5rem 1.5rem; }
   @media (prefers-color-scheme: dark) { body { background: #2f0c02; color: #f4efe2; } a { color: #f4efe2; } }
@@ -37,8 +37,8 @@ const FORBIDDEN_HTML = `<!doctype html>
 <body>
   <main>
     <h1>You don't have access to this page</h1>
-    <p>Admin sections need an admin account. If you think this is wrong, ask whoever administers your bandlib for admin access.</p>
-    <p><a href="/">Back to bandlib</a></p>
+    <p>Admin sections need an admin account. If you think this is wrong, ask whoever administers your bandplate for admin access.</p>
+    <p><a href="/">Back to bandplate</a></p>
   </main>
 </body>
 </html>`;
@@ -51,7 +51,7 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**
  * `/api/*` is excluded: it's a single catch-all (`pages/api/[...path].ts`)
- * that delegates to `@bandlib/api`'s own Hono app, which runs its own
+ * that delegates to `@bandplate/api`'s own Hono app, which runs its own
  * `originCheckMiddleware` — and that one additionally exempts
  * service-token (bearer) requests, which this cookie-only check can't
  * evaluate (it never looks at `Authorization`). Re-checking here would

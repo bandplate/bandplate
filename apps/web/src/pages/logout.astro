@@ -1,7 +1,7 @@
 ---
 // POST-only sign-out. A direct GET (e.g. a bookmarked URL) just bounces
 // home rather than doing anything.
-import { revokeSession } from "@bandlib/core";
+import { revokeSession } from "@bandplate/core";
 import { getAppDeps, getAuthDeps } from "../server/app.js";
 import { SESSION_COOKIE_NAME, clearSessionCookie } from "../server/cookies.js";
 import { isSameOrigin } from "../server/csrf.js";

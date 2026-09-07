@@ -1,7 +1,7 @@
 // Dev-only mailer: logs instead of sending. Never construct this directly —
 // go through `createDevMailer` in `factory.ts`, which refuses it unless the
 // caller explicitly opts into a dev-unsafe mailer.
-import type { Mailer, SendLoginLinkOptions } from "@bandlib/core";
+import type { Mailer, SendLoginLinkOptions } from "@bandplate/core";
 
 export function createConsoleMailer(): Mailer {
   return {

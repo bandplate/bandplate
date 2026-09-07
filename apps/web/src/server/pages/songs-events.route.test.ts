@@ -18,7 +18,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { generateToken, hashToken } from "@bandlib/core";
+import { generateToken, hashToken } from "@bandplate/core";
 import {
   createDb,
   eventsRepo,
@@ -27,7 +27,7 @@ import {
   membersRepo,
   songsRepo,
   takesRepo,
-} from "@bandlib/db";
+} from "@bandplate/db";
 import { createClient } from "@libsql/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -66,9 +66,9 @@ async function waitForServer(url: string, timeoutMs: number): Promise<void> {
 }
 
 async function seedAndGetSessionCookie(): Promise<string> {
-  await execFileAsync("pnpm", ["--filter", "@bandlib/db", "run", "migrate"], {
+  await execFileAsync("pnpm", ["--filter", "@bandplate/db", "run", "migrate"], {
     cwd: REPO_ROOT,
-    env: { ...process.env, BANDLIB_DATABASE_URL: `file:${dbPath}` },
+    env: { ...process.env, BANDPLATE_DATABASE_URL: `file:${dbPath}` },
   });
 
   const client = createClient({ url: `file:${dbPath}` });
@@ -167,11 +167,11 @@ function startBuiltServer(): ChildProcess {
       ...process.env,
       PORT: String(PORT),
       HOST: "127.0.0.1",
-      BANDLIB_DATABASE_URL: `file:${dbPath}`,
-      BANDLIB_BOOTSTRAP_TOKEN: "route-test-bootstrap-token",
-      BANDLIB_APP_ORIGIN: ORIGIN,
-      BANDLIB_ALLOW_DEV_MAILER: "true",
-      BANDLIB_COOKIE_SECURE: "false",
+      BANDPLATE_DATABASE_URL: `file:${dbPath}`,
+      BANDPLATE_BOOTSTRAP_TOKEN: "route-test-bootstrap-token",
+      BANDPLATE_APP_ORIGIN: ORIGIN,
+      BANDPLATE_ALLOW_DEV_MAILER: "true",
+      BANDPLATE_COOKIE_SECURE: "false",
       // Dummy S3 config — none of these route tests exercise the audio
       // endpoint, so this never needs to actually reach a bucket. It only
       // has to be PRESENT (config validation requires it) and internally
@@ -190,7 +190,7 @@ function startBuiltServer(): ChildProcess {
 
 describe("member browsing routes over real HTTP", () => {
   beforeAll(async () => {
-    dbDir = await mkdtemp(join(tmpdir(), "bandlib-songs-events-route-"));
+    dbDir = await mkdtemp(join(tmpdir(), "bandplate-songs-events-route-"));
     dbPath = join(dbDir, "db.sqlite");
 
     await buildApp();

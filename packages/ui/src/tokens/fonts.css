@@ -4,7 +4,7 @@
  */
 
 :root {
-  --bl-font-display: "Coda Caption", "Arial Black", Impact, sans-serif;
-  --bl-font-body: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --bl-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bp-font-display: "Coda Caption", "Arial Black", Impact, sans-serif;
+  --bp-font-body: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bp-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }

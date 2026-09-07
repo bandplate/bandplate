@@ -1,6 +1,6 @@
-import { favoritesRepo, membersRepo, songsRepo } from "@bandlib/db";
-import type { Db } from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
+import { favoritesRepo, membersRepo, songsRepo } from "@bandplate/db";
+import type { Db } from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { toggleFavoriteFromForm } from "./favorites.js";
 

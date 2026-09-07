@@ -3,13 +3,13 @@
 // the `[token].astro` page's frontmatter calls for GET and POST
 // respectively (see that file) — this is "the page level" in the sense the
 // brief means it: the actual functions the page runs, not a re-test of
-// `@bandlib/core`'s own (already covered in packages/core) unit tests, and
+// `@bandplate/core`'s own (already covered in packages/core) unit tests, and
 // not only the JSON API's HTTP-level test
 // (packages/api/src/auth.test.ts's "GET /auth/login/:token" suite).
-import { type AuthDeps, generateToken, hashToken, systemClock } from "@bandlib/core";
-import { loginTokensRepo, membersRepo } from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
-import { createNullMailer } from "@bandlib/mail";
+import { type AuthDeps, generateToken, hashToken, systemClock } from "@bandplate/core";
+import { loginTokensRepo, membersRepo } from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
+import { createNullMailer } from "@bandplate/mail";
 import { beforeEach, describe, expect, it } from "vitest";
 import { consume, peekView } from "./login-token.js";
 

@@ -2,8 +2,8 @@
 // `votes.test.ts`'s coverage: scope gating, a forged `memberId` being
 // structurally impossible, a disabled member's session already gone, and a
 // service token rejected regardless of scope.
-import { createServiceToken } from "@bandlib/core";
-import { favoritesRepo, membersRepo, songsRepo } from "@bandlib/db";
+import { createServiceToken } from "@bandplate/core";
+import { favoritesRepo, membersRepo, songsRepo } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
   TEST_APP_ORIGIN,
@@ -62,7 +62,7 @@ describe("POST /favorites", () => {
 
     const first = await testApp.app.request("/favorites", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ targetType: "song", targetId: songId }),
     });
     expect(first.status).toBe(200);
@@ -71,7 +71,7 @@ describe("POST /favorites", () => {
 
     const second = await testApp.app.request("/favorites", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ targetType: "song", targetId: songId }),
     });
     expect(second.status).toBe(200);
@@ -106,7 +106,7 @@ describe("POST /favorites", () => {
 
     const res = await testApp.app.request("/favorites", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookieB}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookieB}` },
       body: JSON.stringify({ targetType: "song", targetId: songId, memberId: memberAId }),
     });
     expect(res.status).toBe(200);
@@ -127,7 +127,7 @@ describe("POST /favorites", () => {
 
     const res = await testApp.app.request("/favorites", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ targetType: "song", targetId: songId }),
     });
 
@@ -187,7 +187,7 @@ describe("POST /favorites", () => {
 
     const res = await testApp.app.request("/favorites", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ targetType: "song", targetId: "not-a-real-song-id" }),
     });
 
@@ -206,7 +206,7 @@ describe("POST /favorites", () => {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        cookie: `bl_session=${cookie}`,
+        cookie: `bp_session=${cookie}`,
         origin: "https://evil.example",
       },
       body: JSON.stringify({ targetType: "song", targetId: songId }),

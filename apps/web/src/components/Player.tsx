@@ -222,12 +222,12 @@ export default function Player() {
     return () => document.removeEventListener("astro:page-load", onPageLoad);
   }, []);
 
-  // Keeps `--bl-player-height` (declared on `.bl-shell`, consumed by
-  // `.bl-shell-main`'s reserved bottom padding — see components.css) equal
+  // Keeps `--bp-player-height` (declared on `.bp-shell`, consumed by
+  // `.bp-shell-main`'s reserved bottom padding — see components.css) equal
   // to this bar's REAL rendered height, rather than a hand-copied number
   // that can silently drift out of sync with it (exactly what happened
   // before: a declared 76px vs. a measured 109px, occluding the bottom of
-  // every page at >=1024px). `.bl-shell` itself is replaced on every
+  // every page at >=1024px). `.bp-shell` itself is replaced on every
   // ClientRouter navigation (this island is the one thing that persists —
   // see the header comment), so it's re-queried fresh each time rather
   // than cached in a ref. Skipped while the player is `[hidden]` (no track
@@ -243,8 +243,8 @@ export default function Player() {
       if (height <= 0) {
         return;
       }
-      const shell = document.querySelector<HTMLElement>(".bl-shell");
-      shell?.style.setProperty("--bl-player-height", `${height}px`);
+      const shell = document.querySelector<HTMLElement>(".bp-shell");
+      shell?.style.setProperty("--bp-player-height", `${height}px`);
     };
     const observer = new ResizeObserver(applyHeight);
     observer.observe(playerEl);
@@ -264,16 +264,16 @@ export default function Player() {
         : "";
 
   return (
-    <div class="bl-player" hidden={!track} data-testid="bl-player" ref={playerRef}>
+    <div class="bp-player" hidden={!track} data-testid="bp-player" ref={playerRef}>
       {/* Track-change-only announcements — never touched by a timeupdate
           handler (there isn't one), which is what keeps this from
           spamming a screen reader on every second of playback. */}
       <p class="sr-only" aria-live="polite">
         {announced}
       </p>
-      <div class="bl-player-meta">
-        <span class="bl-player-title">{track?.title ?? ""}</span>
-        <span class="bl-player-subtitle">
+      <div class="bp-player-meta">
+        <span class="bp-player-title">{track?.title ?? ""}</span>
+        <span class="bp-player-subtitle">
           {track
             ? [track.subtitle, track.sourceLabel !== "Master" ? track.sourceLabel : null]
                 .filter(Boolean)
@@ -290,7 +290,7 @@ export default function Player() {
           the brief — only the surrounding chrome's visibility toggles via
           the `hidden` attribute above. */}
       {/* biome-ignore lint/a11y/useMediaCaption: a captions track has no meaningful content for a band's own instrumental/vocal recordings — there's no dialogue to transcribe */}
-      <audio ref={audioRef} controls preload="none" class="bl-player-audio" />
+      <audio ref={audioRef} controls preload="none" class="bp-player-audio" />
     </div>
   );
 }

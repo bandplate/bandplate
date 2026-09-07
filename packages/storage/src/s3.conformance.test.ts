@@ -55,8 +55,8 @@ function parseSignedExpiryEpochSeconds(url: string): number {
   return parseAmzDateToEpochSeconds(amzDate) + Number(amzExpires);
 }
 
-const CONTAINER_NAME = "bandlib-storage-conformance-test-minio";
-const BUCKET = "bandlib-test";
+const CONTAINER_NAME = "bandplate-storage-conformance-test-minio";
+const BUCKET = "bandplate-test";
 const ACCESS_KEY_ID = "minioadmin";
 const SECRET_ACCESS_KEY = "minioadmin12345";
 const REGION = "us-east-1";
@@ -178,7 +178,7 @@ if (!hasDocker) {
       throw new Error(
         "Docker is not available in this environment: the S3Storage/MinIO conformance suite " +
           "could not run. This is a real gap in verification, not a pass — install/start Docker " +
-          "and re-run `pnpm --filter @bandlib/storage test`.",
+          "and re-run `pnpm --filter @bandplate/storage test`.",
       );
     });
   });

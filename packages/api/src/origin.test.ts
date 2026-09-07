@@ -1,4 +1,4 @@
-import { createServiceToken } from "@bandlib/core";
+import { createServiceToken } from "@bandplate/core";
 import { describe, expect, it } from "vitest";
 import { TEST_APP_ORIGIN, buildTestApp } from "./test-helpers.js";
 

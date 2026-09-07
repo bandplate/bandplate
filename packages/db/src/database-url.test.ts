@@ -4,14 +4,14 @@ import { type DatabaseUrlEnv, resolveDatabaseUrl } from "./database-url.js";
 describe("resolveDatabaseUrl", () => {
   const cases: Array<{ name: string; env: DatabaseUrlEnv; expected: string }> = [
     {
-      name: "prefers BANDLIB_DATABASE_URL when both are set",
-      env: { BANDLIB_DATABASE_URL: "file:./bandlib.db", DATABASE_URL: "file:./bare.db" },
-      expected: "file:./bandlib.db",
+      name: "prefers BANDPLATE_DATABASE_URL when both are set",
+      env: { BANDPLATE_DATABASE_URL: "file:./bandplate.db", DATABASE_URL: "file:./bare.db" },
+      expected: "file:./bandplate.db",
     },
     {
-      name: "uses BANDLIB_DATABASE_URL alone",
-      env: { BANDLIB_DATABASE_URL: "file:./bandlib.db" },
-      expected: "file:./bandlib.db",
+      name: "uses BANDPLATE_DATABASE_URL alone",
+      env: { BANDPLATE_DATABASE_URL: "file:./bandplate.db" },
+      expected: "file:./bandplate.db",
     },
     {
       name: "falls back to the bare DATABASE_URL",
@@ -19,8 +19,8 @@ describe("resolveDatabaseUrl", () => {
       expected: "file:./bare.db",
     },
     {
-      name: "falls back to DATABASE_URL when BANDLIB_DATABASE_URL is an empty string",
-      env: { BANDLIB_DATABASE_URL: "", DATABASE_URL: "file:./bare.db" },
+      name: "falls back to DATABASE_URL when BANDPLATE_DATABASE_URL is an empty string",
+      env: { BANDPLATE_DATABASE_URL: "", DATABASE_URL: "file:./bare.db" },
       expected: "file:./bare.db",
     },
   ];
@@ -33,13 +33,13 @@ describe("resolveDatabaseUrl", () => {
     { name: "neither variable set", env: {} },
     {
       name: "both explicitly undefined",
-      env: { BANDLIB_DATABASE_URL: undefined, DATABASE_URL: undefined },
+      env: { BANDPLATE_DATABASE_URL: undefined, DATABASE_URL: undefined },
     },
-    { name: "both empty strings", env: { BANDLIB_DATABASE_URL: "", DATABASE_URL: "" } },
+    { name: "both empty strings", env: { BANDPLATE_DATABASE_URL: "", DATABASE_URL: "" } },
   ];
 
   it.each(missingCases)("throws, naming both env vars, when $name", ({ env }) => {
-    expect(() => resolveDatabaseUrl(env)).toThrow(/BANDLIB_DATABASE_URL.*DATABASE_URL/);
+    expect(() => resolveDatabaseUrl(env)).toThrow(/BANDPLATE_DATABASE_URL.*DATABASE_URL/);
   });
 
   it("includes the caller-supplied action in the error message", () => {

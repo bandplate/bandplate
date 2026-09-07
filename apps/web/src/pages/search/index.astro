@@ -10,12 +10,12 @@
 // Layout: a filter panel BESIDE the results on desktop, a collapsed
 // `<details>` above them on phones (brief §4, "as /songs does") — reusing
 // `/songs`'s exact `<details>`-collapse-plus-force-open-past-lg mechanism
-// (`.bl-toolbar-details`, see components.css), generalized here to wrap
+// (`.bp-toolbar-details`, see components.css), generalized here to wrap
 // every filter fieldset (not just one instrument checkbox group) inside a
-// single `.bl-search-filters-body` child, so the same one CSS override
+// single `.bp-search-filters-body` child, so the same one CSS override
 // that already forces that one child visible past `lg` covers the whole
 // filter set instead of needing a rule per fieldset.
-import { instrumentsRepo } from "@bandlib/db";
+import { instrumentsRepo } from "@bandplate/db";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -66,20 +66,20 @@ const resultsLabel = truncated
 ---
 
 <AppLayout title="Search" principal={principal} current="search">
-  <div class="bl-stack">
-    <h1 class="bl-page-title">Search</h1>
+  <div class="bp-stack">
+    <h1 class="bp-page-title">Search</h1>
 
-    <form method="get" class="bl-search-layout">
-      <details class="bl-toolbar-details bl-search-filters" open={filtersApplied}>
-        <summary class="bl-toolbar-details-summary">
+    <form method="get" class="bp-search-layout">
+      <details class="bp-toolbar-details bp-search-filters" open={filtersApplied}>
+        <summary class="bp-toolbar-details-summary">
           Filters
           {filtersApplied && " (applied)"}
         </summary>
-        <div class="bl-search-filters-body bl-stack">
-          <div class="bl-field">
-            <label class="bl-field-label" for="search-q">Song title or alias</label>
+        <div class="bp-search-filters-body bp-stack">
+          <div class="bp-field">
+            <label class="bp-field-label" for="search-q">Song title or alias</label>
             <input
-              class="bl-input"
+              class="bp-input"
               type="search"
               id="search-q"
               name="q"
@@ -88,16 +88,16 @@ const resultsLabel = truncated
             />
           </div>
 
-          <fieldset class="bl-checkbox-group">
+          <fieldset class="bp-checkbox-group">
             <legend>
               Instruments
               {query.instrumentIds.length > 1 && (
-                <span class="bl-field-hint">— must have a take with all of these</span>
+                <span class="bp-field-hint">— must have a take with all of these</span>
               )}
             </legend>
             {
               instruments.map((instrument) => (
-                <span class="bl-checkbox-item">
+                <span class="bp-checkbox-item">
                   <input
                     type="checkbox"
                     id={`search-instrument-${instrument.id}`}
@@ -111,21 +111,21 @@ const resultsLabel = truncated
             }
           </fieldset>
 
-          <div class="bl-form-grid">
-            <div class="bl-field">
-              <label class="bl-field-label" for="search-date-from">Recorded from</label>
+          <div class="bp-form-grid">
+            <div class="bp-field">
+              <label class="bp-field-label" for="search-date-from">Recorded from</label>
               <input
-                class="bl-input"
+                class="bp-input"
                 type="date"
                 id="search-date-from"
                 name="dateFrom"
                 value={query.dateFrom ?? ""}
               />
             </div>
-            <div class="bl-field">
-              <label class="bl-field-label" for="search-date-to">Recorded to</label>
+            <div class="bp-field">
+              <label class="bp-field-label" for="search-date-to">Recorded to</label>
               <input
-                class="bl-input"
+                class="bp-input"
                 type="date"
                 id="search-date-to"
                 name="dateTo"
@@ -134,9 +134,9 @@ const resultsLabel = truncated
             </div>
           </div>
 
-          <div class="bl-field">
-            <label class="bl-field-label" for="search-sort">Sort by</label>
-            <select class="bl-select" id="search-sort" name="sort">
+          <div class="bp-field">
+            <label class="bp-field-label" for="search-sort">Sort by</label>
+            <select class="bp-select" id="search-sort" name="sort">
               <option value="recent" selected={query.sort === "recent"}>Most recent</option>
               <option value="rating" selected={query.sort === "rating"}>
                 Most keeper votes
@@ -144,9 +144,9 @@ const resultsLabel = truncated
             </select>
           </div>
 
-          <div class="bl-field">
-            <label class="bl-field-label" for="search-rating">Minimum rating</label>
-            <select class="bl-select" id="search-rating" name="rating">
+          <div class="bp-field">
+            <label class="bp-field-label" for="search-rating">Minimum rating</label>
+            <select class="bp-select" id="search-rating" name="rating">
               <option value="" selected={!query.rating}>Any rating</option>
               {
                 RATING_OPTIONS.map((option) => (
@@ -158,11 +158,11 @@ const resultsLabel = truncated
             </select>
           </div>
 
-          <fieldset class="bl-checkbox-group">
+          <fieldset class="bp-checkbox-group">
             <legend>State</legend>
             {
               STATE_OPTIONS.map((option) => (
-                <span class="bl-checkbox-item">
+                <span class="bp-checkbox-item">
                   <input
                     type="checkbox"
                     id={`search-state-${option.value}`}
@@ -176,10 +176,10 @@ const resultsLabel = truncated
             }
           </fieldset>
 
-          <div class="bl-toolbar-actions">
-            <button type="submit" class="bl-btn bl-btn-primary">Search</button>
+          <div class="bp-toolbar-actions">
+            <button type="submit" class="bp-btn bp-btn-primary">Search</button>
             {filtersApplied && (
-              <a href="/search" class="bl-btn bl-btn-secondary">
+              <a href="/search" class="bp-btn bp-btn-secondary">
                 Clear
               </a>
             )}
@@ -187,18 +187,18 @@ const resultsLabel = truncated
         </div>
       </details>
 
-      <div class="bl-search-results">
-        <p class="bl-field-hint bl-m0">{resultsLabel}</p>
+      <div class="bp-search-results">
+        <p class="bp-field-hint bp-m0">{resultsLabel}</p>
         {
           truncated && (
-            <p class="bl-field-hint bl-m0">
+            <p class="bp-field-hint bp-m0">
               Showing the first {results.length} matches — narrow your filters to see the rest.
             </p>
           )
         }
         {
           results.length === 0 ? (
-            <div class="bl-empty-state">
+            <div class="bp-empty-state">
               <p>
                 {filtersApplied
                   ? "No takes match those filters — try clearing one."
@@ -206,7 +206,7 @@ const resultsLabel = truncated
               </p>
             </div>
           ) : (
-            <div class="bl-take-list bl-take-list--wide">
+            <div class="bp-take-list bp-take-list--wide">
               {results.map((take) => (
                 <TakeRow
                   take={take}

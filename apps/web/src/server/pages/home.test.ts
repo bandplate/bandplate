@@ -2,7 +2,7 @@
 // events with their takes, needs-your-vote), exercised against a real test
 // database (not over HTTP — `home-search-me-takes.route.test.ts` covers
 // the actual route). Same split as `songs.test.ts`/`events.test.ts`.
-import type { Db } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
 import {
   assetsRepo,
   eventsRepo,
@@ -11,8 +11,8 @@ import {
   membersRepo,
   songsRepo,
   takesRepo,
-} from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
+} from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getHomeData } from "./home.js";
 

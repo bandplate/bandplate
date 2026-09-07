@@ -1,6 +1,6 @@
 ---
-import "@bandlib/ui/tokens/theme.css";
-import "@bandlib/ui/tokens/components.css";
+import "@bandplate/ui/tokens/theme.css";
+import "@bandplate/ui/tokens/components.css";
 
 export interface Props {
   title: string;
@@ -15,7 +15,7 @@ const { title, noindex = false } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title} — bandlib</title>
+    <title>{title} — bandplate</title>
     {noindex && <meta name="robots" content="noindex" />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,8 +24,8 @@ const { title, noindex = false } = Astro.props;
       href="https://fonts.googleapis.com/css2?family=Coda+Caption:wght@800&family=Familjen+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     />
   </head>
-  <body class="bg-bl-bg text-bl-fg font-bl-body">
-    <a href="#main" class="bl-skip-link">Skip to content</a>
+  <body class="bg-bp-bg text-bp-fg font-bp-body">
+    <a href="#main" class="bp-skip-link">Skip to content</a>
     <slot />
   </body>
 </html>

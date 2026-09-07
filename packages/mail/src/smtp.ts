@@ -2,15 +2,15 @@
 // in the whole `packages/core`/`packages/db`/`packages/api`/`packages/mail`
 // surface) allowed to touch Node built-ins, via nodemailer.
 //
-// This lives at its own subpath export (`@bandlib/mail/smtp`), separate
-// from the package barrel (`@bandlib/mail`, `./index.ts`). `./index.ts`
+// This lives at its own subpath export (`@bandplate/mail/smtp`), separate
+// from the package barrel (`@bandplate/mail`, `./index.ts`). `./index.ts`
 // never imports this file, in either direction, so importing the barrel
 // from Workers-bound code can never pull nodemailer or `node:*` into the
 // bundle. Callers who need real SMTP (the Node container profile) import
 // this subpath directly and pass the resulting `Mailer` into `AppDeps`
 // themselves — there is no generic factory that can reach this module,
 // by design (see `factory.ts`).
-import type { Mailer } from "@bandlib/core";
+import type { Mailer } from "@bandplate/core";
 import nodemailer from "nodemailer";
 
 export interface SmtpConfig {
@@ -59,7 +59,7 @@ export function createSmtpMailer(config: SmtpConfig): Mailer {
       await transport.sendMail({
         from: config.from,
         to,
-        subject: "Your bandlib login link",
+        subject: "Your bandplate login link",
         text: `${greeting}Use this link to sign in:\n${url}\n${expiresLine}`,
         html: `<p>${safeGreeting}Use this link to sign in: <a href="${safeUrl}">${safeUrl}</a>${safeExpiresLine}</p>`,
       });

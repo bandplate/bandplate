@@ -9,16 +9,16 @@ import { ConfigError, loadConfig, resetConfigForTesting } from "./config.js";
 const S3_ENV = {
   S3_ENDPOINT: "http://minio:9000",
   S3_PUBLIC_ENDPOINT: "http://localhost:9000",
-  S3_BUCKET: "bandlib-test",
+  S3_BUCKET: "bandplate-test",
   S3_REGION: "auto",
   S3_ACCESS_KEY_ID: "test-access-key",
   S3_SECRET_ACCESS_KEY: "test-secret-key",
 };
 
 const BASE_ENV = {
-  BANDLIB_DATABASE_URL: "file:./test.db",
-  BANDLIB_BOOTSTRAP_TOKEN: "test-token",
-  BANDLIB_ALLOW_DEV_MAILER: "true",
+  BANDPLATE_DATABASE_URL: "file:./test.db",
+  BANDPLATE_BOOTSTRAP_TOKEN: "test-token",
+  BANDPLATE_ALLOW_DEV_MAILER: "true",
   ...S3_ENV,
 };
 
@@ -27,81 +27,81 @@ beforeEach(() => {
 });
 
 describe("loadConfig", () => {
-  it("fails, naming BANDLIB_DATABASE_URL, when it is missing", () => {
+  it("fails, naming BANDPLATE_DATABASE_URL, when it is missing", () => {
     const env = { ...BASE_ENV };
     // biome-ignore lint/performance/noDelete: test-only env manipulation
-    delete (env as Record<string, string | undefined>).BANDLIB_DATABASE_URL;
+    delete (env as Record<string, string | undefined>).BANDPLATE_DATABASE_URL;
     expect(() => loadConfig(env)).toThrow(ConfigError);
-    expect(() => loadConfig(env)).toThrow(/BANDLIB_DATABASE_URL/);
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_DATABASE_URL/);
   });
 
-  it("fails, naming BANDLIB_BOOTSTRAP_TOKEN, when it is missing", () => {
+  it("fails, naming BANDPLATE_BOOTSTRAP_TOKEN, when it is missing", () => {
     const env = { ...BASE_ENV };
     // biome-ignore lint/performance/noDelete: test-only env manipulation
-    delete (env as Record<string, string | undefined>).BANDLIB_BOOTSTRAP_TOKEN;
-    expect(() => loadConfig(env)).toThrow(/BANDLIB_BOOTSTRAP_TOKEN/);
+    delete (env as Record<string, string | undefined>).BANDPLATE_BOOTSTRAP_TOKEN;
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_BOOTSTRAP_TOKEN/);
   });
 
-  it("fails, naming BANDLIB_APP_ORIGIN, when running in production without it set", () => {
+  it("fails, naming BANDPLATE_APP_ORIGIN, when running in production without it set", () => {
     const env = { ...BASE_ENV, NODE_ENV: "production" };
-    expect(() => loadConfig(env)).toThrow(/BANDLIB_APP_ORIGIN/);
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_APP_ORIGIN/);
   });
 
-  it("defaults BANDLIB_APP_ORIGIN to localhost outside production", () => {
+  it("defaults BANDPLATE_APP_ORIGIN to localhost outside production", () => {
     const config = loadConfig({ ...BASE_ENV });
     expect(config.appOrigin).toBe("http://localhost:4321");
   });
 
-  it("accepts an explicit BANDLIB_APP_ORIGIN in production", () => {
-    // NOT `...BASE_ENV` here — it carries BANDLIB_ALLOW_DEV_MAILER=true,
+  it("accepts an explicit BANDPLATE_APP_ORIGIN in production", () => {
+    // NOT `...BASE_ENV` here — it carries BANDPLATE_ALLOW_DEV_MAILER=true,
     // which is now itself rejected once NODE_ENV=production (see the
-    // BANDLIB_ALLOW_DEV_MAILER tests below). A real SMTP config isolates
+    // BANDPLATE_ALLOW_DEV_MAILER tests below). A real SMTP config isolates
     // this test to the one thing it's actually checking: the app origin.
     const config = loadConfig({
-      BANDLIB_DATABASE_URL: "file:./test.db",
-      BANDLIB_BOOTSTRAP_TOKEN: "test-token",
+      BANDPLATE_DATABASE_URL: "file:./test.db",
+      BANDPLATE_BOOTSTRAP_TOKEN: "test-token",
       NODE_ENV: "production",
-      BANDLIB_APP_ORIGIN: "https://bandlib.example",
-      BANDLIB_SMTP_HOST: "smtp.example.com",
-      BANDLIB_SMTP_PORT: "587",
-      BANDLIB_SMTP_FROM: "bandlib@example.com",
+      BANDPLATE_APP_ORIGIN: "https://bandplate.example",
+      BANDPLATE_SMTP_HOST: "smtp.example.com",
+      BANDPLATE_SMTP_PORT: "587",
+      BANDPLATE_SMTP_FROM: "bandplate@example.com",
       ...S3_ENV,
     });
-    expect(config.appOrigin).toBe("https://bandlib.example");
+    expect(config.appOrigin).toBe("https://bandplate.example");
   });
 
   it("fails when no mailer is configured (no SMTP, no dev-mailer opt-in)", () => {
     const env = { ...BASE_ENV };
     // biome-ignore lint/performance/noDelete: test-only env manipulation
-    delete (env as Record<string, string | undefined>).BANDLIB_ALLOW_DEV_MAILER;
+    delete (env as Record<string, string | undefined>).BANDPLATE_ALLOW_DEV_MAILER;
     expect(() => loadConfig(env)).toThrow(
-      /no way to deliver login links|BANDLIB_ALLOW_DEV_MAILER/i,
+      /no way to deliver login links|BANDPLATE_ALLOW_DEV_MAILER/i,
     );
   });
 
   it("fails, naming the missing field, when SMTP config is partially set", () => {
-    const env = { ...BASE_ENV, BANDLIB_SMTP_HOST: "smtp.example.com" };
+    const env = { ...BASE_ENV, BANDPLATE_SMTP_HOST: "smtp.example.com" };
     // biome-ignore lint/performance/noDelete: test-only env manipulation
-    delete (env as Record<string, string | undefined>).BANDLIB_ALLOW_DEV_MAILER;
-    expect(() => loadConfig(env)).toThrow(/BANDLIB_SMTP_PORT|BANDLIB_SMTP_FROM/);
+    delete (env as Record<string, string | undefined>).BANDPLATE_ALLOW_DEV_MAILER;
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_SMTP_PORT|BANDPLATE_SMTP_FROM/);
   });
 
   it("accepts a complete SMTP config and builds an SmtpConfig", () => {
     const config = loadConfig({
-      BANDLIB_DATABASE_URL: "file:./test.db",
-      BANDLIB_BOOTSTRAP_TOKEN: "test-token",
-      BANDLIB_SMTP_HOST: "smtp.example.com",
-      BANDLIB_SMTP_PORT: "587",
-      BANDLIB_SMTP_FROM: "bandlib@example.com",
-      BANDLIB_SMTP_USER: "user",
-      BANDLIB_SMTP_PASS: "pass",
+      BANDPLATE_DATABASE_URL: "file:./test.db",
+      BANDPLATE_BOOTSTRAP_TOKEN: "test-token",
+      BANDPLATE_SMTP_HOST: "smtp.example.com",
+      BANDPLATE_SMTP_PORT: "587",
+      BANDPLATE_SMTP_FROM: "bandplate@example.com",
+      BANDPLATE_SMTP_USER: "user",
+      BANDPLATE_SMTP_PASS: "pass",
       ...S3_ENV,
     });
     expect(config.smtp).toEqual({
       host: "smtp.example.com",
       port: 587,
       secure: false,
-      from: "bandlib@example.com",
+      from: "bandplate@example.com",
       auth: { user: "user", pass: "pass" },
     });
   });
@@ -112,63 +112,63 @@ describe("loadConfig", () => {
     expect(config.cookieSecure).toBe(true);
   });
 
-  it("honors BANDLIB_COOKIE_SECURE=false and a custom BANDLIB_TRUSTED_PROXY_DEPTH", () => {
+  it("honors BANDPLATE_COOKIE_SECURE=false and a custom BANDPLATE_TRUSTED_PROXY_DEPTH", () => {
     const config = loadConfig({
       ...BASE_ENV,
-      BANDLIB_COOKIE_SECURE: "false",
-      BANDLIB_TRUSTED_PROXY_DEPTH: "0",
+      BANDPLATE_COOKIE_SECURE: "false",
+      BANDPLATE_TRUSTED_PROXY_DEPTH: "0",
     });
     expect(config.cookieSecure).toBe(false);
     expect(config.trustedProxyDepth).toBe(0);
   });
 
-  it("fails when BANDLIB_ALLOW_DEV_MAILER=true and NODE_ENV=production", () => {
+  it("fails when BANDPLATE_ALLOW_DEV_MAILER=true and NODE_ENV=production", () => {
     const env = {
       ...BASE_ENV,
       NODE_ENV: "production",
-      BANDLIB_APP_ORIGIN: "https://bandlib.example",
-      BANDLIB_ALLOW_DEV_MAILER: "true",
+      BANDPLATE_APP_ORIGIN: "https://bandplate.example",
+      BANDPLATE_ALLOW_DEV_MAILER: "true",
     };
-    expect(() => loadConfig(env)).toThrow(/BANDLIB_ALLOW_DEV_MAILER/);
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_ALLOW_DEV_MAILER/);
   });
 
-  it("accepts BANDLIB_ALLOW_DEV_MAILER=true outside production", () => {
-    const config = loadConfig({ ...BASE_ENV, BANDLIB_ALLOW_DEV_MAILER: "true" });
+  it("accepts BANDPLATE_ALLOW_DEV_MAILER=true outside production", () => {
+    const config = loadConfig({ ...BASE_ENV, BANDPLATE_ALLOW_DEV_MAILER: "true" });
     expect(config.allowDevMailer).toBe(true);
   });
 
   it("still starts in production with a real SMTP config and no dev-mailer flag", () => {
     const config = loadConfig({
-      BANDLIB_DATABASE_URL: "file:./test.db",
-      BANDLIB_BOOTSTRAP_TOKEN: "test-token",
+      BANDPLATE_DATABASE_URL: "file:./test.db",
+      BANDPLATE_BOOTSTRAP_TOKEN: "test-token",
       NODE_ENV: "production",
-      BANDLIB_APP_ORIGIN: "https://bandlib.example",
-      BANDLIB_SMTP_HOST: "smtp.example.com",
-      BANDLIB_SMTP_PORT: "587",
-      BANDLIB_SMTP_FROM: "bandlib@example.com",
+      BANDPLATE_APP_ORIGIN: "https://bandplate.example",
+      BANDPLATE_SMTP_HOST: "smtp.example.com",
+      BANDPLATE_SMTP_PORT: "587",
+      BANDPLATE_SMTP_FROM: "bandplate@example.com",
       ...S3_ENV,
     });
     expect(config.isProduction).toBe(true);
     expect(config.allowDevMailer).toBe(false);
   });
 
-  it("rejects a BANDLIB_APP_ORIGIN with a trailing slash", () => {
-    const env = { ...BASE_ENV, BANDLIB_APP_ORIGIN: "https://bandlib.example/" };
-    expect(() => loadConfig(env)).toThrow(/BANDLIB_APP_ORIGIN/);
+  it("rejects a BANDPLATE_APP_ORIGIN with a trailing slash", () => {
+    const env = { ...BASE_ENV, BANDPLATE_APP_ORIGIN: "https://bandplate.example/" };
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_APP_ORIGIN/);
   });
 
-  it("rejects a BANDLIB_APP_ORIGIN with a path", () => {
-    const env = { ...BASE_ENV, BANDLIB_APP_ORIGIN: "https://bandlib.example/app" };
-    expect(() => loadConfig(env)).toThrow(/BANDLIB_APP_ORIGIN/);
+  it("rejects a BANDPLATE_APP_ORIGIN with a path", () => {
+    const env = { ...BASE_ENV, BANDPLATE_APP_ORIGIN: "https://bandplate.example/app" };
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_APP_ORIGIN/);
   });
 
-  it("rejects a BANDLIB_APP_ORIGIN that isn't a URL at all", () => {
-    const env = { ...BASE_ENV, BANDLIB_APP_ORIGIN: "not a url" };
-    expect(() => loadConfig(env)).toThrow(/BANDLIB_APP_ORIGIN/);
+  it("rejects a BANDPLATE_APP_ORIGIN that isn't a URL at all", () => {
+    const env = { ...BASE_ENV, BANDPLATE_APP_ORIGIN: "not a url" };
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_APP_ORIGIN/);
   });
 
-  it("accepts a bare BANDLIB_APP_ORIGIN with a port", () => {
-    const config = loadConfig({ ...BASE_ENV, BANDLIB_APP_ORIGIN: "http://localhost:5000" });
+  it("accepts a bare BANDPLATE_APP_ORIGIN with a port", () => {
+    const config = loadConfig({ ...BASE_ENV, BANDPLATE_APP_ORIGIN: "http://localhost:5000" });
     expect(config.appOrigin).toBe("http://localhost:5000");
   });
 
@@ -219,7 +219,7 @@ describe("loadConfig", () => {
     expect(config.s3).toEqual({
       endpoint: "http://minio:9000",
       publicEndpoint: "http://localhost:9000",
-      bucket: "bandlib-test",
+      bucket: "bandplate-test",
       region: "auto",
       accessKeyId: "test-access-key",
       secretAccessKey: "test-secret-key",
@@ -228,7 +228,7 @@ describe("loadConfig", () => {
 
   it("memoizes: a second call returns the same object without re-reading env", () => {
     const first = loadConfig({ ...BASE_ENV });
-    const second = loadConfig({ ...BASE_ENV, BANDLIB_DATABASE_URL: "file:./different.db" });
+    const second = loadConfig({ ...BASE_ENV, BANDPLATE_DATABASE_URL: "file:./different.db" });
     expect(second).toBe(first);
     expect(second.databaseUrl).toBe("file:./test.db");
   });

@@ -9,7 +9,7 @@
 // Pushing the rule down here, with both layers calling it, makes that kind
 // of divergence structurally impossible: there is exactly one place either
 // layer can get this rule from.
-import { type Db, membersRepo } from "@bandlib/db";
+import { type Db, membersRepo } from "@bandplate/db";
 import { z } from "zod";
 
 export const createMemberSchema = z.object({

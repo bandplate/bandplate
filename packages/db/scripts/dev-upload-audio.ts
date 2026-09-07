@@ -20,7 +20,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { createS3Storage } from "@bandlib/storage";
+import { createS3Storage } from "@bandplate/storage";
 import { createClient } from "@libsql/client";
 import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
 
   if (rows.length === 0) {
     console.log(
-      "dev-upload-audio: no ready master/stem asset rows found — run `pnpm --filter @bandlib/db " +
+      "dev-upload-audio: no ready master/stem asset rows found — run `pnpm --filter @bandplate/db " +
         "run seed` first.",
     );
     client.close();
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
 
   console.log(`Uploading real audio for ${rows.length} asset(s) to ${s3Env.bucket}...`);
 
-  const tmpDir = await mkdtemp(join(tmpdir(), "bandlib-dev-audio-"));
+  const tmpDir = await mkdtemp(join(tmpdir(), "bandplate-dev-audio-"));
   try {
     let uploaded = 0;
     for (const asset of rows) {

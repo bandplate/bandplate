@@ -1,5 +1,5 @@
 {
-  "name": "@bandlib/storage",
+  "name": "@bandplate/storage",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@bandlib/core": "workspace:*",
+    "@bandplate/core": "workspace:*",
     "aws4fetch": "^1.0.20"
   },
   "devDependencies": {

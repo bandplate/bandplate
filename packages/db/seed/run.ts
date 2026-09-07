@@ -4,7 +4,7 @@
 // only — a generic band lineup, not any real band's roster.
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { masterStorageKey, normalizeTitle, peaksStorageKey, stemStorageKey } from "@bandlib/core";
+import { masterStorageKey, normalizeTitle, peaksStorageKey, stemStorageKey } from "@bandplate/core";
 import { createClient } from "@libsql/client";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
@@ -51,7 +51,7 @@ function seededDurationMs(clientRef: string): number {
 
 async function main() {
   // Shares `scripts/migrate.ts`'s resolver (see `../src/database-url.ts`):
-  // `BANDLIB_DATABASE_URL` is the name the app itself uses, `DATABASE_URL`
+  // `BANDPLATE_DATABASE_URL` is the name the app itself uses, `DATABASE_URL`
   // is the bare fallback, and — critically — neither being set is now a
   // loud failure here too, not a silent default to a local file that
   // nothing else opens (that silent default was the bug: the seed reported
@@ -646,7 +646,7 @@ async function main() {
   // ---------------------------------------------------------------------
   // Assets — DB rows only. Storage keys use the canonical layout
   // (`masterStorageKey`/`stemStorageKey`/`peaksStorageKey` from
-  // `@bandlib/core` — see task-7-report.md), matching exactly what
+  // `@bandplate/core` — see task-7-report.md), matching exactly what
   // `scripts/dev-upload-audio.ts` uploads real encoded audio to. Running
   // the seed alone does NOT put bytes in a bucket — the audio endpoint
   // will 404/error on these until that script (or a real ingest) has run

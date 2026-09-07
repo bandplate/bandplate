@@ -1,7 +1,7 @@
 // Ingest API — contract v1 (`docs/ingest-contract-v1.md`). Wires every
 // `/ingest/v1/*` route onto the shared `GuardedRouter`.
-import type { Clock, Storage } from "@bandlib/core";
-import type { Db } from "@bandlib/db";
+import type { Clock, Storage } from "@bandplate/core";
+import type { Db } from "@bandplate/db";
 import { type GuardedRouter, publicRoute } from "../../route-registry.js";
 import { registerIngestEventRoutes } from "./events.js";
 import { registerIngestInstrumentsRoute } from "./instruments.js";

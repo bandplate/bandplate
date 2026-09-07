@@ -9,9 +9,9 @@
  * ---------------------------------------------------------------------
  * Why this file adds two more custom properties on top of roost.css's set
  * ---------------------------------------------------------------------
- * `--bl-color-accent` (rust) and `--bl-color-accent-alt` (olive) are the
+ * `--bp-color-accent` (rust) and `--bp-color-accent-alt` (olive) are the
  * SAME hex value in both themes (see roost.css) — they don't get lighter in
- * dark mode the way `--bl-color-fg`/`--bl-color-bg` do. Both are dark,
+ * dark mode the way `--bp-color-fg`/`--bp-color-bg` do. Both are dark,
  * low-luminance colors. That's fine as text on the *light* ground (rust on
  * sand: 9.21:1) but collapses as a boundary/fill against the *dark* ground
  * (rust on espresso: 1.69:1 — nowhere near the 3:1 a component boundary
@@ -20,18 +20,18 @@
  * accent in light mode and to a lightened variant (accent mixed with sand)
  * in dark mode — verified below and in task-4-report.md:
  *
- *   --bl-component-accent-strong  (rust family — danger/error boundaries)
+ *   --bp-component-accent-strong  (rust family — danger/error boundaries)
  *     light: #7b190a vs sand bg    -> 9.21:1 / vs surface -> 9.96:1
  *     dark:  #ab6f60 vs espresso bg -> 4.41:1 / vs surface -> 4.08:1
- *   --bl-component-accent-success (olive family — success/active boundaries)
+ *   --bp-component-accent-success (olive family — success/active boundaries)
  *     light: #334f14 vs sand bg    -> 8.06:1 / vs surface -> 8.71:1
  *     dark:  #808f66 vs espresso bg -> 5.14:1 / vs surface -> 4.76:1
  *
- *   --bl-component-accent-gold (Task 6: gold's first use, per-row on
+ *   --bp-component-accent-gold (Task 6: gold's first use, per-row on
  *     `TakeRow`/`/takes/[id]` rather than a decorative icon glued onto a
  *     "Your favorites" heading that already says the word — review round 1
  *     correctly called that out as carrying no information. Task 8 turns
- *     the per-row marker into `.bl-favorite-toggle` (a real control, filled
+ *     the per-row marker into `.bp-favorite-toggle` (a real control, filled
  *     gold when pressed) — see the "vote toggle, favorite toggle, toast"
  *     block further down for that component's own contrast notes. Now
  *     shown on EVERY row (including a list already scoped to favorites,
@@ -48,7 +48,7 @@
  *     So this token darkens gold FOR LIGHT MODE ONLY (mixed 65% gold / 35%
  *     espresso, computed and verified with the same relative-luminance
  *     formula as every other ratio in this file — see task-6-report.md for
- *     the numbers), and leaves it as plain `--bl-color-accent-gold` in dark
+ *     the numbers), and leaves it as plain `--bp-color-accent-gold` in dark
  *     mode, where the raw color already clears 3:1:
  *       light: #b07313 vs sand bg    -> 3.45:1 / vs surface -> 3.73:1
  *       dark:  #f6aa1c vs espresso bg -> 9.10:1 / vs surface -> 8.42:1
@@ -58,67 +58,67 @@
  * These are used ONLY for borders, dots and tinted-background fills — never
  * as text color, per the brief's rule that rust/olive/gold aren't for body
  * text. Every component below that needs a guaranteed-visible boundary
- * (buttons, inputs, the dialog) uses `--bl-color-fg` instead, which is
- * ~15:1 against `--bl-color-bg` in both themes by construction.
+ * (buttons, inputs, the dialog) uses `--bp-color-fg` instead, which is
+ * ~15:1 against `--bp-color-bg` in both themes by construction.
  *
- * The SAME fixed-hex problem also applies to `.bl-btn-primary`'s FILL TEXT,
+ * The SAME fixed-hex problem also applies to `.bp-btn-primary`'s FILL TEXT,
  * not just boundaries — and it shipped uncaught here in the first pass.
  * The button's rust background never flips, so its text color can't flip
- * either: `roost.css` defines `--bl-color-on-accent` (fixed sand, never
+ * either: `roost.css` defines `--bp-color-on-accent` (fixed sand, never
  * redefined in a dark-mode block) for exactly this, so
  * `rust-bg vs sand-text` is the same 9.21:1 computation in both themes.
- * Using `--bl-color-bg` there instead (which DOES flip, to espresso in
+ * Using `--bp-color-bg` there instead (which DOES flip, to espresso in
  * dark mode) put espresso text on the same fixed rust fill — 1.69:1.
  */
 
 :root {
-  --bl-component-accent-strong: var(--bl-color-accent);
-  --bl-component-accent-success: var(--bl-color-accent-alt);
-  --bl-component-accent-gold: #b07313; /* darkened gold — see file header */
+  --bp-component-accent-strong: var(--bp-color-accent);
+  --bp-component-accent-success: var(--bp-color-accent-alt);
+  --bp-component-accent-gold: #b07313; /* darkened gold — see file header */
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bl-component-accent-strong: #ab6f60;
-    --bl-component-accent-success: #808f66;
-    --bl-component-accent-gold: var(--bl-color-accent-gold);
+    --bp-component-accent-strong: #ab6f60;
+    --bp-component-accent-success: #808f66;
+    --bp-component-accent-gold: var(--bp-color-accent-gold);
   }
 }
 
 :root[data-theme="dark"] {
-  --bl-component-accent-strong: #ab6f60;
-  --bl-component-accent-success: #808f66;
-  --bl-component-accent-gold: var(--bl-color-accent-gold);
+  --bp-component-accent-strong: #ab6f60;
+  --bp-component-accent-success: #808f66;
+  --bp-component-accent-gold: var(--bp-color-accent-gold);
 }
 
 /* ---------------------------------------------------------------------- */
 /* Base                                                                    */
 /* ---------------------------------------------------------------------- */
 
-/* Shared focus style: `--bl-color-fg` rather than an accent, because it's
-   the one color guaranteed to hit 3:1 against `--bl-color-bg` in BOTH
+/* Shared focus style: `--bp-color-fg` rather than an accent, because it's
+   the one color guaranteed to hit 3:1 against `--bp-color-bg` in BOTH
    themes (~15:1 either way) — see the file header. Never remove an
    `outline` without this replacement. */
 :focus-visible {
-  outline: 3px solid var(--bl-color-fg);
+  outline: 3px solid var(--bp-color-fg);
   outline-offset: 2px;
   border-radius: 2px;
 }
 
-.bl-skip-link {
+.bp-skip-link {
   position: absolute;
   left: 0.5rem;
   top: -3rem;
   z-index: 100;
-  background: var(--bl-color-surface);
-  color: var(--bl-color-fg);
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
   padding: 0.75rem 1rem;
   border-radius: 0.25rem;
-  border: 2px solid var(--bl-color-fg);
+  border: 2px solid var(--bp-color-fg);
   transition: top 0.15s ease;
 }
 
-.bl-skip-link:focus {
+.bp-skip-link:focus {
   top: 0.5rem;
 }
 
@@ -126,7 +126,7 @@
 /* Button                                                                  */
 /* ---------------------------------------------------------------------- */
 
-.bl-btn {
+.bp-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -138,79 +138,79 @@
   /* fg border on every variant: guarantees the button's boundary reads
      against the page ground (~15:1) regardless of what its fill does —
      see the file header note on why fill alone can't be trusted here. */
-  border: 2px solid var(--bl-color-fg);
-  font-family: var(--bl-font-body);
+  border: 2px solid var(--bp-color-fg);
+  font-family: var(--bp-font-body);
   font-weight: 600;
   font-size: 1rem;
   line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
   background: transparent;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
   transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bl-btn,
-  .bl-dialog,
-  .bl-dialog::backdrop,
-  .bl-copy-btn,
-  .bl-skip-link {
+  .bp-btn,
+  .bp-dialog,
+  .bp-dialog::backdrop,
+  .bp-copy-btn,
+  .bp-skip-link {
     transition: none !important;
     animation: none !important;
   }
 }
 
-.bl-btn[disabled] {
+.bp-btn[disabled] {
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-.bl-btn-primary {
-  background: var(--bl-color-accent);
-  /* Fixed, NOT `--bl-color-bg` — see the file header note. `--bl-color-bg`
+.bp-btn-primary {
+  background: var(--bp-color-accent);
+  /* Fixed, NOT `--bp-color-bg` — see the file header note. `--bp-color-bg`
      flips to espresso in dark mode while this fill stays the same fixed
      rust in both themes, which put unreadable espresso-on-rust (1.69:1)
-     text on every primary button in dark mode. `--bl-color-on-accent` is
+     text on every primary button in dark mode. `--bp-color-on-accent` is
      deliberately fixed too, so the 9.21:1 sand-on-rust ratio holds in
      both themes by construction. */
-  color: var(--bl-color-on-accent);
+  color: var(--bp-color-on-accent);
 }
-.bl-btn-primary:hover:not([disabled]) {
-  background: color-mix(in srgb, var(--bl-color-accent) 85%, black);
+.bp-btn-primary:hover:not([disabled]) {
+  background: color-mix(in srgb, var(--bp-color-accent) 85%, black);
 }
 
 /* Secondary and danger used to have NO resting-state rules at all — only
-   `:hover` — so both rendered as a bare `.bl-btn` at rest, indistinguishable
+   `:hover` — so both rendered as a bare `.bp-btn` at rest, indistinguishable
    from each other (and, on a "Revoke token" / "Cancel" pair, from a plain
    unstyled button) until a mouse happened to hover one. Touch has no
    hover, so on a phone the distinction never appeared at all. Both now
    have a real resting look, not just a hover accent. */
-.bl-btn-secondary {
-  background: var(--bl-color-surface);
-  border-color: var(--bl-color-fg);
-  color: var(--bl-color-fg);
+.bp-btn-secondary {
+  background: var(--bp-color-surface);
+  border-color: var(--bp-color-fg);
+  color: var(--bp-color-fg);
 }
-.bl-btn-secondary:hover:not([disabled]) {
-  border-color: var(--bl-component-accent-success);
-}
-
-.bl-btn-danger {
-  background: color-mix(in srgb, var(--bl-component-accent-strong) 10%, var(--bl-color-surface));
-  border-color: var(--bl-component-accent-strong);
-  color: var(--bl-color-fg);
-}
-.bl-btn-danger:hover:not([disabled]) {
-  background: color-mix(in srgb, var(--bl-component-accent-strong) 18%, var(--bl-color-surface));
-  border-color: var(--bl-component-accent-strong);
+.bp-btn-secondary:hover:not([disabled]) {
+  border-color: var(--bp-component-accent-success);
 }
 
-.bl-btn-sm {
+.bp-btn-danger {
+  background: color-mix(in srgb, var(--bp-component-accent-strong) 10%, var(--bp-color-surface));
+  border-color: var(--bp-component-accent-strong);
+  color: var(--bp-color-fg);
+}
+.bp-btn-danger:hover:not([disabled]) {
+  background: color-mix(in srgb, var(--bp-component-accent-strong) 18%, var(--bp-color-surface));
+  border-color: var(--bp-component-accent-strong);
+}
+
+.bp-btn-sm {
   /* Still >= the 44px touch-target floor (WCAG 2.5.8) — only the padding
-     and type size shrink for a denser table row. `.bl-btn-sm` used to drop
+     and type size shrink for a denser table row. `.bp-btn-sm` used to drop
      to 36px, which every non-primary control in the admin tables (row
      actions, the sign-out link, the nav) inherited, putting almost every
-     interactive element on the page under the floor `.bl-btn` itself
+     interactive element on the page under the floor `.bp-btn` itself
      claims to guarantee. */
   min-height: 44px;
   padding: 0.375rem 0.875rem;
@@ -219,7 +219,7 @@
 
 /* A destructive trigger rendered as a plain link (the no-JS path to a
    confirm page) but styled to match the button set. */
-a.bl-btn {
+a.bp-btn {
   display: inline-flex;
 }
 
@@ -227,61 +227,61 @@ a.bl-btn {
 /* Field (label + input/select/textarea + error)                          */
 /* ---------------------------------------------------------------------- */
 
-.bl-field {
+.bp-field {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
   margin-bottom: 1.25rem;
 }
 
-.bl-field-label {
-  font-family: var(--bl-font-body);
+.bp-field-label {
+  font-family: var(--bp-font-body);
   font-weight: 600;
   font-size: 0.9375rem;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
 }
 
-.bl-field-hint {
+.bp-field-hint {
   font-size: 0.8125rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
 }
 
-.bl-input,
-.bl-select,
-.bl-textarea {
-  font-family: var(--bl-font-body);
+.bp-input,
+.bp-select,
+.bp-textarea {
+  font-family: var(--bp-font-body);
   font-size: 1rem;
   min-height: 44px;
   padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
-  border: 2px solid var(--bl-color-fg);
-  background: var(--bl-color-surface);
-  color: var(--bl-color-fg);
+  border: 2px solid var(--bp-color-fg);
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
 }
 
-.bl-textarea {
+.bp-textarea {
   min-height: 88px;
 }
 
-.bl-input:focus-visible,
-.bl-select:focus-visible,
-.bl-textarea:focus-visible {
-  border-color: var(--bl-component-accent-success);
+.bp-input:focus-visible,
+.bp-select:focus-visible,
+.bp-textarea:focus-visible {
+  border-color: var(--bp-component-accent-success);
 }
 
-.bl-input[aria-invalid="true"],
-.bl-select[aria-invalid="true"],
-.bl-textarea[aria-invalid="true"] {
-  border-color: var(--bl-component-accent-strong);
+.bp-input[aria-invalid="true"],
+.bp-select[aria-invalid="true"],
+.bp-textarea[aria-invalid="true"] {
+  border-color: var(--bp-component-accent-strong);
 }
 
-.bl-field-error {
+.bp-field-error {
   font-size: 0.875rem;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
   font-weight: 700;
 }
 
-.bl-checkbox-group {
+.bp-checkbox-group {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1.25rem;
@@ -290,30 +290,30 @@ a.bl-btn {
   margin: 0 0 1.25rem;
 }
 
-.bl-checkbox-group legend {
+.bp-checkbox-group legend {
   font-weight: 600;
   font-size: 0.9375rem;
   margin-bottom: 0.5rem;
   padding: 0;
 }
 
-.bl-checkbox-item {
+.bp-checkbox-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-height: 44px;
 }
 
-.bl-checkbox-item input[type="checkbox"] {
+.bp-checkbox-item input[type="checkbox"] {
   /* WCAG 2.5.8 target size (minimum) is 24px for a checkbox — this was
      20px. */
   width: 24px;
   height: 24px;
-  accent-color: var(--bl-component-accent-success);
+  accent-color: var(--bp-component-accent-success);
 }
 
-.bl-checkbox-item label {
-  font-family: var(--bl-font-mono);
+.bp-checkbox-item label {
+  font-family: var(--bp-font-mono);
   font-size: 0.875rem;
 }
 
@@ -321,83 +321,83 @@ a.bl-btn {
 /* Banner                                                                  */
 /* ---------------------------------------------------------------------- */
 
-.bl-banner {
+.bp-banner {
   border-radius: 0.375rem;
-  border: 2px solid var(--bl-color-border);
+  border: 2px solid var(--bp-color-border);
   padding: 0.875rem 1.125rem;
   margin-bottom: 1.25rem;
   font-size: 0.9375rem;
   display: flex;
   gap: 0.625rem;
   align-items: flex-start;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
 }
 
-.bl-banner-icon {
+.bp-banner-icon {
   flex-shrink: 0;
-  font-family: var(--bl-font-mono);
+  font-family: var(--bp-font-mono);
   font-weight: 700;
 }
 
-.bl-banner-success {
-  border-color: var(--bl-component-accent-success);
-  background: color-mix(in srgb, var(--bl-color-accent-alt) 12%, var(--bl-color-surface));
+.bp-banner-success {
+  border-color: var(--bp-component-accent-success);
+  background: color-mix(in srgb, var(--bp-color-accent-alt) 12%, var(--bp-color-surface));
 }
 
-.bl-banner-error {
-  border-color: var(--bl-component-accent-strong);
-  background: color-mix(in srgb, var(--bl-color-accent) 12%, var(--bl-color-surface));
+.bp-banner-error {
+  border-color: var(--bp-component-accent-strong);
+  background: color-mix(in srgb, var(--bp-color-accent) 12%, var(--bp-color-surface));
 }
 
-.bl-banner-info {
-  /* NOT `--bl-color-border` — that token is 1.31:1 / 1.39:1 against the
+.bp-banner-info {
+  /* NOT `--bp-color-border` — that token is 1.31:1 / 1.39:1 against the
      page ground, fine for a purely decorative divider (a table rule, a
      card outline) but this is an interactive component's only boundary,
-     which WCAG 1.4.11 requires at 3:1. `--bl-color-muted` clears that
-     (4.64:1 / 6.93:1 against `--bl-color-bg`, see roost.css) with room to
+     which WCAG 1.4.11 requires at 3:1. `--bp-color-muted` clears that
+     (4.64:1 / 6.93:1 against `--bp-color-bg`, see roost.css) with room to
      spare. */
-  border-color: var(--bl-color-muted);
-  background: var(--bl-color-surface);
+  border-color: var(--bp-color-muted);
+  background: var(--bp-color-surface);
 }
 
 /* ---------------------------------------------------------------------- */
-/* Badge (role/status pills) — text stays `--bl-color-fg` always; accent   */
+/* Badge (role/status pills) — text stays `--bp-color-fg` always; accent   */
 /* colors appear only as the small decorative dot, never as the label     */
 /* text, and the label text itself ("admin" / "active" / ...) is the real */
 /* signal — color is reinforcement, not the sole means (WCAG 1.4.1).      */
 /* ---------------------------------------------------------------------- */
 
-.bl-badge {
+.bp-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  font-family: var(--bl-font-mono);
+  font-family: var(--bp-font-mono);
   font-size: 0.75rem;
   text-transform: lowercase;
   padding: 0.125rem 0.625rem;
   border-radius: 999px;
-  /* NOT `--bl-color-border` (1.31:1 / 1.39:1) — same 3:1 boundary
-     requirement as `.bl-banner-info`, same fix. */
-  border: 1.5px solid var(--bl-color-muted);
-  color: var(--bl-color-fg);
+  /* NOT `--bp-color-border` (1.31:1 / 1.39:1) — same 3:1 boundary
+     requirement as `.bp-banner-info`, same fix. */
+  border: 1.5px solid var(--bp-color-muted);
+  color: var(--bp-color-fg);
   white-space: nowrap;
 }
 
-.bl-badge::before {
+.bp-badge::before {
   content: "";
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: var(--bl-color-muted);
+  background: var(--bp-color-muted);
 }
 
-.bl-badge-admin::before {
-  background: var(--bl-component-accent-strong);
+.bp-badge-admin::before {
+  background: var(--bp-component-accent-strong);
 }
 
-.bl-badge-active::before {
-  background: var(--bl-component-accent-success);
+.bp-badge-active::before {
+  background: var(--bp-component-accent-success);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -405,51 +405,51 @@ a.bl-btn {
 /* narrow ones (not a horizontal scrollbar as the only answer).           */
 /* ---------------------------------------------------------------------- */
 
-.bl-table-wrap {
+.bp-table-wrap {
   width: 100%;
 }
 
-.bl-table {
+.bp-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9375rem;
 }
 
-.bl-table caption {
+.bp-table caption {
   text-align: left;
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
-.bl-table th,
-.bl-table td {
+.bp-table th,
+.bp-table td {
   text-align: left;
   padding: 0.75rem 0.625rem;
-  border-bottom: 1px solid var(--bl-color-border);
+  border-bottom: 1px solid var(--bp-color-border);
   vertical-align: middle;
 }
 
-.bl-table th {
-  font-family: var(--bl-font-mono);
+.bp-table th {
+  font-family: var(--bp-font-mono);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   font-weight: 600;
 }
 
-.bl-table tbody tr:hover {
-  background: var(--bl-color-surface);
+.bp-table tbody tr:hover {
+  background: var(--bp-color-surface);
 }
 
-.bl-table .bl-table-actions {
+.bp-table .bp-table-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 @media (max-width: 640px) {
-  .bl-table thead {
+  .bp-table thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -458,22 +458,22 @@ a.bl-btn {
     white-space: nowrap;
   }
 
-  .bl-table,
-  .bl-table tbody,
-  .bl-table tr,
-  .bl-table td {
+  .bp-table,
+  .bp-table tbody,
+  .bp-table tr,
+  .bp-table td {
     display: block;
     width: 100%;
   }
 
-  .bl-table tr {
-    border: 1px solid var(--bl-color-border);
+  .bp-table tr {
+    border: 1px solid var(--bp-color-border);
     border-radius: 0.5rem;
     margin-bottom: 0.875rem;
     padding: 0.5rem 0.75rem;
   }
 
-  .bl-table td {
+  .bp-table td {
     border-bottom: none;
     padding: 0.375rem 0;
     display: flex;
@@ -483,18 +483,18 @@ a.bl-btn {
     text-align: right;
   }
 
-  .bl-table td::before {
+  .bp-table td::before {
     content: attr(data-label);
-    font-family: var(--bl-font-mono);
+    font-family: var(--bp-font-mono);
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--bl-color-muted);
+    color: var(--bp-color-muted);
     text-align: left;
     flex-shrink: 0;
   }
 
-  .bl-table .bl-table-actions {
+  .bp-table .bp-table-actions {
     justify-content: flex-end;
   }
 }
@@ -504,20 +504,20 @@ a.bl-btn {
 /* confirm page; this only ever appears once JS has intercepted a click.  */
 /* ---------------------------------------------------------------------- */
 
-/* `ConfirmDialog.tsx` renders a bare `<dialog class="bl-dialog">` — no
+/* `ConfirmDialog.tsx` renders a bare `<dialog class="bp-dialog">` — no
    wrapping element — and opens it with `showModal()`, so the scrim the
    platform actually paints is the dialog's own `::backdrop` pseudo-element,
-   not a sibling/wrapper div. A `.bl-dialog-backdrop` class used to be
+   not a sibling/wrapper div. A `.bp-dialog-backdrop` class used to be
    defined here but nothing in the markup ever had that class, so it was
    dead CSS and the intended dimming scrim never rendered at all. */
-.bl-dialog::backdrop {
+.bp-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
 
-.bl-dialog {
-  background: var(--bl-color-bg);
-  color: var(--bl-color-fg);
-  border: 2px solid var(--bl-color-fg);
+.bp-dialog {
+  background: var(--bp-color-bg);
+  color: var(--bp-color-fg);
+  border: 2px solid var(--bp-color-fg);
   border-radius: 0.5rem;
   padding: 1.5rem;
   max-width: 28rem;
@@ -525,28 +525,28 @@ a.bl-btn {
   margin: auto;
 }
 
-.bl-dialog h2 {
-  font-family: var(--bl-font-display);
+.bp-dialog h2 {
+  font-family: var(--bp-font-display);
   font-size: 1.25rem;
   margin: 0 0 0.75rem;
 }
 
-.bl-dialog p {
+.bp-dialog p {
   margin: 0 0 1.25rem;
   line-height: 1.5;
 }
 
-.bl-dialog-actions {
+.bp-dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
   flex-wrap: wrap;
 }
 
-/* `/takes/[id]`'s admin keeper/reject actions — same `.bl-dialog-actions`
+/* `/takes/[id]`'s admin keeper/reject actions — same `.bp-dialog-actions`
    layout, left-aligned (there's no dialog framing it here) with a little
    top margin to separate it from the hint paragraph above. */
-.bl-admin-take-actions {
+.bp-admin-take-actions {
   justify-content: flex-start;
   margin-top: 0.75rem;
 }
@@ -555,19 +555,19 @@ a.bl-btn {
 /* Layout helpers                                                         */
 /* ---------------------------------------------------------------------- */
 
-.bl-container {
+.bp-container {
   max-width: 68rem;
   margin: 0 auto;
   padding: 1.25rem;
 }
 
 @media (min-width: 768px) {
-  .bl-container {
+  .bp-container {
     padding: 2rem;
   }
 }
 
-.bl-stack {
+.bp-stack {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -576,27 +576,27 @@ a.bl-btn {
      `white-space: pre` and no wrap has a min-content width equal to its
      longest unwrapped line, so that width bubbles up through every
      ancestor flex box in the chain and out past the viewport (the
-     ".bl-chords" 46ch-overflow bug). `min-width: 0` on the stack itself is
+     ".bp-chords" 46ch-overflow bug). `min-width: 0` on the stack itself is
      never wrong: a column stack never NEEDS to be wider than its own
      container's content box. */
   min-width: 0;
 }
 
-.bl-card {
-  border: 1px solid var(--bl-color-border);
+.bp-card {
+  border: 1px solid var(--bp-color-border);
   border-radius: 0.5rem;
   padding: 1.25rem;
-  background: var(--bl-color-surface);
+  background: var(--bp-color-surface);
 }
 
-.bl-copy-btn {
+.bp-copy-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
 }
 
-.bl-mono {
-  font-family: var(--bl-font-mono);
+.bp-mono {
+  font-family: var(--bp-font-mono);
   word-break: break-all;
 }
 
@@ -609,10 +609,10 @@ a.bl-btn {
 /* — the wrong one for the viewport simply isn't rendered.                 */
 /* ---------------------------------------------------------------------- */
 
-.bl-shell {
+.bp-shell {
   min-height: 100vh;
-  /* Referenced by `.bl-player` (its own vertical placement) AND
-     `.bl-shell-main` (reserved bottom padding so page content never sits
+  /* Referenced by `.bp-player` (its own vertical placement) AND
+     `.bp-shell-main` (reserved bottom padding so page content never sits
      underneath the fixed player bar) — one number, one place, so the two
      can't drift out of sync.
      This is a SAFE UPPER-BOUND FALLBACK only, used before JS has measured
@@ -620,72 +620,72 @@ a.bl-btn {
      ever loaded (the player bar is `[hidden]`, so it has no real height to
      measure yet — see its own comment). Once a track loads, `Player.tsx`
      overwrites this value on this exact element via a `ResizeObserver` on
-     the real rendered `.bl-player`, so the reserved space always matches
+     the real rendered `.bp-player`, so the reserved space always matches
      actual height rather than a number that silently drifts out of sync
      with it (measured 109px rendered vs. a stale 76px declared here is
      exactly the bug this self-correction exists to prevent). */
-  --bl-player-height: 7rem;
+  --bp-player-height: 7rem;
 }
 
-.bl-shell-header {
+.bp-shell-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   padding: 0.875rem 1.25rem;
-  border-bottom: 1px solid var(--bl-color-border);
+  border-bottom: 1px solid var(--bp-color-border);
 }
 
-.bl-shell-wordmark {
+.bp-shell-wordmark {
   /* Touch target, not a font-size change — measured at 33px tall before,
      under the 44px floor (brief §6); the wordmark itself stays the same
      visual size, just vertically centered in a taller box. */
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  font-family: var(--bl-font-display);
+  font-family: var(--bp-font-display);
   font-weight: 800;
   font-size: 1.375rem;
   text-decoration: none;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
 }
 
-.bl-shell-body {
+.bp-shell-body {
   display: flex;
   align-items: flex-start;
 }
 
-.bl-shell-main {
+.bp-shell-main {
   flex: 1;
   min-width: 0;
   width: 100%;
   max-width: 60rem;
   margin: 0 auto;
   /* 6rem clears the tab bar (56px + safe-area); the player bar sits ABOVE
-     the tab bar (see `.bl-player`'s own `bottom` below), so its height has
+     the tab bar (see `.bp-player`'s own `bottom` below), so its height has
      to be reserved here too, on top of that, or the last take row on a
      tall list would render underneath it. Always reserved — even with no
      track loaded — rather than toggled by JS: a fixed bottom-padding
      number can't itself cause the width-based scrollWidth-blowout bugs a
      JS-computed one already has, elsewhere in this project. */
-  padding: 1.25rem 1.25rem calc(6rem + var(--bl-player-height));
+  padding: 1.25rem 1.25rem calc(6rem + var(--bp-player-height));
   box-sizing: border-box;
 }
 
 /* Bottom tab bar — phones and tablets. */
-.bl-tabbar {
+.bp-tabbar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 40;
   display: flex;
-  border-top: 1px solid var(--bl-color-border);
-  background: var(--bl-color-bg);
+  border-top: 1px solid var(--bp-color-border);
+  background: var(--bp-color-bg);
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-.bl-tabbar-item {
+.bp-tabbar-item {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -695,17 +695,17 @@ a.bl-btn {
   min-height: 56px;
   padding: 0.375rem 0.25rem;
   text-decoration: none;
-  color: var(--bl-color-muted);
-  font-family: var(--bl-font-body);
+  color: var(--bp-color-muted);
+  font-family: var(--bp-font-body);
   font-weight: 600;
   font-size: 0.75rem;
 }
 
-.bl-tabbar-item[aria-current="page"] {
-  color: var(--bl-color-fg);
+.bp-tabbar-item[aria-current="page"] {
+  color: var(--bp-color-fg);
 }
 
-.bl-tabbar-icon {
+.bp-tabbar-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -717,11 +717,11 @@ a.bl-btn {
 /* comment). Sits ABOVE the tab bar on phones (its own fixed element,      */
 /* not part of the tab bar), full-width at the very bottom past `lg`       */
 /* (no tab bar there to stack above). Always in the DOM; only `[hidden]`   */
-/* toggles when nothing is loaded. Its height (`--bl-player-height` on     */
-/* `.bl-shell`, consumed by `.bl-shell-main`'s reserved bottom padding)    */
+/* toggles when nothing is loaded. Its height (`--bp-player-height` on     */
+/* `.bp-shell`, consumed by `.bp-shell-main`'s reserved bottom padding)    */
 /* is kept in sync with `Player.tsx`'s own `ResizeObserver`, not just a    */
 /* number copy-pasted between two rules — see that variable's comment on  */
-/* `.bl-shell` for why. This differs from the "no JS-computed layout"     */
+/* `.bp-shell` for why. This differs from the "no JS-computed layout"     */
 /* rule elsewhere on this project (which is about WIDTH — the actual      */
 /* cause of a real horizontal-scroll bug here before): this is a CSS      */
 /* custom property carrying a height, applied to a `position: fixed`      */
@@ -730,14 +730,14 @@ a.bl-btn {
 /*                                                                          */
 /* Contrast (WCAG relative luminance, computed for this task — every       */
 /* combination this component actually paints):                           */
-/*   title (--bl-color-fg) on this bar's own surface (--bl-color-surface)  */
+/*   title (--bp-color-fg) on this bar's own surface (--bp-color-surface)  */
 /*     light: #2f0c02 on #fbf8ef -> 16.84:1   dark: #f4efe2 on #3a1206 -> 14.41:1 */
-/*   subtitle (--bl-color-muted) on the same surface                       */
+/*   subtitle (--bp-color-muted) on the same surface                       */
 /*     light: #7c6758 on #fbf8ef -> 5.02:1    dark: #b89c86 on #3a1206 -> 6.41:1  */
-/*   an active/playing toggle's icon (--bl-component-accent-success) on    */
+/*   an active/playing toggle's icon (--bp-component-accent-success) on    */
 /*   both the surface above AND the plain page background it also renders  */
-/*   against in TakeRow/take-detail (--bl-color-bg) — NOT the raw fixed    */
-/*   --bl-color-accent-alt, which measures 1.93:1/1.79:1 in dark mode      */
+/*   against in TakeRow/take-detail (--bp-color-bg) — NOT the raw fixed    */
+/*   --bp-color-accent-alt, which measures 1.93:1/1.79:1 in dark mode      */
 /*   (see roost.css's header comment; this is that exact regression,       */
 /*   avoided by using the theme-aware component token instead):            */
 /*     on bg:      light 8.06:1   dark 5.14:1                              */
@@ -746,40 +746,40 @@ a.bl-btn {
 /* in both themes.                                                         */
 /* ---------------------------------------------------------------------- */
 
-.bl-player {
+.bp-player {
   position: fixed;
   left: 0;
   right: 0;
-  /* The tab bar (`.bl-tabbar`) is 57px tall, not 56: `.bl-tabbar-item`'s
+  /* The tab bar (`.bp-tabbar`) is 57px tall, not 56: `.bp-tabbar-item`'s
      56px min-height PLUS the tab bar's own 1px `border-top`. Matching only
      the 56px left that border's top pixel sitting under this bar instead
      of above it. */
   bottom: calc(57px + env(safe-area-inset-bottom, 0px));
   z-index: 42; /* above the tab bar's 40 */
-  min-height: var(--bl-player-height);
+  min-height: var(--bp-player-height);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 0.375rem;
   padding: 0.75rem 1.25rem;
-  background: var(--bl-color-surface);
-  border-top: 1px solid var(--bl-color-border);
+  background: var(--bp-color-surface);
+  border-top: 1px solid var(--bp-color-border);
 }
 
-.bl-player[hidden] {
+.bp-player[hidden] {
   display: none;
 }
 
-.bl-player-meta {
+.bp-player-meta {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.bl-player-title {
-  color: var(--bl-color-fg);
-  font-family: var(--bl-font-body);
+.bp-player-title {
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
   font-weight: 600;
   font-size: 0.9375rem;
   white-space: nowrap;
@@ -787,15 +787,15 @@ a.bl-btn {
   text-overflow: ellipsis;
 }
 
-.bl-player-subtitle {
-  color: var(--bl-color-muted);
+.bp-player-subtitle {
+  color: var(--bp-color-muted);
   font-size: 0.8125rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.bl-player-audio {
+.bp-player-audio {
   width: 100%;
   height: 2.25rem;
 }
@@ -805,7 +805,7 @@ a.bl-btn {
 /* own islands; `Player.tsx` delegates clicks and toggles these classes.   */
 /* ---------------------------------------------------------------------- */
 
-.bl-play-toggle {
+.bp-play-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -815,42 +815,42 @@ a.bl-btn {
   min-height: 44px;
   border: none;
   background: transparent;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
   cursor: pointer;
   padding: 0;
 }
 
-.bl-play-toggle[aria-pressed="true"] {
-  color: var(--bl-component-accent-success);
+.bp-play-toggle[aria-pressed="true"] {
+  color: var(--bp-component-accent-success);
 }
 
 /* The take-detail hero's own, larger play control — same button, same
    data attribute and aria contract, just a bigger hit target and glyph
    since it is the page's primary action rather than one icon among a
    list of rows. */
-.bl-play-toggle-lg {
+.bp-play-toggle-lg {
   width: 3.5rem;
   height: 3.5rem;
-  border: 1px solid var(--bl-color-border);
+  border: 1px solid var(--bp-color-border);
   border-radius: 999px;
-  background: var(--bl-color-surface);
+  background: var(--bp-color-surface);
 }
 
-.bl-play-toggle .bl-play-icon-pause {
+.bp-play-toggle .bp-play-icon-pause {
   display: none;
 }
 
-.bl-play-toggle[aria-pressed="true"] .bl-play-icon-play {
+.bp-play-toggle[aria-pressed="true"] .bp-play-icon-play {
   display: none;
 }
 
-.bl-play-toggle[aria-pressed="true"] .bl-play-icon-pause {
+.bp-play-toggle[aria-pressed="true"] .bp-play-icon-pause {
   display: inline;
 }
 
 /* The take-detail page's play section — the big play control plus (when
    the take has stems) the Solo drawer underneath it. */
-.bl-take-play-section {
+.bp-take-play-section {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -862,23 +862,23 @@ a.bl-btn {
    "Mixer": switching sources plays exactly one stream at a time (see
    task-7-report.md for why synchronised multi-track playback isn't
    attempted). */
-.bl-solo-drawer {
+.bp-solo-drawer {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
-.bl-solo-chip {
+.bp-solo-chip {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   padding: 0.375rem 0.875rem;
-  border: 1px solid var(--bl-color-border);
+  border: 1px solid var(--bp-color-border);
   border-radius: 999px;
-  background: var(--bl-color-surface);
-  color: var(--bl-color-fg);
-  font-family: var(--bl-font-body);
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
   font-size: 0.875rem;
   cursor: pointer;
 }
@@ -888,39 +888,39 @@ a.bl-btn {
    selected chip is identifiable even without colour perception. Reviewed
    in fix round 1, item 3, alongside the `aria-pressed` fix in
    `Player.tsx`'s `syncButtons`. */
-.bl-solo-chip.is-active {
-  border-color: var(--bl-component-accent-success);
-  color: var(--bl-component-accent-success);
+.bp-solo-chip.is-active {
+  border-color: var(--bp-component-accent-success);
+  color: var(--bp-component-accent-success);
   font-weight: 700;
 }
 
-.bl-solo-chip.is-active::before {
+.bp-solo-chip.is-active::before {
   content: "✓";
   margin-right: 0.375rem;
 }
 
 @media (min-width: 1024px) {
-  .bl-player {
+  .bp-player {
     bottom: 0;
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
-/* Sidebar — hidden below `lg`, shown (as a flex row with `.bl-shell-body`) at and above it. */
-.bl-sidebar {
+/* Sidebar — hidden below `lg`, shown (as a flex row with `.bp-shell-body`) at and above it. */
+.bp-sidebar {
   display: none;
 }
 
 @media (min-width: 1024px) {
-  .bl-shell-header {
+  .bp-shell-header {
     display: none;
   }
 
-  .bl-tabbar {
+  .bp-tabbar {
     display: none;
   }
 
-  .bl-sidebar {
+  .bp-sidebar {
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -932,24 +932,24 @@ a.bl-btn {
     box-sizing: border-box;
     /* Bottom padding reserves space for the player bar, which is
        `position: fixed` and sits ON TOP of this column's own bottom edge
-       (see `.bl-player`'s `z-index: 42` — this sidebar has no z-index of
+       (see `.bp-player`'s `z-index: 42` — this sidebar has no z-index of
        its own, i.e. 0, so the player always paints over it). Without this,
-       `.bl-sidebar-footer`'s `margin-top: auto` pins "Sign out" to this
+       `.bp-sidebar-footer`'s `margin-top: auto` pins "Sign out" to this
        column's bottom at 100vh, directly under the player, making it
        unreachable — `elementFromPoint` at the button's centre returns
-       `.bl-player` instead (task-7-report.md, fix round 2). Reuses the
-       same `--bl-player-height` custom property `.bl-shell-main` already
+       `.bp-player` instead (task-7-report.md, fix round 2). Reuses the
+       same `--bp-player-height` custom property `.bp-shell-main` already
        reserves against, rather than a second hardcoded number that could
        drift from the real measured height — see that variable's comment
-       on `.bl-shell`. Always reserved, even with no track loaded, same
-       rationale as `.bl-shell-main`: a fixed number can't itself cause a
+       on `.bp-shell`. Always reserved, even with no track loaded, same
+       rationale as `.bp-shell-main`: a fixed number can't itself cause a
        width-based scrollWidth bug, and nothing should shift when nothing
        is playing. */
-    padding: 1.75rem 1.25rem calc(1.75rem + var(--bl-player-height));
-    border-right: 1px solid var(--bl-color-border);
+    padding: 1.75rem 1.25rem calc(1.75rem + var(--bp-player-height));
+    border-right: 1px solid var(--bp-color-border);
   }
 
-  .bl-sidebar-nav {
+  .bp-sidebar-nav {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -958,11 +958,11 @@ a.bl-btn {
     padding: 0;
   }
 
-  .bl-sidebar-footer {
+  .bp-sidebar-footer {
     margin-top: auto;
   }
 
-  .bl-sidebar-item {
+  .bp-sidebar-item {
     display: flex;
     align-items: center;
     gap: 0.625rem;
@@ -970,36 +970,36 @@ a.bl-btn {
     padding: 0.5rem 0.75rem;
     border-radius: 0.375rem;
     text-decoration: none;
-    color: var(--bl-color-fg);
-    font-family: var(--bl-font-body);
+    color: var(--bp-color-fg);
+    font-family: var(--bp-font-body);
     font-weight: 600;
     font-size: 0.9375rem;
   }
 
-  .bl-sidebar-item:hover {
-    background: var(--bl-color-surface);
+  .bp-sidebar-item:hover {
+    background: var(--bp-color-surface);
   }
 
-  .bl-sidebar-item[aria-current="page"] {
-    background: var(--bl-color-surface);
-    border: 1px solid var(--bl-color-fg);
+  .bp-sidebar-item[aria-current="page"] {
+    background: var(--bp-color-surface);
+    border: 1px solid var(--bp-color-fg);
   }
 
-  .bl-sidebar-icon {
+  .bp-sidebar-icon {
     display: flex;
     align-items: center;
-    color: var(--bl-color-muted);
+    color: var(--bp-color-muted);
   }
 
-  .bl-sidebar-item[aria-current="page"] .bl-sidebar-icon {
-    color: var(--bl-color-fg);
+  .bp-sidebar-item[aria-current="page"] .bp-sidebar-icon {
+    color: var(--bp-color-fg);
   }
 
-  .bl-shell-main {
+  .bp-shell-main {
     /* No tab bar past this breakpoint (sidebar takes over) — the player
        bar is the only fixed bottom element, so only its own height needs
        reserving here, not the 6rem tab-bar clearance mobile carries too. */
-    padding: 2.25rem 2.5rem calc(1.5rem + var(--bl-player-height));
+    padding: 2.25rem 2.5rem calc(1.5rem + var(--bp-player-height));
     max-width: 56rem;
     margin: 0;
   }
@@ -1012,42 +1012,42 @@ a.bl-btn {
 /* decorative (`aria-hidden`), so it carries no text alternative.         */
 /* ---------------------------------------------------------------------- */
 
-.bl-route-progress {
+.bp-route-progress {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   height: 3px;
   z-index: 200;
-  /* NOT `--bl-color-accent` — that's the SAME fixed rust hex in both
+  /* NOT `--bp-color-accent` — that's the SAME fixed rust hex in both
      themes (see roost.css), which measures 9.21:1 against the light
      ground but only 1.69:1 against the dark one (the exact regression
      documented in components.css's file header). This bar needs to be
      visible as a graphical object in both themes, so it uses the
      component-scoped, dark-mode-aware variant instead: 9.21:1 / 9.96:1 in
      light, 4.41:1 / 4.08:1 in dark (against bg / surface respectively). */
-  background: var(--bl-component-accent-strong);
+  background: var(--bp-component-accent-strong);
   transform-origin: left;
   transform: scaleX(0);
   opacity: 0;
 }
 
-.bl-route-progress.is-active {
+.bp-route-progress.is-active {
   opacity: 1;
   transform: scaleX(0.7);
   transition: transform 6s cubic-bezier(0.1, 0.5, 0.5, 1);
 }
 
-.bl-route-progress.is-done {
+.bp-route-progress.is-done {
   opacity: 1;
   transform: scaleX(1);
   transition: transform 0.15s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bl-route-progress,
-  .bl-route-progress.is-active,
-  .bl-route-progress.is-done {
+  .bp-route-progress,
+  .bp-route-progress.is-active,
+  .bp-route-progress.is-done {
     transition: none !important;
   }
 }
@@ -1058,18 +1058,18 @@ a.bl-btn {
 /* once there's room.                                                      */
 /* ---------------------------------------------------------------------- */
 
-.bl-toolbar {
+.bp-toolbar {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
   margin-bottom: 1.5rem;
 }
 
-.bl-toolbar .bl-field {
+.bp-toolbar .bp-field {
   margin-bottom: 0;
 }
 
-.bl-toolbar .bl-checkbox-group {
+.bp-toolbar .bp-checkbox-group {
   flex-basis: 100%;
   margin-bottom: 0;
 }
@@ -1079,12 +1079,12 @@ a.bl-btn {
    phones so its up-to-a-dozen 44px checkbox rows don't push the actual song
    list below the fold. Forced open past `lg`, where there's width to spare
    — see the override below. */
-.bl-toolbar .bl-toolbar-details {
+.bp-toolbar .bp-toolbar-details {
   flex-basis: 100%;
   margin-bottom: 0;
 }
 
-.bl-toolbar-details-summary {
+.bp-toolbar-details-summary {
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9375rem;
@@ -1092,15 +1092,15 @@ a.bl-btn {
   display: flex;
   align-items: center;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--bl-color-border);
+  border: 1px solid var(--bp-color-border);
   border-radius: 0.375rem;
 }
 
-.bl-toolbar-details[open] .bl-toolbar-details-summary {
+.bp-toolbar-details[open] .bp-toolbar-details-summary {
   margin-bottom: 0.75rem;
 }
 
-.bl-toolbar-details .bl-checkbox-group {
+.bp-toolbar-details .bp-checkbox-group {
   margin: 0;
 }
 
@@ -1119,20 +1119,20 @@ a.bl-btn {
      group just controls its layout once it's rendering again. The summary
      /toggle itself is hidden since there's nothing left for it to
      disclose. */
-  .bl-toolbar-details:not([open])::details-content {
+  .bp-toolbar-details:not([open])::details-content {
     content-visibility: visible;
   }
 
-  .bl-toolbar-details:not([open]) > .bl-checkbox-group {
+  .bp-toolbar-details:not([open]) > .bp-checkbox-group {
     display: flex;
   }
 
-  .bl-toolbar-details-summary {
+  .bp-toolbar-details-summary {
     display: none;
   }
 }
 
-.bl-toolbar-actions {
+.bp-toolbar-actions {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
@@ -1140,42 +1140,42 @@ a.bl-btn {
 
 /* ---------------------------------------------------------------------- */
 /* Search layout (Task 6) — a filter panel BESIDE results on desktop, the   */
-/* same collapsed `<details>` (`.bl-toolbar-details`) `/songs` uses on      */
+/* same collapsed `<details>` (`.bp-toolbar-details`) `/songs` uses on      */
 /* phones. Reuses that component rather than inventing a second collapse    */
-/* mechanism: `.bl-search-filters` IS a `.bl-toolbar-details`, so the       */
+/* mechanism: `.bp-search-filters` IS a `.bp-toolbar-details`, so the       */
 /* generic "force open past `lg`" rule above already applies to it. The     */
 /* one thing specific to search is that its `<details>` wraps SEVERAL       */
 /* fieldsets (title search, instruments, dates, rating, state) instead of   */
 /* `/songs`' single checkbox group — grouping them all inside one          */
-/* `.bl-search-filters-body` child means the existing "re-declare this      */
+/* `.bp-search-filters-body` child means the existing "re-declare this      */
 /* child's own display past `lg`" pattern only needs writing once, for      */
 /* that one wrapper, rather than once per fieldset.                        */
 /* ---------------------------------------------------------------------- */
 
-.bl-search-layout {
+.bp-search-layout {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
 @media (min-width: 1024px) {
-  .bl-search-layout {
+  .bp-search-layout {
     display: grid;
     grid-template-columns: 18rem minmax(0, 1fr);
     align-items: start;
     gap: 0 2.5rem;
   }
 
-  .bl-search-filters:not([open]) > .bl-search-filters-body {
+  .bp-search-filters:not([open]) > .bp-search-filters-body {
     display: flex;
   }
 }
 
-.bl-search-filters-body > .bl-field {
+.bp-search-filters-body > .bp-field {
   margin-bottom: 0;
 }
 
-.bl-search-results {
+.bp-search-results {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -1183,17 +1183,17 @@ a.bl-btn {
 }
 
 @media (min-width: 768px) {
-  .bl-toolbar {
+  .bp-toolbar {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: flex-end;
   }
 
-  .bl-toolbar > * {
+  .bp-toolbar > * {
     flex: 1 1 12rem;
   }
 
-  .bl-toolbar > .bl-toolbar-actions {
+  .bp-toolbar > .bp-toolbar-actions {
     flex: 0 0 auto;
   }
 }
@@ -1207,49 +1207,49 @@ a.bl-btn {
 /* A generic single-property spacing/list-reset/cursor tweak (margin,      */
 /* list-style, cursor) belongs to Tailwind's own utilities (already loaded */
 /* via `@tailwindcss/vite`, see `theme.css`) rather than a second,         */
-/* overlapping vocabulary of `.bl-*-sm` classes for the same thing — see   */
-/* task-5-report.md's fix-round-1 notes on `.bl-list-reset`/`.bl-mb-sm`/    */
-/* `.bl-mt-sm`/`.bl-ml-sm`/`.bl-cursor-pointer`, removed in that round.     */
+/* overlapping vocabulary of `.bp-*-sm` classes for the same thing — see   */
+/* task-5-report.md's fix-round-1 notes on `.bp-list-reset`/`.bp-mb-sm`/    */
+/* `.bp-mt-sm`/`.bp-ml-sm`/`.bp-cursor-pointer`, removed in that round.     */
 /* ---------------------------------------------------------------------- */
 
-.bl-m0 {
+.bp-m0 {
   margin: 0;
 }
 
-.bl-page-title {
-  font-family: var(--bl-font-body);
+.bp-page-title {
+  font-family: var(--bp-font-body);
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
 }
 
-.bl-section-title {
-  font-family: var(--bl-font-body);
+.bp-section-title {
+  font-family: var(--bp-font-body);
   font-size: 1.125rem;
   font-weight: 700;
   margin: 0 0 0.75rem;
 }
 
-.bl-stack-tight {
+.bp-stack-tight {
   gap: 0.75rem;
 }
 
 /* ---------------------------------------------------------------------- */
 /* Admin shell (Task 4, cleaned up here — see task-5-report.md's inline-   */
-/* style debt section). `.bl-admin-title` intentionally does NOT reuse     */
-/* `.bl-hero-title`: the admin control panel is a different vocabulary     */
+/* style debt section). `.bp-admin-title` intentionally does NOT reuse     */
+/* `.bp-hero-title`: the admin control panel is a different vocabulary     */
 /* from the member-facing browsing surface, not the same primitive reused  */
 /* "regardless of hierarchy".                                              */
 /* ---------------------------------------------------------------------- */
 
-.bl-admin-title {
-  font-family: var(--bl-font-display);
+.bp-admin-title {
+  font-family: var(--bp-font-display);
   font-weight: 800;
   font-size: 1.75rem;
   margin: 0;
 }
 
-.bl-header-row {
+.bp-header-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -1257,7 +1257,7 @@ a.bl-btn {
   gap: 0.75rem;
 }
 
-.bl-inline-nav-list {
+.bp-inline-nav-list {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -1266,26 +1266,26 @@ a.bl-btn {
   margin: 0;
 }
 
-/* Admin overview's stat tiles — a real grid (`.bl-stat-grid`), never a
-   `.bl-stack` (flex-column) with a `display: grid` inline override sitting
+/* Admin overview's stat tiles — a real grid (`.bp-stat-grid`), never a
+   `.bp-stack` (flex-column) with a `display: grid` inline override sitting
    on top of it (that contradiction was the report's C-item: the inline
    rule wins, so it "worked", but authoring a flex class and then
    overriding its own `display` inline is nonsense — this replaces both
    with one real class). */
-.bl-stat-grid {
+.bp-stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: 1rem;
 }
 
-.bl-card-link {
+.bp-card-link {
   display: block;
   text-decoration: none;
   color: inherit;
 }
 
-.bl-stat-value {
-  font-family: var(--bl-font-display);
+.bp-stat-value {
+  font-family: var(--bp-font-display);
   font-weight: 800;
   font-size: 2.5rem;
   margin: 0.25rem 0;
@@ -1294,36 +1294,36 @@ a.bl-btn {
 /* The "Add a member" / "Add an instrument" / "Create a token" form grids —
    one or two columns depending on width. `--wide` gives the two email/name
    fields on the members form more room before wrapping to two columns. */
-.bl-form-grid {
+.bp-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: 0 1.25rem;
 }
 
-.bl-form-grid--wide {
+.bp-form-grid--wide {
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
 }
 
 /* The per-row inline edit forms in the admin tables (rename+reorder an
    instrument, change a member's role/status) — compact controls that sit
    next to a Save button in a single wrapping line. */
-.bl-inline-form {
+.bp-inline-form {
   display: flex;
   gap: 0.375rem;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.bl-input-compact {
+.bp-input-compact {
   padding: 0.25rem 0.5rem;
 }
 
-.bl-input-inline-label {
+.bp-input-inline-label {
   padding: 0.25rem 0.5rem;
   max-width: 12rem;
 }
 
-.bl-input-inline-number {
+.bp-input-inline-number {
   padding: 0.25rem 0.5rem;
   max-width: 5rem;
 }
@@ -1333,19 +1333,19 @@ a.bl-btn {
    not a checkbox fieldset — the option list is the same instrument
    vocabulary `/admin/instruments` already manages, and this keeps the row
    compact in a table cell. */
-.bl-instrument-multiselect {
+.bp-instrument-multiselect {
   min-width: 9rem;
 }
 
 /* Auth pages (login, the login-token page, setup) — one narrow centered
    column, one display headline. */
-.bl-auth-main {
+.bp-auth-main {
   max-width: 26rem;
   margin-top: 3.5rem;
 }
 
-.bl-auth-title {
-  font-family: var(--bl-font-display);
+.bp-auth-title {
+  font-family: var(--bp-font-display);
   font-weight: 800;
   font-size: 2.25rem;
   margin: 0 0 1.5rem;
@@ -1358,81 +1358,81 @@ a.bl-btn {
 /* count, last played) is mono, right-aligned on desktop as real columns.  */
 /* ---------------------------------------------------------------------- */
 
-.bl-song-list {
-  border-top: 1px solid var(--bl-color-border);
+.bp-song-list {
+  border-top: 1px solid var(--bp-color-border);
 }
 
-/* Task 8: `.bl-song-row` used to BE the `<a>` — the whole row was one
+/* Task 8: `.bp-song-row` used to BE the `<a>` — the whole row was one
    link. `FavoriteToggle` renders a `<form>+<button>`, and a `<form>` inside
    an `<a>` is invalid HTML (interactive content can't nest), so the row is
-   now a plain container with the link as one child (`.bl-song-row-link`,
+   now a plain container with the link as one child (`.bp-song-row-link`,
    carrying the old link styling) and the favorite toggle as a sibling —
    same visual result, `:hover`/border/padding unchanged, just moved from
    the `<a>` onto the row it's still visually indistinguishable from. */
-.bl-song-row {
+.bp-song-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-height: 44px;
   padding: 1rem 0.25rem;
-  border-bottom: 1px solid var(--bl-color-border);
+  border-bottom: 1px solid var(--bp-color-border);
 }
 
-.bl-song-row:hover {
-  background: var(--bl-color-surface);
+.bp-song-row:hover {
+  background: var(--bp-color-surface);
 }
 
-.bl-song-row-link {
+.bp-song-row-link {
   display: flex;
   align-items: center;
   gap: 1rem;
   flex: 1;
   min-width: 0;
   text-decoration: none;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
 }
 
-.bl-song-row-main {
+.bp-song-row-main {
   flex: 1;
   min-width: 0;
 }
 
-.bl-song-title {
+.bp-song-title {
   font-weight: 700;
   font-size: 1.0625rem;
   margin: 0 0 0.1875rem;
 }
 
-.bl-song-title-stub {
-  color: var(--bl-color-muted);
+.bp-song-title-stub {
+  color: var(--bp-color-muted);
   font-style: italic;
   font-weight: 600;
 }
 
-.bl-song-meta {
-  font-family: var(--bl-font-mono);
+.bp-song-meta {
+  font-family: var(--bp-font-mono);
   font-size: 0.8125rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
 }
 
-.bl-song-row-stats {
+.bp-song-row-stats {
   display: none;
   flex-shrink: 0;
   gap: 1.5rem;
-  font-family: var(--bl-font-mono);
+  font-family: var(--bp-font-mono);
   font-size: 0.8125rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   text-align: right;
 }
 
-.bl-song-row-stat-value {
+.bp-song-row-stat-value {
   display: block;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
   font-size: 0.9375rem;
 }
 
 @media (min-width: 1024px) {
-  .bl-song-row-stats {
+  .bp-song-row-stats {
     display: flex;
   }
 }
@@ -1441,13 +1441,13 @@ a.bl-btn {
 /* Event archive — rehearsals and concerts together, distinguished by a    */
 /* left accent stripe AND an explicit kind word (never color alone, per    */
 /* WCAG 1.4.1). Contrast of the accent stripe against both grounds — see  */
-/* components.css's file header for `--bl-component-accent-strong`        */
-/* (rust family) and `--bl-component-accent-success` (olive family), both */
-/* already verified at >=3:1 in both themes. `--bl-color-muted` (the      */
+/* components.css's file header for `--bp-component-accent-strong`        */
+/* (rust family) and `--bp-component-accent-success` (olive family), both */
+/* already verified at >=3:1 in both themes. `--bp-color-muted` (the      */
 /* rehearsal color, the common case) is 4.65:1 / 6.93:1 — see roost.css.  */
 /* ---------------------------------------------------------------------- */
 
-.bl-event-list {
+.bp-event-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -1459,114 +1459,114 @@ a.bl-btn {
    compact enough that two side by side reads as a proper archive grid,
    not cramped. */
 @media (min-width: 1024px) {
-  .bl-event-list {
+  .bp-event-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem 1.5rem;
   }
 }
 
-/* Task 8: same restructuring as `.bl-song-row` above (see its comment) —
-   `.bl-event-row` is now a plain container, `.bl-event-row-link` carries
+/* Task 8: same restructuring as `.bp-song-row` above (see its comment) —
+   `.bp-event-row` is now a plain container, `.bp-event-row-link` carries
    the old link styling, `FavoriteToggle` sits as a sibling. */
-.bl-event-row {
+.bp-event-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-height: 44px;
   padding: 1rem 1.125rem;
-  border: 1px solid var(--bl-color-border);
-  border-left: 4px solid var(--bl-color-muted);
+  border: 1px solid var(--bp-color-border);
+  border-left: 4px solid var(--bp-color-muted);
   border-radius: 0.375rem;
 }
 
-.bl-event-row:hover {
-  background: var(--bl-color-surface);
+.bp-event-row:hover {
+  background: var(--bp-color-surface);
 }
 
-.bl-event-row--concert {
-  border-left-color: var(--bl-component-accent-strong);
+.bp-event-row--concert {
+  border-left-color: var(--bp-component-accent-strong);
 }
 
-.bl-event-row--session {
-  border-left-color: var(--bl-component-accent-success);
+.bp-event-row--session {
+  border-left-color: var(--bp-component-accent-success);
 }
 
-.bl-event-row-link {
+.bp-event-row-link {
   display: flex;
   align-items: center;
   gap: 1rem;
   flex: 1;
   min-width: 0;
   text-decoration: none;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
 }
 
-.bl-event-row-main {
+.bp-event-row-main {
   flex: 1;
   min-width: 0;
 }
 
-.bl-event-row-date {
-  font-family: var(--bl-font-mono);
+.bp-event-row-date {
+  font-family: var(--bp-font-mono);
   font-weight: 600;
   font-size: 0.9375rem;
 }
 
-.bl-event-row-venue {
+.bp-event-row-venue {
   font-size: 0.9375rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   margin: 0.125rem 0 0;
 }
 
-.bl-event-row-stats {
+.bp-event-row-stats {
   display: none;
   flex-shrink: 0;
-  font-family: var(--bl-font-mono);
+  font-family: var(--bp-font-mono);
   font-size: 0.8125rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   text-align: right;
 }
 
 @media (min-width: 1024px) {
-  .bl-event-row-stats {
+  .bp-event-row-stats {
     display: block;
   }
 }
 
-/* The compact, mobile-only equivalent of `.bl-event-row-stats` — the take
+/* The compact, mobile-only equivalent of `.bp-event-row-stats` — the take
    count a member uses "to tell a well-documented rehearsal from an empty
    placeholder before opening it" (see `listRecentWithTakeCounts`), inline
    next to the kind badge instead of in its own right-aligned column, since
    phones don't have a spare column. Below `lg` this is the ONLY place the
    count renders (most seeded rehearsals are untitled, so on a phone the
    badge + this count IS the row's content, besides the date); past `lg`
-   the wide `.bl-event-row-stats` column takes over and this is hidden, so
+   the wide `.bp-event-row-stats` column takes over and this is hidden, so
    the count never renders twice. */
-.bl-event-row-count {
+.bp-event-row-count {
   display: inline-block;
   margin-left: 0.5rem;
-  font-family: var(--bl-font-mono);
+  font-family: var(--bp-font-mono);
   font-size: 0.8125rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
 }
 
 @media (min-width: 1024px) {
-  .bl-event-row-count {
+  .bp-event-row-count {
     display: none;
   }
 }
 
-.bl-badge-concert::before {
-  background: var(--bl-component-accent-strong);
+.bp-badge-concert::before {
+  background: var(--bp-component-accent-strong);
 }
 
-.bl-badge-session::before {
-  background: var(--bl-component-accent-success);
+.bp-badge-session::before {
+  background: var(--bp-component-accent-success);
 }
 
-.bl-badge-keeper::before {
-  background: var(--bl-component-accent-success);
+.bp-badge-keeper::before {
+  background: var(--bp-component-accent-success);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1576,7 +1576,7 @@ a.bl-btn {
 /* none, per the brief).                                                   */
 /* ---------------------------------------------------------------------- */
 
-.bl-take-list {
+.bp-take-list {
   display: flex;
   flex-direction: column;
 }
@@ -1590,28 +1590,28 @@ a.bl-btn {
    of these cases — becomes a real two-column grid past `lg` instead of
    stretching one narrow list across a wide viewport. */
 @media (min-width: 1024px) {
-  .bl-take-list--wide {
+  .bp-take-list--wide {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 1.5rem;
   }
 }
 
-.bl-take-row {
+.bp-take-row {
   display: flex;
-  /* `flex-wrap: wrap` (Task 8 fix round 1): `.bl-take-row-main{flex:1}` has
+  /* `flex-wrap: wrap` (Task 8 fix round 1): `.bp-take-row-main{flex:1}` has
      a `flex-basis` of `0%`, so when the row's CONTENT overflows (a narrow
-     2-column grid cell, e.g. `.bl-take-list--wide` on `/`, plus a wide
+     2-column grid cell, e.g. `.bp-take-list--wide` on `/`, plus a wide
      `VoteToggle` in the trailing column), the flexbox shrink algorithm —
      which distributes negative space in proportion to `basis × shrink` —
-     assigns `.bl-take-row-main` a ZERO share of that shrink (its basis is
-     already 0) and dumps the entire overflow onto `.bl-take-row-trailing`
+     assigns `.bp-take-row-main` a ZERO share of that shrink (its basis is
+     already 0) and dumps the entire overflow onto `.bp-take-row-trailing`
      instead, which then refuses to shrink below its own unconstrained
-     content width. Net effect: `.bl-take-row-main` collapsed to a
+     content width. Net effect: `.bp-take-row-main` collapsed to a
      measured 0px and "Neon Skyline" wrapped one character per line. Same
-     underlying class of narrow-2-col-grid overflow bug `.bl-take-row-line`
+     underlying class of narrow-2-col-grid overflow bug `.bp-take-row-line`
      already had (see its own comment) and the same fix: let the row wrap
-     onto a second line — `.bl-take-row-trailing` (right-aligned via its
+     onto a second line — `.bp-take-row-trailing` (right-aligned via its
      own `align-items: flex-end`) drops below the label/meta instead of
      squeezing it to nothing. */
   flex-wrap: wrap;
@@ -1619,19 +1619,19 @@ a.bl-btn {
   gap: 0.875rem;
   min-height: 44px;
   padding: 0.875rem 0.25rem;
-  border-bottom: 1px solid var(--bl-color-border);
+  border-bottom: 1px solid var(--bp-color-border);
 }
 
-.bl-take-row-main {
+.bp-take-row-main {
   /* Explicit basis, not just `flex: 1` (whose implicit `flex-basis: 0%` is
-     what let this collapse to 0 before `.bl-take-row` grew `flex-wrap` —
-     see that rule's comment) — same fix `.bl-session-row-main`/
-     `.bl-vote-row-main` already use for the identical reason. */
+     what let this collapse to 0 before `.bp-take-row` grew `flex-wrap` —
+     see that rule's comment) — same fix `.bp-session-row-main`/
+     `.bp-vote-row-main` already use for the identical reason. */
   flex: 1 1 10rem;
   min-width: 0;
 }
 
-.bl-take-label {
+.bp-take-label {
   /* inline-flex + min-height, not just a taller line-height — this is a
      44px TOUCH TARGET (brief §6), not a visual size change: the text stays
      its normal size, vertically centered in a taller invisible box, rather
@@ -1641,46 +1641,46 @@ a.bl-btn {
   min-height: 44px;
   font-weight: 600;
   font-size: 0.9375rem;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
   text-decoration: underline;
-  /* `--bl-color-muted`, not `--bl-color-border` (1.31:1 / 1.39:1) — this
+  /* `--bp-color-muted`, not `--bp-color-border` (1.31:1 / 1.39:1) — this
      underline is the link's own non-color affordance (WCAG 1.4.1), so it
      gets the same >=3:1-in-both-themes token every other boundary in this
      file uses (4.65:1 / 6.93:1 — see roost.css). */
-  text-decoration-color: var(--bl-color-muted);
+  text-decoration-color: var(--bp-color-muted);
   text-underline-offset: 0.15em;
 }
 
-.bl-take-label:hover {
+.bp-take-label:hover {
   text-decoration-color: currentColor;
 }
 
 /* Positions `FavoriteToggle` (Task 8) next to a title/label it's marking —
-   the gold fill itself is `.bl-favorite-toggle`'s own concern (see the
+   the gold fill itself is `.bp-favorite-toggle`'s own concern (see the
    "vote toggle, favorite toggle, toast" block below); this class is purely
    layout, the same spot the Task 6 static marker it replaced used to sit
    in. Shared by `TakeRow.astro`, `/songs/[slug]`, `/events/[id]`, and
    `/takes/[id]`'s heroes. */
-.bl-take-favorite-mark {
+.bp-take-favorite-mark {
   display: inline-flex;
   align-items: center;
   margin-left: 0.375rem;
   flex-shrink: 0;
 }
 
-.bl-take-sublabel {
+.bp-take-sublabel {
   display: block;
-  font-family: var(--bl-font-body);
+  font-family: var(--bp-font-body);
   font-style: italic;
 }
 
-.bl-take-meta {
-  font-family: var(--bl-font-mono);
+.bp-take-meta {
+  font-family: var(--bp-font-mono);
   font-size: 0.8125rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
 }
 
-.bl-take-row-line {
+.bp-take-row-line {
   display: flex;
   /* Task 6: unwrapped, this line's content (badge + "full" mode's extra
      date span + the event-link) overflowed a take row's own box and
@@ -1690,7 +1690,7 @@ a.bl-btn {
      real and reproducible in the two-column grids Task 6 adds
      (`/search`, home) where a card can be under 250px wide. Verified live:
      at that width, `align-items: center` alone left the badge/date/link
-     overlapping `.bl-take-row-duration`; `flex-wrap: wrap` (plus the
+     overlapping `.bp-take-row-duration`; `flex-wrap: wrap` (plus the
      `row-gap` below) lets the line break onto its own lines instead. */
   flex-wrap: wrap;
   align-items: center;
@@ -1698,34 +1698,34 @@ a.bl-btn {
   margin-top: 0.25rem;
 }
 
-.bl-take-event-link {
-  /* Same 44px touch-target technique as `.bl-take-label` — a taller
+.bp-take-event-link {
+  /* Same 44px touch-target technique as `.bp-take-label` — a taller
      invisible box, not larger text. `align-items: center` on the parent
-     `.bl-take-row-line` keeps the badge next to it vertically centered
+     `.bp-take-row-line` keeps the badge next to it vertically centered
      against this now-taller link rather than pinned to its own top edge.
      Measured at 375px: 19.5px before, 44px after. */
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  font-family: var(--bl-font-body);
-  color: var(--bl-color-muted);
+  font-family: var(--bp-font-body);
+  color: var(--bp-color-muted);
   text-decoration: underline;
 }
 
-.bl-take-instruments {
+.bp-take-instruments {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3125rem;
   margin-top: 0.375rem;
 }
 
-.bl-take-instrument-tag {
-  font-family: var(--bl-font-mono);
+.bp-take-instrument-tag {
+  font-family: var(--bp-font-mono);
   font-size: 0.6875rem;
   padding: 0.0625rem 0.4375rem;
-  border: 1px solid var(--bl-color-border);
+  border: 1px solid var(--bp-color-border);
   border-radius: 999px;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   white-space: nowrap;
 }
 
@@ -1735,33 +1735,33 @@ a.bl-btn {
    narrow widths without the row overflowing (`VoteToggle`'s own tally text
    already wraps onto its own line via `flex-basis: 100%`, so this just
    needs to not fight that). */
-.bl-take-row-trailing {
+.bp-take-row-trailing {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   /* `min-width: 0` overrides the flex default of `auto`, which pins a flex
      item to its content's max-content width and refuses to shrink below
      it — the classic flexbox trap, and the exact bug this was shipping
-     with (Fix round, this task): `.bl-vote-toggle` inside had nothing
+     with (Fix round, this task): `.bp-vote-toggle` inside had nothing
      bounding its width, so it rendered at its own unconstrained
-     "everything on one line" width and pushed `.bl-take-row-main` to 0,
+     "everything on one line" width and pushed `.bp-take-row-main` to 0,
      wrapping "Neon Skyline" onto two 1-character-wide lines. `flex-shrink`
      stays implicit (1, the default) so this column actually gives up width
-     to `.bl-take-row-main` when the row is narrow. */
+     to `.bp-take-row-main` when the row is narrow. */
   min-width: 0;
   gap: 0.375rem;
 }
 
-.bl-take-row-duration {
+.bp-take-row-duration {
   display: none;
   flex-shrink: 0;
-  font-family: var(--bl-font-mono);
+  font-family: var(--bp-font-mono);
   font-size: 0.8125rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
 }
 
 @media (min-width: 1024px) {
-  .bl-take-row-duration {
+  .bp-take-row-duration {
     display: block;
   }
 }
@@ -1772,16 +1772,16 @@ a.bl-btn {
 /* stays in body/mono type — see the design plan in task-5-report.md.      */
 /* ---------------------------------------------------------------------- */
 
-.bl-hero-title {
-  font-family: var(--bl-font-display);
+.bp-hero-title {
+  font-family: var(--bp-font-display);
   font-weight: 800;
   font-size: 2.25rem;
   line-height: 1.05;
   margin: 0;
 }
 
-.bl-hero-date {
-  font-family: var(--bl-font-display);
+.bp-hero-date {
+  font-family: var(--bp-font-display);
   font-weight: 800;
   font-size: 1.75rem;
   line-height: 1.1;
@@ -1789,11 +1789,11 @@ a.bl-btn {
 }
 
 @media (min-width: 1024px) {
-  .bl-hero-title {
+  .bp-hero-title {
     font-size: 3.25rem;
   }
 
-  .bl-hero-date {
+  .bp-hero-date {
     font-size: 2.5rem;
   }
 }
@@ -1805,8 +1805,8 @@ a.bl-btn {
 /* line" rather than a guessed `rem` value.                                */
 /* ---------------------------------------------------------------------- */
 
-.bl-chords {
-  font-family: var(--bl-font-mono);
+.bp-chords {
+  font-family: var(--bp-font-mono);
   font-size: 1.0625rem;
   line-height: 1.9;
   /* `pre`, not `pre-wrap` — a chord line's spacing is column alignment
@@ -1826,8 +1826,8 @@ a.bl-btn {
   margin: 0;
 }
 
-.bl-lyrics {
-  font-family: var(--bl-font-body);
+.bp-lyrics {
+  font-family: var(--bp-font-body);
   font-size: 1.125rem;
   line-height: 1.75;
   white-space: pre-wrap;
@@ -1845,48 +1845,48 @@ a.bl-btn {
 /* chart: section first, then the words and changes under it.               */
 /* ---------------------------------------------------------------------- */
 
-.bl-song-chart {
+.bp-song-chart {
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
-  /* Part of the same min-content-width fix as `.bl-stack` above — every
-     flex box between `.bl-chords` and the page's outer column needs this,
+  /* Part of the same min-content-width fix as `.bp-stack` above — every
+     flex box between `.bp-chords` and the page's outer column needs this,
      not just the `<pre>` itself (tried alone; not enough). */
   min-width: 0;
 }
 
-.bl-song-chart-section {
+.bp-song-chart-section {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   min-width: 0;
 }
 
-.bl-song-chart-label {
-  font-family: var(--bl-font-body);
+.bp-song-chart-label {
+  font-family: var(--bp-font-body);
   font-weight: 700;
   font-size: 0.9375rem;
   margin: 0;
   padding-left: 0.75rem;
-  /* `--bl-component-accent-strong` — the same token/pairing already
+  /* `--bp-component-accent-strong` — the same token/pairing already
      verified against the page ground elsewhere in this file (9.21:1 light,
      4.41:1 dark; well over the 3:1 WCAG 1.4.11 non-text-boundary floor), not
      a new ratio. Fill/border use only, never as this label's own text
      color, per the brief's accent-token rule. */
-  border-left: 3px solid var(--bl-component-accent-strong);
+  border-left: 3px solid var(--bp-component-accent-strong);
 }
 
 /* ---------------------------------------------------------------------- */
 /* Song detail layout — chords/lyrics beside the take list at `lg`.        */
 /* ---------------------------------------------------------------------- */
 
-.bl-song-detail-grid {
+.bp-song-detail-grid {
   display: grid;
   gap: 2rem;
 }
 
 @media (min-width: 1024px) {
-  .bl-song-detail-grid {
+  .bp-song-detail-grid {
     grid-template-columns: minmax(0, 1fr) 23rem;
     align-items: start;
   }
@@ -1896,15 +1896,15 @@ a.bl-btn {
 /* Empty states — an invitation, not a report (per the brief's copy rule). */
 /* ---------------------------------------------------------------------- */
 
-.bl-empty-state {
+.bp-empty-state {
   padding: 2.5rem 1.25rem;
   text-align: center;
-  color: var(--bl-color-muted);
-  border: 1px dashed var(--bl-color-border);
+  color: var(--bp-color-muted);
+  border: 1px dashed var(--bp-color-border);
   border-radius: 0.5rem;
 }
 
-.bl-empty-state p {
+.bp-empty-state p {
   margin: 0;
 }
 
@@ -1916,7 +1916,7 @@ a.bl-btn {
 /* control CSS of its own, only the event-group spacing the layout needs.  */
 /* ---------------------------------------------------------------------- */
 
-.bl-home-event-group {
+.bp-home-event-group {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -1924,62 +1924,62 @@ a.bl-btn {
 
 /* ---------------------------------------------------------------------- */
 /* Take detail (Task 6) — no player yet (increment 4); see the page's own  */
-/* header comment for where that goes. `--bl-color-muted` for the link     */
+/* header comment for where that goes. `--bp-color-muted` for the link     */
 /* underline here is the same >=3:1-in-both-themes token every other link  */
 /* underline in this file uses (4.65:1 / 6.93:1 — see roost.css).          */
 /* ---------------------------------------------------------------------- */
 
-.bl-hero-title-link {
-  color: var(--bl-color-fg);
+.bp-hero-title-link {
+  color: var(--bp-color-fg);
   text-decoration: underline;
-  text-decoration-color: var(--bl-color-muted);
+  text-decoration-color: var(--bp-color-muted);
   text-underline-offset: 0.2em;
 }
 
-.bl-hero-title-link:hover {
+.bp-hero-title-link:hover {
   text-decoration-color: currentColor;
 }
 
-.bl-take-detail-meta {
+.bp-take-detail-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: 1.25rem 1.5rem;
   margin: 0;
 }
 
-.bl-take-detail-meta dt {
-  font-family: var(--bl-font-mono);
+.bp-take-detail-meta dt {
+  font-family: var(--bp-font-mono);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   margin: 0 0 0.3125rem;
 }
 
-.bl-take-detail-meta dd {
+.bp-take-detail-meta dd {
   margin: 0;
   font-size: 0.9375rem;
 }
 
-.bl-take-detail-meta dd a {
-  color: var(--bl-color-fg);
+.bp-take-detail-meta dd a {
+  color: var(--bp-color-fg);
   text-decoration: underline;
-  text-decoration-color: var(--bl-color-muted);
+  text-decoration-color: var(--bp-color-muted);
   text-underline-offset: 0.15em;
 }
 
-.bl-take-detail-meta dd a:hover {
+.bp-take-detail-meta dd a:hover {
   text-decoration-color: currentColor;
 }
 
-.bl-asset-list {
+.bp-asset-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--bl-color-border);
+  border-top: 1px solid var(--bp-color-border);
 }
 
-.bl-asset-row {
+.bp-asset-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -1987,10 +1987,10 @@ a.bl-btn {
   gap: 0.5rem 1rem;
   min-height: 44px;
   padding: 0.75rem 0.25rem;
-  border-bottom: 1px solid var(--bl-color-border);
+  border-bottom: 1px solid var(--bp-color-border);
 }
 
-.bl-asset-row-label {
+.bp-asset-row-label {
   font-weight: 600;
 }
 
@@ -2000,55 +2000,55 @@ a.bl-btn {
    inline item with a vertical-rule border between items instead of a text
    glyph — the same information, laid out like the badge/tag rows already
    used elsewhere in this file rather than a generated-design cliché. */
-.bl-asset-row-meta {
+.bp-asset-row-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   font-size: 0.8125rem;
 }
 
-.bl-asset-row-meta-item {
+.bp-asset-row-meta-item {
   padding-inline: 0.5rem;
 }
 
-.bl-asset-row-meta-item:first-child {
+.bp-asset-row-meta-item:first-child {
   padding-inline-start: 0;
 }
 
-.bl-asset-row-meta-item + .bl-asset-row-meta-item {
-  border-inline-start: 1px solid var(--bl-color-border);
+.bp-asset-row-meta-item + .bp-asset-row-meta-item {
+  border-inline-start: 1px solid var(--bp-color-border);
 }
 
 /* ---------------------------------------------------------------------- */
 /* /me (Task 6, revised in review round 1 for F3) — sessions and vote      */
 /* history. Flat rows, same vocabulary as the take/event rows above rather */
 /* than a third list treatment. Past `lg`, both lists become the same      */
-/* 2-column grid `.bl-take-list--wide` already uses (favorites' own take   */
+/* 2-column grid `.bp-take-list--wide` already uses (favorites' own take   */
 /* list gets that exact class) — `/me` used to be identical at 375/1440,   */
 /* just wider single-column rows; this is what actually makes it a real    */
 /* desktop layout instead of a phone layout stretched wide.                */
 /* ---------------------------------------------------------------------- */
 
-.bl-session-list,
-.bl-vote-list {
+.bp-session-list,
+.bp-vote-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--bl-color-border);
+  border-top: 1px solid var(--bp-color-border);
 }
 
 @media (min-width: 1024px) {
-  .bl-session-list,
-  .bl-vote-list {
+  .bp-session-list,
+  .bp-vote-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 1.5rem;
   }
 }
 
-.bl-session-row,
-.bl-vote-row {
+.bp-session-row,
+.bp-vote-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -2056,51 +2056,51 @@ a.bl-btn {
   gap: 0.75rem;
   min-height: 44px;
   padding: 0.875rem 0.25rem;
-  border-bottom: 1px solid var(--bl-color-border);
+  border-bottom: 1px solid var(--bp-color-border);
 }
 
-.bl-session-row-main,
-.bl-vote-row-main {
+.bp-session-row-main,
+.bp-vote-row-main {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   min-width: 0;
   /* Explicit basis (not just `min-width: 0`) so this shrinks predictably
      against its row's other child instead of the row wrapping the OTHER
-     child onto its own line — see `.bl-session-row-agent`/
-     `.bl-session-row-action` just below for the fix this was paired with
+     child onto its own line — see `.bp-session-row-agent`/
+     `.bp-session-row-action` just below for the fix this was paired with
      (F3: "Sign out" was orphaning onto its own line at every width). */
   flex: 1 1 12rem;
 }
 
-/* F3: a long mono user-agent string used to force `.bl-session-row` (which
+/* F3: a long mono user-agent string used to force `.bp-session-row` (which
    wraps) to push the "Sign out" form onto its own line at BOTH 375px and
    1440px — not a width bug, a content-can't-shrink bug. Truncating this one
    line instead of letting it grow is what lets the row's flexbox actually
    shrink it, so the button stays on the same line as the row's own
    content whenever there's room for it. */
-.bl-session-row-agent {
+.bp-session-row-agent {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
 }
 
-.bl-session-row-action {
+.bp-session-row-action {
   flex-shrink: 0;
 }
 
-.bl-vote-row-song {
+.bp-vote-row-song {
   display: inline-flex;
   align-items: center;
   font-weight: 600;
-  color: var(--bl-color-fg);
+  color: var(--bp-color-fg);
   text-decoration: underline;
-  text-decoration-color: var(--bl-color-muted);
+  text-decoration-color: var(--bp-color-muted);
   text-underline-offset: 0.15em;
 }
 
-.bl-vote-row-song:hover {
+.bp-vote-row-song:hover {
   text-decoration-color: currentColor;
 }
 
@@ -2108,22 +2108,22 @@ a.bl-btn {
 /* Task 8 — vote toggle, favorite toggle, toast. `VoteToggle.astro`/       */
 /* `FavoriteToggle.astro` render the markup below; `VoteFavorite.tsx`      */
 /* toggles `aria-pressed`/text content on it after a submit, exactly the   */
-/* way `Player.tsx` already toggles `.bl-play-toggle`'s own state.         */
+/* way `Player.tsx` already toggles `.bp-play-toggle`'s own state.         */
 /*                                                                          */
 /* Contrast (WCAG relative luminance, computed for this task):             */
-/*   Resting vote button: border `--bl-color-fg`, text `--bl-color-fg`,    */
-/*   background `--bl-color-surface` — same combination `.bl-btn-secondary`*/
-/*   already uses; `--bl-color-fg` is ~15:1 against both `--bl-color-bg`   */
-/*   and `--bl-color-surface` in both themes (see roost.css's header).     */
+/*   Resting vote button: border `--bp-color-fg`, text `--bp-color-fg`,    */
+/*   background `--bp-color-surface` — same combination `.bp-btn-secondary`*/
+/*   already uses; `--bp-color-fg` is ~15:1 against both `--bp-color-bg`   */
+/*   and `--bp-color-surface` in both themes (see roost.css's header).     */
 /*                                                                          */
-/*   Pressed vote button: text STAYS `--bl-color-fg` (~15:1) — border and  */
+/*   Pressed vote button: text STAYS `--bp-color-fg` (~15:1) — border and  */
 /*   a tinted background switch to the accent family instead of the text   */
-/*   color, deliberately mirroring `.bl-btn-danger`'s existing pattern     */
-/*   rather than `.bl-solo-chip.is-active`'s (which sets `color` directly  */
-/*   to `--bl-component-accent-success`). `--bl-component-accent-success`  */
+/*   color, deliberately mirroring `.bp-btn-danger`'s existing pattern     */
+/*   rather than `.bp-solo-chip.is-active`'s (which sets `color` directly  */
+/*   to `--bp-component-accent-success`). `--bp-component-accent-success`  */
 /*   text would have been fine (8.06:1/8.71:1 light, 5.14:1/4.76:1 dark —  */
 /*   all >=4.5:1, per this file's header) but                              */
-/*   `--bl-component-accent-strong` (used for "Not a keeper") is NOT:      */
+/*   `--bp-component-accent-strong` (used for "Not a keeper") is NOT:      */
 /*   9.21:1/9.96:1 in light mode, but only 4.41:1/4.08:1 in dark mode —    */
 /*   BELOW the 4.5:1 normal-text floor at this button's 0.875rem/14px size */
 /*   (not "large text" under WCAG 1.4.3 even at bold weight, which needs   */
@@ -2135,23 +2135,23 @@ a.bl-btn {
 /*   text/fill" spot the project has gotten wrong five times before.       */
 /*   Selection also carries a non-colour affordance (bold weight plus a    */
 /*   leading check/cross mark via `::before` — same technique              */
-/*   `.bl-solo-chip.is-active` already uses), not colour alone (WCAG       */
+/*   `.bp-solo-chip.is-active` already uses), not colour alone (WCAG       */
 /*   1.4.1).                                                               */
 /*                                                                          */
-/*   Favorite star: filled (pressed) uses `--bl-component-accent-gold` as  */
+/*   Favorite star: filled (pressed) uses `--bp-component-accent-gold` as  */
 /*   an ICON FILL (not text) — already verified in this file's header      */
 /*   (3.45:1/3.73:1 light, 9.10:1/8.42:1 dark, clearing the 3:1 non-text   */
-/*   floor). Unfilled (outline) uses `--bl-color-muted` (4.65:1/6.93:1 —   */
+/*   floor). Unfilled (outline) uses `--bp-color-muted` (4.65:1/6.93:1 —   */
 /*   see roost.css), comfortably clearing 3:1 too. Filled vs. outline is   */
 /*   itself the non-colour affordance — a different SHAPE, not just a      */
 /*   different colour on the same shape.                                  */
 /*                                                                          */
-/*   Toast: `--bl-color-fg` text on `--bl-color-surface`, border           */
-/*   `--bl-color-fg` — the exact combination `Player.tsx`'s own bar         */
+/*   Toast: `--bp-color-fg` text on `--bp-color-surface`, border           */
+/*   `--bp-color-fg` — the exact combination `Player.tsx`'s own bar         */
 /*   already uses and documents (16.84:1 light / 14.41:1 dark).            */
 /* ---------------------------------------------------------------------- */
 
-.bl-vote-toggle {
+.bp-vote-toggle {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -2161,67 +2161,67 @@ a.bl-btn {
   max-width: 100%;
 }
 
-.bl-vote-toggle-form {
+.bp-vote-toggle-form {
   display: contents;
 }
 
-.bl-vote-btn {
+.bp-vote-btn {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   padding: 0.375rem 0.75rem;
   border-radius: 0.375rem;
-  border: 2px solid var(--bl-color-fg);
-  background: var(--bl-color-surface);
-  color: var(--bl-color-fg);
-  font-family: var(--bl-font-body);
+  border: 2px solid var(--bp-color-fg);
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
   font-weight: 600;
   font-size: 0.8125rem;
   cursor: pointer;
 }
 
-.bl-vote-btn-keeper[aria-pressed="true"] {
-  border-color: var(--bl-component-accent-success);
-  background: color-mix(in srgb, var(--bl-component-accent-success) 14%, var(--bl-color-surface));
+.bp-vote-btn-keeper[aria-pressed="true"] {
+  border-color: var(--bp-component-accent-success);
+  background: color-mix(in srgb, var(--bp-component-accent-success) 14%, var(--bp-color-surface));
   font-weight: 700;
 }
 
-.bl-vote-btn-keeper[aria-pressed="true"]::before {
+.bp-vote-btn-keeper[aria-pressed="true"]::before {
   content: "✓ ";
 }
 
-.bl-vote-btn-not-keeper[aria-pressed="true"] {
-  border-color: var(--bl-component-accent-strong);
-  background: color-mix(in srgb, var(--bl-component-accent-strong) 12%, var(--bl-color-surface));
+.bp-vote-btn-not-keeper[aria-pressed="true"] {
+  border-color: var(--bp-component-accent-strong);
+  background: color-mix(in srgb, var(--bp-component-accent-strong) 12%, var(--bp-color-surface));
   font-weight: 700;
 }
 
-.bl-vote-btn-not-keeper[aria-pressed="true"]::before {
+.bp-vote-btn-not-keeper[aria-pressed="true"]::before {
   content: "✕ ";
 }
 
-.bl-vote-tally {
-  font-family: var(--bl-font-mono);
+.bp-vote-tally {
+  font-family: var(--bp-font-mono);
   font-size: 0.75rem;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   flex-basis: 100%;
 }
 
-.bl-vote-toggle-lg .bl-vote-btn {
+.bp-vote-toggle-lg .bp-vote-btn {
   min-height: 48px;
   padding: 0.5rem 1rem;
   font-size: 0.9375rem;
 }
 
-.bl-vote-toggle-lg .bl-vote-tally {
+.bp-vote-toggle-lg .bp-vote-tally {
   font-size: 0.8125rem;
 }
 
-.bl-favorite-toggle-form {
+.bp-favorite-toggle-form {
   display: inline-flex;
 }
 
-.bl-favorite-toggle {
+.bp-favorite-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2231,31 +2231,31 @@ a.bl-btn {
   min-height: 44px;
   border: none;
   background: transparent;
-  color: var(--bl-color-muted);
+  color: var(--bp-color-muted);
   cursor: pointer;
   padding: 0;
 }
 
-.bl-favorite-toggle .bl-star-filled {
+.bp-favorite-toggle .bp-star-filled {
   display: none;
-  color: var(--bl-component-accent-gold);
+  color: var(--bp-component-accent-gold);
 }
 
-.bl-favorite-toggle[aria-pressed="true"] .bl-star-outline {
+.bp-favorite-toggle[aria-pressed="true"] .bp-star-outline {
   display: none;
 }
 
-.bl-favorite-toggle[aria-pressed="true"] .bl-star-filled {
+.bp-favorite-toggle[aria-pressed="true"] .bp-star-filled {
   display: inline;
 }
 
-.bl-favorite-toggle-form-lg .bl-favorite-toggle {
+.bp-favorite-toggle-form-lg .bp-favorite-toggle {
   width: 2.75rem;
   height: 2.75rem;
 }
 
-.bl-favorite-toggle-form-lg .bl-star-outline,
-.bl-favorite-toggle-form-lg .bl-star-filled {
+.bp-favorite-toggle-form-lg .bp-star-outline,
+.bp-favorite-toggle-form-lg .bp-star-filled {
   width: 20px;
   height: 20px;
 }
@@ -2263,13 +2263,13 @@ a.bl-btn {
 /* Toast region — top-right, deliberately NOT near the bottom of the
    viewport: this project has twice shipped a fixed-position/reserved-space
    element that occluded something else near the bottom (the player bar,
-   the tab bar) — see `.bl-shell`'s own comment. A toast anchored at the
+   the tab bar) — see `.bp-shell`'s own comment. A toast anchored at the
    top avoids that whole class of bug rather than needing a third height
    negotiation with the player bar and tab bar. `role="status"`
    (`VoteFavorite.tsx`) gives it an implicit `aria-live="polite"` region;
    nothing here ever calls `.focus()` on it — a toast must not steal focus
    from whatever the member was doing when it appeared. */
-.bl-toast-region {
+.bp-toast-region {
   position: fixed;
   top: 1rem;
   right: 1rem;
@@ -2281,21 +2281,21 @@ a.bl-btn {
   pointer-events: none;
 }
 
-.bl-toast {
+.bp-toast {
   margin: 0;
   padding: 0.75rem 1rem;
-  border: 2px solid var(--bl-color-fg);
+  border: 2px solid var(--bp-color-fg);
   border-radius: 0.375rem;
-  background: var(--bl-color-surface);
-  color: var(--bl-color-fg);
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
   font-size: 0.875rem;
   font-weight: 600;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   pointer-events: auto;
-  animation: bl-toast-in 0.15s ease;
+  animation: bp-toast-in 0.15s ease;
 }
 
-@keyframes bl-toast-in {
+@keyframes bp-toast-in {
   from {
     opacity: 0;
     transform: translateY(-0.5rem);
@@ -2307,7 +2307,7 @@ a.bl-btn {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bl-toast {
+  .bp-toast {
     animation: none;
   }
 }

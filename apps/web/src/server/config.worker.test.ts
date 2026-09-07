@@ -15,14 +15,14 @@ const VALID_ENV: CloudflareEnv = {
   // A minimal fake D1 binding — `loadWorkersConfig` only checks
   // truthiness before delegating everything else to zod.
   DB: {} as CloudflareEnv["DB"],
-  BANDLIB_APP_ORIGIN: "https://bandlib.mydomain.example.org",
-  BANDLIB_BOOTSTRAP_TOKEN: "test-bootstrap-token",
+  BANDPLATE_APP_ORIGIN: "https://bandplate.mydomain.example.org",
+  BANDPLATE_BOOTSTRAP_TOKEN: "test-bootstrap-token",
   MAIL_PROVIDER: "resend",
   MAIL_API_KEY: "test-mail-key",
-  MAIL_FROM: "bandlib@mydomain.example.org",
+  MAIL_FROM: "bandplate@mydomain.example.org",
   S3_ENDPOINT: "https://abc123.r2.cloudflarestorage.com",
   S3_PUBLIC_ENDPOINT: "https://abc123.r2.cloudflarestorage.com",
-  S3_BUCKET: "bandlib",
+  S3_BUCKET: "bandplate",
   S3_REGION: "auto",
   S3_ACCESS_KEY_ID: "test-access-key",
   S3_SECRET_ACCESS_KEY: "test-secret-key",
@@ -31,7 +31,7 @@ const VALID_ENV: CloudflareEnv = {
 describe("loadWorkersConfig", () => {
   it("accepts a fully-configured, non-placeholder env", () => {
     const config = loadWorkersConfig(VALID_ENV);
-    expect(config.appOrigin).toBe(VALID_ENV.BANDLIB_APP_ORIGIN);
+    expect(config.appOrigin).toBe(VALID_ENV.BANDPLATE_APP_ORIGIN);
     expect(config.s3.endpoint).toBe(VALID_ENV.S3_ENDPOINT);
   });
 
@@ -43,15 +43,15 @@ describe("loadWorkersConfig", () => {
 
   // --- CRITICAL 1: placeholder [vars] must fail fast, not 403 silently ---
 
-  it("fails, naming BANDLIB_APP_ORIGIN, when it is left at the shipped wrangler.toml placeholder", () => {
-    const env = { ...VALID_ENV, BANDLIB_APP_ORIGIN: "https://bandlib.example" };
+  it("fails, naming BANDPLATE_APP_ORIGIN, when it is left at the shipped wrangler.toml placeholder", () => {
+    const env = { ...VALID_ENV, BANDPLATE_APP_ORIGIN: "https://bandplate.example" };
     expect(() => loadWorkersConfig(env)).toThrow(ConfigError);
-    expect(() => loadWorkersConfig(env)).toThrow(/BANDLIB_APP_ORIGIN/);
+    expect(() => loadWorkersConfig(env)).toThrow(/BANDPLATE_APP_ORIGIN/);
     expect(() => loadWorkersConfig(env)).toThrow(/placeholder/);
   });
 
   it("fails, naming MAIL_FROM, when it is left at the shipped wrangler.toml placeholder", () => {
-    const env = { ...VALID_ENV, MAIL_FROM: "bandlib@bandlib.example" };
+    const env = { ...VALID_ENV, MAIL_FROM: "bandplate@bandplate.example" };
     expect(() => loadWorkersConfig(env)).toThrow(/MAIL_FROM/);
     expect(() => loadWorkersConfig(env)).toThrow(/placeholder/);
   });
@@ -72,7 +72,7 @@ describe("loadWorkersConfig", () => {
   });
 
   it("does not reject a real domain that doesn't match the shipped placeholder shape", () => {
-    const env = { ...VALID_ENV, BANDLIB_APP_ORIGIN: "https://bandlib.io" };
+    const env = { ...VALID_ENV, BANDPLATE_APP_ORIGIN: "https://bandplate.io" };
     expect(() => loadWorkersConfig(env)).not.toThrow();
   });
 });

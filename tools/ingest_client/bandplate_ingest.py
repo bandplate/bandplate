@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bandlib ingest reference client — contract v1.
+"""bandplate ingest reference client — contract v1.
 
 A dependency-light Python client for the ingest API described in
 docs/ingest-contract-v1.md. It exists for two reasons:
@@ -19,7 +19,7 @@ readable and installable anywhere Python 3.9+ runs.
 --- Folder convention this client expects -----------------------------
 
     <project_dir>/
-      .bandlib-ingest.json      <- sidecar: event + per-take clientRefs
+      .bandplate-ingest.json      <- sidecar: event + per-take clientRefs
                                     (created on first run; contract v1 §3:
                                     "Generate a UUID on first ingest and
                                     write it to a sidecar file beside the
@@ -27,7 +27,7 @@ readable and installable anywhere Python 3.9+ runs.
       <take-name>/
         master.<ext>             <- required: the take's mixed-down master
         <instrument-slug>.<ext>  <- optional: one file per captured stem,
-                                    named exactly as the bandlib instrument
+                                    named exactly as the bandplate instrument
                                     slug (see GET /ingest/v1/instruments)
         peaks.json                <- optional: 1000 ints, -128..127
 
@@ -37,9 +37,9 @@ here is Reaper-specific.
 
 --- Usage ---------------------------------------------------------------
 
-    python3 bandlib_ingest.py \\
+    python3 bandplate_ingest.py \\
         --base-url http://localhost:27510/api \\
-        --token blk_...  \\
+        --token bpk_...  \\
         --project /path/to/session1 \\
         --event-kind rehearsal --venue "Zkušebna Vysočany" \\
         --create-missing-songs
@@ -63,7 +63,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-SIDECAR_NAME = ".bandlib-ingest.json"
+SIDECAR_NAME = ".bandplate-ingest.json"
 
 FORMAT_BY_EXT = {
     ".opus": "opus",
@@ -341,7 +341,7 @@ def ingest_project(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--base-url", required=True, help="e.g. http://localhost:4321/api")
-    parser.add_argument("--token", required=True, help="blk_{tokenId}_{secret}")
+    parser.add_argument("--token", required=True, help="bpk_{tokenId}_{secret}")
     parser.add_argument("--project", required=True, type=Path, help="project directory (see module docstring)")
     parser.add_argument("--event-kind", default="rehearsal", choices=["rehearsal", "concert", "session"])
     parser.add_argument("--held-at", default=None, help="ISO-8601 with offset; defaults to now")

@@ -1,4 +1,4 @@
-// Mailer port. Implementations (console/null/smtp) live in `@bandlib/mail` —
+// Mailer port. Implementations (console/null/smtp) live in `@bandplate/mail` —
 // this package only declares the shape the domain depends on.
 
 export interface SendLoginLinkOptions {

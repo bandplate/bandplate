@@ -1,5 +1,5 @@
 // Proves — by actually bundling, not by inspecting our own source — that
-// `@bandlib/mail`'s barrel (`index.ts`) never pulls nodemailer or any
+// `@bandplate/mail`'s barrel (`index.ts`) never pulls nodemailer or any
 // `node:*` built-in into a Workers-targeted bundle. esbuild with
 // `platform: "browser"` refuses to resolve bare `node:*` specifiers, so if
 // the barrel's module graph reached one, this build would fail; instead we
@@ -10,7 +10,7 @@
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 
-describe("@bandlib/mail barrel is Workers-safe", () => {
+describe("@bandplate/mail barrel is Workers-safe", () => {
   it("bundling the barrel for the browser platform pulls in no nodemailer and no node:* built-in", async () => {
     const result = await build({
       entryPoints: [new URL("./index.ts", import.meta.url).pathname],

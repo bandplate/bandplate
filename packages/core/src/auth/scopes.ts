@@ -37,7 +37,7 @@ export function isScope(value: string): value is Scope {
 
 /**
  * Member role — the UI-facing concept. Deliberately structurally
- * compatible with (but not imported from) `@bandlib/db`'s
+ * compatible with (but not imported from) `@bandplate/db`'s
  * `members.role` column type, so this package doesn't need to depend on
  * the schema just to name the two roles.
  */

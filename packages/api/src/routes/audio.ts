@@ -12,12 +12,12 @@
 // `Cache-Control: private, max-age=1800` on the 302 ITSELF (not just the
 // bucket response) lets the browser skip re-issuing this redirect request
 // for 30 minutes on a repeat visit to the same take, while
-// `signedDownloadUrl`'s own quantised signing (see `@bandlib/storage`) is
+// `signedDownloadUrl`'s own quantised signing (see `@bandplate/storage`) is
 // what makes the LOCATION it redirects to cache-identical across that
 // window too — see task-7-report.md for the proof (a real cache hit,
 // verified in a browser).
-import type { Storage } from "@bandlib/core";
-import { type Db, assetsRepo } from "@bandlib/db";
+import type { Storage } from "@bandplate/core";
+import { type Db, assetsRepo } from "@bandplate/db";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";
 

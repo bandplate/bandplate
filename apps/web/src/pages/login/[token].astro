@@ -9,7 +9,7 @@
 // (via `Layout`'s `noindex` prop) keep any intermediate cache or crawler
 // from ever holding onto this URL, since holding it is equivalent to
 // holding a (time-limited, single-use) credential.
-import Banner from "@bandlib/ui/components/Banner.astro";
+import Banner from "@bandplate/ui/components/Banner.astro";
 import Layout from "../../layouts/Layout.astro";
 import { getAppDeps, getAuthDeps } from "../../server/app.js";
 import { setSessionCookie } from "../../server/cookies.js";
@@ -48,8 +48,8 @@ if (Astro.request.method === "POST") {
 ---
 
 <Layout title="Sign in" noindex>
-  <main id="main" class="bl-container bl-auth-main">
-    <h1 class="bl-auth-title">bandlib</h1>
+  <main id="main" class="bp-container bp-auth-main">
+    <h1 class="bp-auth-title">bandplate</h1>
 
     {originError && (
       <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
@@ -61,7 +61,7 @@ if (Astro.request.method === "POST") {
           Sign in as <strong>{view.displayName ?? "yourself"}</strong>.
         </p>
         <form method="post">
-          <button type="submit" class="bl-btn bl-btn-primary">Sign in</button>
+          <button type="submit" class="bp-btn bp-btn-primary">Sign in</button>
         </form>
       </>
     ) : (
@@ -70,7 +70,7 @@ if (Astro.request.method === "POST") {
       </Banner>
     )}
     {view.kind !== "valid" && (
-      <p><a href="/login" class="bl-btn bl-btn-secondary">Request a new link</a></p>
+      <p><a href="/login" class="bp-btn bp-btn-secondary">Request a new link</a></p>
     )}
   </main>
 </Layout>

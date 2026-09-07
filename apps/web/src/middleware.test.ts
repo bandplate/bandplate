@@ -14,10 +14,10 @@
 // function, so `onRequest` is callable directly with a hand-built
 // `context`/`next` — no need to boot Astro's dev server or the Node
 // adapter for this.
-import type { MemberPrincipal } from "@bandlib/core";
+import type { MemberPrincipal } from "@bandplate/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const TEST_APP_ORIGIN = "https://bandlib.example";
+const TEST_APP_ORIGIN = "https://bandplate.example";
 
 const resolvePrincipalFromCookie = vi.fn();
 

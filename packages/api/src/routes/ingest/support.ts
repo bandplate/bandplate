@@ -1,7 +1,7 @@
 // Small ingest-specific helpers shared across the route handlers. Web
 // Crypto/`btoa` only — no `node:buffer` — so this stays fine to run on
 // Workers in increment 7 like the rest of `packages/api`.
-import type { assetsRepo } from "@bandlib/db";
+import type { assetsRepo } from "@bandplate/db";
 
 type AssetFormat = assetsRepo.AssetFormat;
 
@@ -27,7 +27,7 @@ export function contentTypeForFormat(format: AssetFormat): string {
  * Converts a lowercase-hex SHA-256 digest (the shape the ingest contract's
  * `sha256` field uses) to standard base64 — the encoding S3's
  * `x-amz-checksum-sha256` header and `AwsClient`'s checksum signing expect
- * (NOT base64url; see `@bandlib/core`'s `crypto.ts`, which only has a
+ * (NOT base64url; see `@bandplate/core`'s `crypto.ts`, which only has a
  * base64url encoder for token hashing, a different use case).
  */
 export function hexSha256ToBase64(hex: string): string {

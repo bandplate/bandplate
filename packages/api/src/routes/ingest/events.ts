@@ -1,6 +1,6 @@
 // `POST /ingest/v1/events` — contract v1 §4 "Phase 1 — declare the event".
-import type { Clock } from "@bandlib/core";
-import { type Db, eventsRepo } from "@bandlib/db";
+import type { Clock } from "@bandplate/core";
+import { type Db, eventsRepo } from "@bandplate/db";
 import { errorResponse } from "../../errors.js";
 import { type GuardedRouter, requireServiceScopes } from "../../route-registry.js";
 import { createEventSchema } from "./schemas.js";

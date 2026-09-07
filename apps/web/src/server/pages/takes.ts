@@ -10,7 +10,7 @@
 // is or isn't one of their favorites), unlike the decorative heading star
 // this same review round removed. See `TakeRow`'s own `favorited` prop for
 // the rest of this marker's use.
-import type { Db } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
 import {
   assetsRepo,
   eventsRepo,
@@ -19,7 +19,7 @@ import {
   songsRepo,
   takesRepo,
   votesRepo,
-} from "@bandlib/db";
+} from "@bandplate/db";
 
 export interface TakeDetail {
   take: takesRepo.Take;

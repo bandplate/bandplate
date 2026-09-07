@@ -43,7 +43,7 @@ export function computeOptimisticTally(
  * The tally sentence — deliberately duplicated from, not imported from,
  * `server/format.ts#formatVoteTally`. Every other client-bundled module in
  * this app (`client/`, and the islands in `components/`) only ever imports
- * from `client/` or `@bandlib/*` packages, never from `server/` — nothing
+ * from `client/` or `@bandplate/*` packages, never from `server/` — nothing
  * in `server/` is audited for being safe to ship to the browser (some of
  * it touches `Db`/session cookies directly), and importing across that
  * boundary once would make it easy to do again for something that isn't

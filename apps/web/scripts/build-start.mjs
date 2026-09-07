@@ -17,14 +17,14 @@ import { build } from "esbuild";
 
 // Guarded against the Cloudflare build (`package.json`'s `build` script
 // runs this unconditionally after `astro build`): when
-// `BANDLIB_ADAPTER=cloudflare`, `astro build` produces `dist/_worker.js/`
+// `BANDPLATE_ADAPTER=cloudflare`, `astro build` produces `dist/_worker.js/`
 // for `wrangler deploy`, not `dist/server/entry.mjs` — there is no Node
 // entry to wrap, and `scripts/start.ts` (which imports the Node-only
 // `config.ts`/libSQL client) has no business running there at all. Skip
 // this step entirely for that build instead of bundling a wrapper nothing
 // will ever run.
-if (process.env.BANDLIB_ADAPTER === "cloudflare") {
-  console.log("[build-start] BANDLIB_ADAPTER=cloudflare — skipping Node start.mjs bundling");
+if (process.env.BANDPLATE_ADAPTER === "cloudflare") {
+  console.log("[build-start] BANDPLATE_ADAPTER=cloudflare — skipping Node start.mjs bundling");
   process.exit(0);
 }
 

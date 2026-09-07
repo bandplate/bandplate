@@ -5,8 +5,8 @@
 // different functions, calling different core services) is what makes a
 // mail-provider link-prefetch GET harmless: there is no code path from a
 // GET request to `consumeLoginToken` at all.
-import type { AuthDeps, MemberPrincipal } from "@bandlib/core";
-import { consumeLoginToken, peekLoginToken } from "@bandlib/core";
+import type { AuthDeps, MemberPrincipal } from "@bandplate/core";
+import { consumeLoginToken, peekLoginToken } from "@bandplate/core";
 
 export type LoginTokenView = { kind: "valid"; displayName?: string } | { kind: "invalid" };
 

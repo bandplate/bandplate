@@ -3,7 +3,7 @@ import { getApiApp } from "../../server/app.js";
 
 export const prerender = false;
 
-// Hono routes inside @bandlib/api are declared relative (e.g. "/health"),
+// Hono routes inside @bandplate/api are declared relative (e.g. "/health"),
 // but Astro mounts this catch-all under /api/*. Strip the /api prefix
 // before delegating so Hono's router matches. The app itself (env reads,
 // db connection, mailer selection) is built once by the shared composition
@@ -29,7 +29,7 @@ export const ALL: APIRoute = async ({ request, locals }) => {
   // `locals.runtime`, set by `@astrojs/cloudflare`) is what makes Hono
   // populate `c.executionCtx` inside the mounted app — required for
   // `POST /auth/login`'s `c.executionCtx.waitUntil(...)` (see
-  // `AuthRouteDeps.enableDeferredMailSend` in `@bandlib/api`). Under the
+  // `AuthRouteDeps.enableDeferredMailSend` in `@bandplate/api`). Under the
   // Node adapter `locals.runtime` is `undefined`, so `app.fetch` is
   // called with just the request, exactly as before.
   if (locals.runtime) {

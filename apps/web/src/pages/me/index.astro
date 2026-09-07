@@ -5,7 +5,7 @@
 //
 // Instruments (Task 6 review round 1's data-model gap, now closed via the
 // `memberInstruments` join table — see its schema comment): rendered as
-// plain tags, same visual vocabulary `.bl-take-instrument-tag` already
+// plain tags, same visual vocabulary `.bp-take-instrument-tag` already
 // established for a take's instruments, INCLUDING archived ones (a member
 // who plays an instrument the band has since dropped still sees it here —
 // see `membersRepo.listInstrumentsForMember`).
@@ -81,21 +81,21 @@ function claimTakeTransition(takeId: string): string | null {
 
 <AppLayout title="Me" principal={principal} current="me">
   <TakeTransitionRetarget />
-  <div class="bl-stack">
-    <h1 class="bl-page-title">Me</h1>
+  <div class="bp-stack">
+    <h1 class="bp-page-title">Me</h1>
 
-    <section class="bl-card">
-      <h2 class="bl-section-title bl-m0">{member.displayName}</h2>
-      <p class="bl-field-hint bl-m0">
+    <section class="bp-card">
+      <h2 class="bp-section-title bp-m0">{member.displayName}</h2>
+      <p class="bp-field-hint bp-m0">
         {member.email}
-        <span class={`bl-badge ${member.role === "admin" ? "bl-badge-admin" : ""}`}>
+        <span class={`bp-badge ${member.role === "admin" ? "bp-badge-admin" : ""}`}>
           {member.role}
         </span>
       </p>
       {instruments.length > 0 && (
-        <div class="bl-take-instruments">
+        <div class="bp-take-instruments">
           {instruments.map((instrument) => (
-            <span class="bl-take-instrument-tag">
+            <span class="bp-take-instrument-tag">
               {instrument.label}
               {instrument.archivedAt !== null && " (archived)"}
             </span>
@@ -104,7 +104,7 @@ function claimTakeTransition(takeId: string): string | null {
       )}
       {member.role === "admin" && (
         <p>
-          <a href="/admin" class="bl-btn bl-btn-secondary bl-btn-sm">
+          <a href="/admin" class="bp-btn bp-btn-secondary bp-btn-sm">
             Go to admin
           </a>
         </p>
@@ -112,29 +112,29 @@ function claimTakeTransition(takeId: string): string | null {
     </section>
 
     <section>
-      <h2 class="bl-section-title">Sessions</h2>
-      <ul class="bl-session-list">
+      <h2 class="bp-section-title">Sessions</h2>
+      <ul class="bp-session-list">
         {
           sessions.map((session) => {
             const status = sessionStatus(session);
             return (
-              <li class="bl-session-row">
-                <div class="bl-session-row-main">
-                  <p class="bl-mono bl-session-row-agent bl-m0">
+              <li class="bp-session-row">
+                <div class="bp-session-row-main">
+                  <p class="bp-mono bp-session-row-agent bp-m0">
                     {session.userAgent ?? "Unknown device"}
                   </p>
-                  <p class="bl-field-hint bl-m0">
+                  <p class="bp-field-hint bp-m0">
                     Signed in {formatTimestamp(session.createdAt)} — last active{" "}
                     {formatTimestamp(session.lastSeenAt)}
                     {session.isCurrent && " — this device"}
                   </p>
-                  <span class={`bl-badge ${status === "active" ? "bl-badge-active" : ""}`}>
+                  <span class={`bp-badge ${status === "active" ? "bp-badge-active" : ""}`}>
                     {status}
                   </span>
                 </div>
                 {session.isCurrent && (
-                  <form method="post" action="/logout" class="bl-session-row-action">
-                    <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">
+                  <form method="post" action="/logout" class="bp-session-row-action">
+                    <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">
                       Sign out
                     </button>
                   </form>
@@ -147,26 +147,26 @@ function claimTakeTransition(takeId: string): string | null {
     </section>
 
     <section>
-      <h2 class="bl-section-title">Favorites</h2>
+      <h2 class="bp-section-title">Favorites</h2>
       {
         !hasFavorites ? (
-          <div class="bl-empty-state">
+          <div class="bp-empty-state">
             <p>
               Nothing pinned yet — tap the star on a song, take, or event to pin it here.{" "}
               <a href="/search">Browse the archive</a>.
             </p>
           </div>
         ) : (
-          <div class="bl-stack bl-stack-tight">
+          <div class="bp-stack bp-stack-tight">
             {favorites.songs.length > 0 && (
               <div>
-                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Songs</p>}
-                <div class="bl-song-list">
+                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Songs</p>}
+                <div class="bp-song-list">
                   {favorites.songs.map((song) => (
-                    <div class="bl-song-row">
-                      <a href={`/songs/${song.slug}`} class="bl-song-row-link">
-                        <div class="bl-song-row-main">
-                          <p class="bl-song-title bl-m0">{song.title}</p>
+                    <div class="bp-song-row">
+                      <a href={`/songs/${song.slug}`} class="bp-song-row-link">
+                        <div class="bp-song-row-main">
+                          <p class="bp-song-title bp-m0">{song.title}</p>
                         </div>
                       </a>
                       <FavoriteToggle
@@ -182,15 +182,15 @@ function claimTakeTransition(takeId: string): string | null {
             )}
             {favorites.events.length > 0 && (
               <div>
-                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Events</p>}
-                <div class="bl-event-list">
+                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Events</p>}
+                <div class="bp-event-list">
                   {favorites.events.map((event) => (
-                    <div class={`bl-event-row bl-event-row--${event.kind}`}>
-                      <a href={`/events/${event.id}`} class="bl-event-row-link">
-                        <div class="bl-event-row-main">
-                          <p class="bl-event-row-date bl-m0">{formatLongDate(event.heldAt)}</p>
-                          <p class="bl-event-row-venue bl-m0">
-                            <span class={`bl-badge bl-badge-${event.kind}`}>{event.kind}</span>
+                    <div class={`bp-event-row bp-event-row--${event.kind}`}>
+                      <a href={`/events/${event.id}`} class="bp-event-row-link">
+                        <div class="bp-event-row-main">
+                          <p class="bp-event-row-date bp-m0">{formatLongDate(event.heldAt)}</p>
+                          <p class="bp-event-row-venue bp-m0">
+                            <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
                             {eventLabel(event) && ` ${eventLabel(event)}`}
                           </p>
                         </div>
@@ -208,8 +208,8 @@ function claimTakeTransition(takeId: string): string | null {
             )}
             {favorites.takes.length > 0 && (
               <div>
-                {favoriteKindCount > 1 && <p class="bl-field-label bl-m0">Takes</p>}
-                <div class="bl-take-list bl-take-list--wide">
+                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Takes</p>}
+                <div class="bp-take-list bp-take-list--wide">
                   {favorites.takes.map((take) => (
                     <TakeRow
                       take={take}
@@ -230,17 +230,17 @@ function claimTakeTransition(takeId: string): string | null {
     </section>
 
     <section>
-      <h2 class="bl-section-title">Votes so far</h2>
+      <h2 class="bp-section-title">Votes so far</h2>
       {
         votes.length === 0 ? (
-          <div class="bl-empty-state">
+          <div class="bp-empty-state">
             <p>You haven't voted on anything yet — check "Needs your vote" on the home page.</p>
           </div>
         ) : (
-          <ul class="bl-vote-list">
+          <ul class="bp-vote-list">
             {votes.map(({ vote, take, favorited }) => (
-              <li class="bl-vote-row">
-                <div class="bl-vote-row-main">
+              <li class="bp-vote-row">
+                <div class="bp-vote-row-main">
                   {take?.playableAssetId && (
                     <PlayToggleButton
                       takeId={take.id}
@@ -252,7 +252,7 @@ function claimTakeTransition(takeId: string): string | null {
                     <>
                       <a
                         href={`/takes/${take.id}`}
-                        class="bl-vote-row-song"
+                        class="bp-vote-row-song"
                         transition:name={claimTakeTransition(take.id) ?? undefined}
                         data-take-id={take.id}
                       >
@@ -266,9 +266,9 @@ function claimTakeTransition(takeId: string): string | null {
                       />
                     </>
                   ) : (
-                    <span class="bl-vote-row-song">A take that's since been removed</span>
+                    <span class="bp-vote-row-song">A take that's since been removed</span>
                   )}
-                  {vote.comment && <p class="bl-field-hint bl-m0">&ldquo;{vote.comment}&rdquo;</p>}
+                  {vote.comment && <p class="bp-field-hint bp-m0">&ldquo;{vote.comment}&rdquo;</p>}
                 </div>
                 {take && (
                   <VoteToggle

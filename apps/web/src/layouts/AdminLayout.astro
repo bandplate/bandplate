@@ -1,5 +1,5 @@
 ---
-import type { MemberPrincipal } from "@bandlib/core";
+import type { MemberPrincipal } from "@bandplate/core";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Layout from "./Layout.astro";
 
@@ -20,25 +20,25 @@ const navItems = [
 ---
 
 <Layout title={`Admin — ${title}`}>
-  <div class="bl-container bl-stack">
-    <header class="bl-stack bl-stack-tight">
-      <div class="bl-header-row">
-        <h1 class="bl-admin-title">bandlib admin</h1>
+  <div class="bp-container bp-stack">
+    <header class="bp-stack bp-stack-tight">
+      <div class="bp-header-row">
+        <h1 class="bp-admin-title">bandplate admin</h1>
         <form method="post" action="/logout">
-          <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">
+          <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">
             Sign out ({principal.role})
           </button>
         </form>
       </div>
       <nav aria-label="Admin sections">
-        <ul class="bl-inline-nav-list">
+        <ul class="bp-inline-nav-list">
           {
             navItems.map((item) => (
               <li>
                 <a
                   href={item.href}
-                  class="bl-btn bl-btn-sm"
-                  class:list={[item.key === current ? "bl-btn-primary" : "bl-btn-secondary"]}
+                  class="bp-btn bp-btn-sm"
+                  class:list={[item.key === current ? "bp-btn-primary" : "bp-btn-secondary"]}
                   aria-current={item.key === current ? "page" : undefined}
                 >
                   {item.label}
@@ -49,7 +49,7 @@ const navItems = [
         </ul>
       </nav>
     </header>
-    <main id="main" class="bl-stack">
+    <main id="main" class="bp-stack">
       <slot />
     </main>
   </div>

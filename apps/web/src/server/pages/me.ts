@@ -7,9 +7,9 @@
 // table rather than a JSON column. `membersRepo.listInstrumentsForMember`
 // includes archived instruments on purpose, so a member who plays one the
 // band has since dropped still sees it here.
-import { hashToken } from "@bandlib/core";
-import type { Db, instrumentsRepo } from "@bandlib/db";
-import { authSessionsRepo, membersRepo, takesRepo, votesRepo } from "@bandlib/db";
+import { hashToken } from "@bandplate/core";
+import type { Db, instrumentsRepo } from "@bandplate/db";
+import { authSessionsRepo, membersRepo, takesRepo, votesRepo } from "@bandplate/db";
 import { type HomeFavorites, getFavorites } from "./home.js";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 

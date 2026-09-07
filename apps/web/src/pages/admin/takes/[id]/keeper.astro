@@ -11,7 +11,7 @@
 // scope before this frontmatter ever runs (redirect if anonymous, 403 if
 // signed in but not an admin) — the same reason `archive.astro` has no
 // explicit scope check of its own.
-import ConfirmActionPage from "@bandlib/ui/components/ConfirmActionPage.astro";
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
 import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";

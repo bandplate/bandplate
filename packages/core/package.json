@@ -1,5 +1,5 @@
 {
-  "name": "@bandlib/core",
+  "name": "@bandplate/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@bandlib/db": "workspace:*",
+    "@bandplate/db": "workspace:*",
     "zod": "^3.24.1"
   },
   "devDependencies": {

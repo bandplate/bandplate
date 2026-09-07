@@ -3,7 +3,7 @@
 // auto-created (Reaper track names are messy; letting one silently become
 // a new instrument would corrupt the filter vocabulary within one
 // rehearsal).
-import { type Db, instrumentsRepo } from "@bandlib/db";
+import { type Db, instrumentsRepo } from "@bandplate/db";
 
 export interface InstrumentVocab {
   /** slug -> instrument row, active (non-archived) only. */

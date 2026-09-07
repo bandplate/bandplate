@@ -1,6 +1,6 @@
-import { type Mailer, createInMemoryRateLimiter } from "@bandlib/core";
-import { membersRepo } from "@bandlib/db";
-import { createInMemoryStorage } from "@bandlib/storage/testing";
+import { type Mailer, createInMemoryRateLimiter } from "@bandplate/core";
+import { membersRepo } from "@bandplate/db";
+import { createInMemoryStorage } from "@bandplate/storage/testing";
 import { describe, expect, it } from "vitest";
 import { buildRoutedApp } from "./index.js";
 import {
@@ -53,7 +53,7 @@ describe("POST /setup", () => {
     });
 
     expect(res.status).toBe(201);
-    expect(res.headers.get("set-cookie")).toMatch(/^bl_session=/);
+    expect(res.headers.get("set-cookie")).toMatch(/^bp_session=/);
     const body = await res.json();
     expect(body.testEmailSent).toBe(true);
   });

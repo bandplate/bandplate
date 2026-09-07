@@ -25,7 +25,7 @@ const { takeId, assetId, title, subtitle = "", size = "sm" } = Astro.props;
 
 <button
   type="button"
-  class={`bl-play-toggle ${size === "lg" ? "bl-play-toggle-lg" : ""}`}
+  class={`bp-play-toggle ${size === "lg" ? "bp-play-toggle-lg" : ""}`}
   data-audio-source
   data-take-id={takeId}
   data-asset-id={assetId}
@@ -37,7 +37,7 @@ const { takeId, assetId, title, subtitle = "", size = "sm" } = Astro.props;
   aria-label={`Play ${title}`}
 >
   <svg
-    class="bl-play-icon-play"
+    class="bp-play-icon-play"
     aria-hidden="true"
     width={size === "lg" ? "28" : "18"}
     height={size === "lg" ? "28" : "18"}
@@ -47,7 +47,7 @@ const { takeId, assetId, title, subtitle = "", size = "sm" } = Astro.props;
     <path d="M4 2.5v11l10-5.5-10-5.5z" />
   </svg>
   <svg
-    class="bl-play-icon-pause"
+    class="bp-play-icon-pause"
     aria-hidden="true"
     width={size === "lg" ? "28" : "18"}
     height={size === "lg" ? "28" : "18"}

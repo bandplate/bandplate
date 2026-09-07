@@ -1,6 +1,6 @@
 // Workers-profile composition root. Deliberately a SEPARATE file from
 // `app.ts` (the Node/container composition root), not a branch inside it
-// — `app.ts` reaches `@bandlib/mail/smtp` via a dynamic `import()` that
+// — `app.ts` reaches `@bandplate/mail/smtp` via a dynamic `import()` that
 // Vite/Rollup still traces into the module graph for chunking purposes
 // even though it's runtime-unreachable on Workers (the Workers profile
 // always calls `initWorkersRuntime`, which never touches that branch),
@@ -8,7 +8,7 @@
 // `node:net`, `node:tls`, ... imports) into the built `_worker.js` output.
 // Physically separating the two composition roots is what keeps that
 // entirely out of the Workers bundle: `astro.config.mjs` aliases
-// `server/app.js` to THIS file only when `BANDLIB_ADAPTER=cloudflare`, so
+// `server/app.js` to THIS file only when `BANDPLATE_ADAPTER=cloudflare`, so
 // `app.ts` (and everything it reaches, including the SMTP branch) is never
 // even parsed for that build. `pages/api/[...path].ts`, `middleware.ts`,
 // and every Astro page still just import `../.../server/app.js` — the
@@ -16,11 +16,11 @@
 // `astro.config.mjs`'s comment on the alias for why a plain Vite config
 // (as Vitest uses) never applies it, so the Node/`vitest run` path is
 // completely unaffected by this file's existence.
-import { type AppDeps, createApp } from "@bandlib/api";
-import { type AuthDeps, createInMemoryRateLimiter, systemClock } from "@bandlib/core";
-import { createD1Db } from "@bandlib/db";
-import { createHttpMailer } from "@bandlib/mail";
-import { createS3Storage } from "@bandlib/storage";
+import { type AppDeps, createApp } from "@bandplate/api";
+import { type AuthDeps, createInMemoryRateLimiter, systemClock } from "@bandplate/core";
+import { createD1Db } from "@bandplate/db";
+import { createHttpMailer } from "@bandplate/mail";
+import { createS3Storage } from "@bandplate/storage";
 import {
   type CloudflareEnv,
   type WorkersRuntimeConfig,
@@ -39,14 +39,14 @@ interface Runtime {
 let runtimePromise: Promise<Runtime> | undefined;
 
 /**
- * D1 (via the `DB` binding, `@bandlib/db`'s `createD1Db` — the whole
+ * D1 (via the `DB` binding, `@bandplate/db`'s `createD1Db` — the whole
  * point of the narrow `Db` seam, see `packages/db/src/client.ts`'s doc
- * comment) instead of libSQL, and `@bandlib/mail`'s `createHttpMailer`
+ * comment) instead of libSQL, and `@bandplate/mail`'s `createHttpMailer`
  * (Resend/Postmark over `fetch`) instead of SMTP, which Workers cannot
  * speak at all (no TCP sockets). `S3Storage` needs zero changes — it was
  * already `fetch`-only.
  *
- * `enableDeferredMailSend: true` — see `AuthRouteDeps` in `@bandlib/api`'s
+ * `enableDeferredMailSend: true` — see `AuthRouteDeps` in `@bandplate/api`'s
  * `routes/auth.ts` — is what lets `POST /auth/login` schedule the
  * login-link send via `c.executionCtx.waitUntil` instead of awaiting it
  * inline, closing the login-timing side channel properly rather than
@@ -132,7 +132,7 @@ export async function getAppDeps(): Promise<AppDeps> {
 
 /**
  * The shared `AuthDeps` — used by Astro page handlers that call
- * `@bandlib/core`'s auth services directly, rather than round-tripping
+ * `@bandplate/core`'s auth services directly, rather than round-tripping
  * through HTTP for their own server-rendered, no-JS-friendly forms.
  */
 export async function getAuthDeps(): Promise<AuthDeps> {

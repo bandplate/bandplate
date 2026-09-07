@@ -1,7 +1,7 @@
 // `GET /ingest/v1/instruments` — contract v1 §7/§8: the live vocabulary a
 // bridge should build its Reaper-track-name -> slug mapping UI from,
 // rather than hardcoding it.
-import { type Db, instrumentsRepo } from "@bandlib/db";
+import { type Db, instrumentsRepo } from "@bandplate/db";
 import { type GuardedRouter, requireServiceScopes } from "../../route-registry.js";
 
 export interface IngestInstrumentsRouteDeps {

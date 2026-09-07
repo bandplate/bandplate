@@ -3,7 +3,7 @@
 // plain GET form (works with JS off — see `songs/index.astro`); this module
 // parses that query string and calls the one repo query that backs it,
 // `songsRepo.listWithStats`.
-import { type Db, assetsRepo } from "@bandlib/db";
+import { type Db, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
   favoritesRepo,
@@ -11,7 +11,7 @@ import {
   songsRepo,
   takesRepo,
   votesRepo,
-} from "@bandlib/db";
+} from "@bandplate/db";
 
 export type SongListItem = songsRepo.SongWithStats;
 

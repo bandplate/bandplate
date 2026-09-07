@@ -1,5 +1,5 @@
 // Auth domain services — orchestrate the `members`/`login_tokens`/
-// `auth_sessions`/`service_tokens` repos from `@bandlib/db` behind the
+// `auth_sessions`/`service_tokens` repos from `@bandplate/db` behind the
 // behaviors the HTTP layer needs. No `node:*` imports; Web Crypto only.
 import {
   type Db,
@@ -7,7 +7,7 @@ import {
   loginTokensRepo,
   membersRepo,
   serviceTokensRepo,
-} from "@bandlib/db";
+} from "@bandplate/db";
 import type { MemberPrincipal, MemberRole, Scope, ServicePrincipal } from "../auth/index.js";
 import { scopesForRole } from "../auth/index.js";
 import { generateToken, hashToken, timingSafeEqualHex } from "../crypto.js";
@@ -66,7 +66,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-const SERVICE_TOKEN_PREFIX = "blk_";
+const SERVICE_TOKEN_PREFIX = "bpk_";
 const UUID_LENGTH = 36;
 
 /**
@@ -89,7 +89,7 @@ export interface AuthDeps {
   db: Db;
   mailer: Mailer;
   clock: Clock;
-  /** The operator-configured `BANDLIB_BOOTSTRAP_TOKEN` value. Required by `bootstrapAdmin` only. */
+  /** The operator-configured `BANDPLATE_BOOTSTRAP_TOKEN` value. Required by `bootstrapAdmin` only. */
   bootstrapToken?: string;
   loginTokenTtlMs?: number;
   sessionTtlMs?: number;
@@ -382,7 +382,7 @@ function parseServiceToken(raw: string): { tokenId: string; secret: string } | u
 }
 
 /**
- * Resolve a `Authorization: Bearer blk_{tokenId}_{secret}` header to a
+ * Resolve a `Authorization: Bearer bpk_{tokenId}_{secret}` header to a
  * service principal. Rejects unknown/revoked tokens and secret mismatches;
  * updates `lastUsedAt` on success.
  */
@@ -420,7 +420,7 @@ export interface CreateServiceTokenResult {
   label: string;
   scopes: Scope[];
   createdAt: number;
-  /** The raw `blk_...` bearer token. Returned exactly once — never stored, never logged. */
+  /** The raw `bpk_...` bearer token. Returned exactly once — never stored, never logged. */
   rawToken: string;
 }
 
@@ -538,8 +538,8 @@ export async function bootstrapAdmin(
     await withTimeout(
       deps.mailer.send({
         to: member.email,
-        subject: "bandlib is set up",
-        text: "This is a test message confirming outbound mail works for your bandlib deployment.",
+        subject: "bandplate is set up",
+        text: "This is a test message confirming outbound mail works for your bandplate deployment.",
       }),
       deps.bootstrapMailTimeoutMs ?? DEFAULT_BOOTSTRAP_MAIL_TIMEOUT_MS,
     );

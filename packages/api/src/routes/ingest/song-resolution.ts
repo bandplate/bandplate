@@ -7,8 +7,8 @@
 //   4. No match, `createIfMissing: true` -> a stub song is created.
 //   5. No match, `createIfMissing: false` -> not found (caller 409s with
 //      fuzzy candidates).
-import { normalizeTitle, slugify } from "@bandlib/core";
-import { type Db, songsRepo } from "@bandlib/db";
+import { normalizeTitle, slugify } from "@bandplate/core";
+import { type Db, songsRepo } from "@bandplate/db";
 
 export type SongMatch = "external-ref" | "title" | "alias" | "created-stub";
 

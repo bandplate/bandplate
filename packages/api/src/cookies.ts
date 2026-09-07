@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 
-export const SESSION_COOKIE_NAME = "bl_session";
+export const SESSION_COOKIE_NAME = "bp_session";
 
 // 365 days, in seconds (Max-Age is seconds, not ms).
 const SESSION_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
@@ -12,7 +12,7 @@ export interface CookieSecurity {
 }
 
 /**
- * Sets `bl_session` with exactly: HttpOnly, (Secure), SameSite=Lax, Path=/,
+ * Sets `bp_session` with exactly: HttpOnly, (Secure), SameSite=Lax, Path=/,
  * Max-Age=31536000. `SameSite=Lax` is deliberate — the login link arrives
  * from an external mail client, and `Strict` would land the post-login
  * redirect logged out.

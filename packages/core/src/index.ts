@@ -1,4 +1,4 @@
-// @bandlib/core — domain layer, runtime-agnostic (no node:* imports, no
+// @bandplate/core — domain layer, runtime-agnostic (no node:* imports, no
 // Node-only globals). Must run unmodified on Cloudflare Workers.
 export * from "./ports/index.js";
 export * from "./ids.js";

@@ -1,4 +1,4 @@
-import { normalizeTitle, uuidv7 } from "@bandlib/core";
+import { normalizeTitle, uuidv7 } from "@bandplate/core";
 import { type SQL, and, asc, desc, eq, gte, inArray, lte, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {

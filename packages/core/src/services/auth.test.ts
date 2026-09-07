@@ -1,5 +1,5 @@
-import { type Db, authSessionsRepo, membersRepo, schema, serviceTokensRepo } from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
+import { type Db, authSessionsRepo, membersRepo, schema, serviceTokensRepo } from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Clock } from "../ports/clock.js";
 import type { MailMessage, Mailer } from "../ports/mailer.js";
@@ -499,7 +499,7 @@ describe("auth service", () => {
 
     it("rejects malformed bearer values without throwing", async () => {
       expect(await resolveServiceToken(deps, "not-a-token")).toBeUndefined();
-      expect(await resolveServiceToken(deps, "blk_")).toBeUndefined();
+      expect(await resolveServiceToken(deps, "bpk_")).toBeUndefined();
     });
 
     it("rejects a revoked token", async () => {

@@ -1,4 +1,4 @@
-import { membersRepo } from "@bandlib/db";
+import { membersRepo } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
   TEST_APP_ORIGIN,
@@ -35,7 +35,7 @@ describe("admin members routes", () => {
   it("creates, lists, patches status/role, and revokes sessions for a member", async () => {
     const testApp = await buildTestApp();
     const cookie = await loginAsAdmin(testApp);
-    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+    const authedHeaders = { ...jsonHeaders, cookie: `bp_session=${cookie}` };
 
     const createRes = await testApp.app.request("/admin/members", {
       method: "POST",
@@ -48,7 +48,7 @@ describe("admin members routes", () => {
     expect(created.member.role).toBe("member");
 
     const listRes = await testApp.app.request("/admin/members", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     const list = await listRes.json();
     expect(list.members).toHaveLength(2); // admin + new member
@@ -76,7 +76,7 @@ describe("admin members routes", () => {
   it("refuses to create a member with a duplicate email", async () => {
     const testApp = await buildTestApp();
     const cookie = await loginAsAdmin(testApp);
-    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+    const authedHeaders = { ...jsonHeaders, cookie: `bp_session=${cookie}` };
 
     const res = await testApp.app.request("/admin/members", {
       method: "POST",
@@ -93,7 +93,7 @@ describe("admin members routes", () => {
 
     const res = await testApp.app.request("/admin/members/does-not-exist", {
       method: "PATCH",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ status: "disabled" }),
     });
 
@@ -104,15 +104,15 @@ describe("admin members routes", () => {
   // logic) rejected these, but `PATCH /admin/members/:id` had no such
   // guard at all — the sole admin could self-demote via one authenticated
   // API request, no browser session shenanigans required. Both cases now
-  // go through `@bandlib/core`'s `updateMemberWithGuards`, shared with the
+  // go through `@bandplate/core`'s `updateMemberWithGuards`, shared with the
   // web page — see `packages/core/src/services/members.ts`.
   it("rejects an admin demoting or disabling themselves via the API", async () => {
     const testApp = await buildTestApp();
     const cookie = await loginAsAdmin(testApp);
-    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+    const authedHeaders = { ...jsonHeaders, cookie: `bp_session=${cookie}` };
 
     const listRes = await testApp.app.request("/admin/members", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     const { members } = await listRes.json();
     const self = members.find((m: { email: string }) => m.email === "admin@example.com");
@@ -134,10 +134,10 @@ describe("admin members routes", () => {
   it("rejects demoting the last admin via the API, even from a service token", async () => {
     const testApp = await buildTestApp();
     const cookie = await loginAsAdmin(testApp);
-    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+    const authedHeaders = { ...jsonHeaders, cookie: `bp_session=${cookie}` };
 
     const listRes = await testApp.app.request("/admin/members", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     const { members } = await listRes.json();
     const soleAdmin = members.find((m: { email: string }) => m.email === "admin@example.com");
@@ -171,7 +171,7 @@ describe("admin instruments routes", () => {
   it("creates, lists, and patches an instrument", async () => {
     const testApp = await buildTestApp();
     const cookie = await loginAsAdmin(testApp);
-    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+    const authedHeaders = { ...jsonHeaders, cookie: `bp_session=${cookie}` };
 
     const createRes = await testApp.app.request("/admin/instruments", {
       method: "POST",
@@ -192,7 +192,7 @@ describe("admin instruments routes", () => {
     expect(patched.instrument.archivedAt).not.toBeNull();
 
     const listRes = await testApp.app.request("/admin/instruments", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     const list = await listRes.json();
     expect(list.instruments.some((i: { id: string }) => i.id === created.instrument.id)).toBe(true);
@@ -203,7 +203,7 @@ describe("admin tokens routes", () => {
   it("creates a token, returns the raw secret once, then never again", async () => {
     const testApp = await buildTestApp();
     const cookie = await loginAsAdmin(testApp);
-    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+    const authedHeaders = { ...jsonHeaders, cookie: `bp_session=${cookie}` };
 
     const createRes = await testApp.app.request("/admin/tokens", {
       method: "POST",
@@ -212,10 +212,10 @@ describe("admin tokens routes", () => {
     });
     expect(createRes.status).toBe(201);
     const created = await createRes.json();
-    expect(created.token.rawToken).toMatch(/^blk_/);
+    expect(created.token.rawToken).toMatch(/^bpk_/);
 
     const listRes = await testApp.app.request("/admin/tokens", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     const list = await listRes.json();
     const listedToken = list.tokens.find((t: { id: string }) => t.id === created.token.id);
@@ -243,7 +243,7 @@ describe("admin tokens routes", () => {
 
     const res = await testApp.app.request("/admin/tokens", {
       method: "POST",
-      headers: { ...jsonHeaders, cookie: `bl_session=${cookie}` },
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify({ label: "bad", scopes: ["not-a-real-scope"] }),
     });
 
@@ -253,7 +253,7 @@ describe("admin tokens routes", () => {
   it("patches scopes and revokes a token", async () => {
     const testApp = await buildTestApp();
     const cookie = await loginAsAdmin(testApp);
-    const authedHeaders = { ...jsonHeaders, cookie: `bl_session=${cookie}` };
+    const authedHeaders = { ...jsonHeaders, cookie: `bp_session=${cookie}` };
 
     const createRes = await testApp.app.request("/admin/tokens", {
       method: "POST",

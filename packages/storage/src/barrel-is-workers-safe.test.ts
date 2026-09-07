@@ -1,14 +1,14 @@
 // Proves — by actually bundling, not by inspecting our own source — that
-// `@bandlib/storage`'s main barrel (`index.ts`) never pulls `node:http` (or
+// `@bandplate/storage`'s main barrel (`index.ts`) never pulls `node:http` (or
 // any other `node:*` built-in) into a Workers-targeted bundle. Mirrors
-// `@bandlib/mail`'s identical test for its own SMTP/nodemailer split — see
+// `@bandplate/mail`'s identical test for its own SMTP/nodemailer split — see
 // that file's header comment for the technique and why the "sanity check"
 // half matters (proving this technique actually detects the Node-only
 // module when it IS reachable, not just that it's clean when it isn't).
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 
-describe("@bandlib/storage barrel is Workers-safe", () => {
+describe("@bandplate/storage barrel is Workers-safe", () => {
   it("bundling the barrel for the browser platform pulls in no node:* built-in", async () => {
     const result = await build({
       entryPoints: [new URL("./index.ts", import.meta.url).pathname],

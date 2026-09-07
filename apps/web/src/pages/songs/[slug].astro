@@ -46,11 +46,11 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
 ---
 
 <AppLayout title={song.title} principal={principal} current="songs">
-  <div class="bl-stack">
+  <div class="bp-stack">
     <div>
-      <h1 class="bl-hero-title">
+      <h1 class="bp-hero-title">
         {song.title}
-        <span class="bl-take-favorite-mark">
+        <span class="bp-take-favorite-mark">
           <FavoriteToggle
             targetType="song"
             targetId={song.id}
@@ -60,24 +60,24 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
           />
         </span>
       </h1>
-      {song.isStub && <p class="bl-field-hint bl-m0">Stub — not a full song entry yet.</p>}
-      {metaParts.length > 0 && <p class="bl-mono bl-m0">{metaParts.join(", ")}</p>}
+      {song.isStub && <p class="bp-field-hint bp-m0">Stub — not a full song entry yet.</p>}
+      {metaParts.length > 0 && <p class="bp-mono bp-m0">{metaParts.join(", ")}</p>}
     </div>
 
-    <div class="bl-song-detail-grid">
-      <div class="bl-stack">
+    <div class="bp-song-detail-grid">
+      <div class="bp-stack">
         {chart.kind === "sections" && (
           <section>
-            <h2 class="bl-section-title">Chords &amp; lyrics</h2>
-            <div class="bl-song-chart">
+            <h2 class="bp-section-title">Chords &amp; lyrics</h2>
+            <div class="bp-song-chart">
               {chart.sections.map((section) => (
-                <div class="bl-song-chart-section">
-                  {section.label && <p class="bl-song-chart-label">{section.label}</p>}
+                <div class="bp-song-chart-section">
+                  {section.label && <p class="bp-song-chart-label">{section.label}</p>}
                   {section.chordLines.length > 0 && (
-                    <pre class="bl-chords">{section.chordLines.join("\n")}</pre>
+                    <pre class="bp-chords">{section.chordLines.join("\n")}</pre>
                   )}
                   {section.lyricLines.length > 0 && (
-                    <pre class="bl-lyrics">{section.lyricLines.join("\n")}</pre>
+                    <pre class="bp-lyrics">{section.lyricLines.join("\n")}</pre>
                   )}
                 </div>
               ))}
@@ -95,29 +95,29 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
             lyrics, blank lines (stanza breaks) intact. */}
             {chart.chordText && (
               <section>
-                <h2 class="bl-section-title">Chords</h2>
-                <pre class="bl-chords">{chart.chordText}</pre>
+                <h2 class="bp-section-title">Chords</h2>
+                <pre class="bp-chords">{chart.chordText}</pre>
               </section>
             )}
             {chart.lyricsText && (
               <section>
-                <h2 class="bl-section-title">Lyrics</h2>
-                <pre class="bl-lyrics">{chart.lyricsText}</pre>
+                <h2 class="bp-section-title">Lyrics</h2>
+                <pre class="bp-lyrics">{chart.lyricsText}</pre>
               </section>
             )}
           </>
         )}
 
         {instrumentNotes.length > 0 && (
-          <section class="bl-card">
-            <h2 class="bl-section-title">
+          <section class="bp-card">
+            <h2 class="bp-section-title">
               Notes by instrument
             </h2>
-            <div class="bl-stack bl-stack-tight">
+            <div class="bp-stack bp-stack-tight">
               {instrumentNotes.map((note) => (
                 <div>
-                  <p class="bl-field-label bl-m0">{note.instrumentLabel}</p>
-                  <p class="bl-m0">{note.body}</p>
+                  <p class="bp-field-label bp-m0">{note.instrumentLabel}</p>
+                  <p class="bp-m0">{note.body}</p>
                 </div>
               ))}
             </div>
@@ -125,22 +125,22 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
         )}
 
         {song.notes && (
-          <section class="bl-card">
-            <h2 class="bl-section-title">
+          <section class="bp-card">
+            <h2 class="bp-section-title">
               General notes
             </h2>
-            <p class="bl-m0">{song.notes}</p>
+            <p class="bp-m0">{song.notes}</p>
           </section>
         )}
 
         {aliases.length > 0 && (
           <section>
-            <h2 class="bl-section-title">
+            <h2 class="bp-section-title">
               Also known as
             </h2>
-            <ul class="bl-stack bl-stack-tight list-none">
+            <ul class="bp-stack bp-stack-tight list-none">
               {aliases.map((alias) => (
-                <li class={alias.source === "ingest" ? "bl-mono" : ""}>{alias.aliasNorm}</li>
+                <li class={alias.source === "ingest" ? "bp-mono" : ""}>{alias.aliasNorm}</li>
               ))}
             </ul>
           </section>
@@ -148,16 +148,16 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
       </div>
 
       <div>
-        <h2 class="bl-section-title">
+        <h2 class="bp-section-title">
           Takes
         </h2>
         {
           takes.length === 0 ? (
-            <div class="bl-empty-state">
+            <div class="bp-empty-state">
               <p>No takes of this one yet — record a rehearsal and it'll show up here.</p>
             </div>
           ) : (
-            <div class="bl-take-list">
+            <div class="bp-take-list">
               {takes.map((take) => (
                 <TakeRow
                   take={take}

@@ -1,14 +1,14 @@
 // `/admin/tokens` page logic — mirrors
 // `packages/api/src/routes/admin-tokens.ts`. The raw secret is returned
 // exactly once, from `createToken`, and never persisted or logged (see
-// `createServiceToken` in `@bandlib/core`) — the page that renders it must
+// `createServiceToken` in `@bandplate/core`) — the page that renders it must
 // not put it anywhere that survives a redirect (query string, a cookie,
 // server logs), so `createToken`'s result is rendered directly by the POST
 // handler rather than round-tripped through a redirect.
-import type { AuthDeps, Scope } from "@bandlib/core";
-import { createServiceToken, isScope } from "@bandlib/core";
-import type { Db } from "@bandlib/db";
-import { serviceTokensRepo } from "@bandlib/db";
+import type { AuthDeps, Scope } from "@bandplate/core";
+import { createServiceToken, isScope } from "@bandplate/core";
+import type { Db } from "@bandplate/db";
+import { serviceTokensRepo } from "@bandplate/db";
 import { z } from "zod";
 
 type ServiceToken = serviceTokensRepo.ServiceToken;

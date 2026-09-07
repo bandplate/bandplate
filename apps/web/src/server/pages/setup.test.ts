@@ -1,8 +1,8 @@
 // `/setup`: form-post bootstrap flow, exercised via the exact functions the
 // `setup.astro` page's frontmatter calls.
-import { type AuthDeps, systemClock } from "@bandlib/core";
-import { createTestDb } from "@bandlib/db/testing";
-import { createNullMailer } from "@bandlib/mail";
+import { type AuthDeps, systemClock } from "@bandplate/core";
+import { createTestDb } from "@bandplate/db/testing";
+import { createNullMailer } from "@bandplate/mail";
 import { beforeEach, describe, expect, it } from "vitest";
 import { handleSetupPost, isBootstrapAvailable } from "./setup.js";
 
@@ -44,7 +44,7 @@ describe("setup page logic", () => {
     );
     expect(result.kind).toBe("bad_token");
 
-    const { membersRepo } = await import("@bandlib/db");
+    const { membersRepo } = await import("@bandplate/db");
     expect(await membersRepo.count(auth.db)).toBe(0);
   });
 

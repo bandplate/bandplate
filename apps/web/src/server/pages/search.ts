@@ -3,8 +3,8 @@
 // form (see search/index.astro) — this module parses the query string into
 // `takesRepo.SearchFilters` and calls the one repo query that backs it, the
 // same shape `server/pages/songs.ts` uses for its own GET-form filtering.
-import type { Db } from "@bandlib/db";
-import { favoritesRepo, takesRepo } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
+import { favoritesRepo, takesRepo } from "@bandplate/db";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
 const VALID_STATES: readonly takesRepo.TakeState[] = [

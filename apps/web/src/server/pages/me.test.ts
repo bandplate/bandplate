@@ -1,7 +1,7 @@
 // `/me` composition logic: the member, their sessions (with the current
 // one marked), favorites, and votes so far — against a real test database.
-import { hashToken } from "@bandlib/core";
-import type { Db } from "@bandlib/db";
+import { hashToken } from "@bandplate/core";
+import type { Db } from "@bandplate/db";
 import {
   authSessionsRepo,
   eventsRepo,
@@ -11,8 +11,8 @@ import {
   songsRepo,
   takesRepo,
   votesRepo,
-} from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
+} from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getMeData } from "./me.js";
 

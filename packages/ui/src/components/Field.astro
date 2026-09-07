@@ -38,20 +38,20 @@ const describedBy =
   [error ? errorId : "", hint ? hintId : ""].filter(Boolean).join(" ") || undefined;
 ---
 
-<div class="bl-field">
-  <label class="bl-field-label" for={fieldId}>
+<div class="bp-field">
+  <label class="bp-field-label" for={fieldId}>
     {label}
     {required && <span aria-hidden="true"> *</span>}
   </label>
   {hint && (
-    <span class="bl-field-hint" id={hintId}>
+    <span class="bp-field-hint" id={hintId}>
       {hint}
     </span>
   )}
   {
     as === "textarea" ? (
       <textarea
-        class="bl-textarea"
+        class="bp-textarea"
         id={fieldId}
         name={name}
         required={required}
@@ -63,7 +63,7 @@ const describedBy =
       </textarea>
     ) : as === "select" ? (
       <select
-        class="bl-select"
+        class="bp-select"
         id={fieldId}
         name={name}
         required={required}
@@ -75,7 +75,7 @@ const describedBy =
       </select>
     ) : (
       <input
-        class="bl-input"
+        class="bp-input"
         id={fieldId}
         name={name}
         type={type}
@@ -88,7 +88,7 @@ const describedBy =
     )
   }
   {error && (
-    <p class="bl-field-error" id={errorId} role="alert">
+    <p class="bp-field-error" id={errorId} role="alert">
       {error}
     </p>
   )}

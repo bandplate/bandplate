@@ -103,7 +103,7 @@
 // that component's own header comment). It has no effect at all without
 // that script: with JS off, this attribute just sits there unused and
 // round 1's first-occurrence-wins naming is exactly what still happens.
-import type { instrumentsRepo, takesRepo } from "@bandlib/db";
+import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 import { formatDuration, formatShortDate } from "../server/format.js";
 import { TAKE_STATE_LABEL } from "../server/take-state.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
@@ -176,7 +176,7 @@ const showDate = context.kind === "full";
 const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (take.label ?? "");
 ---
 
-<div class="bl-take-row">
+<div class="bp-take-row">
   <slot name="leading">
     {
       playableAssetId && (
@@ -189,16 +189,16 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
       )
     }
   </slot>
-  <div class="bl-take-row-main">
+  <div class="bp-take-row-main">
     <a
       href={`/takes/${take.id}`}
-      class="bl-take-label"
+      class="bp-take-label"
       transition:name={resolvedTransitionName}
       data-take-id={take.id}
     >
       {primaryLabel}
     </a>
-    <span class="bl-take-favorite-mark">
+    <span class="bp-take-favorite-mark">
       <FavoriteToggle
         targetType="take"
         targetId={take.id}
@@ -206,28 +206,28 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
         label={primaryLabel}
       />
     </span>
-    {take.label && <span class="bl-take-meta bl-take-sublabel">{take.label}</span>}
-    <div class="bl-take-meta bl-take-row-line">
-      <span class={`bl-badge ${take.state === "keeper" ? "bl-badge-keeper" : ""}`}>
+    {take.label && <span class="bp-take-meta bp-take-sublabel">{take.label}</span>}
+    <div class="bp-take-meta bp-take-row-line">
+      <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
         {TAKE_STATE_LABEL[take.state]}
       </span>
       {showDate && <span>{formatShortDate(take.recordedAt)}</span>}
       {event && (
-        <a href={`/events/${event.id}`} class="bl-take-event-link">
+        <a href={`/events/${event.id}`} class="bp-take-event-link">
           View this {event.kind}
         </a>
       )}
     </div>
     {instruments.length > 0 && (
-      <div class="bl-take-instruments">
+      <div class="bp-take-instruments">
         {instruments.map((instrument) => (
-          <span class="bl-take-instrument-tag">{instrument.label}</span>
+          <span class="bp-take-instrument-tag">{instrument.label}</span>
         ))}
       </div>
     )}
   </div>
-  <div class="bl-take-row-trailing">
-    <span class="bl-take-row-duration">{formatDuration(take.durationMs)}</span>
+  <div class="bp-take-row-trailing">
+    <span class="bp-take-row-duration">{formatDuration(take.durationMs)}</span>
     <slot name="trailing">
       <VoteToggle
         takeId={take.id}

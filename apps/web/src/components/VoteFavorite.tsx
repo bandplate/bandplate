@@ -120,7 +120,7 @@ function applyVoteState(takeId: string, myVote: boolean | undefined, tally: Tall
  * If this was the LAST row, removing it bare would leave a `<h2>` over an
  * empty container — exactly the blank panel §3 forbids, and wrong until
  * the next reload. So when the container is about to become empty, the
- * container itself is swapped for the same `.bl-empty-state` markup
+ * container itself is swapped for the same `.bp-empty-state` markup
  * `index.astro` renders server-side for `unvotedTakes.length === 0`
  * (`UNVOTED_LIST_EMPTY_STATE_HTML`), not just left behind empty.
  */
@@ -128,17 +128,17 @@ function removeFromUnvotedList(takeId: string): void {
   const list = document.querySelector<HTMLElement>("[data-unvoted-list]");
   const row = list
     ?.querySelector<HTMLElement>(`[data-vote-form][data-take-id="${CSS.escape(takeId)}"]`)
-    ?.closest<HTMLElement>(".bl-take-row");
+    ?.closest<HTMLElement>(".bp-take-row");
   if (!list || !row) {
     return;
   }
-  const isLastRow = list.querySelectorAll(".bl-take-row").length === 1;
+  const isLastRow = list.querySelectorAll(".bp-take-row").length === 1;
 
   function finish(): void {
     row?.remove();
     if (isLastRow && list) {
       const emptyState = document.createElement("div");
-      emptyState.className = "bl-empty-state";
+      emptyState.className = "bp-empty-state";
       emptyState.innerHTML = UNVOTED_LIST_EMPTY_STATE_HTML;
       list.replaceWith(emptyState);
     }
@@ -298,9 +298,9 @@ export default function VoteFavorite() {
     // whatever the member was doing) and never `assertive`, which would
     // interrupt a screen reader mid-sentence for a non-urgent "couldn't
     // save" message.
-    <output class="bl-toast-region" aria-live="polite">
+    <output class="bp-toast-region" aria-live="polite">
       {toasts.map((toast) => (
-        <p class="bl-toast" key={toast.id}>
+        <p class="bp-toast" key={toast.id}>
           {toast.text}
         </p>
       ))}

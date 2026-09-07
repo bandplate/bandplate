@@ -4,7 +4,7 @@
 // intercepts it once hydrated for an optimistic update). Extends the gold
 // "favorite" treatment `TakeRow.astro` already established (a filled gold
 // star marks a favorite) rather than inventing a second visual language —
-// see `components.css`'s `.bl-favorite-mark` — but turns it into a real,
+// see `components.css`'s `.bp-favorite-mark` — but turns it into a real,
 // always-rendered control instead of a conditional, read-only marker: an
 // unfavorited row now shows an outline star (the same shape, unfilled),
 // not nothing.
@@ -33,7 +33,7 @@ const actionLabel = `${favorited ? "Remove" : "Add"} ${label} ${favorited ? "fro
 <form
   method="post"
   action="/favorites"
-  class={`bl-favorite-toggle-form ${size === "lg" ? "bl-favorite-toggle-form-lg" : ""}`}
+  class={`bp-favorite-toggle-form ${size === "lg" ? "bp-favorite-toggle-form-lg" : ""}`}
   data-favorite-form
   data-target-type={targetType}
   data-target-id={targetId}
@@ -43,16 +43,16 @@ const actionLabel = `${favorited ? "Remove" : "Add"} ${label} ${favorited ? "fro
   <input type="hidden" name="targetId" value={targetId} />
   <button
     type="submit"
-    class="bl-favorite-toggle"
+    class="bp-favorite-toggle"
     aria-pressed={favorited ? "true" : "false"}
     aria-label={actionLabel}
     title={actionLabel}
     data-label={label}
   >
-    <svg class="bl-star-outline" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+    <svg class="bp-star-outline" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
       <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
     </svg>
-    <svg class="bl-star-filled" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <svg class="bp-star-filled" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
       <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
     </svg>
   </button>

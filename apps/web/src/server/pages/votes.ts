@@ -4,8 +4,8 @@
 // (no JS) and the `VoteFavorite` island's `fetch` (JS) both hit the same
 // URL, so this one function is the single place "cast a keeper vote" is
 // implemented for the browser-facing app.
-import type { Db } from "@bandlib/db";
-import { takesRepo, votesRepo } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
+import { takesRepo, votesRepo } from "@bandplate/db";
 import { z } from "zod";
 
 const castVoteFormSchema = z.object({

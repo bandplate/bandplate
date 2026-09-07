@@ -1,6 +1,6 @@
 ---
-import Banner from "@bandlib/ui/components/Banner.astro";
-import Field from "@bandlib/ui/components/Field.astro";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
@@ -86,11 +86,11 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
   {justRevoked && <Banner kind="success">Sessions revoked. They'll need a new login link.</Banner>}
   {formError && <Banner kind="error">{formError}</Banner>}
 
-  <section class="bl-card">
-    <h2 class="bl-section-title">Add a member</h2>
+  <section class="bp-card">
+    <h2 class="bp-section-title">Add a member</h2>
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
-      <div class="bl-form-grid bl-form-grid--wide">
+      <div class="bp-form-grid bp-form-grid--wide">
         <Field
           label="Name"
           name="displayName"
@@ -107,7 +107,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
           error={createErrorField === "email" ? createError : undefined}
         />
       </div>
-      <button type="submit" class="bl-btn bl-btn-primary">Add member</button>
+      <button type="submit" class="bp-btn bp-btn-primary">Add member</button>
     </form>
   </section>
 
@@ -116,8 +116,8 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
     {members.length === 0 ? (
       <p>No members yet — add the first one above.</p>
     ) : (
-      <div class="bl-table-wrap">
-        <table class="bl-table">
+      <div class="bp-table-wrap">
+        <table class="bp-table">
           <caption class="sr-only">
             Band members
           </caption>
@@ -136,26 +136,26 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
             {members.map((member) => (
               <tr>
                 <td data-label="Name">{member.displayName}</td>
-                <td data-label="Email" class="bl-mono">{member.email}</td>
+                <td data-label="Email" class="bp-mono">{member.email}</td>
                 <td data-label="Role">
-                  <span class={`bl-badge ${member.role === "admin" ? "bl-badge-admin" : ""}`}>
+                  <span class={`bp-badge ${member.role === "admin" ? "bp-badge-admin" : ""}`}>
                     {member.role}
                   </span>
                 </td>
                 <td data-label="Status">
-                  <span class={`bl-badge ${member.status === "active" ? "bl-badge-active" : ""}`}>
+                  <span class={`bp-badge ${member.status === "active" ? "bp-badge-active" : ""}`}>
                     {member.status}
                   </span>
                 </td>
                 <td data-label="Instruments">
-                  <form method="post" class="bl-inline-form">
+                  <form method="post" class="bp-inline-form">
                     <input type="hidden" name="intent" value="instruments" />
                     <input type="hidden" name="memberId" value={member.id} />
                     <label class="sr-only" for={`instruments-${member.id}`}>
                       Instruments for {member.displayName}
                     </label>
                     <select
-                      class="bl-select bl-input-compact bl-instrument-multiselect"
+                      class="bp-select bp-input-compact bp-instrument-multiselect"
                       id={`instruments-${member.id}`}
                       name="instrumentIds"
                       multiple
@@ -173,12 +173,12 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                         ))
                       }
                     </select>
-                    <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
+                    <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save</button>
                   </form>
                 </td>
-                <td data-label="Last seen" class="bl-mono">{formatTimestamp(member.lastSeenAt)}</td>
+                <td data-label="Last seen" class="bp-mono">{formatTimestamp(member.lastSeenAt)}</td>
                 <td data-label="Actions">
-                  <div class="bl-table-actions">
+                  <div class="bp-table-actions">
                     {member.id === principal.memberId ? (
                       // An admin can't change their own role/status here —
                       // the server rejects it anyway (see updateMember's
@@ -188,32 +188,32 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                       // this row at all. Instruments aren't a
                       // self-demotion concern, so that form (above) is
                       // still shown for this row.
-                      <p class="bl-field-hint bl-m0">This is you.</p>
+                      <p class="bp-field-hint bp-m0">This is you.</p>
                     ) : (
-                      <form method="post" class="bl-inline-form">
+                      <form method="post" class="bp-inline-form">
                         <input type="hidden" name="intent" value="update" />
                         <input type="hidden" name="memberId" value={member.id} />
                         <label class="sr-only" for={`role-${member.id}`}>
                           Role for {member.displayName}
                         </label>
-                        <select class="bl-select bl-input-compact" id={`role-${member.id}`} name="role">
+                        <select class="bp-select bp-input-compact" id={`role-${member.id}`} name="role">
                           <option value="member" selected={member.role === "member"}>member</option>
                           <option value="admin" selected={member.role === "admin"}>admin</option>
                         </select>
                         <label class="sr-only" for={`status-${member.id}`}>
                           Status for {member.displayName}
                         </label>
-                        <select class="bl-select bl-input-compact" id={`status-${member.id}`} name="status">
+                        <select class="bp-select bp-input-compact" id={`status-${member.id}`} name="status">
                           <option value="invited" selected={member.status === "invited"}>invited</option>
                           <option value="active" selected={member.status === "active"}>active</option>
                           <option value="disabled" selected={member.status === "disabled"}>disabled</option>
                         </select>
-                        <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save</button>
+                        <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save</button>
                       </form>
                     )}
                     <a
                       href={`/admin/members/${member.id}/revoke-sessions`}
-                      class="bl-btn bl-btn-danger bl-btn-sm"
+                      class="bp-btn bp-btn-danger bp-btn-sm"
                       data-confirm
                       data-confirm-title={`Revoke sessions for ${member.displayName}?`}
                       data-confirm-body={`${member.displayName} will be signed out everywhere and will need a new login link to get back in.`}

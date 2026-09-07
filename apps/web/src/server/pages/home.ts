@@ -3,7 +3,7 @@
 // toggle on the event row itself — Task 8), and "needs your vote"
 // (published takes this member hasn't voted on, each with a real vote and
 // favorite control).
-import { type Db, assetsRepo } from "@bandlib/db";
+import { type Db, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
   favoritesRepo,
@@ -11,7 +11,7 @@ import {
   songsRepo,
   takesRepo,
   votesRepo,
-} from "@bandlib/db";
+} from "@bandplate/db";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
 /** How many recent events (each with their takes) the home page shows. */

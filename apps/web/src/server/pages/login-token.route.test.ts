@@ -28,8 +28,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { generateToken, hashToken } from "@bandlib/core";
-import { createDb, loginTokensRepo, membersRepo } from "@bandlib/db";
+import { generateToken, hashToken } from "@bandplate/core";
+import { createDb, loginTokensRepo, membersRepo } from "@bandplate/db";
 import { createClient } from "@libsql/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -66,12 +66,12 @@ async function seedMemberAndToken(): Promise<string> {
   // Reuses the real migration runner (packages/db/scripts/migrate.ts,
   // exercised the same way an operator would run it) rather than
   // depending on drizzle-orm directly from apps/web — apps/web has no
-  // direct dependency on drizzle-orm (only @bandlib/db does), and pnpm's
+  // direct dependency on drizzle-orm (only @bandplate/db does), and pnpm's
   // strict node_modules resolution means importing it here would require
   // adding a dependency purely for this one test file.
-  await execFileAsync("pnpm", ["--filter", "@bandlib/db", "run", "migrate"], {
+  await execFileAsync("pnpm", ["--filter", "@bandplate/db", "run", "migrate"], {
     cwd: REPO_ROOT,
-    env: { ...process.env, BANDLIB_DATABASE_URL: `file:${dbPath}` },
+    env: { ...process.env, BANDPLATE_DATABASE_URL: `file:${dbPath}` },
   });
 
   const client = createClient({ url: `file:${dbPath}` });
@@ -109,11 +109,11 @@ function startBuiltServer(): ChildProcess {
       ...process.env,
       PORT: String(PORT),
       HOST: "127.0.0.1",
-      BANDLIB_DATABASE_URL: `file:${dbPath}`,
-      BANDLIB_BOOTSTRAP_TOKEN: "route-test-bootstrap-token",
-      BANDLIB_APP_ORIGIN: ORIGIN,
-      BANDLIB_ALLOW_DEV_MAILER: "true",
-      BANDLIB_COOKIE_SECURE: "false",
+      BANDPLATE_DATABASE_URL: `file:${dbPath}`,
+      BANDPLATE_BOOTSTRAP_TOKEN: "route-test-bootstrap-token",
+      BANDPLATE_APP_ORIGIN: ORIGIN,
+      BANDPLATE_ALLOW_DEV_MAILER: "true",
+      BANDPLATE_COOKIE_SECURE: "false",
       // Dummy S3 config — none of these route tests exercise the audio
       // endpoint, so this never needs to actually reach a bucket. It only
       // has to be PRESENT (config validation requires it) and internally
@@ -132,7 +132,7 @@ function startBuiltServer(): ChildProcess {
 
 describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", () => {
   beforeAll(async () => {
-    dbDir = await mkdtemp(join(tmpdir(), "bandlib-login-token-route-"));
+    dbDir = await mkdtemp(join(tmpdir(), "bandplate-login-token-route-"));
     dbPath = join(dbDir, "db.sqlite");
     rawToken = await seedMemberAndToken();
 
@@ -167,7 +167,7 @@ describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", (
     });
     expect(post.status).toBe(302);
     expect(post.headers.get("location")).toBe("/");
-    expect(post.headers.get("set-cookie")).toContain("bl_session=");
+    expect(post.headers.get("set-cookie")).toContain("bp_session=");
 
     // Single-use: the SAME token, POSTed again, must now fail — the two
     // preceding GETs did not burn its one use, only this POST did.

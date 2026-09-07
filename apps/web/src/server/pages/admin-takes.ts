@@ -4,8 +4,8 @@
 // (brief §1: "That separation is deliberate — it's what makes 'upload a
 // lossless master for this one' a decision rather than a side effect of
 // the fourth vote").
-import type { Db } from "@bandlib/db";
-import { songsRepo, takesRepo } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
+import { songsRepo, takesRepo } from "@bandplate/db";
 
 export interface TakeForAdminAction {
   take: takesRepo.Take;

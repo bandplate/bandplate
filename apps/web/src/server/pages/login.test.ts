@@ -2,9 +2,9 @@
 // the `login/index.astro` page's frontmatter calls after reading
 // `await Astro.request.formData()`, i.e. a plain `<form method="post">`
 // submission, no `fetch`/JSON involved anywhere in this path.
-import { type AuthDeps, createInMemoryRateLimiter, systemClock } from "@bandlib/core";
-import { createTestDb } from "@bandlib/db/testing";
-import { type CapturingMailer, createCapturingMailer } from "@bandlib/mail";
+import { type AuthDeps, createInMemoryRateLimiter, systemClock } from "@bandplate/core";
+import { createTestDb } from "@bandplate/db/testing";
+import { type CapturingMailer, createCapturingMailer } from "@bandplate/mail";
 import { beforeEach, describe, expect, it } from "vitest";
 import { type LoginPostDeps, handleLoginPost } from "./login.js";
 
@@ -57,7 +57,7 @@ describe("handleLoginPost", () => {
   it("builds the login URL from the configured appOrigin", async () => {
     const mailer = deps.auth.mailer as CapturingMailer;
     const db = deps.auth.db;
-    const { membersRepo } = await import("@bandlib/db");
+    const { membersRepo } = await import("@bandplate/db");
     await membersRepo.create(db, {
       displayName: "Alex",
       slug: "alex",

@@ -2,8 +2,8 @@
 // One generic endpoint (not nested under `/songs`, `/takes`, or `/events`)
 // because the same toggle applies to all three target types from many
 // different pages — see `apps/web/src/pages/favorites.astro`.
-import type { Db } from "@bandlib/db";
-import { eventsRepo, favoritesRepo, songsRepo, takesRepo } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
+import { eventsRepo, favoritesRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { z } from "zod";
 
 const toggleFavoriteFormSchema = z.object({

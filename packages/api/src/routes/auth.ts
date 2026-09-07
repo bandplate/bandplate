@@ -1,5 +1,5 @@
-import type { AuthDeps, RateLimiter } from "@bandlib/core";
-import { consumeLoginToken, peekLoginToken, requestLogin, revokeSession } from "@bandlib/core";
+import type { AuthDeps, RateLimiter } from "@bandplate/core";
+import { consumeLoginToken, peekLoginToken, requestLogin, revokeSession } from "@bandplate/core";
 import { getCookie } from "hono/cookie";
 import { z } from "zod";
 import { SESSION_COOKIE_NAME, clearSessionCookie, setSessionCookie } from "../cookies.js";
@@ -38,7 +38,7 @@ export interface AuthRouteDeps {
    * Workers profile only. When `true`, `POST /auth/login` schedules the
    * login-link send via `c.executionCtx.waitUntil` instead of awaiting it
    * inline — see `requestLogin`'s `deferMailSend` doc comment in
-   * `@bandlib/core`. `c.executionCtx` is per-request (Hono populates it
+   * `@bandplate/core`. `c.executionCtx` is per-request (Hono populates it
    * from the `ctx` argument of the Workers `fetch(request, env, ctx)`
    * handler), so this is read fresh on every request rather than baked
    * into the (once-per-isolate) `deps` this router closes over. Left

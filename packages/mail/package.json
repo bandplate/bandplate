@@ -1,5 +1,5 @@
 {
-  "name": "@bandlib/mail",
+  "name": "@bandplate/mail",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@bandlib/core": "workspace:*",
+    "@bandplate/core": "workspace:*",
     "nodemailer": "^6.9.16"
   },
   "devDependencies": {

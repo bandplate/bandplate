@@ -6,7 +6,7 @@
 // paired with a positive case proving the same URL/flow succeeds when the
 // mismatch is removed — so a suite that accidentally always passes (e.g. a
 // broken `fetch` silently returning ok:false either way) is itself caught.
-import type { Clock, Storage } from "@bandlib/core";
+import type { Clock, Storage } from "@bandplate/core";
 import { describe, expect, it } from "vitest";
 
 export interface ConformanceFixture {

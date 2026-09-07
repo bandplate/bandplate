@@ -15,17 +15,17 @@ import { ConfigError, type RuntimeConfig } from "./config.js";
  * `docs/deploy-cloudflare.md` for what a self-deployer sets. `DB` is the
  * one real binding (D1); everything else is a plain secret string,
  * deliberately — R2 is reached over its S3-compatible endpoint via
- * `@bandlib/storage`'s `S3Storage`, never the R2 binding (see that
+ * `@bandplate/storage`'s `S3Storage`, never the R2 binding (see that
  * package's own doc comment on why), and mail goes through
- * `@bandlib/mail`'s `createHttpMailer`, never SMTP (Workers has no TCP
+ * `@bandplate/mail`'s `createHttpMailer`, never SMTP (Workers has no TCP
  * sockets). Both need only string secrets, which is exactly what
  * `wrangler secret put` sets.
  */
 export interface CloudflareEnv {
   DB: import("@cloudflare/workers-types").D1Database;
-  BANDLIB_APP_ORIGIN?: string;
-  BANDLIB_BOOTSTRAP_TOKEN: string;
-  BANDLIB_TRUSTED_PROXY_DEPTH?: string;
+  BANDPLATE_APP_ORIGIN?: string;
+  BANDPLATE_BOOTSTRAP_TOKEN: string;
+  BANDPLATE_TRUSTED_PROXY_DEPTH?: string;
   MAIL_PROVIDER?: string;
   MAIL_API_KEY?: string;
   MAIL_FROM?: string;
@@ -42,22 +42,22 @@ export interface WorkersRuntimeConfig extends RuntimeConfig {
 }
 
 // CRITICAL: `wrangler.toml`'s `[vars]` ships with placeholder values
-// (`https://bandlib.example`, `bandlib@bandlib.example`,
+// (`https://bandplate.example`, `bandplate@bandplate.example`,
 // `https://<account-id>.r2.cloudflarestorage.com`) that a self-deployer
 // must replace. Every one of them is a non-empty, well-formed-looking
 // string, so a plain `.min(1)` (or even the origin-shape check above)
 // passes them straight through — and the *first* symptom is not an
 // error, it's a same-origin check silently rejecting every form POST
 // (`isSameOrigin` compares the real `Origin` header against a
-// `bandlib.example` that never arrives), which looks exactly like a
+// `bandplate.example` that never arrives), which looks exactly like a
 // working app whose submit buttons just don't do anything. Refuse to
 // start on the known placeholder shapes instead, naming the offending
 // variable — the same fail-fast treatment every other misconfiguration
 // here already gets.
 const PLACEHOLDER_PATTERNS: RegExp[] = [
-  // `bandlib.example` / `bandlib@bandlib.example` — the doc's own
+  // `bandplate.example` / `bandplate@bandplate.example` — the doc's own
   // "e.g." example values, verbatim, left uncustomized.
-  /\bbandlib\.example\b/i,
+  /\bbandplate\.example\b/i,
   // `<account-id>` and similar angle-bracket template slots.
   /<[a-z0-9_-]+>/i,
 ];
@@ -70,12 +70,12 @@ const NOT_A_PLACEHOLDER = {
   message:
     "is still set to the placeholder value shipped in wrangler.toml — replace it with your " +
     "real value before deploying (see docs/deploy-cloudflare.md's numbered [vars] step). " +
-    "Left as-is, this fails silently instead: e.g. a placeholder BANDLIB_APP_ORIGIN makes " +
+    "Left as-is, this fails silently instead: e.g. a placeholder BANDPLATE_APP_ORIGIN makes " +
     "every form POST 403 with no visible error.",
 };
 
 const EnvSchema = z.object({
-  BANDLIB_APP_ORIGIN: z
+  BANDPLATE_APP_ORIGIN: z
     .string()
     .trim()
     .min(1)
@@ -87,11 +87,11 @@ const EnvSchema = z.object({
           return false;
         }
       },
-      { message: "must be a bare origin — scheme + host only, e.g. https://bandlib.example" },
+      { message: "must be a bare origin — scheme + host only, e.g. https://bandplate.example" },
     )
     .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
-  BANDLIB_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
-  BANDLIB_TRUSTED_PROXY_DEPTH: z
+  BANDPLATE_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
+  BANDPLATE_TRUSTED_PROXY_DEPTH: z
     .string()
     .trim()
     .refine((v) => /^\d+$/.test(v), { message: "must be a non-negative integer" })
@@ -99,7 +99,7 @@ const EnvSchema = z.object({
   // Every Workers deploy is public-internet-facing behind Cloudflare's
   // own TLS-terminating edge, so unlike the Node profile (which has a
   // non-TLS local-dev mode), the session cookie is always `Secure` here —
-  // no `BANDLIB_COOKIE_SECURE` escape hatch to misconfigure.
+  // no `BANDPLATE_COOKIE_SECURE` escape hatch to misconfigure.
   MAIL_PROVIDER: z.enum(["resend", "postmark"], {
     errorMap: () => ({ message: 'is required and must be "resend" or "postmark"' }),
   }),
@@ -160,11 +160,11 @@ export function loadWorkersConfig(env: CloudflareEnv): WorkersRuntimeConfig {
     // unused by the Workers composition root; kept only so this satisfies
     // the shared `RuntimeConfig` shape without a second interface.
     databaseUrl: "",
-    appOrigin: data.BANDLIB_APP_ORIGIN,
-    bootstrapToken: data.BANDLIB_BOOTSTRAP_TOKEN,
+    appOrigin: data.BANDPLATE_APP_ORIGIN,
+    bootstrapToken: data.BANDPLATE_BOOTSTRAP_TOKEN,
     cookieSecure: true,
-    trustedProxyDepth: data.BANDLIB_TRUSTED_PROXY_DEPTH
-      ? Number(data.BANDLIB_TRUSTED_PROXY_DEPTH)
+    trustedProxyDepth: data.BANDPLATE_TRUSTED_PROXY_DEPTH
+      ? Number(data.BANDPLATE_TRUSTED_PROXY_DEPTH)
       : 1,
     allowDevMailer: false,
     smtp: undefined,

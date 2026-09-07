@@ -1,4 +1,4 @@
-import type { MemberPrincipal, Principal, Scope } from "@bandlib/core";
+import type { MemberPrincipal, Principal, Scope } from "@bandplate/core";
 import { describe, expect, it } from "vitest";
 import { guardAdminPath, guardMemberPath, isAdminPath, isPublicPath } from "./guard.js";
 

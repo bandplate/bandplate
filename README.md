@@ -1,4 +1,4 @@
-# bandlib
+# bandplate
 
 A self-hostable web app where a band browses, plays, and votes on its
 rehearsal recordings.
@@ -36,8 +36,8 @@ pnpm build
    in — every variable is documented there. The app validates this config
    once, at startup, and refuses to start with a message naming the specific
    variable if something required is missing — including refusing to start
-   with no way to send login emails (set `BANDLIB_SMTP_*`, or
-   `BANDLIB_ALLOW_DEV_MAILER=true` for local dev only, which is also
+   with no way to send login emails (set `BANDPLATE_SMTP_*`, or
+   `BANDPLATE_ALLOW_DEV_MAILER=true` for local dev only, which is also
    refused outright once `NODE_ENV=production`) and with no object storage
    configured (`S3_*` — see the next step; there is no "no storage" mode,
    every take's audio lives there).
@@ -49,8 +49,8 @@ pnpm build
    ```
    Then fill in the `.env`'s `S3_*` block — the defaults there
    (`S3_ENDPOINT=http://localhost:9000`, `S3_PUBLIC_ENDPOINT=http://localhost:9000`,
-   `S3_BUCKET=bandlib`, `S3_ACCESS_KEY_ID=bandlib-dev`,
-   `S3_SECRET_ACCESS_KEY=bandlib-dev-secret`) already match this path —
+   `S3_BUCKET=bandplate`, `S3_ACCESS_KEY_ID=bandplate-dev`,
+   `S3_SECRET_ACCESS_KEY=bandplate-dev-secret`) already match this path —
    `apps/web` running directly on the host (`pnpm --filter web dev`, or
    `pnpm build && pnpm start`), reaching the compose-started MinIO at
    `localhost`. The one case that needs a DIFFERENT `S3_ENDPOINT` is
@@ -64,12 +64,12 @@ pnpm build
    against the wrong one 403s/hangs in the browser with no obvious cause).
 
    One variable needs a deployment-time decision, not just a value:
-   **`BANDLIB_TRUSTED_PROXY_DEPTH`** controls how many reverse-proxy hops in
-   front of bandlib are trusted to have appended their own observed peer
+   **`BANDPLATE_TRUSTED_PROXY_DEPTH`** controls how many reverse-proxy hops in
+   front of bandplate are trusted to have appended their own observed peer
    address to `X-Forwarded-For` — this is how the login rate limiter picks
    the real client IP. It defaults to `1`, correct for the common case of
    one edge/proxy (a CDN, a PaaS router, a single nginx/Caddy) in front of
-   the app. **If bandlib has no reverse proxy in front of it at all —
+   the app. **If bandplate has no reverse proxy in front of it at all —
    it receives connections directly from clients — set this to `0`.** Left
    at `1` with no fronting proxy, a client can set `X-Forwarded-For` on
    their own request with nothing trustworthy having appended to it, letting
@@ -77,21 +77,21 @@ pnpm build
    the login rate limit entirely. Get it backwards the other way (`0` behind
    a real proxy) and the rate limit bucket becomes the proxy's own address,
    shared across everyone behind it.
-2. **Run migrations** against `BANDLIB_DATABASE_URL`:
+2. **Run migrations** against `BANDPLATE_DATABASE_URL`:
    ```sh
-   BANDLIB_DATABASE_URL=file:./apps/web/.data/bandlib.db \
-     pnpm --filter @bandlib/db run migrate
+   BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+     pnpm --filter @bandplate/db run migrate
    ```
 3. **(Optional) Seed example data** — a generic demo band lineup (songs,
    events, takes, votes), useful for trying the app or for local dev.
    **Skip this against a real deployment's database.** It reads the same
-   `BANDLIB_DATABASE_URL` as the migration step above (or the bare
+   `BANDPLATE_DATABASE_URL` as the migration step above (or the bare
    `DATABASE_URL`, accepted as a fallback) and now fails loudly, naming the
    variable, if neither is set — it will NOT silently write to some default
    local file if you forget it:
    ```sh
-   BANDLIB_DATABASE_URL=file:./apps/web/.data/bandlib.db \
-     pnpm --filter @bandlib/db run seed
+   BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+     pnpm --filter @bandplate/db run seed
    ```
    The seed creates asset ROWS (so the UI has something to show) but not
    real audio bytes behind them — run the dev upload script (needs
@@ -99,11 +99,11 @@ pnpm build
    playable encoded audio behind every seeded take, so the player actually
    has something to play:
    ```sh
-   BANDLIB_DATABASE_URL=file:./apps/web/.data/bandlib.db \
+   BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
      S3_ENDPOINT=http://localhost:9000 S3_PUBLIC_ENDPOINT=http://localhost:9000 \
-     S3_BUCKET=bandlib S3_REGION=auto \
-     S3_ACCESS_KEY_ID=bandlib-dev S3_SECRET_ACCESS_KEY=bandlib-dev-secret \
-     pnpm --filter @bandlib/db run dev:upload-audio
+     S3_BUCKET=bandplate S3_REGION=auto \
+     S3_ACCESS_KEY_ID=bandplate-dev S3_SECRET_ACCESS_KEY=bandplate-dev-secret \
+     pnpm --filter @bandplate/db run dev:upload-audio
    ```
 4. **Build and start the app.** For local dev, `pnpm --filter web dev` is
    fine. For a real deployment, build (`pnpm --filter web build`) and start
@@ -151,7 +151,7 @@ packages/
   db/             Drizzle schema + repos — runtime-agnostic, no node:* imports
   api/            Hono app (createApp), mounted under /api by apps/web
   mail/           Mailer implementations (console/null/capturing + SMTP,
-                   the SMTP one behind its own `@bandlib/mail/smtp` entry
+                   the SMTP one behind its own `@bandplate/mail/smtp` entry
                    point so importing the barrel never pulls in nodemailer)
   storage/        Object storage — `S3Storage` (aws4fetch, MinIO/R2-compatible
                    SigV4 signing), runtime-agnostic. `InMemoryStorage` (a

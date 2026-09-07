@@ -5,8 +5,8 @@
 // directly here (not after a redirect) — a broken mailer needs to be
 // discovered by the operator running setup, not by the first member who
 // can't get a login link.
-import Banner from "@bandlib/ui/components/Banner.astro";
-import Field from "@bandlib/ui/components/Field.astro";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import Layout from "../layouts/Layout.astro";
 import { getAppDeps, getAuthDeps } from "../server/app.js";
 import { setSessionCookie } from "../server/cookies.js";
@@ -43,9 +43,9 @@ if (Astro.request.method === "POST") {
 const fieldErrors = result?.kind === "invalid" ? result.errors : {};
 ---
 
-<Layout title="Set up bandlib">
-  <main id="main" class="bl-container bl-auth-main">
-    <h1 class="bl-auth-title">Set up bandlib</h1>
+<Layout title="Set up bandplate">
+  <main id="main" class="bp-container bp-auth-main">
+    <h1 class="bp-auth-title">Set up bandplate</h1>
 
     {originError && (
       <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
@@ -54,7 +54,7 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
     {result?.kind === "ok" ? (
       <>
         <Banner kind="success" title="You're signed in as the first admin">
-          bandlib is ready to use.
+          bandplate is ready to use.
         </Banner>
         {result.testEmailSent ? (
           <Banner kind="success" title="Test email sent">
@@ -67,11 +67,11 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
             still signed in, so you can fix it and continue.
           </Banner>
         )}
-        <p><a href="/admin" class="bl-btn bl-btn-primary">Go to admin</a></p>
+        <p><a href="/admin" class="bp-btn bp-btn-primary">Go to admin</a></p>
       </>
     ) : (
       <form method="post" novalidate>
-        <p class="bl-m0">
+        <p class="bp-m0">
           Create the first admin account. You'll need the bootstrap token from your server's
           environment configuration.
         </p>
@@ -79,7 +79,7 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
           <Banner kind="error">That bootstrap token isn't right. Check your server configuration.</Banner>
         )}
         {result?.kind === "already_bootstrapped" && (
-          <Banner kind="error">bandlib is already set up. Sign in instead.</Banner>
+          <Banner kind="error">bandplate is already set up. Sign in instead.</Banner>
         )}
         <Field
           label="Bootstrap token"
@@ -104,7 +104,7 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
           autocomplete="email"
           error={fieldErrors.email}
         />
-        <button type="submit" class="bl-btn bl-btn-primary">Create admin account</button>
+        <button type="submit" class="bp-btn bp-btn-primary">Create admin account</button>
       </form>
     )}
   </main>

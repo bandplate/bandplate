@@ -26,22 +26,22 @@ importers:
       '@astrojs/preact':
         specifier: ^4.0.1
         version: 4.1.3(@babel/core@7.29.7)(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)(preact@10.29.8)(rollup@4.63.1)(tsx@4.23.13)(yaml@2.9.0)
-      '@bandlib/api':
+      '@bandplate/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@bandlib/core':
+      '@bandplate/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@bandlib/db':
+      '@bandplate/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@bandlib/mail':
+      '@bandplate/mail':
         specifier: workspace:*
         version: link:../../packages/mail
-      '@bandlib/storage':
+      '@bandplate/storage':
         specifier: workspace:*
         version: link:../../packages/storage
-      '@bandlib/ui':
+      '@bandplate/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@libsql/client':
@@ -90,10 +90,10 @@ importers:
 
   packages/api:
     dependencies:
-      '@bandlib/core':
+      '@bandplate/core':
         specifier: workspace:*
         version: link:../core
-      '@bandlib/db':
+      '@bandplate/db':
         specifier: workspace:*
         version: link:../db
       hono:
@@ -103,10 +103,10 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
     devDependencies:
-      '@bandlib/mail':
+      '@bandplate/mail':
         specifier: workspace:*
         version: link:../mail
-      '@bandlib/storage':
+      '@bandplate/storage':
         specifier: workspace:*
         version: link:../storage
       '@cloudflare/vitest-pool-workers':
@@ -127,7 +127,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@bandlib/db':
+      '@bandplate/db':
         specifier: workspace:*
         version: link:../db
       zod:
@@ -146,7 +146,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@bandlib/core':
+      '@bandplate/core':
         specifier: workspace:*
         version: link:../core
       '@libsql/client':
@@ -156,7 +156,7 @@ importers:
         specifier: 0.38.4
         version: 0.38.4(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.14.0)
     devDependencies:
-      '@bandlib/storage':
+      '@bandplate/storage':
         specifier: workspace:*
         version: link:../storage
       '@cloudflare/workers-types':
@@ -180,7 +180,7 @@ importers:
 
   packages/mail:
     dependencies:
-      '@bandlib/core':
+      '@bandplate/core':
         specifier: workspace:*
         version: link:../core
       nodemailer:
@@ -202,7 +202,7 @@ importers:
 
   packages/storage:
     dependencies:
-      '@bandlib/core':
+      '@bandplate/core':
         specifier: workspace:*
         version: link:../core
       aws4fetch:

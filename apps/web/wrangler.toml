@@ -1,10 +1,10 @@
 # Deploy config for the Cloudflare Workers profile (increment 7). Build
-# first with `BANDLIB_ADAPTER=cloudflare astro build` (produces
+# first with `BANDPLATE_ADAPTER=cloudflare astro build` (produces
 # `dist/_worker.js/`), then `wrangler deploy` (or `wrangler dev` for local
 # verification). See `docs/deploy-cloudflare.md` for the full walkthrough —
 # what a self-deployer creates, which secrets to set, and how migrations
 # run.
-name = "bandlib"
+name = "bandplate"
 main = "dist/_worker.js/index.js"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
@@ -21,34 +21,34 @@ binding = "ASSETS"
 # deliberately not used.
 #
 # `database_id` here is a placeholder — a self-deployer replaces it with
-# their own D1 database's id after `wrangler d1 create bandlib` (see the
+# their own D1 database's id after `wrangler d1 create bandplate` (see the
 # docs). Local `wrangler dev`/`vitest-pool-workers` never touch a real
 # Cloudflare account regardless of this value.
 [[d1_databases]]
 binding = "DB"
-database_name = "bandlib"
+database_name = "bandplate"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "../../packages/db/migrations/sqlite"
 
 # --- Non-secret vars -------------------------------------------------------
-# Secrets (BANDLIB_BOOTSTRAP_TOKEN, MAIL_API_KEY, S3_ACCESS_KEY_ID,
+# Secrets (BANDPLATE_BOOTSTRAP_TOKEN, MAIL_API_KEY, S3_ACCESS_KEY_ID,
 # S3_SECRET_ACCESS_KEY) are set with `wrangler secret put <NAME>`, never
 # committed here — see docs/deploy-cloudflare.md.
 #
 # CRITICAL — every value below is a PLACEHOLDER. `docs/deploy-cloudflare.md`
 # step 5 ("Replace every [vars] placeholder") walks through all five.
-# BANDLIB_APP_ORIGIN and MAIL_FROM (the "bandlib.example" ones) and
+# BANDPLATE_APP_ORIGIN and MAIL_FROM (the "bandplate.example" ones) and
 # S3_ENDPOINT/S3_PUBLIC_ENDPOINT (the "<account-id>" ones) are enforced at
 # startup — the app refuses to boot with a message naming the variable if
 # you forget one (see `apps/web/src/server/config.worker.ts`). S3_BUCKET
 # needs replacing too if you named your bucket anything other than
-# "bandlib" in step 2 — that one can't be fail-fast-checked because
-# "bandlib" is itself a perfectly valid bucket name.
+# "bandplate" in step 2 — that one can't be fail-fast-checked because
+# "bandplate" is itself a perfectly valid bucket name.
 [vars]
-BANDLIB_APP_ORIGIN = "https://bandlib.example"
+BANDPLATE_APP_ORIGIN = "https://bandplate.example"
 MAIL_PROVIDER = "resend"
-MAIL_FROM = "bandlib@bandlib.example"
+MAIL_FROM = "bandplate@bandplate.example"
 S3_ENDPOINT = "https://<account-id>.r2.cloudflarestorage.com"
 S3_PUBLIC_ENDPOINT = "https://<account-id>.r2.cloudflarestorage.com"
-S3_BUCKET = "bandlib"
+S3_BUCKET = "bandplate"
 S3_REGION = "auto"

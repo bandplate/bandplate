@@ -7,10 +7,10 @@
  *
  * Contrast (WCAG relative luminance; see task-1-report.md "Fix round 1" for
  * every text-intent token in both themes):
- *   body text (--bl-color-fg) on ground (--bl-color-bg)
+ *   body text (--bp-color-fg) on ground (--bp-color-bg)
  *     light theme: espresso #2f0c02 on sand #f4efe2  -> 15.58:1
  *     dark theme:  sand #f4efe2 on espresso #2f0c02  -> 15.58:1
- *   muted text (--bl-color-muted) on ground (--bl-color-bg)
+ *   muted text (--bp-color-muted) on ground (--bp-color-bg)
  *     light theme: #7c6758 on sand #f4efe2 -> 4.65:1 (darkened from the
  *       brand's textMuted #8a7362, which measured 3.88:1 and failed AA for
  *       normal-size text; shifted the minimum amount within the warm-brown
@@ -21,61 +21,61 @@
 
 :root {
   /* Light palette (default) */
-  --bl-color-bg: #f4efe2; /* sand */
-  --bl-color-fg: #2f0c02; /* espresso */
+  --bp-color-bg: #f4efe2; /* sand */
+  --bp-color-fg: #2f0c02; /* espresso */
 
-  --bl-color-accent: #7b190a; /* rust */
-  --bl-color-accent-alt: #334f14; /* olive */
-  --bl-color-accent-gold: #f6aa1c; /* gold */
+  --bp-color-accent: #7b190a; /* rust */
+  --bp-color-accent-alt: #334f14; /* olive */
+  --bp-color-accent-gold: #f6aa1c; /* gold */
 
-  --bl-color-muted: #7c6758; /* darkened from brand textMuted #8a7362 for AA */
-  --bl-color-border: #d8d2c2;
+  --bp-color-muted: #7c6758; /* darkened from brand textMuted #8a7362 for AA */
+  --bp-color-border: #d8d2c2;
 
-  --bl-color-surface: #fbf8ef;
-  --bl-color-overlay: rgba(244, 239, 226, 0.92);
+  --bp-color-surface: #fbf8ef;
+  --bp-color-overlay: rgba(244, 239, 226, 0.92);
 
   /* Fixed (never redefined in the dark-mode blocks below) — the foreground
-     for text painted directly on an accent fill (e.g. `.bl-btn-primary`).
-     `--bl-color-accent`/`-accent-alt` are themselves fixed hexes (same in
+     for text painted directly on an accent fill (e.g. `.bp-btn-primary`).
+     `--bp-color-accent`/`-accent-alt` are themselves fixed hexes (same in
      both themes — see components.css's header comment), so their on-fill
      text must be fixed too: sand-on-rust measures 9.21:1, and that number
      only holds if this token does NOT flip to espresso in dark mode the
-     way `--bl-color-bg` does. Using `--bl-color-bg` here (as this file
+     way `--bp-color-bg` does. Using `--bp-color-bg` here (as this file
      used to) put espresso text on the same fixed rust fill in dark mode —
      1.69:1, correctness bug, see task-4-report.md "Fix round 1" (C2).
      Never use this as running body text — same rust/olive-fill-only rule
      as every other accent token. */
-  --bl-color-on-accent: #f4efe2; /* sand, fixed */
+  --bp-color-on-accent: #f4efe2; /* sand, fixed */
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bl-color-bg: #2f0c02; /* espresso */
-    --bl-color-fg: #f4efe2; /* sand */
+    --bp-color-bg: #2f0c02; /* espresso */
+    --bp-color-fg: #f4efe2; /* sand */
 
-    --bl-color-accent: #7b190a; /* rust */
-    --bl-color-accent-alt: #334f14; /* olive */
-    --bl-color-accent-gold: #f6aa1c; /* gold */
+    --bp-color-accent: #7b190a; /* rust */
+    --bp-color-accent-alt: #334f14; /* olive */
+    --bp-color-accent-gold: #f6aa1c; /* gold */
 
-    --bl-color-muted: #b89c86;
-    --bl-color-border: #4a2a1a;
+    --bp-color-muted: #b89c86;
+    --bp-color-border: #4a2a1a;
 
-    --bl-color-surface: #3a1206;
-    --bl-color-overlay: rgba(47, 12, 2, 0.92);
+    --bp-color-surface: #3a1206;
+    --bp-color-overlay: rgba(47, 12, 2, 0.92);
   }
 }
 
 :root[data-theme="dark"] {
-  --bl-color-bg: #2f0c02; /* espresso */
-  --bl-color-fg: #f4efe2; /* sand */
+  --bp-color-bg: #2f0c02; /* espresso */
+  --bp-color-fg: #f4efe2; /* sand */
 
-  --bl-color-accent: #7b190a; /* rust */
-  --bl-color-accent-alt: #334f14; /* olive */
-  --bl-color-accent-gold: #f6aa1c; /* gold */
+  --bp-color-accent: #7b190a; /* rust */
+  --bp-color-accent-alt: #334f14; /* olive */
+  --bp-color-accent-gold: #f6aa1c; /* gold */
 
-  --bl-color-muted: #b89c86;
-  --bl-color-border: #4a2a1a;
+  --bp-color-muted: #b89c86;
+  --bp-color-border: #4a2a1a;
 
-  --bl-color-surface: #3a1206;
-  --bl-color-overlay: rgba(47, 12, 2, 0.92);
+  --bp-color-surface: #3a1206;
+  --bp-color-overlay: rgba(47, 12, 2, 0.92);
 }

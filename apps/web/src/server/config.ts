@@ -58,7 +58,7 @@ const EnvSchema = z
   .object({
     NODE_ENV: z.string().optional(),
     // Deliberately requires exactly this name, with NO `DATABASE_URL`
-    // fallback — unlike `@bandlib/db`'s `resolveDatabaseUrl` (used by
+    // fallback — unlike `@bandplate/db`'s `resolveDatabaseUrl` (used by
     // `packages/db/scripts/migrate.ts` and `packages/db/seed/run.ts`),
     // which accepts either name for convenience across ad-hoc tooling
     // invocations. The app's composition root is the opposite case: one
@@ -66,17 +66,17 @@ const EnvSchema = z
     // the offending variable named in the error (see the class doc above)
     // — accepting a second spelling here would just be a second way to
     // misconfigure the same thing silently. Keep the two in sync only in
-    // spirit (both read `BANDLIB_DATABASE_URL` first); do not merge them
+    // spirit (both read `BANDPLATE_DATABASE_URL` first); do not merge them
     // into one resolver. See task-5-report.md "Fix round 3" #2.
-    BANDLIB_DATABASE_URL: z.string().trim().min(1, "is required"),
+    BANDPLATE_DATABASE_URL: z.string().trim().min(1, "is required"),
     // Parsed as a URL, not just a non-empty string: a trailing slash or a
-    // stray path (e.g. "https://bandlib.example/") is a value the browser's
+    // stray path (e.g. "https://bandplate.example/") is a value the browser's
     // `Origin` header can NEVER match — `Origin` is always exactly
     // scheme://host[:port], no path, no trailing slash — so a value like
     // that silently 403s every mutating request via `isSameOrigin` with no
     // clue why. Re-serializing the parsed URL's `.origin` and comparing it
     // back to the input catches exactly that shape of mistake.
-    BANDLIB_APP_ORIGIN: z
+    BANDPLATE_APP_ORIGIN: z
       .string()
       .trim()
       .min(1)
@@ -90,21 +90,21 @@ const EnvSchema = z
         },
         {
           message:
-            "must be a bare origin — scheme + host only, e.g. https://bandlib.example " +
+            "must be a bare origin — scheme + host only, e.g. https://bandplate.example " +
             "(no trailing slash, no path, no query string)",
         },
       )
       .optional(),
-    BANDLIB_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
-    BANDLIB_COOKIE_SECURE: BOOLEAN_STRING.optional(),
-    BANDLIB_TRUSTED_PROXY_DEPTH: NON_NEGATIVE_INT_STRING.optional(),
-    BANDLIB_SMTP_HOST: z.string().trim().min(1).optional(),
-    BANDLIB_SMTP_PORT: NON_NEGATIVE_INT_STRING.optional(),
-    BANDLIB_SMTP_USER: z.string().trim().min(1).optional(),
-    BANDLIB_SMTP_PASS: z.string().min(1).optional(),
-    BANDLIB_SMTP_FROM: z.string().trim().min(1).optional(),
-    BANDLIB_SMTP_SECURE: BOOLEAN_STRING.optional(),
-    BANDLIB_ALLOW_DEV_MAILER: BOOLEAN_STRING.optional(),
+    BANDPLATE_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
+    BANDPLATE_COOKIE_SECURE: BOOLEAN_STRING.optional(),
+    BANDPLATE_TRUSTED_PROXY_DEPTH: NON_NEGATIVE_INT_STRING.optional(),
+    BANDPLATE_SMTP_HOST: z.string().trim().min(1).optional(),
+    BANDPLATE_SMTP_PORT: NON_NEGATIVE_INT_STRING.optional(),
+    BANDPLATE_SMTP_USER: z.string().trim().min(1).optional(),
+    BANDPLATE_SMTP_PASS: z.string().min(1).optional(),
+    BANDPLATE_SMTP_FROM: z.string().trim().min(1).optional(),
+    BANDPLATE_SMTP_SECURE: BOOLEAN_STRING.optional(),
+    BANDPLATE_ALLOW_DEV_MAILER: BOOLEAN_STRING.optional(),
     // --- Object storage (audio) ---------------------------------------
     // Six variables, all required — this app has no meaningful "no
     // storage configured" mode (every take's audio lives here). The
@@ -136,17 +136,17 @@ const EnvSchema = z
   .superRefine((env, ctx) => {
     const isProduction = env.NODE_ENV === "production";
 
-    // BANDLIB_APP_ORIGIN silently defaulted to localhost in every
+    // BANDPLATE_APP_ORIGIN silently defaulted to localhost in every
     // environment used to fail closed (every mutating browser request 403s
     // on the API's Origin check) with no clue why. It's now required
     // outright in production; dev/test keep the localhost default.
-    if (isProduction && !env.BANDLIB_APP_ORIGIN) {
+    if (isProduction && !env.BANDPLATE_APP_ORIGIN) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["BANDLIB_APP_ORIGIN"],
+        path: ["BANDPLATE_APP_ORIGIN"],
         message:
           "is required in production (NODE_ENV=production) — set it to the exact public " +
-          "origin this app is served from, e.g. https://bandlib.example. Without it, every " +
+          "origin this app is served from, e.g. https://bandplate.example. Without it, every " +
           "mutating request fails the API's Origin/CSRF check with a 403 and no obvious cause.",
       });
     }
@@ -155,9 +155,9 @@ const EnvSchema = z
     // construct a transport, and a half-configured SMTP block is almost
     // certainly a typo'd variable name rather than an intentional setup.
     const smtpFields = {
-      BANDLIB_SMTP_HOST: env.BANDLIB_SMTP_HOST,
-      BANDLIB_SMTP_PORT: env.BANDLIB_SMTP_PORT,
-      BANDLIB_SMTP_FROM: env.BANDLIB_SMTP_FROM,
+      BANDPLATE_SMTP_HOST: env.BANDPLATE_SMTP_HOST,
+      BANDPLATE_SMTP_PORT: env.BANDPLATE_SMTP_PORT,
+      BANDPLATE_SMTP_FROM: env.BANDPLATE_SMTP_FROM,
     };
     const smtpProvided = Object.values(smtpFields).some((v) => v !== undefined);
     const smtpComplete = Object.values(smtpFields).every((v) => v !== undefined);
@@ -168,31 +168,31 @@ const EnvSchema = z
             code: z.ZodIssueCode.custom,
             path: [name],
             message:
-              "is required once any BANDLIB_SMTP_* variable is set — SMTP config is all-or-nothing " +
-              "(BANDLIB_SMTP_HOST, BANDLIB_SMTP_PORT, BANDLIB_SMTP_FROM).",
+              "is required once any BANDPLATE_SMTP_* variable is set — SMTP config is all-or-nothing " +
+              "(BANDPLATE_SMTP_HOST, BANDPLATE_SMTP_PORT, BANDPLATE_SMTP_FROM).",
           });
         }
       }
     }
-    if ((env.BANDLIB_SMTP_USER === undefined) !== (env.BANDLIB_SMTP_PASS === undefined)) {
+    if ((env.BANDPLATE_SMTP_USER === undefined) !== (env.BANDPLATE_SMTP_PASS === undefined)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["BANDLIB_SMTP_USER"],
-        message: "BANDLIB_SMTP_USER and BANDLIB_SMTP_PASS must be set together, or not at all.",
+        path: ["BANDPLATE_SMTP_USER"],
+        message: "BANDPLATE_SMTP_USER and BANDPLATE_SMTP_PASS must be set together, or not at all.",
       });
     }
 
     // The app is email-only after bootstrap. Refuse to start with no way to
     // deliver login links at all, rather than silently starting broken.
-    const allowDevMailer = env.BANDLIB_ALLOW_DEV_MAILER === "true";
+    const allowDevMailer = env.BANDPLATE_ALLOW_DEV_MAILER === "true";
     if (!smtpComplete && !allowDevMailer) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["BANDLIB_ALLOW_DEV_MAILER"],
+        path: ["BANDPLATE_ALLOW_DEV_MAILER"],
         message:
           "No mailer is configured. The app has no way to deliver login links after bootstrap, " +
-          "which is a lockout waiting to happen. Set BANDLIB_SMTP_HOST/PORT/FROM (and optionally " +
-          "USER/PASS) for a real deployment, or BANDLIB_ALLOW_DEV_MAILER=true for local dev only " +
+          "which is a lockout waiting to happen. Set BANDPLATE_SMTP_HOST/PORT/FROM (and optionally " +
+          "USER/PASS) for a real deployment, or BANDPLATE_ALLOW_DEV_MAILER=true for local dev only " +
           "(prints login links to the console instead of emailing them).",
       });
     }
@@ -207,11 +207,11 @@ const EnvSchema = z
     if (isProduction && allowDevMailer) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["BANDLIB_ALLOW_DEV_MAILER"],
+        path: ["BANDPLATE_ALLOW_DEV_MAILER"],
         message:
           "must not be true when NODE_ENV=production — the console mailer prints raw login " +
           "links to stdout, which is a credential leak in any real deployment's logs. Configure " +
-          "BANDLIB_SMTP_* instead.",
+          "BANDPLATE_SMTP_* instead.",
       });
     }
   });
@@ -245,28 +245,28 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
   const isProduction = data.NODE_ENV === "production";
 
   const smtp: SmtpConfig | undefined =
-    data.BANDLIB_SMTP_HOST && data.BANDLIB_SMTP_PORT && data.BANDLIB_SMTP_FROM
+    data.BANDPLATE_SMTP_HOST && data.BANDPLATE_SMTP_PORT && data.BANDPLATE_SMTP_FROM
       ? {
-          host: data.BANDLIB_SMTP_HOST,
-          port: Number(data.BANDLIB_SMTP_PORT),
-          secure: data.BANDLIB_SMTP_SECURE === "true",
-          from: data.BANDLIB_SMTP_FROM,
+          host: data.BANDPLATE_SMTP_HOST,
+          port: Number(data.BANDPLATE_SMTP_PORT),
+          secure: data.BANDPLATE_SMTP_SECURE === "true",
+          from: data.BANDPLATE_SMTP_FROM,
           auth:
-            data.BANDLIB_SMTP_USER && data.BANDLIB_SMTP_PASS
-              ? { user: data.BANDLIB_SMTP_USER, pass: data.BANDLIB_SMTP_PASS }
+            data.BANDPLATE_SMTP_USER && data.BANDPLATE_SMTP_PASS
+              ? { user: data.BANDPLATE_SMTP_USER, pass: data.BANDPLATE_SMTP_PASS }
               : undefined,
         }
       : undefined;
 
   cached = {
-    databaseUrl: data.BANDLIB_DATABASE_URL,
-    appOrigin: data.BANDLIB_APP_ORIGIN ?? "http://localhost:4321",
-    bootstrapToken: data.BANDLIB_BOOTSTRAP_TOKEN,
-    cookieSecure: data.BANDLIB_COOKIE_SECURE !== "false",
-    trustedProxyDepth: data.BANDLIB_TRUSTED_PROXY_DEPTH
-      ? Number(data.BANDLIB_TRUSTED_PROXY_DEPTH)
+    databaseUrl: data.BANDPLATE_DATABASE_URL,
+    appOrigin: data.BANDPLATE_APP_ORIGIN ?? "http://localhost:4321",
+    bootstrapToken: data.BANDPLATE_BOOTSTRAP_TOKEN,
+    cookieSecure: data.BANDPLATE_COOKIE_SECURE !== "false",
+    trustedProxyDepth: data.BANDPLATE_TRUSTED_PROXY_DEPTH
+      ? Number(data.BANDPLATE_TRUSTED_PROXY_DEPTH)
       : 1,
-    allowDevMailer: data.BANDLIB_ALLOW_DEV_MAILER === "true",
+    allowDevMailer: data.BANDPLATE_ALLOW_DEV_MAILER === "true",
     smtp,
     s3: {
       endpoint: data.S3_ENDPOINT,

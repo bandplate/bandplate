@@ -1,4 +1,4 @@
-import { uuidv7 } from "@bandlib/core";
+import { uuidv7 } from "@bandplate/core";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { authSessions, members } from "../schema/sqlite/index.js";

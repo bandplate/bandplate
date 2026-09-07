@@ -5,7 +5,7 @@ import {
   LOGIN_IP_LIMIT,
   LOGIN_IP_WINDOW_MS,
   extractClientIp,
-} from "@bandlib/api";
+} from "@bandplate/api";
 // `/login` page logic — extracted into a plain function so it's testable
 // without booting Astro. Reuses the exact rate-limit policy the JSON API's
 // `/auth/login` route uses (see `packages/api/src/routes/auth.ts`) and the
@@ -13,8 +13,8 @@ import {
 // "always resolve the same way for an unknown/disabled/whitelisted
 // address" — this function has no branch to leak that signal even if it
 // wanted to.
-import type { AuthDeps, RateLimiter } from "@bandlib/core";
-import { requestLogin } from "@bandlib/core";
+import type { AuthDeps, RateLimiter } from "@bandplate/core";
+import { requestLogin } from "@bandplate/core";
 import { z } from "zod";
 
 const emailSchema = z.string().trim().min(1).max(320);
@@ -31,7 +31,7 @@ export interface LoginPostDeps {
   trustedProxyDepth?: number;
   /**
    * Workers profile only — see `requestLogin`'s `deferMailSend` doc
-   * comment in `@bandlib/core`. The caller (`login/index.astro`) builds
+   * comment in `@bandplate/core`. The caller (`login/index.astro`) builds
    * this per-request from `Astro.locals.runtime.ctx.waitUntil`, which is
    * only available under the Cloudflare adapter. Left unset on the
    * Node/container profile.

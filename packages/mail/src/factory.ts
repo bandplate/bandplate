@@ -3,10 +3,10 @@
 // so a mailer that silently discards login links would lock a real
 // deployment out, and `console`/`null` must never be reachable without an
 // explicit opt-in. The real SMTP mailer lives behind its own entry point
-// (`@bandlib/mail/smtp`, see the module doc comment there) precisely so
+// (`@bandplate/mail/smtp`, see the module doc comment there) precisely so
 // this barrel — and this factory — never has to import nodemailer or any
 // `node:*` built-in; callers construct it directly instead of through here.
-import type { Mailer } from "@bandlib/core";
+import type { Mailer } from "@bandplate/core";
 import { createConsoleMailer } from "./console.js";
 import { createNullMailer } from "./null.js";
 
@@ -24,7 +24,7 @@ export interface CreateDevMailerOptions {
 /**
  * Construct a `console` or `null` mailer. Refuses unless
  * `options.allowDevMailer` is `true`. For a real deployment, construct
- * `createSmtpMailer` from `@bandlib/mail/smtp` directly instead of calling
+ * `createSmtpMailer` from `@bandplate/mail/smtp` directly instead of calling
  * this factory.
  */
 export function createDevMailer(kind: DevMailerKind, options: CreateDevMailerOptions): Mailer {

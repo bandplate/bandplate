@@ -4,7 +4,7 @@
 // bounds) is already proven at the repo level in
 // `packages/db/src/repos/takes.test.ts` — this covers the page-specific
 // parsing/wiring layer instead of re-deriving that coverage.
-import type { Db } from "@bandlib/db";
+import type { Db } from "@bandplate/db";
 import {
   eventsRepo,
   favoritesRepo,
@@ -12,8 +12,8 @@ import {
   membersRepo,
   songsRepo,
   takesRepo,
-} from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
+} from "@bandplate/db";
+import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { hasAnyFilter, parseSearchQuery, searchTakes } from "./search.js";
 

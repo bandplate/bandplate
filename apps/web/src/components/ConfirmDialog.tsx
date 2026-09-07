@@ -107,25 +107,25 @@ export default function ConfirmDialog() {
   return (
     <dialog
       ref={dialogRef}
-      class="bl-dialog"
+      class="bp-dialog"
       aria-modal="true"
-      aria-labelledby="bl-confirm-title"
+      aria-labelledby="bp-confirm-title"
       onClose={handleClose}
       onCancel={handleClose}
     >
       {state && (
         <>
-          <h2 id="bl-confirm-title">{state.title}</h2>
+          <h2 id="bp-confirm-title">{state.title}</h2>
           <p>{state.body}</p>
           {error && (
-            <p class="bl-field-error" role="alert">
+            <p class="bp-field-error" role="alert">
               {error}
             </p>
           )}
-          <div class="bl-dialog-actions">
+          <div class="bp-dialog-actions">
             <button
               type="button"
-              class="bl-btn bl-btn-secondary"
+              class="bp-btn bp-btn-secondary"
               onClick={handleClose}
               disabled={pending}
             >
@@ -133,7 +133,7 @@ export default function ConfirmDialog() {
             </button>
             <button
               type="button"
-              class="bl-btn bl-btn-danger"
+              class="bp-btn bp-btn-danger"
               onClick={handleConfirm}
               disabled={pending}
             >

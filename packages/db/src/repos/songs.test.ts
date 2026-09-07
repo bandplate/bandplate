@@ -1,4 +1,4 @@
-import { normalizeTitle } from "@bandlib/core";
+import { normalizeTitle } from "@bandplate/core";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "../client.js";
 import { createTestDb } from "../testing/create-test-db.js";

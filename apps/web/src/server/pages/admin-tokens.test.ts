@@ -1,6 +1,6 @@
-import { type AuthDeps, systemClock } from "@bandlib/core";
-import { createTestDb } from "@bandlib/db/testing";
-import { createNullMailer } from "@bandlib/mail";
+import { type AuthDeps, systemClock } from "@bandplate/core";
+import { createTestDb } from "@bandplate/db/testing";
+import { createNullMailer } from "@bandplate/mail";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createToken, listTokens, revokeToken, updateTokenScopes } from "./admin-tokens.js";
 
@@ -31,7 +31,7 @@ describe("admin tokens page logic", () => {
     );
     expect(result.kind).toBe("ok");
     if (result.kind === "ok") {
-      expect(result.rawToken).toMatch(/^blk_/);
+      expect(result.rawToken).toMatch(/^bpk_/);
     }
 
     const tokens = await listTokens(auth.db);

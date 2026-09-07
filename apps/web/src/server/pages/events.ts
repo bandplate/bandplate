@@ -1,6 +1,6 @@
 // `/events` and `/events/[id]` page logic. Read-only, same shape as
 // `server/pages/songs.ts`.
-import { type Db, assetsRepo } from "@bandlib/db";
+import { type Db, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
   favoritesRepo,
@@ -8,7 +8,7 @@ import {
   songsRepo,
   takesRepo,
   votesRepo,
-} from "@bandlib/db";
+} from "@bandplate/db";
 
 export type EventListItem = eventsRepo.EventWithTakeCount;
 

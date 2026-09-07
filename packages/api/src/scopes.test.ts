@@ -1,5 +1,5 @@
-import { createServiceToken } from "@bandlib/core";
-import { membersRepo } from "@bandlib/db";
+import { createServiceToken } from "@bandplate/core";
+import { membersRepo } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
   TEST_APP_ORIGIN,
@@ -60,7 +60,7 @@ describe("scope enforcement", () => {
     });
 
     const res = await testApp.app.request("/admin/members", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     expect(res.status).toBe(403);
   });
@@ -74,7 +74,7 @@ describe("scope enforcement", () => {
     });
 
     const res = await testApp.app.request("/admin/members", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     expect(res.status).toBe(200);
   });
@@ -88,7 +88,7 @@ describe("scope enforcement", () => {
     });
 
     const res = await testApp.app.request("/admin/tokens", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     expect(res.status).toBe(200);
   });
@@ -102,7 +102,7 @@ describe("scope enforcement", () => {
     });
 
     const res = await testApp.app.request("/admin/tokens", {
-      headers: { cookie: `bl_session=${cookie}` },
+      headers: { cookie: `bp_session=${cookie}` },
     });
     expect(res.status).toBe(403);
   });

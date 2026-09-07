@@ -1,7 +1,7 @@
 ---
-import { SCOPES } from "@bandlib/core";
-import Banner from "@bandlib/ui/components/Banner.astro";
-import Field from "@bandlib/ui/components/Field.astro";
+import { SCOPES } from "@bandplate/core";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import CopyButton from "../../../components/CopyButton.tsx";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAppDeps, getAuthDeps } from "../../../server/app.js";
@@ -70,13 +70,13 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
       <p class="mb-2">
         <strong>Copy this secret now — it will not be shown again.</strong>
       </p>
-      <p class="bl-mono mb-2">{created.rawToken}</p>
+      <p class="bp-mono mb-2">{created.rawToken}</p>
       <CopyButton client:load value={created.rawToken} label="Copy secret" />
     </Banner>
   )}
 
-  <section class="bl-card">
-    <h2 class="bl-section-title">Create a token</h2>
+  <section class="bp-card">
+    <h2 class="bp-section-title">Create a token</h2>
     <form method="post" novalidate>
       <input type="hidden" name="intent" value="create" />
       <Field
@@ -87,22 +87,22 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
         error={createErrorField === "label" ? createError : undefined}
       />
       <fieldset
-        class="bl-checkbox-group"
+        class="bp-checkbox-group"
         aria-invalid={createErrorField === "scopes" ? "true" : undefined}
         aria-describedby={createErrorField === "scopes" ? "scopes-error" : undefined}
       >
         <legend>Scopes</legend>
         {SCOPES.map((scope) => (
-          <span class="bl-checkbox-item">
+          <span class="bp-checkbox-item">
             <input type="checkbox" id={`scope-new-${scope}`} name="scopes" value={scope} />
             <label for={`scope-new-${scope}`}>{scope}</label>
           </span>
         ))}
         {createErrorField === "scopes" && (
-          <p class="bl-field-error" id="scopes-error" role="alert">{createError}</p>
+          <p class="bp-field-error" id="scopes-error" role="alert">{createError}</p>
         )}
       </fieldset>
-      <button type="submit" class="bl-btn bl-btn-primary">Create token</button>
+      <button type="submit" class="bp-btn bp-btn-primary">Create token</button>
     </form>
   </section>
 
@@ -111,8 +111,8 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
     {tokens.length === 0 ? (
       <p>No service tokens yet — create one above.</p>
     ) : (
-      <div class="bl-table-wrap">
-        <table class="bl-table">
+      <div class="bp-table-wrap">
+        <table class="bp-table">
           <thead>
             <tr>
               <th scope="col">Label</th>
@@ -127,27 +127,27 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
               <tr>
                 <td data-label="Label">
                   {token.label}
-                  {token.revokedAt && <span class="bl-badge ml-2">revoked</span>}
+                  {token.revokedAt && <span class="bp-badge ml-2">revoked</span>}
                 </td>
-                <td data-label="Scopes" class="bl-mono">{token.scopes.join(", ")}</td>
-                <td data-label="Created" class="bl-mono">{formatTimestamp(token.createdAt)}</td>
-                <td data-label="Last used" class="bl-mono">{formatTimestamp(token.lastUsedAt)}</td>
+                <td data-label="Scopes" class="bp-mono">{token.scopes.join(", ")}</td>
+                <td data-label="Created" class="bp-mono">{formatTimestamp(token.createdAt)}</td>
+                <td data-label="Last used" class="bp-mono">{formatTimestamp(token.lastUsedAt)}</td>
                 <td data-label="Actions">
-                  <div class="bl-table-actions">
+                  <div class="bp-table-actions">
                     {!token.revokedAt && (
                       <>
                         <details>
-                          {/* No cursor utility needed — .bl-btn already sets cursor: pointer. */}
-                          <summary class="bl-btn bl-btn-secondary bl-btn-sm">Edit scopes</summary>
+                          {/* No cursor utility needed — .bp-btn already sets cursor: pointer. */}
+                          <summary class="bp-btn bp-btn-secondary bp-btn-sm">Edit scopes</summary>
                           <form method="post" class="mt-3">
                             <input type="hidden" name="intent" value="update" />
                             <input type="hidden" name="tokenId" value={token.id} />
-                            <fieldset class="bl-checkbox-group">
+                            <fieldset class="bp-checkbox-group">
                               <legend class="sr-only">
                                 Scopes for {token.label}
                               </legend>
                               {SCOPES.map((scope) => (
-                                <span class="bl-checkbox-item">
+                                <span class="bp-checkbox-item">
                                   <input
                                     type="checkbox"
                                     id={`scope-${token.id}-${scope}`}
@@ -159,12 +159,12 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                                 </span>
                               ))}
                             </fieldset>
-                            <button type="submit" class="bl-btn bl-btn-secondary bl-btn-sm">Save scopes</button>
+                            <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save scopes</button>
                           </form>
                         </details>
                         <a
                           href={`/admin/tokens/${token.id}/revoke`}
-                          class="bl-btn bl-btn-danger bl-btn-sm"
+                          class="bp-btn bp-btn-danger bp-btn-sm"
                           data-confirm
                           data-confirm-title={`Revoke the token ${token.label}?`}
                           data-confirm-body={`Anything using ${token.label} will stop being able to authenticate immediately. This can't be undone.`}

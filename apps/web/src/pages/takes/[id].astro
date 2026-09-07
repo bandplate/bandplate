@@ -1,5 +1,5 @@
 ---
-import { hasAllScopes } from "@bandlib/core";
+import { hasAllScopes } from "@bandplate/core";
 // Take detail — the song (linked), the event and date (linked), duration,
 // label, instruments recorded, state, and the current vote tally. Then the
 // take's assets: the master, stems by instrument, and whether a lossless
@@ -26,7 +26,7 @@ import { hasAllScopes } from "@bandlib/core";
 // already the song title); a "song" mode row's link is the recorded date
 // instead, so that one morphs a date into a title — still a smooth shared
 // transition, just not a pixel-identical one. See task-6-report.md.
-import type { assetsRepo } from "@bandlib/db";
+import type { assetsRepo } from "@bandplate/db";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import VoteToggle from "../../components/VoteToggle.astro";
@@ -91,19 +91,19 @@ function assetLabel(asset: assetsRepo.Asset): string {
 ---
 
 <AppLayout title={song ? song.title : "Take"} principal={principal} current="home">
-  <div class="bl-stack">
+  <div class="bp-stack">
     <div>
       {
         song ? (
-          <h1 class="bl-hero-title">
+          <h1 class="bp-hero-title">
             <a
               href={`/songs/${song.slug}`}
-              class="bl-hero-title-link"
+              class="bp-hero-title-link"
               transition:name={`take-${take.id}`}
             >
               {song.title}
             </a>
-            <span class="bl-take-favorite-mark">
+            <span class="bp-take-favorite-mark">
               <FavoriteToggle
                 targetType="take"
                 targetId={take.id}
@@ -114,9 +114,9 @@ function assetLabel(asset: assetsRepo.Asset): string {
             </span>
           </h1>
         ) : (
-          <h1 class="bl-hero-title" transition:name={`take-${take.id}`}>
+          <h1 class="bp-hero-title" transition:name={`take-${take.id}`}>
             Take
-            <span class="bl-take-favorite-mark">
+            <span class="bp-take-favorite-mark">
               <FavoriteToggle
                 targetType="take"
                 targetId={take.id}
@@ -128,12 +128,12 @@ function assetLabel(asset: assetsRepo.Asset): string {
           </h1>
         )
       }
-      {take.label && <p class="bl-m0">{take.label}</p>}
+      {take.label && <p class="bp-m0">{take.label}</p>}
     </div>
 
     {
       playableMaster && (
-        <div class="bl-take-play-section">
+        <div class="bp-take-play-section">
           <PlayToggleButton
             takeId={take.id}
             assetId={playableMaster.id}
@@ -142,10 +142,10 @@ function assetLabel(asset: assetsRepo.Asset): string {
             size="lg"
           />
           {playableStems.length > 0 && (
-            <div class="bl-solo-drawer" role="group" aria-label="Solo an instrument">
+            <div class="bp-solo-drawer" role="group" aria-label="Solo an instrument">
               <button
                 type="button"
-                class="bl-solo-chip"
+                class="bp-solo-chip"
                 data-audio-source
                 data-take-id={take.id}
                 data-asset-id={playableMaster.id}
@@ -162,7 +162,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                 return (
                   <button
                     type="button"
-                    class="bl-solo-chip"
+                    class="bp-solo-chip"
                     data-audio-source
                     data-take-id={take.id}
                     data-asset-id={stem.id}
@@ -182,7 +182,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
       )
     }
 
-    <dl class="bl-take-detail-meta">
+    <dl class="bp-take-detail-meta">
       <div>
         <dt>Recorded</dt>
         <dd>
@@ -197,12 +197,12 @@ function assetLabel(asset: assetsRepo.Asset): string {
       </div>
       <div>
         <dt>Duration</dt>
-        <dd class="bl-mono">{formatDuration(take.durationMs)}</dd>
+        <dd class="bp-mono">{formatDuration(take.durationMs)}</dd>
       </div>
       <div>
         <dt>State</dt>
         <dd>
-          <span class={`bl-badge ${take.state === "keeper" ? "bl-badge-keeper" : ""}`}>
+          <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
             {TAKE_STATE_LABEL[take.state]}
           </span>
         </dd>
@@ -213,9 +213,9 @@ function assetLabel(asset: assetsRepo.Asset): string {
           {instruments.length === 0 ? (
             "—"
           ) : (
-            <div class="bl-take-instruments">
+            <div class="bp-take-instruments">
               {instruments.map((instrument) => (
-                <span class="bl-take-instrument-tag">{instrument.label}</span>
+                <span class="bp-take-instrument-tag">{instrument.label}</span>
               ))}
             </div>
           )}
@@ -238,15 +238,15 @@ function assetLabel(asset: assetsRepo.Asset): string {
 
     {
       isAdmin && (take.state === "published" || take.state === "new") && (
-        <section class="bl-card">
-          <h2 class="bl-section-title">Admin</h2>
-          <p class="bl-field-hint bl-m0">
+        <section class="bp-card">
+          <h2 class="bp-section-title">Admin</h2>
+          <p class="bp-field-hint bp-m0">
             Votes only inform this — promoting or rejecting is a deliberate call, not automatic.
           </p>
-          <div class="bl-dialog-actions bl-admin-take-actions">
+          <div class="bp-dialog-actions bp-admin-take-actions">
             <a
               href={`/admin/takes/${take.id}/keeper`}
-              class="bl-btn bl-btn-primary bl-btn-sm"
+              class="bp-btn bp-btn-primary bp-btn-sm"
               data-confirm
               data-confirm-title={`Promote ${heroTitle} to keeper?`}
               data-confirm-body="This take will be marked keeper — the band's pick for this song at this event."
@@ -257,7 +257,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
             </a>
             <a
               href={`/admin/takes/${take.id}/keeper?reject=1`}
-              class="bl-btn bl-btn-danger bl-btn-sm"
+              class="bp-btn bp-btn-danger bp-btn-sm"
               data-confirm
               data-confirm-title={`Reject ${heroTitle}?`}
               data-confirm-body="This take will be marked rejected and dropped from 'needs your vote'. It stays in the archive."
@@ -272,29 +272,29 @@ function assetLabel(asset: assetsRepo.Asset): string {
     }
 
     <section>
-      <h2 class="bl-section-title">Assets</h2>
+      <h2 class="bp-section-title">Assets</h2>
       {
         displayableAssets.length === 0 ? (
-          <div class="bl-empty-state">
+          <div class="bp-empty-state">
             <p>No assets uploaded for this take yet.</p>
           </div>
         ) : (
-          <div class="bl-stack bl-stack-tight">
-            <p class="bl-field-hint bl-m0">
+          <div class="bp-stack bp-stack-tight">
+            <p class="bp-field-hint bp-m0">
               {hasLossless
                 ? "A lossless master is available."
                 : "No lossless master available yet."}
             </p>
-            <ul class="bl-asset-list">
+            <ul class="bp-asset-list">
               {displayableAssets.map((asset) => (
-                <li class="bl-asset-row">
-                  <span class="bl-asset-row-label">{assetLabel(asset)}</span>
-                  <span class="bl-asset-row-meta bl-mono">
-                    <span class="bl-asset-row-meta-item">{asset.format}</span>
-                    <span class="bl-asset-row-meta-item">{asset.tier}</span>
-                    <span class="bl-asset-row-meta-item">{formatBytes(asset.bytes)}</span>
+                <li class="bp-asset-row">
+                  <span class="bp-asset-row-label">{assetLabel(asset)}</span>
+                  <span class="bp-asset-row-meta bp-mono">
+                    <span class="bp-asset-row-meta-item">{asset.format}</span>
+                    <span class="bp-asset-row-meta-item">{asset.tier}</span>
+                    <span class="bp-asset-row-meta-item">{formatBytes(asset.bytes)}</span>
                     {asset.status !== "ready" && (
-                      <span class="bl-asset-row-meta-item">{asset.status}</span>
+                      <span class="bp-asset-row-meta-item">{asset.status}</span>
                     )}
                   </span>
                 </li>

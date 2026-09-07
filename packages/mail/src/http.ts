@@ -2,7 +2,7 @@
 // (increment 7). Workers has no TCP sockets, so `smtp.ts`'s nodemailer
 // transport cannot run there at all; this module talks to the provider
 // over plain `fetch`, which is exactly what both profiles already use for
-// object storage (`@bandlib/storage`'s `S3Storage`, via `aws4fetch`), so
+// object storage (`@bandplate/storage`'s `S3Storage`, via `aws4fetch`), so
 // it needs nothing Workers-specific and runs unmodified under the
 // container profile too.
 //
@@ -15,7 +15,7 @@
 // comment): a Workers deploy with a broken mailer is a lockout exactly like
 // a Node deploy with a broken SMTP config, so this fails the *send* loudly
 // (throws) rather than swallowing a non-2xx provider response.
-import type { Mailer, SendLoginLinkOptions } from "@bandlib/core";
+import type { Mailer, SendLoginLinkOptions } from "@bandplate/core";
 
 /** Escapes the five HTML-significant characters, mirroring `smtp.ts`. */
 function escapeHtml(value: string): string {
@@ -123,7 +123,7 @@ export function createHttpMailer(config: HttpMailerConfig): Mailer {
         : "";
       await sendMessage({
         to,
-        subject: "Your bandlib login link",
+        subject: "Your bandplate login link",
         text: `${greeting}Use this link to sign in:\n${url}\n${expiresLine}`,
         html: `<p>${safeGreeting}Use this link to sign in: <a href="${safeUrl}">${safeUrl}</a>${safeExpiresLine}</p>`,
       });

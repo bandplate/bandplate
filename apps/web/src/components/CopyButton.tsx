@@ -26,7 +26,7 @@ export default function CopyButton({ value, label = "Copy" }: Props) {
   return (
     <button
       type="button"
-      class="bl-btn bl-btn-secondary bl-btn-sm bl-copy-btn"
+      class="bp-btn bp-btn-secondary bp-btn-sm bp-copy-btn"
       onClick={handleClick}
     >
       {copied ? "Copied" : label}

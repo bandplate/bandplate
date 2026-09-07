@@ -18,7 +18,7 @@ describe("smtp mailer", () => {
     const mailer = createSmtpMailer({
       host: "smtp.example",
       port: 587,
-      from: "bandlib@example.com",
+      from: "bandplate@example.com",
     });
 
     await mailer.sendLoginLink("alex@example.com", 'https://band.example/login/abc?x=1&y="2"', {

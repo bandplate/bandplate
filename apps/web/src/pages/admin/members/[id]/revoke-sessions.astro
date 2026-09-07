@@ -6,7 +6,7 @@
 // `ConfirmDialog` island intercepts the trigger and POSTs here directly
 // with `Accept: text/plain` instead of navigating, which is how this page
 // tells the two callers apart below.
-import ConfirmActionPage from "@bandlib/ui/components/ConfirmActionPage.astro";
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
 import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps, getAuthDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";

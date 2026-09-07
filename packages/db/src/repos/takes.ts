@@ -302,9 +302,22 @@ export interface SearchFilters {
   search?: string;
 }
 
+/**
+ * `"recent"` (default) — newest first, same as every other take listing.
+ * `"rating"` — `keeperVotes DESC, ratingScore DESC` (Task 8 brief, §1): a
+ * take with 6 keeper votes out of 7 outranks one with 1 keeper vote out of
+ * 1, even though the second has a higher `ratingScore` (1.0 vs ~0.86) — vote
+ * COUNT is the primary key precisely so a single enthusiastic vote can't
+ * outrank a take the whole band has actually weighed in on. `ratingScore`
+ * only breaks a tie between takes with the same `keeperVotes`.
+ */
+export type TakeSort = "recent" | "rating";
+
 export interface SearchOptions {
   /** Override for tests — production callers should leave this at `SEARCH_LIMIT`. */
   limit?: number;
+  /** Defaults to `"recent"`. */
+  sort?: TakeSort;
 }
 
 /**
@@ -384,7 +397,15 @@ export async function search(
           .from(takes)
           .where(and(...conditions))
       : db.select().from(takes);
-  const rows = await query.orderBy(desc(takes.recordedAt), desc(takes.id)).limit(limit + 1);
+  // `desc(takes.id)` is the same deterministic tie-break `listBySong` uses —
+  // see its comment. It's the LAST key in both orderings (after whatever
+  // the sort mode itself ranks by), so it only ever breaks a tie the sort
+  // mode left open, never overrides it.
+  const orderBy =
+    options.sort === "rating"
+      ? [desc(takes.keeperVotes), desc(takes.ratingScore), desc(takes.recordedAt), desc(takes.id)]
+      : [desc(takes.recordedAt), desc(takes.id)];
+  const rows = await query.orderBy(...orderBy).limit(limit + 1);
 
   const truncated = rows.length > limit;
   return { results: truncated ? rows.slice(0, limit) : rows, truncated };

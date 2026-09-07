@@ -747,6 +747,73 @@ describe("takes.search", () => {
     expect(result.map((t) => t.id)).toEqual([newer.id, older.id]);
   });
 
+  it("sort: 'rating' ranks by keeperVotes DESC first — a 6-of-7 outranks a 1-of-1 despite its lower ratingScore", async () => {
+    const song = await songs.create(db, {
+      title: "Rating Sort Song",
+      slug: "rating-sort-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    // Older, but recorded FIRST in `takes.create` order to prove this isn't
+    // just recency sneaking the answer in — recordedAt is set OPPOSITE of
+    // what a recency sort would produce (the 1-of-1 is the newer take).
+    const sixOfSeven = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const oneOfOne = await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 2000,
+      createdAt: 2000,
+      updatedAt: 2000,
+    });
+
+    const membersList = await Promise.all(
+      Array.from({ length: 7 }, (_, i) =>
+        members.create(db, {
+          displayName: `Rating Voter ${i}`,
+          slug: `rating-voter-${i}`,
+          email: `rating-voter-${i}@example.com`,
+          createdAt: 1000,
+        }),
+      ),
+    );
+    for (const [i, member] of membersList.entries()) {
+      await votes.castVote(db, {
+        takeId: sixOfSeven.id,
+        memberId: member.id,
+        keeper: i < 6,
+        now: 1000,
+      });
+    }
+    await votes.castVote(db, {
+      takeId: oneOfOne.id,
+      memberId: membersList[0]?.id ?? "",
+      keeper: true,
+      now: 2000,
+    });
+
+    const sixRow = await takes.getById(db, sixOfSeven.id);
+    const oneRow = await takes.getById(db, oneOfOne.id);
+    expect(sixRow?.keeperVotes).toBe(6);
+    expect(sixRow?.ratingScore).toBeCloseTo(6 / 7);
+    expect(oneRow?.keeperVotes).toBe(1);
+    expect(oneRow?.ratingScore).toBe(1);
+
+    // A plain recency (default) sort would put the newer 1-of-1 first —
+    // proving the "rating" sort actually changes the order, not just
+    // agreeing with recency by coincidence.
+    const { results: recent } = await takes.search(db, {}, { sort: "recent" });
+    expect(recent.map((t) => t.id)).toEqual([oneOfOne.id, sixOfSeven.id]);
+
+    const { results: rated } = await takes.search(db, {}, { sort: "rating" });
+    expect(rated.map((t) => t.id)).toEqual([sixOfSeven.id, oneOfOne.id]);
+  });
+
   it("filters by instrument AND semantics — a take with only bass does not match {bass, drums}", async () => {
     const song = await songs.create(db, {
       title: "Instrument Search Song",

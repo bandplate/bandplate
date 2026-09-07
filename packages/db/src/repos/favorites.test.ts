@@ -133,6 +133,102 @@ describe("favorites repo", () => {
     expect(ids).toEqual(new Set());
   });
 
+  it("isFavorited reports true only after add, false after remove", async () => {
+    const member = await members.create(db, {
+      displayName: "Fav Tester 6",
+      slug: "fav-tester-6",
+      email: "fav6@example.com",
+      createdAt: Date.now(),
+    });
+    const song = await songs.create(db, {
+      title: "Fav Song 6",
+      slug: "fav-song-6",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    expect(await favorites.isFavorited(db, member.id, "song", song.id)).toBe(false);
+    await favorites.add(db, {
+      memberId: member.id,
+      targetType: "song",
+      targetId: song.id,
+      createdAt: 1000,
+    });
+    expect(await favorites.isFavorited(db, member.id, "song", song.id)).toBe(true);
+    await favorites.remove(db, member.id, "song", song.id);
+    expect(await favorites.isFavorited(db, member.id, "song", song.id)).toBe(false);
+  });
+
+  it("toggle adds when absent and removes when present, reporting the resulting state", async () => {
+    const member = await members.create(db, {
+      displayName: "Fav Tester 7",
+      slug: "fav-tester-7",
+      email: "fav7@example.com",
+      createdAt: Date.now(),
+    });
+    const song = await songs.create(db, {
+      title: "Fav Song 7",
+      slug: "fav-song-7",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    const first = await favorites.toggle(db, {
+      memberId: member.id,
+      targetType: "song",
+      targetId: song.id,
+      now: 1000,
+    });
+    expect(first).toEqual({ favorited: true });
+    expect(await favorites.isFavorited(db, member.id, "song", song.id)).toBe(true);
+
+    const second = await favorites.toggle(db, {
+      memberId: member.id,
+      targetType: "song",
+      targetId: song.id,
+      now: 2000,
+    });
+    expect(second).toEqual({ favorited: false });
+    expect(await favorites.isFavorited(db, member.id, "song", song.id)).toBe(false);
+  });
+
+  it("one member's favorite is not another's — per-member isolation", async () => {
+    const memberA = await members.create(db, {
+      displayName: "Fav Tester 8a",
+      slug: "fav-tester-8a",
+      email: "fav8a@example.com",
+      createdAt: Date.now(),
+    });
+    const memberB = await members.create(db, {
+      displayName: "Fav Tester 8b",
+      slug: "fav-tester-8b",
+      email: "fav8b@example.com",
+      createdAt: Date.now(),
+    });
+    const song = await songs.create(db, {
+      title: "Fav Song 8",
+      slug: "fav-song-8",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    await favorites.add(db, {
+      memberId: memberA.id,
+      targetType: "song",
+      targetId: song.id,
+      createdAt: 1000,
+    });
+
+    expect(await favorites.isFavorited(db, memberA.id, "song", song.id)).toBe(true);
+    expect(await favorites.isFavorited(db, memberB.id, "song", song.id)).toBe(false);
+    expect((await favorites.listByMember(db, memberB.id)).length).toBe(0);
+    expect((await favorites.listByMember(db, memberA.id)).length).toBe(1);
+
+    // memberB removing a favorite they never had must not disturb memberA's.
+    await favorites.remove(db, memberB.id, "song", song.id);
+    expect(await favorites.isFavorited(db, memberA.id, "song", song.id)).toBe(true);
+  });
+
   it("remove deletes the favorite", async () => {
     const member = await members.create(db, {
       displayName: "Fav Tester 3",

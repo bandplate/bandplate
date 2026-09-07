@@ -49,6 +49,63 @@ export async function listByMember(db: Db, memberId: string): Promise<Favorite[]
     .orderBy(desc(favorites.createdAt));
 }
 
+export async function isFavorited(
+  db: Db,
+  memberId: string,
+  targetType: FavoriteTargetType,
+  targetId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ memberId: favorites.memberId })
+    .from(favorites)
+    .where(
+      and(
+        eq(favorites.memberId, memberId),
+        eq(favorites.targetType, targetType),
+        eq(favorites.targetId, targetId),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+export interface ToggleFavoriteInput {
+  memberId: string;
+  targetType: FavoriteTargetType;
+  targetId: string;
+  now: number;
+}
+
+/**
+ * Flips one favorite: adds it if absent, removes it if present, and reports
+ * which happened — what `VoteToggle`/`FavoriteToggle`'s single "one tap"
+ * control needs, so the caller (an Astro page's own POST handler, or the
+ * JSON API route) doesn't have to track "was this already a favorite"
+ * itself. A read-then-write, not a single atomic statement — unlike
+ * `votesRepo.castVote`, there's no aggregate to keep self-healing here, and
+ * `add`/`remove` are each already idempotent (`onConflictDoNothing` /
+ * delete-where-absent-is-a-no-op), so a rare double-submit race just means
+ * the second request reads the row the first one already wrote and toggles
+ * it again — the same "last click wins" behavior every other read-then-act
+ * mutation in this codebase already accepts (e.g. `admin-instruments.ts`'s
+ * `setInstrumentArchived`), not the D1 batch constraint's multi-statement
+ * atomicity concern.
+ */
+export async function toggle(db: Db, input: ToggleFavoriteInput): Promise<{ favorited: boolean }> {
+  const already = await isFavorited(db, input.memberId, input.targetType, input.targetId);
+  if (already) {
+    await remove(db, input.memberId, input.targetType, input.targetId);
+    return { favorited: false };
+  }
+  await add(db, {
+    memberId: input.memberId,
+    targetType: input.targetType,
+    targetId: input.targetId,
+    createdAt: input.now,
+  });
+  return { favorited: true };
+}
+
 /**
  * Just the target ids of one type, as a `Set` for O(1) membership checks —
  * `/takes/[id]` and `/search` (Task 6 review round 1's per-row favorite

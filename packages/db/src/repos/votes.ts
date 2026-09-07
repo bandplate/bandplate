@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { takes, votes } from "../schema/sqlite/index.js";
 
@@ -60,10 +60,62 @@ export async function castVote(db: Db, input: CastVoteInput): Promise<void> {
   ]);
 }
 
+export interface RemoveVoteInput {
+  takeId: string;
+  memberId: string;
+  now: number;
+}
+
+/**
+ * Deletes a member's vote on a take, then recomputes the take's aggregates —
+ * same `db.batch([delete, aggregate-recompute])` shape as `castVote`'s own
+ * `db.batch([upsert, aggregate-recompute])`. Not wired to any control today
+ * (the vote UI is a two-position keeper/not-keeper toggle — see
+ * `VoteToggle.astro` — with no third "no opinion" state reachable once a
+ * member has voted), but kept as a real, tested repo capability: it's what
+ * makes the zero-vote aggregate case reachable through normal use (a take's
+ * only vote being retracted) rather than only through
+ * `buildAggregateUpdate` exercised directly, and it's the natural primitive
+ * an admin "clear a vote" tool or a future "un-vote" affordance would need.
+ */
+export async function removeVote(db: Db, input: RemoveVoteInput): Promise<void> {
+  const { takeId, memberId, now } = input;
+
+  await db.batch([
+    db.delete(votes).where(and(eq(votes.takeId, takeId), eq(votes.memberId, memberId))),
+    buildAggregateUpdate(db, takeId, now),
+  ]);
+}
+
 export async function listByTake(db: Db, takeId: string): Promise<Vote[]> {
   return db.select().from(votes).where(eq(votes.takeId, takeId));
 }
 
 export async function listByMember(db: Db, memberId: string): Promise<Vote[]> {
   return db.select().from(votes).where(eq(votes.memberId, memberId)).orderBy(desc(votes.updatedAt));
+}
+
+/**
+ * One member's vote (if any) on each of the given takes, as a `Map` keyed
+ * by take id — the initial `aria-pressed` state `VoteToggle.astro` needs
+ * for every take row it renders, batch-fetched the same way
+ * `favoritesRepo.listTargetIdsByMember` avoids one query per row.
+ */
+export async function listByMemberForTakes(
+  db: Db,
+  memberId: string,
+  takeIds: string[],
+): Promise<Map<string, boolean>> {
+  const result = new Map<string, boolean>();
+  if (takeIds.length === 0) {
+    return result;
+  }
+  const rows = await db
+    .select({ takeId: votes.takeId, keeper: votes.keeper })
+    .from(votes)
+    .where(and(eq(votes.memberId, memberId), inArray(votes.takeId, takeIds)));
+  for (const row of rows) {
+    result.set(row.takeId, row.keeper);
+  }
+  return result;
 }

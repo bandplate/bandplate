@@ -149,6 +149,29 @@ async function main() {
   };
 
   // ---------------------------------------------------------------------
+  // Member instruments — which instruments each member plays, rendered on
+  // `/me` and the admin roster. `setInstruments` is replace-all, so this is
+  // safe to re-run. Dee's trombone is archived further down (once takes
+  // reference it too) so `/me` has a real example of a member holding an
+  // instrument the band has since dropped — the join keeps rendering it
+  // regardless (see `memberInstruments`' schema comment).
+  // ---------------------------------------------------------------------
+  const memberInstrumentSeeds: Record<string, string[]> = {
+    "admin@example.com": ["vocals"],
+    "bailey@example.com": ["drums", "bass"],
+    "cass@example.com": ["guitar", "vocals"],
+    "dee@example.com": ["bass", "trombone"],
+    "sam@example.com": ["keys", "trumpet"],
+  };
+  for (const [email, slugs] of Object.entries(memberInstrumentSeeds)) {
+    await membersRepo.setInstruments(
+      db,
+      member(email),
+      slugs.map((slug) => instrument(slug)),
+    );
+  }
+
+  // ---------------------------------------------------------------------
   // Songs — chord progressions and lyrics are original demo content
   // written for this seed, not lyrics from any real song.
   // ---------------------------------------------------------------------
@@ -810,6 +833,19 @@ async function main() {
     });
   }
 
+  // ---------------------------------------------------------------------
+  // Archive trombone — after everything above has already referenced it
+  // (takes and Dee's member_instruments row both still do), so the seed
+  // demonstrates the "archived instrument a member still holds" case
+  // without deleting anything. Guarded so a re-run doesn't re-archive with
+  // a fresh timestamp every time.
+  // ---------------------------------------------------------------------
+  const tromboneId = instrument("trombone");
+  const trombone = await instrumentsRepo.getById(db, tromboneId);
+  if (trombone && trombone.archivedAt === null) {
+    await instrumentsRepo.archive(db, tromboneId, daysAgo(30));
+  }
+
   console.log("Seed complete.");
   console.log(`  instruments: ${instrumentBySlug.size}`);
   console.log(`  members: ${memberByEmail.size}`);
@@ -818,6 +854,9 @@ async function main() {
   console.log(`  takes: ${takeByRef.size}`);
   console.log(`  votes: ${voteSeeds.length}`);
   console.log(`  favorites: ${favoriteSeeds.length}`);
+  console.log(
+    `  member instruments: ${Object.keys(memberInstrumentSeeds).length} members assigned`,
+  );
 
   client.close();
 }

@@ -115,6 +115,45 @@ export const instruments = sqliteTable("instruments", {
   archivedAt: ts("archived_at"),
 });
 
+// A member<->instrument relation was specified in the project plan (Task 6
+// review, "data-model gap") but never made it into this schema — a
+// transcription loss in the Task 2 brief, not a deliberate omission. Closing
+// it now as a join table, the same shape as `takeInstruments` just below,
+// rather than a JSON array column on `members` (the shape `serviceTokens.scopes`
+// uses elsewhere in this file):
+//   - A JSON array can't carry a foreign key, so an instrument rename/archive
+//     would need an application-level fan-out write to every member row that
+//     mentions it; a join table gets that for free (the instrument row is the
+//     single source of truth, looked up by id).
+//   - "Filtering members by instrument" isn't asked for today, but a join
+//     table is what that would need if it ever is — a JSON array would have
+//     to be restructured into one anyway. `takeInstruments` already made this
+//     exact call for the same reasoning (see its own comment).
+//   - Instruments are archivable, and archiving must not disturb a member's
+//     existing association (the brief: "a member holding an archived
+//     instrument must still render") — a plain FK with no cascade-on-archive
+//     behavior (archiving only ever sets `archivedAt`, never deletes the row)
+//     satisfies this by construction, the same way `takeInstruments` already
+//     keeps rendering an instrument the band has dropped.
+export const memberInstruments = sqliteTable(
+  "member_instruments",
+  {
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    instrumentId: text("instrument_id")
+      .notNull()
+      .references(() => instruments.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.memberId, t.instrumentId] }),
+    // Reverse index, mirroring take_instruments' own — "everyone who plays
+    // bass" as a single index scan. Nothing uses that query today, but the
+    // table is shaped so it costs nothing to add later.
+    index("member_instruments_instrument_id_member_id_idx").on(t.instrumentId, t.memberId),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // songs
 // ---------------------------------------------------------------------------

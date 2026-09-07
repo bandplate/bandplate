@@ -1,7 +1,8 @@
 import { uuidv7 } from "@bandlib/core";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
-import { members } from "../schema/sqlite/index.js";
+import { instruments, memberInstruments, members } from "../schema/sqlite/index.js";
+import type { Instrument } from "./instruments.js";
 
 export type MemberRole = (typeof members.$inferSelect)["role"];
 export type MemberStatus = (typeof members.$inferSelect)["status"];
@@ -140,4 +141,91 @@ export async function createIfEmpty(
   const { id, statement } = buildCreateIfEmptyStatement(db, input);
   await statement;
   return getById(db, id);
+}
+
+// ---------------------------------------------------------------------------
+// member <-> instrument (which instruments a member plays) — see
+// `schema/sqlite/index.ts`'s `memberInstruments` for why this is a join
+// table rather than a JSON column. Admin-managed (the admin member form's
+// multi-select), read everywhere a member's own instruments are shown
+// (`/me`, the admin roster).
+// ---------------------------------------------------------------------------
+
+/**
+ * Replace-all: a member's full set of instrument ids, in one write. Delete +
+ * insert rather than a diff — the multi-select this backs submits the whole
+ * set every time, so there's nothing to diff against, and the two
+ * statements go into one `db.batch([...])` so a member is never left with a
+ * partially-applied set if the write fails partway (no interactive
+ * transactions, per the project's D1-compatibility rule).
+ */
+export async function setInstruments(
+  db: Db,
+  memberId: string,
+  instrumentIds: string[],
+): Promise<void> {
+  const uniqueIds = [...new Set(instrumentIds)];
+  const deleteStatement = db
+    .delete(memberInstruments)
+    .where(eq(memberInstruments.memberId, memberId));
+
+  if (uniqueIds.length === 0) {
+    await deleteStatement;
+    return;
+  }
+
+  const insertStatement = db
+    .insert(memberInstruments)
+    .values(uniqueIds.map((instrumentId) => ({ memberId, instrumentId })));
+  await db.batch([deleteStatement, insertStatement]);
+}
+
+/**
+ * A member's own instruments, in the band's own sort order — INCLUDING
+ * archived ones. Archiving an instrument only ever sets `instruments.archivedAt`
+ * (the row, and this join, are never deleted), so a member who plays an
+ * instrument the band has since dropped keeps rendering it here, same as
+ * `takesRepo.listInstrumentsForTakes` does for takes.
+ */
+export async function listInstrumentsForMember(db: Db, memberId: string): Promise<Instrument[]> {
+  const rows = await db
+    .select({ instrument: instruments })
+    .from(memberInstruments)
+    .innerJoin(instruments, eq(instruments.id, memberInstruments.instrumentId))
+    .where(eq(memberInstruments.memberId, memberId))
+    .orderBy(instruments.sortOrder);
+  return rows.map((row) => row.instrument);
+}
+
+/**
+ * Batch version of `listInstrumentsForMember` for a roster listing (the
+ * admin members page) — one query for every member's instruments instead of
+ * one round trip per row. Callers must dedupe `memberIds` themselves,
+ * matching `takesRepo.listInstrumentsForTakes`'s own contract.
+ */
+export async function listInstrumentsForMembers(
+  db: Db,
+  memberIds: string[],
+): Promise<Map<string, Instrument[]>> {
+  const result = new Map<string, Instrument[]>();
+  if (memberIds.length === 0) {
+    return result;
+  }
+
+  const rows = await db
+    .select({ memberId: memberInstruments.memberId, instrument: instruments })
+    .from(memberInstruments)
+    .innerJoin(instruments, eq(instruments.id, memberInstruments.instrumentId))
+    .where(inArray(memberInstruments.memberId, memberIds))
+    .orderBy(instruments.sortOrder);
+
+  for (const row of rows) {
+    const existing = result.get(row.memberId);
+    if (existing) {
+      existing.push(row.instrument);
+    } else {
+      result.set(row.memberId, [row.instrument]);
+    }
+  }
+  return result;
 }

@@ -56,6 +56,29 @@
 // `TakeRowContext` itself (and its two ref types) lives in the sibling
 // `take-row-context.ts`, not exported from here — see that file's header
 // comment for why (an Astro server-build compiler bug, not a style choice).
+//
+// --- `transitionName` (Task 6 review round 1, F1) --------------------
+//
+// Every row used to hardcode `transition:name={`take-${take.id}`}`. That's
+// fine as long as a given take id is rendered at most once per page — but
+// `/` and `/me` both list takes across more than one section (favorites,
+// recent events, needs-your-vote / favorites, votes), and a take that's
+// both a favorite AND e.g. unvoted lands in two of them at once. Two
+// elements sharing one `view-transition-name` isn't a warning — per the
+// CSS View Transitions spec it silently aborts the transition for the
+// WHOLE page, not just those two elements. `transitionName` lets the
+// caller de-duplicate: omit it (or pass `undefined`) for the normal case
+// and it defaults to `take-${take.id}`; pass `null` to suppress the
+// attribute entirely for a take id the same page render already used once.
+//
+// --- `favorited` (Task 6 review round 1, F4) --------------------------
+//
+// Gold's only prior use was a decorative star next to a "Your favorites"
+// heading that already said the word "favorites" — no information. This
+// prop puts the same star per-row instead, shown only when THIS row's take
+// is one of the current member's favorites — real, row-specific
+// information on pages that mix favorited and non-favorited takes (`/`'s
+// recent-events/needs-your-vote sections, `/search`, `/takes/[id]`'s hero).
 import type { instrumentsRepo, takesRepo } from "@bandlib/db";
 import { formatDuration, formatShortDate } from "../server/format.js";
 import { TAKE_STATE_LABEL } from "../server/take-state.js";
@@ -65,9 +88,19 @@ export interface Props {
   take: takesRepo.Take;
   instruments: instrumentsRepo.Instrument[];
   context: TakeRowContext;
+  /** `undefined` (the default, when omitted) → `take-${take.id}`. `null` →
+   *  no `transition:name` at all. A caller listing the same take id more
+   *  than once on one page must pass `null` for every occurrence after the
+   *  first — see this file's header comment. */
+  transitionName?: string | null;
+  /** Shows the gold favorite marker next to the take's label. Defaults to
+   *  `false` — see this file's header comment. */
+  favorited?: boolean;
 }
 
-const { take, instruments, context } = Astro.props;
+const { take, instruments, context, transitionName, favorited = false } = Astro.props;
+const resolvedTransitionName =
+  transitionName === null ? undefined : (transitionName ?? `take-${take.id}`);
 
 const event = context.kind !== "event" ? context.event : undefined;
 const song = context.kind !== "song" ? context.song : undefined;
@@ -88,9 +121,17 @@ const showDate = context.kind === "full";
 <div class="bl-take-row">
   <slot name="leading" />
   <div class="bl-take-row-main">
-    <a href={`/takes/${take.id}`} class="bl-take-label" transition:name={`take-${take.id}`}>
+    <a href={`/takes/${take.id}`} class="bl-take-label" transition:name={resolvedTransitionName}>
       {primaryLabel}
     </a>
+    {favorited && (
+      <span class="bl-favorite-mark bl-take-favorite-mark" title="One of your favorites">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
+        </svg>
+        <span class="sr-only">, one of your favorites</span>
+      </span>
+    )}
     {take.label && <span class="bl-take-meta bl-take-sublabel">{take.label}</span>}
     <div class="bl-take-meta bl-take-row-line">
       <span class={`bl-badge ${take.state === "keeper" ? "bl-badge-keeper" : ""}`}>

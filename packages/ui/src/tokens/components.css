@@ -925,7 +925,22 @@ a.bl-btn {
     top: 0;
     height: 100vh;
     box-sizing: border-box;
-    padding: 1.75rem 1.25rem;
+    /* Bottom padding reserves space for the player bar, which is
+       `position: fixed` and sits ON TOP of this column's own bottom edge
+       (see `.bl-player`'s `z-index: 42` — this sidebar has no z-index of
+       its own, i.e. 0, so the player always paints over it). Without this,
+       `.bl-sidebar-footer`'s `margin-top: auto` pins "Sign out" to this
+       column's bottom at 100vh, directly under the player, making it
+       unreachable — `elementFromPoint` at the button's centre returns
+       `.bl-player` instead (task-7-report.md, fix round 2). Reuses the
+       same `--bl-player-height` custom property `.bl-shell-main` already
+       reserves against, rather than a second hardcoded number that could
+       drift from the real measured height — see that variable's comment
+       on `.bl-shell`. Always reserved, even with no track loaded, same
+       rationale as `.bl-shell-main`: a fixed number can't itself cause a
+       width-based scrollWidth bug, and nothing should shift when nothing
+       is playing. */
+    padding: 1.75rem 1.25rem calc(1.75rem + var(--bl-player-height));
     border-right: 1px solid var(--bl-color-border);
   }
 

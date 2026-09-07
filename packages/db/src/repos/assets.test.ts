@@ -7,11 +7,16 @@ import * as instruments from "./instruments.js";
 import * as songs from "./songs.js";
 import * as takes from "./takes.js";
 
+// Unique per call (not just per test file) — `listPlayableMastersByTakeIds`'s
+// own "batches across multiple takes" test calls this twice against the
+// same db, and a fixed slug would collide on songs.slug's unique index.
+let seedTakeCounter = 0;
+
 async function seedTake(db: Db) {
   const now = Date.now();
   const song = await songs.create(db, {
     title: "Asset Test Song",
-    slug: "asset-test-song",
+    slug: `asset-test-song-${++seedTakeCounter}`,
     createdAt: now,
     updatedAt: now,
   });
@@ -99,6 +104,137 @@ describe("assets.takeHasLossless", () => {
     await assets.markReady(db, asset.id, Date.now());
 
     expect(await assets.takeHasLossless(db, take.id)).toBe(true);
+  });
+});
+
+describe("assets.listPlayableMastersByTakeIds", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  it("returns nothing for a take with no assets at all", async () => {
+    const take = await seedTake(db);
+    const result = await assets.listPlayableMastersByTakeIds(db, [take.id]);
+    expect(result.has(take.id)).toBe(false);
+  });
+
+  it("does not surface a master that is still status='pending'", async () => {
+    const take = await seedTake(db);
+    await assets.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 1000,
+        status: "pending",
+        createdAt: Date.now(),
+      },
+    ]);
+
+    const result = await assets.listPlayableMastersByTakeIds(db, [take.id]);
+    expect(result.has(take.id)).toBe(false);
+  });
+
+  it("does not surface a stem — only kind='master' counts", async () => {
+    const take = await seedTake(db);
+    const bassId = (await instruments.create(db, { slug: "bass", label: "Bass" })).id;
+    await assets.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "stem",
+        instrumentId: bassId,
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/stems/bass/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 1000,
+        status: "ready",
+        createdAt: Date.now(),
+      },
+    ]);
+
+    const result = await assets.listPlayableMastersByTakeIds(db, [take.id]);
+    expect(result.has(take.id)).toBe(false);
+  });
+
+  it("prefers the lossy tier over lossless when both are ready", async () => {
+    const take = await seedTake(db);
+    await assets.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossless",
+        format: "flac",
+        storageKey: `takes/${take.id}/master/lossless.flac`,
+        contentType: "audio/flac",
+        bytes: 30_000_000,
+        status: "ready",
+        createdAt: Date.now(),
+      },
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 3_000_000,
+        status: "ready",
+        createdAt: Date.now(),
+      },
+    ]);
+
+    const result = await assets.listPlayableMastersByTakeIds(db, [take.id]);
+    expect(result.get(take.id)?.tier).toBe("lossy");
+  });
+
+  it("falls back to the lossless tier when no lossy master is ready", async () => {
+    const take = await seedTake(db);
+    await assets.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossless",
+        format: "flac",
+        storageKey: `takes/${take.id}/master/lossless.flac`,
+        contentType: "audio/flac",
+        bytes: 30_000_000,
+        status: "ready",
+        createdAt: Date.now(),
+      },
+    ]);
+
+    const result = await assets.listPlayableMastersByTakeIds(db, [take.id]);
+    expect(result.get(take.id)?.tier).toBe("lossless");
+  });
+
+  it("batches across multiple takes in one call, and returns an empty map for an empty input", async () => {
+    const takeA = await seedTake(db);
+    const takeB = await seedTake(db);
+    await assets.createMany(db, [
+      {
+        takeId: takeA.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${takeA.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 1000,
+        status: "ready",
+        createdAt: Date.now(),
+      },
+    ]);
+
+    const result = await assets.listPlayableMastersByTakeIds(db, [takeA.id, takeB.id]);
+    expect(result.has(takeA.id)).toBe(true);
+    expect(result.has(takeB.id)).toBe(false);
+
+    expect(await assets.listPlayableMastersByTakeIds(db, [])).toEqual(new Map());
   });
 });
 

@@ -1,5 +1,5 @@
 import { uuidv7 } from "@bandlib/core";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { assets } from "../schema/sqlite/index.js";
 
@@ -62,8 +62,67 @@ export async function listByTake(db: Db, takeId: string): Promise<Asset[]> {
   return db.select().from(assets).where(eq(assets.takeId, takeId));
 }
 
+export async function getById(db: Db, id: string): Promise<Asset | undefined> {
+  const [row] = await db.select().from(assets).where(eq(assets.id, id)).limit(1);
+  return row;
+}
+
 export async function markReady(db: Db, id: string, readyAt: number): Promise<void> {
   await db.update(assets).set({ status: "ready", readyAt }).where(eq(assets.id, id));
+}
+
+/**
+ * Corrects `bytes`/`durationMs` after the real file behind an asset is
+ * (re-)uploaded — used by `packages/db/scripts/dev-upload-audio.ts`, whose
+ * generated fixture's actual size/duration won't match whatever placeholder
+ * numbers a seed row was created with. Never used by the ingest path
+ * itself, which should know these values up front.
+ */
+export async function updateAudioMeta(
+  db: Db,
+  id: string,
+  meta: { bytes: number; durationMs: number },
+): Promise<void> {
+  await db.update(assets).set(meta).where(eq(assets.id, id));
+}
+
+/**
+ * Batch-fetches, for each of the given takes, the ONE master asset a play
+ * control should link to — the reason `TakeRow`'s leading slot needs this
+ * (see `apps/web/src/server/pages/playable.ts`): a take with no ready
+ * master asset gets no play control at all, not a disabled one, so every
+ * list of takes needs to know which ones qualify before rendering.
+ *
+ * "Playable" means: `kind = 'master'`, `status = 'ready'`. When both tiers
+ * exist, the lossy one wins — it's the one every browser can decode
+ * without a plugin, and it's what the persistent player uses as the
+ * default source (see task-7-report.md). A take with only a lossless
+ * master still gets a play control (better than none), it just isn't the
+ * preferred tier.
+ */
+export async function listPlayableMastersByTakeIds(
+  db: Db,
+  takeIds: string[],
+): Promise<Map<string, Asset>> {
+  const result = new Map<string, Asset>();
+  if (takeIds.length === 0) {
+    return result;
+  }
+
+  const rows = await db
+    .select()
+    .from(assets)
+    .where(
+      and(inArray(assets.takeId, takeIds), eq(assets.kind, "master"), eq(assets.status, "ready")),
+    );
+
+  for (const row of rows) {
+    const existing = result.get(row.takeId);
+    if (!existing || (existing.tier !== "lossy" && row.tier === "lossy")) {
+      result.set(row.takeId, row);
+    }
+  }
+  return result;
 }
 
 /**

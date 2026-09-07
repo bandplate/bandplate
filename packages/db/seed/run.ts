@@ -4,7 +4,7 @@
 // only — a generic band lineup, not any real band's roster.
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { normalizeTitle } from "@bandlib/core";
+import { masterStorageKey, normalizeTitle, peaksStorageKey, stemStorageKey } from "@bandlib/core";
 import { createClient } from "@libsql/client";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
@@ -644,8 +644,18 @@ async function main() {
   };
 
   // ---------------------------------------------------------------------
-  // Assets — seed-take-2 (the neon-skyline keeper) gets full stems + a
-  // lossless master; seed-take-9 gets only a lossy master (no stems).
+  // Assets — DB rows only. Storage keys use the canonical layout
+  // (`masterStorageKey`/`stemStorageKey`/`peaksStorageKey` from
+  // `@bandlib/core` — see task-7-report.md), matching exactly what
+  // `scripts/dev-upload-audio.ts` uploads real encoded audio to. Running
+  // the seed alone does NOT put bytes in a bucket — the audio endpoint
+  // will 404/error on these until that script (or a real ingest) has run
+  // against the same S3-compatible storage. Lossy tier is mp3 (universal
+  // browser decode support — see the S3_* config docs), not opus.
+  //
+  // seed-take-2 (the neon-skyline keeper) gets full stems + a lossless
+  // master; seed-take-9 and a handful of others get only a lossy master
+  // (no stems).
   // ---------------------------------------------------------------------
   async function ensureAsset(
     storageKey: string,
@@ -667,19 +677,19 @@ async function main() {
   }
 
   const stemsTakeId = take("seed-take-2");
-  await ensureAsset(`${stemsTakeId}/master.opus`, {
+  await ensureAsset(masterStorageKey(stemsTakeId, "lossy", "mp3"), {
     takeId: stemsTakeId,
     kind: "master",
     tier: "lossy",
-    format: "opus",
-    contentType: "audio/opus",
+    format: "mp3",
+    contentType: "audio/mpeg",
     bytes: 4_200_000,
     status: "ready",
     durationMs: 210_000,
     createdAt: daysAgo(90),
     readyAt: daysAgo(90),
   });
-  await ensureAsset(`${stemsTakeId}/master.flac`, {
+  await ensureAsset(masterStorageKey(stemsTakeId, "lossless", "flac"), {
     takeId: stemsTakeId,
     kind: "master",
     tier: "lossless",
@@ -692,13 +702,13 @@ async function main() {
     readyAt: daysAgo(90),
   });
   for (const slug of ["drums", "bass", "guitar", "vocals"]) {
-    await ensureAsset(`${stemsTakeId}/stems/${slug}.opus`, {
+    await ensureAsset(stemStorageKey(stemsTakeId, slug, "lossy", "mp3"), {
       takeId: stemsTakeId,
       kind: "stem",
       instrumentId: instrument(slug),
       tier: "lossy",
-      format: "opus",
-      contentType: "audio/opus",
+      format: "mp3",
+      contentType: "audio/mpeg",
       bytes: 3_800_000,
       status: "ready",
       durationMs: 210_000,
@@ -706,7 +716,7 @@ async function main() {
       readyAt: daysAgo(90),
     });
   }
-  await ensureAsset(`${stemsTakeId}/peaks.json`, {
+  await ensureAsset(peaksStorageKey(stemsTakeId), {
     takeId: stemsTakeId,
     kind: "peaks",
     tier: "lossy",
@@ -719,12 +729,12 @@ async function main() {
   });
 
   const masterOnlyTakeId = take("seed-take-9");
-  await ensureAsset(`${masterOnlyTakeId}/master.opus`, {
+  await ensureAsset(masterStorageKey(masterOnlyTakeId, "lossy", "mp3"), {
     takeId: masterOnlyTakeId,
     kind: "master",
     tier: "lossy",
-    format: "opus",
-    contentType: "audio/opus",
+    format: "mp3",
+    contentType: "audio/mpeg",
     bytes: 3_900_000,
     status: "ready",
     durationMs: 195_000,
@@ -741,12 +751,12 @@ async function main() {
     "seed-take-18",
   ]) {
     const takeId = take(ref);
-    await ensureAsset(`${takeId}/master.opus`, {
+    await ensureAsset(masterStorageKey(takeId, "lossy", "mp3"), {
       takeId,
       kind: "master",
       tier: "lossy",
-      format: "opus",
-      contentType: "audio/opus",
+      format: "mp3",
+      contentType: "audio/mpeg",
       bytes: 4_000_000,
       status: "ready",
       durationMs: 200_000,

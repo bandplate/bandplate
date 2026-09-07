@@ -9,20 +9,35 @@ Follow this top to bottom for a first deploy. Everything up to "Build and
 deploy" is either a one-time account setup step or a local check you can
 do with no Cloudflare account at all.
 
+## 0. Before anything: how to run `wrangler`
+
+`wrangler` is a devDependency of `apps/web`, not a global install, so
+every command below is run through pnpm **from that directory**:
+
+```
+cd apps/web
+pnpm exec wrangler --version     # 4.41.0
+pnpm exec wrangler login         # once, to authenticate
+```
+
+Every `pnpm exec wrangler ...` in this guide assumes `apps/web` as the
+working directory — that is also where `wrangler.toml` lives, which
+wrangler needs to find.
+
 ## 1. Create what you need on a real account
 
 Do these in order — each later step needs something from the one before it.
 
 1. **A D1 database**:
    ```
-   wrangler d1 create bandplate
+   pnpm exec wrangler d1 create bandplate
    ```
    Copy the printed `database_id` into `apps/web/wrangler.toml`'s
    `[[d1_databases]]` entry — it ships with a placeholder id.
 
 2. **An R2 bucket**, plus an **S3 API token** for it:
    ```
-   wrangler r2 bucket create bandplate
+   pnpm exec wrangler r2 bucket create bandplate
    ```
    Then, in the R2 dashboard, go to "Manage R2 API Tokens" and create a
    token scoped to that bucket. This app talks to R2 over its
@@ -37,7 +52,7 @@ Do these in order — each later step needs something from the one before it.
    mailer is a lockout, exactly like the Node profile with no SMTP
    configured (see `packages/mail/src/factory.ts`'s doc comment).
 
-4. **The Worker itself** — no separate step needed. `wrangler deploy`
+4. **The Worker itself** — no separate step needed. `pnpm exec wrangler deploy`
    creates the Workers project on first run, using the `name` in
    `wrangler.toml`.
 
@@ -90,10 +105,10 @@ names — the values from step 2). Set the sensitive ones with `wrangler
 secret put`, one at a time:
 
 ```
-wrangler secret put BANDPLATE_BOOTSTRAP_TOKEN
-wrangler secret put MAIL_API_KEY
-wrangler secret put S3_ACCESS_KEY_ID
-wrangler secret put S3_SECRET_ACCESS_KEY
+pnpm exec wrangler secret put BANDPLATE_BOOTSTRAP_TOKEN
+pnpm exec wrangler secret put MAIL_API_KEY
+pnpm exec wrangler secret put S3_ACCESS_KEY_ID
+pnpm exec wrangler secret put S3_SECRET_ACCESS_KEY
 ```
 
 `BANDPLATE_TRUSTED_PROXY_DEPTH` is optional (defaults to 1, which is
@@ -103,10 +118,10 @@ exactly one trusted hop).
 ## 4. Migrate — before every deploy, unconditionally
 
 ```
-wrangler d1 migrations apply DB --remote
+pnpm exec wrangler d1 migrations apply DB --remote
 ```
 
-Run this as its own explicit step **before** `wrangler deploy`, every
+Run this as its own explicit step **before** `pnpm exec wrangler deploy`, every
 time, not just the first time. It is not run automatically on startup
 (same posture as the Node profile, which runs `pnpm --filter @bandplate/db
 migrate` as its own step, not on boot) — but unlike the Node profile,
@@ -120,8 +135,8 @@ nothing obviously wrong about the deploy that produced it.
 ```
 cd apps/web
 BANDPLATE_ADAPTER=cloudflare pnpm exec astro build   # → dist/_worker.js/
-wrangler d1 migrations apply DB --remote             # step 4, repeated — don't skip on redeploys
-wrangler deploy
+pnpm exec wrangler d1 migrations apply DB --remote             # step 4, repeated — don't skip on redeploys
+pnpm exec wrangler deploy
 ```
 
 `BANDPLATE_ADAPTER=cloudflare` is the only thing that switches the build
@@ -132,14 +147,14 @@ on it.
 ## Local verification (no account needed)
 
 Everything above requires a real Cloudflare account. Before spending any
-of that, verify the Workers build itself locally with `wrangler dev` and
+of that, verify the Workers build itself locally with `pnpm exec wrangler dev` and
 a local D1 database — no account, no deploy:
 
 ```
 cd apps/web
 BANDPLATE_ADAPTER=cloudflare pnpm exec astro build
-wrangler d1 migrations apply DB --local
-wrangler dev
+pnpm exec wrangler d1 migrations apply DB --local
+pnpm exec wrangler dev
 ```
 
 This needs an `apps/web/.dev.vars` file (gitignored, never committed)
@@ -156,12 +171,12 @@ BANDPLATE_APP_ORIGIN=http://localhost:8787
 ```
 
 `BANDPLATE_APP_ORIGIN` is the one value here you can't just leave at
-whatever `wrangler.toml` ships, or fake: `wrangler dev` serves the app
+whatever `wrangler.toml` ships, or fake: `pnpm exec wrangler dev` serves the app
 from `http://localhost:8787`, and if this doesn't match exactly, every
 form POST your browser makes — including `/setup` — 403s on the
 same-origin check before it reaches a page. A `curl` request with a
 hand-set `Origin` header won't catch this (curl doesn't enforce or care
-about same-origin); only an actual browser pointed at `wrangler dev`
+about same-origin); only an actual browser pointed at `pnpm exec wrangler dev`
 does. The other four values can be fake — the app only needs them
 present and well-formed. Object storage and outbound mail calls will
 fail against fake credentials (no MinIO or real provider is reachable
@@ -180,14 +195,14 @@ body — Workers doesn't attach thrown-error detail to the HTTP response
 the way a Node stack trace might leak locally. The actual `ConfigError`
 message, which names the offending variable, only reaches `wrangler
 tail` (or the real-time log stream in the dashboard for a deployed
-Worker) — locally, the `wrangler dev` terminal already prints it. Run
-`wrangler tail` before assuming a 500 is unexplainable.
+Worker) — locally, the `pnpm exec wrangler dev` terminal already prints it. Run
+`pnpm exec wrangler tail` before assuming a 500 is unexplainable.
 
 ## Post-deploy smoke test
 
 `S3Storage` against R2's own S3 endpoint is the one path that cannot be
 verified locally at all: Cloudflare's local dev tooling (Miniflare /
-`wrangler dev`, and `@cloudflare/vitest-pool-workers`, which is built on
+`pnpm exec wrangler dev`, and `@cloudflare/vitest-pool-workers`, which is built on
 it) only exposes R2 locally through the **binding** API
 (`env.BUCKET.get/put/...`, called from inside a Worker) — there is no
 local S3-compatible HTTP endpoint to sign requests against, the way real
@@ -201,7 +216,7 @@ enforcement, Range requests, and expiry/quantisation logic that R2's
 production S3 API also implements — but R2 itself is untested until a
 real deploy.
 
-Close that gap directly after every real `wrangler deploy`, rather than
+Close that gap directly after every real `pnpm exec wrangler deploy`, rather than
 trusting the MinIO suite as a total stand-in:
 
 1. Create a service token with `ingest:write` (`POST /admin/tokens` as an

@@ -26,6 +26,45 @@ export const DEFAULT_SESSION_REFRESH_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 h
  * typical SMTP round trip without making every login request feel slow.
  */
 export const DEFAULT_LOGIN_TIMING_FLOOR_MS = 300;
+/**
+ * Bound on `bootstrapAdmin`'s confirmation-email send. Unlike
+ * `requestLogin`, this send is not on a timing-sensitive path (there's no
+ * account-enumeration signal to hide — the caller already knows whether
+ * bootstrap succeeded), but it's still awaited inline before the response
+ * is returned, so an unbounded hang against a dead/misconfigured mail
+ * provider stalls the entire `/setup` response — the operator's very
+ * first request — for however long the underlying `fetch`/SMTP transport
+ * takes to time out (which can be much longer than this). Bound it
+ * explicitly instead of trusting the transport's own timeout.
+ */
+export const DEFAULT_BOOTSTRAP_MAIL_TIMEOUT_MS = 5_000;
+
+/**
+ * Races `promise` against a timer, rejecting if it doesn't settle within
+ * `timeoutMs`. Used only where an unbounded `await` on an external call
+ * (mail, in `bootstrapAdmin`'s case) would otherwise stall a response
+ * indefinitely — a plain `setTimeout`, not `deps.sleep`, since this isn't
+ * on the timing-sensitive path `deps.sleep`/`loginTimingFloorMs` exist to
+ * control, and real tests exercise it with a fast-resolving mock mailer
+ * that never reaches the timeout.
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
 
 const SERVICE_TOKEN_PREFIX = "blk_";
 const UUID_LENGTH = 36;
@@ -70,6 +109,8 @@ export interface AuthDeps {
    * nothing there.
    */
   deferMailSend?: (send: () => Promise<void>) => void;
+  /** See `DEFAULT_BOOTSTRAP_MAIL_TIMEOUT_MS`. */
+  bootstrapMailTimeoutMs?: number;
 }
 
 function sessionTtl(deps: AuthDeps): number {
@@ -494,11 +535,14 @@ export async function bootstrapAdmin(
 
   let testEmailSent = false;
   try {
-    await deps.mailer.send({
-      to: member.email,
-      subject: "bandlib is set up",
-      text: "This is a test message confirming outbound mail works for your bandlib deployment.",
-    });
+    await withTimeout(
+      deps.mailer.send({
+        to: member.email,
+        subject: "bandlib is set up",
+        text: "This is a test message confirming outbound mail works for your bandlib deployment.",
+      }),
+      deps.bootstrapMailTimeoutMs ?? DEFAULT_BOOTSTRAP_MAIL_TIMEOUT_MS,
+    );
     testEmailSent = true;
   } catch {
     testEmailSent = false;

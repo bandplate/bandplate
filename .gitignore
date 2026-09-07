@@ -14,3 +14,9 @@ dist/
 *.db-journal
 *.db-shm
 *.db-wal
+
+# Per-deployer Cloudflare config — copy from wrangler.toml.example and fill in
+# your own account's ids. Kept out of git for the same reason .dev.vars is:
+# every self-deployer edits it, so tracking it means a permanently dirty tree
+# and a conflict on every upstream pull.
+wrangler.toml

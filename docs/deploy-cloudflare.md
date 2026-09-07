@@ -24,6 +24,21 @@ Every `pnpm exec wrangler ...` in this guide assumes `apps/web` as the
 working directory — that is also where `wrangler.toml` lives, which
 wrangler needs to find.
 
+`wrangler.toml` itself is **not** tracked in git, for the same reason
+`.dev.vars` isn't: every deployer fills it with their own account's
+resource ids, so tracking it would mean a permanently modified file and a
+conflict on every upstream pull. Copy the template once:
+
+```
+cp wrangler.toml.example wrangler.toml
+```
+
+Then edit your copy — steps 1 and 3 below tell you what to put in it.
+Nothing in it is secret (a D1 `database_id` identifies a resource; access
+is gated by your API token), so keeping it local is about ergonomics, not
+security. Real secrets go through `pnpm exec wrangler secret put`, never
+into this file — see step 5.
+
 ## 1. Create what you need on a real account
 
 Do these in order — each later step needs something from the one before it.
@@ -58,7 +73,8 @@ Do these in order — each later step needs something from the one before it.
 
 ## 2. Replace every `[vars]` placeholder
 
-`apps/web/wrangler.toml` ships with five placeholder values in `[vars]`.
+`apps/web/wrangler.toml.example` ships with five placeholder values in
+`[vars]`, which your copy inherits.
 This step is easy to skip because nothing about the file *looks* broken
 afterward — every placeholder is a non-empty, well-formed-looking string,
 so it's easy to assume "the D1 `database_id` from step 1 was the only

@@ -53,9 +53,16 @@ const RATING_OPTIONS: Array<{ value: SearchRating; label: string }> = [
   { value: "100", label: "Unanimous keeper" },
 ];
 
-const resultsLabel = filtersApplied
-  ? `${results.length} ${results.length === 1 ? "take matches" : "takes match"}`
-  : `${results.length} ${results.length === 1 ? "take" : "takes"}`;
+// When truncated, `results.length` is only the page size (`SEARCH_LIMIT`),
+// not the true match count — stating it as a count directly above the
+// truncation notice below would contradict that notice ("N takes match" /
+// "showing the first N — narrow to see the rest" reads as if N were the
+// whole truth). Qualify it as "at least N" instead so the two lines agree.
+const resultsLabel = truncated
+  ? `${results.length}+ ${results.length === 1 ? "take matches" : "takes match"}`
+  : filtersApplied
+    ? `${results.length} ${results.length === 1 ? "take matches" : "takes match"}`
+    : `${results.length} ${results.length === 1 ? "take" : "takes"}`;
 ---
 
 <AppLayout title="Search" principal={principal} current="search">

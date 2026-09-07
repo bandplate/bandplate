@@ -35,12 +35,12 @@ if (!id) {
 }
 
 const appDeps = await getAppDeps();
-const detail = await getTakeDetail(appDeps.db, id);
+const detail = await getTakeDetail(appDeps.db, id, principal.memberId);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { take, song, event, instruments, assets, hasLossless } = detail;
+const { take, song, event, instruments, assets, hasLossless, favorited } = detail;
 const instrumentLabelById = new Map(instruments.map((i) => [i.id, i.label]));
 
 // `peaks` assets are waveform data for the future player, not something a
@@ -48,6 +48,11 @@ const instrumentLabelById = new Map(instruments.map((i) => [i.id, i.label]));
 // stems by instrument") doesn't mention them either.
 const masters = assets.filter((a) => a.kind === "master");
 const stems = assets.filter((a) => a.kind === "stem");
+// F7 (review round 1): the empty state used to gate on `assets.length`,
+// which includes `peaks` rows — a take with ONLY peaks assets (waveform
+// data, filtered out above) rendered an empty `<ul>` instead of the empty
+// state. Gate on what's actually displayed instead.
+const displayableAssets = [...masters, ...stems];
 
 function assetLabel(asset: assetsRepo.Asset): string {
   if (asset.kind === "master") {
@@ -78,10 +83,26 @@ const kindLabel =
             >
               {song.title}
             </a>
+            {favorited && (
+              <span class="bl-favorite-mark bl-take-favorite-mark" title="One of your favorites">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
+                </svg>
+                <span class="sr-only">, one of your favorites</span>
+              </span>
+            )}
           </h1>
         ) : (
           <h1 class="bl-hero-title" transition:name={`take-${take.id}`}>
             Take
+            {favorited && (
+              <span class="bl-favorite-mark bl-take-favorite-mark" title="One of your favorites">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
+                </svg>
+                <span class="sr-only">, one of your favorites</span>
+              </span>
+            )}
           </h1>
         )
       }
@@ -136,7 +157,7 @@ const kindLabel =
     <section>
       <h2 class="bl-section-title">Assets</h2>
       {
-        assets.length === 0 ? (
+        displayableAssets.length === 0 ? (
           <div class="bl-empty-state">
             <p>No assets uploaded for this take yet.</p>
           </div>
@@ -148,12 +169,16 @@ const kindLabel =
                 : "No lossless master available yet."}
             </p>
             <ul class="bl-asset-list">
-              {[...masters, ...stems].map((asset) => (
+              {displayableAssets.map((asset) => (
                 <li class="bl-asset-row">
                   <span class="bl-asset-row-label">{assetLabel(asset)}</span>
                   <span class="bl-asset-row-meta bl-mono">
-                    {asset.format} · {asset.tier} · {formatBytes(asset.bytes)}
-                    {asset.status !== "ready" && ` · ${asset.status}`}
+                    <span class="bl-asset-row-meta-item">{asset.format}</span>
+                    <span class="bl-asset-row-meta-item">{asset.tier}</span>
+                    <span class="bl-asset-row-meta-item">{formatBytes(asset.bytes)}</span>
+                    {asset.status !== "ready" && (
+                      <span class="bl-asset-row-meta-item">{asset.status}</span>
+                    )}
                   </span>
                 </li>
               ))}

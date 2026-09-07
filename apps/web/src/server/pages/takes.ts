@@ -4,8 +4,21 @@
 // assets (master, stems by instrument, whether a lossless master exists).
 // No playback — increment 4 adds the player; see the page for where the
 // layout leaves room for it.
+//
+// `favorited` (Task 6 review round 1, F4): whether the requesting member
+// has favorited THIS take — real per-page information (a single take either
+// is or isn't one of their favorites), unlike the decorative heading star
+// this same review round removed. See `TakeRow`'s own `favorited` prop for
+// the rest of this marker's use.
 import type { Db } from "@bandlib/db";
-import { assetsRepo, eventsRepo, type instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
+import {
+  assetsRepo,
+  eventsRepo,
+  favoritesRepo,
+  type instrumentsRepo,
+  songsRepo,
+  takesRepo,
+} from "@bandlib/db";
 
 export interface TakeDetail {
   take: takesRepo.Take;
@@ -14,20 +27,26 @@ export interface TakeDetail {
   instruments: instrumentsRepo.Instrument[];
   assets: assetsRepo.Asset[];
   hasLossless: boolean;
+  favorited: boolean;
 }
 
-export async function getTakeDetail(db: Db, id: string): Promise<TakeDetail | undefined> {
+export async function getTakeDetail(
+  db: Db,
+  id: string,
+  memberId: string,
+): Promise<TakeDetail | undefined> {
   const take = await takesRepo.getById(db, id);
   if (!take) {
     return undefined;
   }
 
-  const [song, event, instrumentsByTake, assets, hasLossless] = await Promise.all([
+  const [song, event, instrumentsByTake, assets, hasLossless, favoriteTakeIds] = await Promise.all([
     songsRepo.getById(db, take.songId),
     eventsRepo.getById(db, take.eventId),
     takesRepo.listInstrumentsForTakes(db, [take.id]),
     assetsRepo.listByTake(db, take.id),
     assetsRepo.takeHasLossless(db, take.id),
+    favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
   ]);
 
   return {
@@ -37,5 +56,6 @@ export async function getTakeDetail(db: Db, id: string): Promise<TakeDetail | un
     instruments: instrumentsByTake.get(take.id) ?? [],
     assets,
     hasLossless,
+    favorited: favoriteTakeIds.has(take.id),
   };
 }

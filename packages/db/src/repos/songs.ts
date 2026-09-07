@@ -54,6 +54,55 @@ export async function create(db: Db, input: CreateSongInput): Promise<Song> {
   return row;
 }
 
+/**
+ * Creates a song and one alias in a single `db.batch([...])` — used by
+ * ingest to create a stub song and immediately record the take's
+ * `song.externalRef` as an alias in one atomic step (contract v1 §6, case
+ * 4), so a crash between the two inserts can never leave a stub with no
+ * alias for later ingests to match on. The row returned is the one
+ * constructed locally, matching `create`'s own pattern (`takesRepo.create`
+ * does the same for its take+take_instruments batch) rather than reading
+ * it back, since the id is client-generated (uuidv7) and D1 has no
+ * interactive transactions to read-then-write safely within.
+ */
+export async function createWithAlias(
+  db: Db,
+  input: CreateSongInput,
+  alias?: { value: string; source: SongAliasSource },
+): Promise<Song> {
+  const id = uuidv7();
+  const row: Song = {
+    id,
+    title: input.title,
+    titleNorm: normalizeTitle(input.title),
+    slug: input.slug,
+    tempoBpm: input.tempoBpm ?? null,
+    musicalKey: input.musicalKey ?? null,
+    chordProgression: input.chordProgression ?? null,
+    lyrics: input.lyrics ?? null,
+    notes: input.notes ?? null,
+    isStub: input.isStub ?? false,
+    archivedAt: null,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+  };
+
+  const insertSong = db.insert(songs).values(row);
+  if (alias) {
+    const aliasRow = {
+      id: uuidv7(),
+      songId: id,
+      aliasNorm: normalizeTitle(alias.value),
+      source: alias.source,
+    };
+    await db.batch([insertSong, db.insert(songAliases).values(aliasRow)]);
+  } else {
+    await insertSong;
+  }
+
+  return row;
+}
+
 export async function getBySlug(db: Db, slug: string): Promise<Song | undefined> {
   const [row] = await db.select().from(songs).where(eq(songs.slug, slug)).limit(1);
   return row;

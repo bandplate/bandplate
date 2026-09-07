@@ -24,7 +24,9 @@ import type { Context, Hono, MiddlewareHandler } from "hono";
 import { mergePath } from "hono/utils/url";
 import type { AppEnv } from "./types.js";
 
-export type RouteGuard = { public: true } | { scopes: readonly Scope[] };
+export type RouteGuard =
+  | { public: true }
+  | { scopes: readonly Scope[]; requireServiceToken?: boolean };
 
 /** Marks a route as intentionally reachable with no principal at all. */
 export function publicRoute(): RouteGuard {
@@ -34,6 +36,20 @@ export function publicRoute(): RouteGuard {
 /** The only way to gate a route on scopes — declares what `hasAllScopes` will check. */
 export function requireScopes(...scopes: Scope[]): RouteGuard {
   return { scopes };
+}
+
+/**
+ * Like `requireScopes`, but for machine-to-machine routes that distinguish
+ * `401` (no/malformed/unknown/revoked token — or a member session, which
+ * is simply never a valid principal here) from `403` (a real service token
+ * that just lacks the scope) — see the ingest contract v1 §2 and §9. Every
+ * other route in this codebase collapses both cases into `403` (see
+ * `scopes.test.ts`: "an anonymous caller gets 403 (not 500) from a scoped
+ * route") — that behavior is unchanged for `requireScopes`; this is an
+ * additive variant, not a replacement.
+ */
+export function requireServiceScopes(...scopes: Scope[]): RouteGuard {
+  return { scopes, requireServiceToken: true };
 }
 
 export interface RegisteredRoute {
@@ -90,8 +106,23 @@ export class GuardedRouter {
     this.app[method](path, async (c: Context<AppEnv>) => {
       if (!("public" in guard)) {
         const principal = c.get("principal");
+        if (guard.requireServiceToken && (!principal || principal.kind !== "service")) {
+          return c.json(
+            { error: { code: "unauthorized", message: "A valid service token is required." } },
+            401,
+          );
+        }
         if (!hasAllScopes(principal, guard.scopes)) {
-          return c.json({ error: { code: "forbidden", message: "Insufficient scope." } }, 403);
+          const missing = guard.scopes.filter((s) => !principal?.scopes.includes(s));
+          return c.json(
+            {
+              error: {
+                code: "forbidden",
+                message: `Insufficient scope. Missing: ${missing.join(", ")}.`,
+              },
+            },
+            403,
+          );
         }
       }
       return handler(c);

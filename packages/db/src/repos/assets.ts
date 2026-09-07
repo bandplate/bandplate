@@ -72,6 +72,78 @@ export async function markReady(db: Db, id: string, readyAt: number): Promise<vo
 }
 
 /**
+ * Looks up the asset occupying one "slot" on a take — the same
+ * `(takeId, kind, coalesce(instrumentId,''), tier, format)` tuple the
+ * schema's `assets_slot_idx` unique index enforces. Ingest re-declares
+ * take+assets on every retry (contract v1 §3/§4) and needs to find the
+ * existing row for a slot, if any, to decide whether to reuse it
+ * (matching hash → already `ready`, skip) or reset it to `pending` (hash
+ * changed → re-upload, same storage key, overwriting rather than
+ * orphaning).
+ */
+export async function getBySlot(
+  db: Db,
+  takeId: string,
+  kind: AssetKind,
+  instrumentId: string | null,
+  tier: AssetTier,
+  format: AssetFormat,
+): Promise<Asset | undefined> {
+  const [row] = await db
+    .select()
+    .from(assets)
+    .where(
+      and(
+        eq(assets.takeId, takeId),
+        eq(assets.kind, kind),
+        instrumentId === null
+          ? sql`${assets.instrumentId} IS NULL`
+          : eq(assets.instrumentId, instrumentId),
+        eq(assets.tier, tier),
+        eq(assets.format, format),
+      ),
+    )
+    .limit(1);
+  return row;
+}
+
+export interface ResetForReuploadInput {
+  bytes: number;
+  sha256?: string | null;
+  contentType: string;
+  durationMs?: number | null;
+  sampleRate?: number | null;
+  channels?: number | null;
+}
+
+/**
+ * Resets an existing asset slot back to `pending` ahead of a re-upload —
+ * the "hash differs" branch of the contract's retry semantics (v1 §4): the
+ * storage key is unchanged (declared deterministically from `takeId` and
+ * the slot), so the eventual re-upload overwrites the same object rather
+ * than orphaning a new one.
+ */
+export async function resetForReupload(
+  db: Db,
+  id: string,
+  input: ResetForReuploadInput,
+): Promise<void> {
+  await db
+    .update(assets)
+    .set({
+      status: "pending",
+      bytes: input.bytes,
+      sha256: input.sha256 ?? null,
+      contentType: input.contentType,
+      durationMs: input.durationMs ?? null,
+      sampleRate: input.sampleRate ?? null,
+      channels: input.channels ?? null,
+      readyAt: null,
+    })
+    .where(eq(assets.id, id));
+}
+
+/**
  * Corrects `bytes`/`durationMs` after the real file behind an asset is
  * (re-)uploaded — used by `packages/db/scripts/dev-upload-audio.ts`, whose
  * generated fixture's actual size/duration won't match whatever placeholder

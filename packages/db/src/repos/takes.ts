@@ -2,6 +2,7 @@ import { normalizeTitle, uuidv7 } from "@bandlib/core";
 import { type SQL, and, asc, desc, eq, gte, inArray, lte, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
+  assets,
   instruments,
   songAliases,
   songs,
@@ -82,6 +83,49 @@ export async function create(db: Db, input: CreateTakeInput): Promise<Take> {
 export async function getById(db: Db, id: string): Promise<Take | undefined> {
   const [row] = await db.select().from(takes).where(eq(takes.id, id)).limit(1);
   return row;
+}
+
+/**
+ * Ingest idempotency lookup — mirrors `eventsRepo.getByClientRef`. Stable
+ * per take within a project (contract v1 §3): the bridge prefers the
+ * Reaper region GUID.
+ */
+export async function getByClientRef(db: Db, clientRef: string): Promise<Take | undefined> {
+  const [row] = await db.select().from(takes).where(eq(takes.clientRef, clientRef)).limit(1);
+  return row;
+}
+
+/**
+ * Publish (or re-file as `new`) a take in one statement, setting
+ * `publishedAt` alongside `state` — `setState` above deliberately doesn't
+ * touch `publishedAt` since none of its other callers need to.
+ */
+export async function setStateWithPublishedAt(
+  db: Db,
+  id: string,
+  state: TakeState,
+  publishedAt: number | null,
+  updatedAt: number,
+): Promise<void> {
+  await db.update(takes).set({ state, publishedAt, updatedAt }).where(eq(takes.id, id));
+}
+
+/**
+ * Deletes a take and its dependent rows (`assets`, `take_instruments`).
+ * Explicit deletes rather than relying on the schema's `ON DELETE CASCADE`
+ * FK actions: this codebase never issues `PRAGMA foreign_keys = ON` (kept
+ * off so it behaves identically to D1, which does not enforce FKs either),
+ * so SQLite would silently leave orphaned `assets`/`take_instruments` rows
+ * behind if this relied on cascade. Precomputed into a single
+ * `db.batch([...])` — see the repo-wide rule against interactive
+ * transactions/read-then-write races on D1.
+ */
+export async function remove(db: Db, id: string): Promise<void> {
+  await db.batch([
+    db.delete(assets).where(eq(assets.takeId, id)),
+    db.delete(takeInstruments).where(eq(takeInstruments.takeId, id)),
+    db.delete(takes).where(eq(takes.id, id)),
+  ]);
 }
 
 /** Batch lookup — avoids one round trip per row when rendering a mixed list (favorites, votes). */

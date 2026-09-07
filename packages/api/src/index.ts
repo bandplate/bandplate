@@ -11,6 +11,7 @@ import { registerAdminTokenRoutes } from "./routes/admin-tokens.js";
 import { registerAudioRoutes } from "./routes/audio.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerFavoriteRoutes } from "./routes/favorites.js";
+import { registerIngestRoutes } from "./routes/ingest/index.js";
 import { registerSetupRoutes } from "./routes/setup.js";
 import { registerVoteRoutes } from "./routes/votes.js";
 import type { AppEnv } from "./types.js";
@@ -113,6 +114,7 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
   registerAudioRoutes(router, { db: deps.db, storage: deps.storage });
   registerVoteRoutes(router, { db: deps.db, clock: deps.clock });
   registerFavoriteRoutes(router, { db: deps.db, clock: deps.clock });
+  registerIngestRoutes(router, { db: deps.db, clock: deps.clock, storage: deps.storage });
 
   // The structural backstop: fails app construction itself if any route on
   // the live Hono instance doesn't correspond to a GuardedRouter
@@ -127,7 +129,12 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
 }
 
 export type { AppEnv } from "./types.js";
-export { GuardedRouter, publicRoute, requireScopes } from "./route-registry.js";
+export {
+  GuardedRouter,
+  publicRoute,
+  requireScopes,
+  requireServiceScopes,
+} from "./route-registry.js";
 // Re-exported so other front doors onto the login flow (apps/web's Astro
 // `/login` page) can apply the exact same rate-limit policy and client-IP
 // extraction instead of a second, independently-tuned copy. See

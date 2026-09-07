@@ -44,6 +44,16 @@ export async function getById(db: Db, id: string): Promise<Event | undefined> {
   return row;
 }
 
+/**
+ * Ingest idempotency lookup: `clientRef` is unique, generated once by the
+ * bridge and reused forever (contract v1 §3). Re-posting the same
+ * `clientRef` must return the existing row rather than create a duplicate.
+ */
+export async function getByClientRef(db: Db, clientRef: string): Promise<Event | undefined> {
+  const [row] = await db.select().from(events).where(eq(events.clientRef, clientRef)).limit(1);
+  return row;
+}
+
 /** Batch lookup — avoids one round trip per row when rendering a take list's event links. */
 export async function getByIds(db: Db, ids: string[]): Promise<Event[]> {
   if (ids.length === 0) {

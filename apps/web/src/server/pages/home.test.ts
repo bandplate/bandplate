@@ -182,4 +182,65 @@ describe("getHomeData", () => {
     expect(data.unvotedTakes.map((t) => t.id)).toEqual([take.id]);
     expect(data.unvotedTakes[0]?.song?.slug).toBe("unvoted-song-home");
   });
+
+  // F4 (review round 1): the gold favorite marker is per-row, real
+  // information — a take can be BOTH "needs your vote"/"recent events" AND
+  // a favorite at once (this is also the exact shape F1's duplicate
+  // `view-transition-name` bug needed — see index.astro's `claimTakeTransition`).
+  it("marks a take as favorited in recentEvents/unvotedTakes when it's also one of this member's favorites, and not otherwise", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Doubly Listed Song",
+      slug: "doubly-listed-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const otherSong = await songsRepo.create(db, {
+      title: "Not Favorited Song",
+      slug: "not-favorited-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const favoritedUnvoted = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+    const plainUnvoted = await takesRepo.create(db, {
+      songId: otherSong.id,
+      eventId: event.id,
+      recordedAt: now - 1,
+      createdAt: now - 1,
+      updatedAt: now - 1,
+      state: "published",
+    });
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "take",
+      targetId: favoritedUnvoted.id,
+      createdAt: now,
+    });
+
+    const data = await getHomeData(db, memberId);
+
+    const favoritedRow = data.unvotedTakes.find((t) => t.id === favoritedUnvoted.id);
+    const plainRow = data.unvotedTakes.find((t) => t.id === plainUnvoted.id);
+    expect(favoritedRow?.favorited).toBe(true);
+    expect(plainRow?.favorited).toBe(false);
+
+    // Same take, same favorited status, in the "recent events" section too
+    // — it's the same event's take list.
+    const recentTakes = data.recentEvents[0]?.takes ?? [];
+    expect(recentTakes.find((t) => t.id === favoritedUnvoted.id)?.favorited).toBe(true);
+    expect(recentTakes.find((t) => t.id === plainUnvoted.id)?.favorited).toBe(false);
+  });
 });

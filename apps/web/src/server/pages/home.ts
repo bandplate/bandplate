@@ -43,14 +43,33 @@ export async function getFavorites(db: Db, memberId: string): Promise<HomeFavori
   };
 }
 
+interface RecentEventTake {
+  instruments: instrumentsRepo.Instrument[];
+  song: songsRepo.Song | undefined;
+}
+
 export interface RecentEventWithTakes {
   event: eventsRepo.EventWithTakeCount;
   takes: Array<
-    takesRepo.Take & { instruments: instrumentsRepo.Instrument[]; song: songsRepo.Song | undefined }
+    takesRepo.Take &
+      RecentEventTake & {
+        /** Also one of this member's favorites — filled in by `getHomeData`
+         *  from a separate, already-concurrent query (see there). Real
+         *  per-row information (F4, review round 1): this list mixes
+         *  favorited and non-favorited takes. */
+        favorited: boolean;
+      }
   >;
 }
 
-async function getRecentEventsWithTakes(db: Db): Promise<RecentEventWithTakes[]> {
+/** Pre-`favorited` shape — `getHomeData` fills that in once it has the
+ *  member's favorite take ids, so this function doesn't need them. */
+interface RecentEventWithTakesRaw {
+  event: eventsRepo.EventWithTakeCount;
+  takes: Array<takesRepo.Take & RecentEventTake>;
+}
+
+async function getRecentEventsWithTakes(db: Db): Promise<RecentEventWithTakesRaw[]> {
   const events = await eventsRepo.listRecentWithTakeCounts(db, { limit: RECENT_EVENTS_LIMIT });
   if (events.length === 0) {
     return [];
@@ -86,14 +105,29 @@ async function getUnvotedTakes(db: Db, memberId: string): Promise<TakeWithFullCo
 export interface HomeData {
   favorites: HomeFavorites;
   recentEvents: RecentEventWithTakes[];
-  unvotedTakes: TakeWithFullContext[];
+  unvotedTakes: Array<TakeWithFullContext & { favorited: boolean }>;
 }
 
 export async function getHomeData(db: Db, memberId: string): Promise<HomeData> {
-  const [favorites, recentEvents, unvotedTakes] = await Promise.all([
+  const [favorites, favoriteTakeIds, recentEvents, unvotedTakes] = await Promise.all([
     getFavorites(db, memberId),
+    // A separate, lighter query rather than deriving this from `favorites`
+    // above — keeps it concurrent with `recentEvents`/`unvotedTakes` rather
+    // than serialized behind `getFavorites`' own song+take lookups.
+    favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
     getRecentEventsWithTakes(db),
     getUnvotedTakes(db, memberId),
   ]);
-  return { favorites, recentEvents, unvotedTakes };
+
+  return {
+    favorites,
+    recentEvents: recentEvents.map((entry) => ({
+      ...entry,
+      takes: entry.takes.map((take) => ({ ...take, favorited: favoriteTakeIds.has(take.id) })),
+    })),
+    unvotedTakes: unvotedTakes.map((take) => ({
+      ...take,
+      favorited: favoriteTakeIds.has(take.id),
+    })),
+  };
 }

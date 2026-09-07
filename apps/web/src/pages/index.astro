@@ -10,6 +10,15 @@
 // Favorites and "needs your vote" are DISPLAY ONLY — no favorite toggle, no
 // vote control. Both land in increment 5; a control that no-ops here would
 // be worse than omitting it (brief §"Ambiguities").
+//
+// `transitionName`/`claimTakeTransition` (review round 1, F1): a take that
+// is BOTH a favorite and also appears in "recent events" or "needs your
+// vote" would otherwise get the same `view-transition-name` twice on this
+// page — which, per the CSS View Transitions spec, silently aborts the
+// transition for the WHOLE page, not just those two rows. Only the first
+// section to render a given take id keeps the name; later occurrences
+// don't get one (the row still works, it just isn't a morph target). See
+// `TakeRow.astro`'s own header comment for the prop this composes with.
 import TakeRow from "../components/TakeRow.astro";
 import AppLayout from "../layouts/AppLayout.astro";
 import { getAppDeps } from "../server/app.js";
@@ -25,6 +34,17 @@ const appDeps = await getAppDeps();
 const { favorites, recentEvents, unvotedTakes } = await getHomeData(appDeps.db, principal.memberId);
 
 const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
+
+const usedTakeTransitionIds = new Set<string>();
+/** First call for a given take id gets the real name; every later call on
+ *  this same page render gets `null` (no `transition:name` at all). */
+function claimTakeTransition(takeId: string): string | null {
+  if (usedTakeTransitionIds.has(takeId)) {
+    return null;
+  }
+  usedTakeTransitionIds.add(takeId);
+  return `take-${takeId}`;
+}
 ---
 
 <AppLayout title="Home" principal={principal} current="home">
@@ -32,25 +52,13 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
     <h1 class="bl-page-title">Welcome back</h1>
 
     <section>
-      <h2 class="bl-section-title bl-section-title-favorite">
-        <svg
-          class="bl-favorite-mark"
-          aria-hidden="true"
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="currentColor"
-        >
-          <path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z" />
-        </svg>
-        Your favorites
-      </h2>
+      <h2 class="bl-section-title">Your favorites</h2>
       {
         !hasFavorites ? (
           <div class="bl-empty-state">
             <p>
-              Nothing pinned yet — favorite a song or a take and it'll show up here, ready for
-              rehearsal.
+              Nothing pinned yet — favoriting is coming soon. In the meantime,{" "}
+              <a href="/search">browse the archive</a> for what to listen to next.
             </p>
           </div>
         ) : (
@@ -78,6 +86,7 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
                       take={take}
                       instruments={take.instruments}
                       context={{ kind: "full", song: take.song, event: take.event }}
+                      transitionName={claimTakeTransition(take.id)}
                     />
                   ))}
                 </div>
@@ -93,7 +102,10 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
       {
         recentEvents.length === 0 ? (
           <div class="bl-empty-state">
-            <p>No events yet — they'll show up here once a rehearsal or show is logged.</p>
+            <p>
+              No events yet. Ask whoever's running the session to log the next rehearsal or show —
+              it'll show up here as soon as they do.
+            </p>
           </div>
         ) : (
           <div class="bl-stack">
@@ -121,6 +133,8 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
                         take={take}
                         instruments={take.instruments}
                         context={{ kind: "event", song: take.song }}
+                        transitionName={claimTakeTransition(take.id)}
+                        favorited={take.favorited}
                       />
                     ))}
                   </div>
@@ -146,6 +160,8 @@ const hasFavorites = favorites.songs.length > 0 || favorites.takes.length > 0;
                 take={take}
                 instruments={take.instruments}
                 context={{ kind: "full", song: take.song, event: take.event }}
+                transitionName={claimTakeTransition(take.id)}
+                favorited={take.favorited}
               />
             ))}
           </div>

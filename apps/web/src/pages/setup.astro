@@ -62,8 +62,9 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
           </Banner>
         ) : (
           <Banner kind="error" title="Test email failed to send">
-            Members won't be able to sign in by email until this is fixed — check your SMTP
-            configuration. You're still signed in, so you can fix it and continue.
+            Members won't be able to sign in by email until this is fixed — check your mail
+            configuration (SMTP settings, or the mail provider API key on Workers). You're
+            still signed in, so you can fix it and continue.
           </Banner>
         )}
         <p><a href="/admin" class="bl-btn bl-btn-primary">Go to admin</a></p>

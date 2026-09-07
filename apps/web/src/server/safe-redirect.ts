@@ -29,5 +29,15 @@ export function safeRedirectPath(
   if (referer.origin !== appOrigin) {
     return fallback;
   }
+  // A pathname starting with `//` is protocol-relative: returned bare as a
+  // `Location` header (no scheme, no host of our own in front of it), a
+  // browser resolves `//evil.example/x` to `http://evil.example/x` — an
+  // open redirect even though `referer.origin` above matched `appOrigin`.
+  // The WHATWG URL parser already folds a leading backslash into `/` for
+  // special schemes (`http://host/\evil.example` parses to pathname
+  // `//evil.example`), so this one check also covers that variant.
+  if (referer.pathname.startsWith("//")) {
+    return fallback;
+  }
   return `${referer.pathname}${referer.search}`;
 }

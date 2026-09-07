@@ -23,4 +23,22 @@ describe("safeRedirectPath", () => {
   it("falls back for a garbage Referer that isn't a valid URL", () => {
     expect(safeRedirectPath("not a url", APP_ORIGIN, "/fallback")).toBe("/fallback");
   });
+
+  it("falls back for a protocol-relative `//host` path — never an open redirect", () => {
+    expect(safeRedirectPath("https://band.example//evil.example/x", APP_ORIGIN, "/fallback")).toBe(
+      "/fallback",
+    );
+  });
+
+  it("falls back for a `///host` path", () => {
+    expect(safeRedirectPath("https://band.example///evil.example/x", APP_ORIGIN, "/fallback")).toBe(
+      "/fallback",
+    );
+  });
+
+  it("falls back for a backslash variant the URL parser folds into `//host`", () => {
+    expect(
+      safeRedirectPath(`https://band.example/${"\\"}evil.example/x`, APP_ORIGIN, "/fallback"),
+    ).toBe("/fallback");
+  });
 });

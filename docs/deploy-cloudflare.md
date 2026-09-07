@@ -54,8 +54,15 @@ Do these in order — each later step needs something from the one before it.
    ```
    pnpm exec wrangler r2 bucket create bandplate
    ```
-   Then, in the R2 dashboard, go to "Manage R2 API Tokens" and create a
-   token scoped to that bucket. This app talks to R2 over its
+   Then create the S3 API token in the dashboard — wrangler cannot do
+   this part. It lives on the **R2 Object Storage** overview page, in the
+   **Account Details** panel on the right: **Manage** next to **API
+   Tokens** → *Create Account API token*. (Direct link:
+   `https://dash.cloudflare.com/?to=/:account/r2/api-tokens`. The label
+   has moved between dashboard revisions — older docs call it "Manage R2
+   API Tokens" — so navigate to the R2 page and look for API Tokens
+   rather than hunting a top-level menu entry.) Give it **Object Read &
+   Write**, scoped to the bucket you just created. This app talks to R2 over its
    **S3-compatible endpoint**, not the R2 binding (see
    `packages/storage/src/s3.ts`'s closing comment for why) — so what you
    need out of this step is an access key id, a secret access key, and

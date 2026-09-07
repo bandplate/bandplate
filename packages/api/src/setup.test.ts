@@ -1,6 +1,5 @@
 import { type Mailer, createInMemoryRateLimiter } from "@bandlib/core";
 import { membersRepo } from "@bandlib/db";
-import { createTestDb } from "@bandlib/db/testing";
 import { createInMemoryStorage } from "@bandlib/storage/testing";
 import { describe, expect, it } from "vitest";
 import { buildRoutedApp } from "./index.js";
@@ -9,6 +8,7 @@ import {
   TEST_BOOTSTRAP_TOKEN,
   buildTestApp,
   createFakeClock,
+  resolveTestDb,
 } from "./test-helpers.js";
 
 const jsonHeaders = { "content-type": "application/json", origin: TEST_APP_ORIGIN };
@@ -93,7 +93,7 @@ describe("POST /setup", () => {
   });
 
   it("succeeds even when the test email fails to send", async () => {
-    const db = await createTestDb();
+    const db = await resolveTestDb();
     const clock = createFakeClock();
     const rateLimiter = createInMemoryRateLimiter(clock);
     const failingMailer: Mailer = {

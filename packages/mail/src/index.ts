@@ -5,3 +5,4 @@ export * from "./console.js";
 export * from "./null.js";
 export * from "./capturing.js";
 export * from "./factory.js";
+export * from "./http.js";

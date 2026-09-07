@@ -9,6 +9,7 @@ import {
   TEST_BOOTSTRAP_TOKEN,
   buildTestApp,
   createFakeClock,
+  resolveTestDb,
 } from "./test-helpers.js";
 
 describe("createApp", () => {
@@ -38,8 +39,7 @@ describe("createApp", () => {
   });
 
   it("an unhandled throw returns a structured 500 without leaking exception text", async () => {
-    const { createTestDb } = await import("@bandlib/db/testing");
-    const realDb = await createTestDb();
+    const realDb = await resolveTestDb();
     const secretDetail = "SENSITIVE_DRIVER_DETAIL_should_never_reach_the_client";
     // Poison `select` specifically — `requestLogin`'s first read
     // (`membersRepo.getByEmail`) uses it — so the route handler throws

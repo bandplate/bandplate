@@ -34,6 +34,18 @@ export interface AuthRouteDeps {
   cookieSecure: boolean;
   /** See `DEFAULT_TRUSTED_PROXY_DEPTH`. */
   trustedProxyDepth?: number;
+  /**
+   * Workers profile only. When `true`, `POST /auth/login` schedules the
+   * login-link send via `c.executionCtx.waitUntil` instead of awaiting it
+   * inline — see `requestLogin`'s `deferMailSend` doc comment in
+   * `@bandlib/core`. `c.executionCtx` is per-request (Hono populates it
+   * from the `ctx` argument of the Workers `fetch(request, env, ctx)`
+   * handler), so this is read fresh on every request rather than baked
+   * into the (once-per-isolate) `deps` this router closes over. Left
+   * unset/`false` on the Node/container profile, which keeps awaiting the
+   * send inline exactly as before.
+   */
+  enableDeferredMailSend?: boolean;
 }
 
 /**
@@ -111,7 +123,10 @@ export function registerAuthRoutes(router: GuardedRouter, deps: AuthRouteDeps): 
 
     // `requestLogin` returns void either way — the route has no signal to
     // leak even if it wanted to.
-    await requestLogin(deps.auth, parsed.data.email, {
+    const deferMailSend = deps.enableDeferredMailSend
+      ? (send: () => Promise<void>) => c.executionCtx.waitUntil(send())
+      : undefined;
+    await requestLogin({ ...deps.auth, deferMailSend }, parsed.data.email, {
       requestedIp: ip === "unknown" ? null : ip,
       buildLoginUrl: (rawToken) => `${deps.appOrigin}/login/${rawToken}`,
     });

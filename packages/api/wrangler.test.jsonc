@@ -1,0 +1,22 @@
+{
+  // Test-only wrangler config, consumed only by
+  // `@cloudflare/vitest-pool-workers` (see `vitest.workers.config.ts`) —
+  // never used for an actual deploy. Declares the one binding the test
+  // harness needs: a D1 database, so `packages/api`'s existing
+  // `*.test.ts` files (via `buildTestApp`/`resolveTestDb` in
+  // `test-helpers.ts`) can run unmodified against real D1 in Miniflare,
+  // in addition to the Node/libSQL pool.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bandlib-api-test",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bandlib-test",
+      // Any well-formed UUID works for local-only Miniflare testing —
+      // this id is never used against a real Cloudflare account.
+      "database_id": "00000000-0000-0000-0000-000000000001"
+    }
+  ]
+}

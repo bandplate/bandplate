@@ -9,7 +9,7 @@ export const prerender = false;
 // db connection, mailer selection) is built once by the shared composition
 // root in `server/app.ts` — see that module for why env validation and the
 // SMTP import are deferred rather than run at module load.
-export const ALL: APIRoute = async ({ request }) => {
+export const ALL: APIRoute = async ({ request, locals }) => {
   const url = new URL(request.url);
   url.pathname = url.pathname.replace(/^\/api/, "") || "/";
 
@@ -25,5 +25,15 @@ export const ALL: APIRoute = async ({ request }) => {
   }
 
   const app = await getApiApp();
+  // Workers profile only: forwarding `env`/`ctx` (from
+  // `locals.runtime`, set by `@astrojs/cloudflare`) is what makes Hono
+  // populate `c.executionCtx` inside the mounted app — required for
+  // `POST /auth/login`'s `c.executionCtx.waitUntil(...)` (see
+  // `AuthRouteDeps.enableDeferredMailSend` in `@bandlib/api`). Under the
+  // Node adapter `locals.runtime` is `undefined`, so `app.fetch` is
+  // called with just the request, exactly as before.
+  if (locals.runtime) {
+    return app.fetch(new Request(url, init), locals.runtime.env, locals.runtime.ctx);
+  }
   return app.fetch(new Request(url, init));
 };

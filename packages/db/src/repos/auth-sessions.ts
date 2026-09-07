@@ -36,21 +36,21 @@ export async function create(db: Db, input: CreateSessionInput): Promise<Session
  * Builds (but does not execute) a guarded session insert — `INSERT ...
  * SELECT ... WHERE EXISTS (SELECT 1 FROM members WHERE id = ?)` — for use
  * inside a `db.batch([...])` alongside a guarded member insert. Returning
- * the unexecuted statement (a `RunnableQuery`, same shape `db.batch`
- * already accepts for `db.insert(...)`/`db.update(...)` builders) is what
- * lets `bootstrapAdmin` land the member row and its very first session in
- * one atomic batch: if the member insert didn't happen (guarded elsewhere
- * against a non-empty table), this row's own `memberId` never exists
- * either, so this guarded insert is a no-op in the same batch — no
- * orphaned session can result.
+ * the unexecuted statement is what lets `bootstrapAdmin` land the member
+ * row and its very first session in one atomic batch: if the member
+ * insert didn't happen (guarded elsewhere against a non-empty table),
+ * this row's own `memberId` never exists either, so this guarded insert is
+ * a no-op in the same batch — no orphaned session can result.
+ *
+ * Built via `db.insert(authSessions).select(sql\`...\`)`, not
+ * `db.run(sql\`...\`)` — see `membersRepo.buildCreateIfEmptyStatement`'s
+ * doc comment for why: `db.run()`'s `SQLiteRaw` result isn't a valid D1
+ * batch item (D1's `.batch()` needs `.stmt`, which only a real
+ * query-builder's `_prepare()` produces), even though libSQL tolerated it.
  */
-export function buildCreateIfMemberExistsStatement(
-  db: Db,
-  input: CreateSessionInput,
-): { session: Session; statement: ReturnType<Db["run"]> } {
+export function buildCreateIfMemberExistsStatement(db: Db, input: CreateSessionInput) {
   const row = buildRow(input);
-  const statement = db.run(sql`
-    insert into auth_sessions (id, member_id, token_hash, created_at, last_seen_at, expires_at, user_agent, revoked_at)
+  const statement = db.insert(authSessions).select(sql`
     select ${row.id}, ${row.memberId}, ${row.tokenHash}, ${row.createdAt}, ${row.lastSeenAt}, ${row.expiresAt}, ${row.userAgent}, null
     where exists (select 1 from members where id = ${row.memberId})
   `);

@@ -19,12 +19,21 @@ if (Astro.request.method === "POST") {
     originError = true;
   } else {
     const formData = await Astro.request.formData();
+    // Workers profile only: `Astro.locals.runtime.ctx.waitUntil` schedules
+    // the login-link send after the response is already decided, so the
+    // mailer's latency never reaches the request/response timing — see
+    // `requestLogin`'s `deferMailSend` doc comment in `@bandlib/core`.
+    // `undefined` under the Node adapter (no `locals.runtime`), which
+    // makes `handleLoginPost` fall back to its unchanged inline-await
+    // behavior there.
+    const runtime = Astro.locals.runtime;
     result = await handleLoginPost(
       {
         auth: authDeps,
         rateLimiter: appDeps.rateLimiter,
         appOrigin: appDeps.config.appOrigin,
         trustedProxyDepth: appDeps.config.trustedProxyDepth,
+        deferMailSend: runtime ? (send) => runtime.ctx.waitUntil(send()) : undefined,
       },
       formData,
       Astro.request.headers,

@@ -4,6 +4,7 @@ dist/
 .wrangler/
 .env*
 !.env.example
+.dev.vars
 .DS_Store
 .superpowers/
 .claude/

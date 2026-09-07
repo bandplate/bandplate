@@ -59,6 +59,17 @@ export interface AuthDeps {
   loginTimingFloorMs?: number;
   /** See the `Sleep` doc comment. Defaults to a real `setTimeout`-based wait. */
   sleep?: Sleep;
+  /**
+   * Escape hatch for taking the mail send out of the request path entirely
+   * (the Workers profile — see `requestLogin`'s doc comment). When
+   * provided, `requestLogin` hands it a thunk instead of awaiting
+   * `mailer.sendLoginLink` inline; the caller is responsible for actually
+   * running it (on Workers, via `ctx.waitUntil(thunk())`). Left unset on
+   * the Node/container profile, which keeps awaiting the send inline and
+   * relying on `loginTimingFloorMs` as before — this option changes
+   * nothing there.
+   */
+  deferMailSend?: (send: () => Promise<void>) => void;
 }
 
 function sessionTtl(deps: AuthDeps): number {
@@ -87,14 +98,24 @@ export interface RequestLoginMeta {
  * must respond identically regardless of what happened inside; returning
  * `void` makes that the only option rather than a discipline problem.
  *
- * Status and body alone aren't enough, though: a real SMTP mailer costs a
- * round trip for a whitelisted address but not for an unknown/disabled one,
- * and that gap is remotely measurable even with an identical response. This
- * clamps total wall-clock time to `loginTimingFloorMs` (default
- * `DEFAULT_LOGIN_TIMING_FLOOR_MS`) regardless of which branch ran, measured
- * via the injected `Clock` (never `Date.now()`, so tests can control it) and
- * enforced via the injected `sleep` primitive (never a bare `setTimeout`
- * call inline, so tests can fake the wait without actually blocking).
+ * Status and body alone aren't enough, though: a real mailer costs a round
+ * trip for a whitelisted address but not for an unknown/disabled one, and
+ * that gap is remotely measurable even with an identical response. On the
+ * container profile (no `deps.deferMailSend`), this clamps total wall-clock
+ * time to `loginTimingFloorMs` (default `DEFAULT_LOGIN_TIMING_FLOOR_MS`)
+ * regardless of which branch ran, measured via the injected `Clock` (never
+ * `Date.now()`, so tests can control it) and enforced via the injected
+ * `sleep` primitive (never a bare `setTimeout` call inline, so tests can
+ * fake the wait without actually blocking). That floor only hides the gap
+ * when the mailer is faster than it — a slow relay still leaks the signal.
+ *
+ * On the Workers profile, pass `deps.deferMailSend` (wired to
+ * `ctx.waitUntil`): the mail send is scheduled after the response is
+ * already decided rather than awaited inline, so the mailer's latency
+ * (fast or slow) never reaches the request/response timing at all. The
+ * `loginTimingFloorMs` clamp still runs in that case too — harmless, and it
+ * still covers the much smaller residual gap between "one indexed SELECT"
+ * and "one SELECT plus one login_tokens INSERT".
  */
 export async function requestLogin(
   deps: AuthDeps,
@@ -122,10 +143,16 @@ export async function requestLogin(
       createdAt: now,
     });
 
-    await deps.mailer.sendLoginLink(member.email, meta.buildLoginUrl(rawToken), {
-      displayName: member.displayName,
-      expiresAt,
-    });
+    const send = () =>
+      deps.mailer.sendLoginLink(member.email, meta.buildLoginUrl(rawToken), {
+        displayName: member.displayName,
+        expiresAt,
+      });
+    if (deps.deferMailSend) {
+      deps.deferMailSend(send);
+    } else {
+      await send();
+    }
   } finally {
     const floorMs = deps.loginTimingFloorMs ?? DEFAULT_LOGIN_TIMING_FLOOR_MS;
     const elapsed = deps.clock.now() - start;

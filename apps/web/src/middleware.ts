@@ -18,7 +18,7 @@
 // calls are left exactly as they were (redundant with this, not replaced
 // by it) — see the task-4 handoff's "do not disturb" list.
 import { defineMiddleware } from "astro:middleware";
-import { getAppDeps, getAuthDeps } from "./server/app.js";
+import { getAppDeps, getAuthDeps, initWorkersRuntime } from "./server/app.js";
 import { SESSION_COOKIE_NAME } from "./server/cookies.js";
 import { isSameOrigin } from "./server/csrf.js";
 import { guardAdminPath, guardMemberPath, normalizePathname } from "./server/guard.js";
@@ -74,6 +74,17 @@ function isApiRoute(pathname: string): boolean {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // Workers profile only: `context.locals.runtime` is set by
+  // `@astrojs/cloudflare`'s own middleware, which runs before this one.
+  // `initWorkersRuntime` is a no-op after its first call (see
+  // `server/app.ts`'s doc comment) — this runs on every request, but only
+  // the first one in a given isolate actually builds anything. The Node
+  // adapter never sets `locals.runtime`, so this branch never runs there
+  // and `getAuthDeps`/`getAppDeps` fall through to the unchanged
+  // Node/libSQL runtime exactly as before.
+  if (context.locals.runtime) {
+    initWorkersRuntime(context.locals.runtime.env);
+  }
   const [authDeps, appDeps] = await Promise.all([getAuthDeps(), getAppDeps()]);
   const cookieValue = context.cookies.get(SESSION_COOKIE_NAME)?.value;
   const principal = await resolvePrincipalFromCookie(authDeps, cookieValue);

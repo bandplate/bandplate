@@ -1,15 +1,27 @@
-// Composition root — builds the one `Db`/`Mailer`/`Clock`/`RateLimiter`/
-// `Storage`/`AppDeps`/`AuthDeps` set this process uses, memoized so both the JSON API
-// mount (`pages/api/[...path].ts`) and the Astro pages (`server/pages/*`)
-// share the same database connection and rate-limiter state rather than
-// each building their own.
+// Composition root (Node/container profile) — builds the one `Db`/
+// `Mailer`/`Clock`/`RateLimiter`/`Storage`/`AppDeps`/`AuthDeps` set this
+// process uses, memoized so both the JSON API mount
+// (`pages/api/[...path].ts`) and the Astro pages (`server/pages/*`) share
+// the same database connection and rate-limiter state rather than each
+// building their own.
 //
 // The SMTP mailer (`@bandlib/mail/smtp`, the only Node-dependent module
 // outside this composition root) is loaded via a dynamic `import()` inside
 // `buildMailer`, not a static top-level import — so a bundler targeting a
-// runtime without SMTP configured (or a future Workers build) never has to
-// include nodemailer just because this module was imported. See the
-// task-4-report.md verification of this.
+// runtime without SMTP configured never has to include nodemailer just
+// because this module was imported. See the task-4-report.md verification
+// of this.
+//
+// The Workers profile's composition root is a SEPARATE file,
+// `app.workers.ts` — not a branch in this one — specifically so its
+// module graph never reaches this file's `import("@bandlib/mail/smtp")`
+// at all; see that file's doc comment for why sharing this file would
+// have put nodemailer (and its `node:*` imports) into the deployed
+// Worker bundle even though the branch is runtime-unreachable there.
+// `astro.config.mjs`'s Vite alias is what selects between the two files
+// per build — every caller (`middleware.ts`, every Astro page,
+// `pages/api/[...path].ts`) imports the same `../.../server/app.js`
+// specifier unchanged.
 import { type AppDeps, createApp } from "@bandlib/api";
 import { type AuthDeps, type Mailer, createInMemoryRateLimiter, systemClock } from "@bandlib/core";
 import { createDb } from "@bandlib/db";
@@ -91,6 +103,16 @@ function getRuntime(): Promise<Runtime> {
   }
   return runtimePromise;
 }
+
+/**
+ * No-op on the Node profile — present only so `middleware.ts` (which is
+ * shared source between both profiles) has something to call
+ * unconditionally without an adapter-specific branch of its own. Real
+ * implementation lives in `app.workers.ts`; `middleware.ts` never reaches
+ * this branch in practice, since `context.locals.runtime` is `undefined`
+ * under the Node adapter.
+ */
+export function initWorkersRuntime(_env: unknown): void {}
 
 /** The shared Hono app — used by the `/api/*` catch-all route. */
 export async function getApiApp(): Promise<ApiApp> {

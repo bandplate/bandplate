@@ -1,14 +1,59 @@
+import cloudflare from "@astrojs/cloudflare";
 import node from "@astrojs/node";
 import preact from "@astrojs/preact";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
+// Adapter selected per build via `BANDLIB_ADAPTER` — `node` (default,
+// what the user runs today: `astro build && node dist/start.mjs`) or
+// `cloudflare` (increment 7's Workers profile: `astro build` produces a
+// Worker script under `dist/_worker.js/`, deployed with `wrangler deploy`
+// — see `docs/deploy-cloudflare.md`). Nothing else in this file branches
+// on it: the Node profile's own config (`security.checkOrigin: false` and
+// why, below) is unchanged either way.
+//
+// `imageService: "compile"` avoids pulling in Sharp (a native binary,
+// unusable inside a Worker) for the Cloudflare build; this app serves no
+// remote/optimized images through Astro's image pipeline, so the
+// compile-time-only service is a strict downgrade in capability we don't
+// use, not a behavior change.
+const adapterKind = process.env.BANDLIB_ADAPTER === "cloudflare" ? "cloudflare" : "node";
+const adapter =
+  adapterKind === "cloudflare"
+    ? cloudflare({ imageService: "compile", platformProxy: { enabled: true } })
+    : node({ mode: "standalone" });
+
 export default defineConfig({
   output: "server",
-  adapter: node({ mode: "standalone" }),
+  adapter,
   integrations: [preact({ compat: true })],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [
+      tailwindcss(),
+      // Swaps `server/app.ts` (the Node composition root — SMTP, libSQL)
+      // for `server/app.workers.ts` (D1, http mailer) for THIS build's
+      // Vite graph only, when targeting Cloudflare. Every importer keeps
+      // writing the same relative `.../server/app.js` specifier — a
+      // `resolveId` hook (not a plain alias: Rollup's alias `replacement`
+      // for a RegExp `find` substitutes only the matched substring, which
+      // isn't what a full-file swap needs) intercepts any request whose
+      // specifier ends with `server/app.js`, regardless of each
+      // importer's relative depth, and resolves it straight to the
+      // Workers file instead. See `app.workers.ts`'s doc comment for why
+      // this file split exists at all (keeping nodemailer's `node:*`
+      // imports fully out of the Worker bundle, not just unreachable at
+      // runtime).
+      adapterKind === "cloudflare" && {
+        name: "bandlib-workers-app-runtime",
+        enforce: "pre",
+        resolveId(source, importer) {
+          if (/(^|\/)server\/app\.js$/.test(source) && importer) {
+            return new URL("./src/server/app.workers.ts", import.meta.url).pathname;
+          }
+          return null;
+        },
+      },
+    ].filter(Boolean),
   },
   // Astro's built-in Origin/CSRF guard (`security.checkOrigin`, on by
   // default since Astro 5) compares `request.headers.get("origin")`

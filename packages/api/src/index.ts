@@ -29,6 +29,8 @@ export interface AppConfig {
    * `routes/auth.ts`'s `extractClientIp`). Defaults to 1.
    */
   trustedProxyDepth?: number;
+  /** See `AuthRouteDeps.enableDeferredMailSend` in `routes/auth.ts`. Workers profile only. */
+  enableDeferredMailSend?: boolean;
 }
 
 /**
@@ -106,6 +108,7 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
     appOrigin: deps.config.appOrigin,
     cookieSecure: deps.config.cookieSecure,
     trustedProxyDepth: deps.config.trustedProxyDepth,
+    enableDeferredMailSend: deps.config.enableDeferredMailSend,
   });
   registerSetupRoutes(router, { db: deps.db, auth, cookieSecure: deps.config.cookieSecure });
   registerAdminMemberRoutes(router, { db: deps.db, auth });

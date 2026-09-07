@@ -3,7 +3,7 @@
 // storage) for `app.request()` tests. Not part of the runtime library
 // surface.
 import { type Clock, type Storage, createInMemoryRateLimiter } from "@bandlib/core";
-import type { Db } from "@bandlib/db";
+import { type Db, createD1Db } from "@bandlib/db";
 import { createTestDb } from "@bandlib/db/testing";
 import { type CapturingMailer, createCapturingMailer } from "@bandlib/mail";
 import { createInMemoryStorage } from "@bandlib/storage/testing";
@@ -12,8 +12,61 @@ import { type AppConfig, buildRoutedApp } from "./index.js";
 import type { GuardedRouter } from "./route-registry.js";
 import type { AppEnv } from "./types.js";
 
+/**
+ * Builds the `Db` this test app runs against. Every one of this package's
+ * `*.test.ts` files goes through `buildTestApp` and never constructs a `Db`
+ * itself — that's what lets the exact same test files run twice: once
+ * under plain Vitest (in-memory libSQL, `createTestDb`) and once under
+ * `@cloudflare/vitest-pool-workers` (real D1, `createD1Db` wrapping
+ * `env.DB`) — see `vitest.workers.config.ts`. The D1 binding itself is
+ * already migrated before any test body runs — `test/apply-migrations.ts`
+ * (a `setupFiles` entry, only wired into the Workers config) calls
+ * `cloudflare:test`'s own `applyD1Migrations` once per isolated-storage
+ * test — so this function's only job under that pool is wrapping the
+ * binding, not migrating it.
+ *
+ * Detected via the runtime check Cloudflare's own docs recommend
+ * (`navigator.userAgent === "Cloudflare-Workers"` is true only inside
+ * workerd); `cloudflare:test` is a virtual module that only resolves under
+ * that pool, so it's imported dynamically and only on that branch — plain
+ * Node/Vitest never attempts to resolve it.
+ */
+export async function resolveTestDb(): Promise<Db> {
+  if (typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers") {
+    // A non-literal specifier: TypeScript can't (and, since this module
+    // only exists as a virtual module supplied by
+    // `@cloudflare/vitest-pool-workers` at test-run time, shouldn't try
+    // to) resolve `cloudflare:test` as a static import target from this
+    // package's own tsconfig.
+    const cloudflareTestSpecifier = "cloudflare:test";
+    const cloudflareTest = (await import(/* @vite-ignore */ cloudflareTestSpecifier)) as {
+      env: { DB: unknown };
+    };
+    return createD1Db(cloudflareTest.env.DB as Parameters<typeof createD1Db>[0]);
+  }
+  return createTestDb();
+}
+
 export const TEST_APP_ORIGIN = "https://band.example";
 export const TEST_BOOTSTRAP_TOKEN = "test-bootstrap-token";
+
+/**
+ * True when this test file is executing inside workerd (the
+ * `@cloudflare/vitest-pool-workers` pool), false under plain Node/Vitest.
+ * A handful of tests use this to skip a specific assertion that's
+ * impossible to satisfy under Workers for a structural reason, not a bug:
+ * `InMemoryStorage` (`@bandlib/storage/testing`) proves out presigned URLs
+ * by actually starting a `node:http` server and fetching against it — and
+ * a Cloudflare Worker cannot bind a listening socket at all (Workers are
+ * request-driven; there is no "accept an inbound TCP connection" API).
+ * That's a limitation of this test fixture, not of the app: the real
+ * `S3Storage` implementation only ever does outbound `fetch()` (never
+ * listens), which is exactly what a Worker CAN do, and IS exercised — see
+ * the storage conformance suite (`packages/storage`), which runs against
+ * Miniflare R2 as a separate leg specifically because of this gap.
+ */
+export const isWorkerdRuntime =
+  typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 
 export interface FakeClock extends Clock {
   advance(ms: number): void;
@@ -85,7 +138,7 @@ function createLazyInMemoryStorage(): { storage: Storage; close: () => Promise<v
 }
 
 export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<TestApp> {
-  const db = await createTestDb();
+  const db = await resolveTestDb();
   const mailer = createCapturingMailer();
   const clock = createFakeClock();
   const rateLimiter = createInMemoryRateLimiter(clock);

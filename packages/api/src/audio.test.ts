@@ -6,6 +6,7 @@ import {
   buildTestApp,
   extractLoginToken,
   extractSessionCookieValue,
+  isWorkerdRuntime,
 } from "./test-helpers.js";
 
 const jsonHeaders = { "content-type": "application/json", origin: TEST_APP_ORIGIN };
@@ -223,27 +224,30 @@ describe("GET /assets/:id/audio", () => {
     expect(res.status).toBe(404);
   });
 
-  it("the redirected-to URL actually serves the asset's bytes", async () => {
-    testApp = await buildTestApp();
-    const cookie = await loginAsMember(testApp);
-    const asset = await seedReadyAsset(testApp);
-    await testApp.storage.put(
-      asset.storageKey,
-      new TextEncoder().encode("fake mp3 bytes"),
-      "audio/mpeg",
-    );
+  it.skipIf(isWorkerdRuntime)(
+    "the redirected-to URL actually serves the asset's bytes",
+    async () => {
+      testApp = await buildTestApp();
+      const cookie = await loginAsMember(testApp);
+      const asset = await seedReadyAsset(testApp);
+      await testApp.storage.put(
+        asset.storageKey,
+        new TextEncoder().encode("fake mp3 bytes"),
+        "audio/mpeg",
+      );
 
-    const res = await testApp.app.request(`/assets/${asset.id}/audio`, {
-      headers: { cookie: `bl_session=${cookie}` },
-      redirect: "manual",
-    });
-    const location = res.headers.get("location");
-    if (!location) {
-      throw new Error("expected a Location header");
-    }
+      const res = await testApp.app.request(`/assets/${asset.id}/audio`, {
+        headers: { cookie: `bl_session=${cookie}` },
+        redirect: "manual",
+      });
+      const location = res.headers.get("location");
+      if (!location) {
+        throw new Error("expected a Location header");
+      }
 
-    const fetched = await fetch(location);
-    expect(fetched.status).toBe(200);
-    expect(await fetched.text()).toBe("fake mp3 bytes");
-  });
+      const fetched = await fetch(location);
+      expect(fetched.status).toBe(200);
+      expect(await fetched.text()).toBe("fake mp3 bytes");
+    },
+  );
 });

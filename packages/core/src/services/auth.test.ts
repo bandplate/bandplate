@@ -225,6 +225,70 @@ describe("auth service", () => {
     });
   });
 
+  describe("requestLogin deferMailSend (Workers profile)", () => {
+    it("schedules the send via deferMailSend instead of awaiting the mailer inline, for a whitelisted member", async () => {
+      await membersRepo.create(db, {
+        displayName: "Alex",
+        slug: "alex",
+        email: "alex@example.com",
+        status: "active",
+        createdAt: clock.now(),
+      });
+      const deferred: Array<() => Promise<void>> = [];
+      const deferMailSend = (send: () => Promise<void>) => {
+        deferred.push(send);
+      };
+
+      await requestLogin({ ...deps, deferMailSend }, "alex@example.com", { buildLoginUrl });
+
+      // Not sent inline — requestLogin returned before the thunk ran.
+      expect(mailer.sent).toHaveLength(0);
+      expect(deferred).toHaveLength(1);
+
+      await deferred[0]?.();
+      expect(mailer.sent).toHaveLength(1);
+      expect(mailer.sent[0]).toMatchObject({ kind: "login-link", to: "alex@example.com" });
+    });
+
+    it("never calls deferMailSend for an unknown address — there is nothing to send", async () => {
+      const deferred: Array<() => Promise<void>> = [];
+      const deferMailSend = (send: () => Promise<void>) => {
+        deferred.push(send);
+      };
+
+      await requestLogin({ ...deps, deferMailSend }, "nobody@example.com", { buildLoginUrl });
+
+      expect(deferred).toHaveLength(0);
+      expect(mailer.sent).toHaveLength(0);
+    });
+
+    it("still applies the timing-floor clamp even when the send itself is deferred", async () => {
+      await membersRepo.create(db, {
+        displayName: "Alex",
+        slug: "alex",
+        email: "alex@example.com",
+        status: "active",
+        createdAt: clock.now(),
+      });
+      const calls: number[] = [];
+      const sleep = async (ms: number) => {
+        calls.push(ms);
+      };
+      const deferMailSend = (send: () => Promise<void>) => {
+        void send();
+      };
+
+      await requestLogin(
+        { ...deps, sleep, deferMailSend, loginTimingFloorMs: 300 },
+        "alex@example.com",
+        { buildLoginUrl },
+      );
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toBeGreaterThanOrEqual(300);
+    });
+  });
+
   describe("peekLoginToken / consumeLoginToken", () => {
     async function issueToken(status: "invited" | "active" = "invited"): Promise<string> {
       await membersRepo.create(db, {

@@ -29,6 +29,14 @@ export interface LoginPostDeps {
   rateLimiter: RateLimiter;
   appOrigin: string;
   trustedProxyDepth?: number;
+  /**
+   * Workers profile only — see `requestLogin`'s `deferMailSend` doc
+   * comment in `@bandlib/core`. The caller (`login/index.astro`) builds
+   * this per-request from `Astro.locals.runtime.ctx.waitUntil`, which is
+   * only available under the Cloudflare adapter. Left unset on the
+   * Node/container profile.
+   */
+  deferMailSend?: (send: () => Promise<void>) => void;
 }
 
 export async function handleLoginPost(
@@ -55,7 +63,7 @@ export async function handleLoginPost(
     return { kind: "rate_limited", retryAfterSeconds: Math.ceil(retryAfterMs / 1000) };
   }
 
-  await requestLogin(deps.auth, parsed.data, {
+  await requestLogin({ ...deps.auth, deferMailSend: deps.deferMailSend }, parsed.data, {
     requestedIp: ip === "unknown" ? null : ip,
     buildLoginUrl: (rawToken) => `${deps.appOrigin}/login/${rawToken}`,
   });

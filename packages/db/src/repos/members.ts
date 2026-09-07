@@ -107,19 +107,26 @@ export interface CreateIfEmptyInput {
  * what lets `bootstrapAdmin` batch it together with the first session
  * insert via `db.batch([...])` — see `authSessionsRepo.buildCreateIfMemberExistsStatement`.
  * The id is generated up front and handed back alongside the statement so
- * the caller can build the paired session-insert statement against it, and
- * because the guarded insert has to be followed by a plain read-back
- * anyway rather than trying to type the driver's raw run() result (which
- * the shared `Db` interface types as `unknown` by design; see
- * `client.ts`).
+ * the caller can build the paired session-insert statement against it.
+ *
+ * Built via `db.insert(members).select(sql\`...\`)` — NOT `db.run(sql\`...\`)`
+ * — deliberately. `db.run()`/`.all()`/`.get()`/`.values()` return a
+ * `SQLiteRaw` wrapper whose `_prepare()` returns itself, which has no
+ * `.stmt`; libSQL's own `.batch()` tolerates that shape, but the D1
+ * driver's `.batch()` calls `preparedQuery.stmt.bind(...)` on every item
+ * and crashes with "Cannot read properties of undefined (reading 'bind')"
+ * — a read-then-write/interactive-transaction-shaped gap D1 actually
+ * enforces where libSQL didn't (see the increment 7 report). `.insert(...).
+ * select(rawSqlObject)` is a real `SQLiteInsertBase`, whose `_prepare()`
+ * goes through the driver's `session.prepareQuery()` like any other
+ * builder-produced statement, so it batches correctly under both drivers.
+ * Passing a raw `SQL` object (rather than a query-builder callback) to
+ * `.select()` is an explicitly supported overload — see
+ * `SQLiteInsertBuilder.select`'s `select(selectQuery: SQL)` signature.
  */
-export function buildCreateIfEmptyStatement(
-  db: Db,
-  input: CreateIfEmptyInput,
-): { id: string; statement: ReturnType<Db["run"]> } {
+export function buildCreateIfEmptyStatement(db: Db, input: CreateIfEmptyInput) {
   const id = uuidv7();
-  const statement = db.run(sql`
-    insert into members (id, display_name, slug, email, role, status, created_at, email_verified_at)
+  const statement = db.insert(members).select(sql`
     select ${id}, ${input.displayName}, ${input.slug}, ${normalizeEmail(input.email)}, 'admin', 'active', ${input.createdAt}, ${input.emailVerifiedAt ?? null}
     where not exists (select 1 from members)
   `);

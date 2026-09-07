@@ -85,12 +85,34 @@ export async function resolveSong(
 
   if (input.createIfMissing) {
     const slug = await uniqueSongSlug(db, input.title);
-    const song = await songsRepo.createWithAlias(
-      db,
-      { title: input.title, slug, isStub: true, createdAt: now, updatedAt: now },
-      input.externalRef ? { value: input.externalRef, source: "ingest" } : undefined,
-    );
-    return { found: true, song, created: true, match: "created-stub" };
+    try {
+      const song = await songsRepo.createWithAlias(
+        db,
+        { title: input.title, slug, isStub: true, createdAt: now, updatedAt: now },
+        input.externalRef ? { value: input.externalRef, source: "ingest" } : undefined,
+      );
+      return { found: true, song, created: true, match: "created-stub" };
+    } catch (err) {
+      // Lost the race against a concurrent create for the same normalized
+      // title (`songs.title_norm` is UNIQUE) — two different titles that
+      // both normalize to e.g. "pritel" would otherwise both succeed and
+      // permanently duplicate the song. Same idempotency-under-a-race
+      // guard `events.ts`/`takes.ts` use for their clientRef UNIQUE races:
+      // fall back to the winner's row rather than 500ing on what is, from
+      // the caller's perspective, a retried/concurrent request.
+      const winner = await songsRepo.findByTitleNorm(db, titleNorm);
+      if (!winner) {
+        throw err;
+      }
+      if (externalRefNorm) {
+        const existingAlias = await songsRepo.findByAlias(db, externalRefNorm);
+        if (!existingAlias) {
+          // biome-ignore lint/style/noNonNullAssertion: externalRefNorm is only set when input.externalRef is
+          await songsRepo.addAlias(db, winner.id, input.externalRef!, "ingest");
+        }
+      }
+      return { found: true, song: winner, created: false, match: "title" };
+    }
   }
 
   return { found: false, candidates: await fuzzyCandidates(db, input.title) };

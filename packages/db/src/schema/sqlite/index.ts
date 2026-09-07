@@ -178,7 +178,17 @@ export const songs = sqliteTable(
     createdAt: ts("created_at").notNull(),
     updatedAt: ts("updated_at").notNull(),
   },
-  (t) => [index("songs_title_norm_idx").on(t.titleNorm)],
+  (t) => [
+    // UNIQUE (not just indexed): two concurrent stub creates for titles
+    // that normalize the same (e.g. "Přítel (take 3)" and "Přítel - take
+    // 5", both -> "pritel") must not both succeed — that would be a
+    // permanent duplicate song, not a self-healing race the way the
+    // `slug` UNIQUE constraint already makes title-identical concurrent
+    // creates. Making this UNIQUE turns the loser into a catchable
+    // constraint error `songsRepo.createWithAlias`'s caller re-fetches
+    // and converges on, mirroring the slug case.
+    uniqueIndex("songs_title_norm_idx").on(t.titleNorm),
+  ],
 );
 
 export const songInstrumentNotes = sqliteTable(

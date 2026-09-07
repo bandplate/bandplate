@@ -9,14 +9,16 @@ import * as takes from "./takes.js";
 
 // Unique per call (not just per test file) — `listPlayableMastersByTakeIds`'s
 // own "batches across multiple takes" test calls this twice against the
-// same db, and a fixed slug would collide on songs.slug's unique index.
+// same db, and a fixed slug/title would collide on songs.slug's unique
+// index and (since fix round 1) songs.title_norm's unique index too.
 let seedTakeCounter = 0;
 
 async function seedTake(db: Db) {
   const now = Date.now();
+  seedTakeCounter += 1;
   const song = await songs.create(db, {
-    title: "Asset Test Song",
-    slug: `asset-test-song-${++seedTakeCounter}`,
+    title: `Asset Test Song ${seedTakeCounter}`,
+    slug: `asset-test-song-${seedTakeCounter}`,
     createdAt: now,
     updatedAt: now,
   });

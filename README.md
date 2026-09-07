@@ -38,7 +38,26 @@ pnpm build
    variable if something required is missing — including refusing to start
    with no way to send login emails (set `BANDLIB_SMTP_*`, or
    `BANDLIB_ALLOW_DEV_MAILER=true` for local dev only, which is also
-   refused outright once `NODE_ENV=production`).
+   refused outright once `NODE_ENV=production`) and with no object storage
+   configured (`S3_*` — see the next step; there is no "no storage" mode,
+   every take's audio lives there).
+
+   **Object storage (audio).** For local dev, `deploy/node/compose.yml`
+   starts a MinIO container and creates the bucket for you:
+   ```sh
+   cd deploy/node && docker compose up -d minio minio-init
+   ```
+   Then fill in the `.env`'s `S3_*` block — the defaults there
+   (`S3_ENDPOINT=http://minio:9000`, `S3_PUBLIC_ENDPOINT=http://localhost:9000`,
+   `S3_BUCKET=bandlib`, `S3_ACCESS_KEY_ID=bandlib-dev`,
+   `S3_SECRET_ACCESS_KEY=bandlib-dev-secret`) already match this compose
+   stack — but if you're running `apps/web` directly on the host (not
+   inside the `app` compose service), point `S3_ENDPOINT` at
+   `http://localhost:9000` too, since `minio` only resolves on the compose
+   network. **`S3_ENDPOINT` and `S3_PUBLIC_ENDPOINT` are allowed to
+   differ, and behind Docker they usually must** — see the `.env.example`
+   comment on those two variables for exactly why (a presigned URL signed
+   against the wrong one 403s/hangs in the browser with no obvious cause).
 
    One variable needs a deployment-time decision, not just a value:
    **`BANDLIB_TRUSTED_PROXY_DEPTH`** controls how many reverse-proxy hops in
@@ -69,6 +88,18 @@ pnpm build
    ```sh
    BANDLIB_DATABASE_URL=file:./apps/web/.data/bandlib.db \
      pnpm --filter @bandlib/db run seed
+   ```
+   The seed creates asset ROWS (so the UI has something to show) but not
+   real audio bytes behind them — run the dev upload script (needs
+   `ffmpeg` on PATH, and the same `S3_*` config as the app) to put real,
+   playable encoded audio behind every seeded take, so the player actually
+   has something to play:
+   ```sh
+   BANDLIB_DATABASE_URL=file:./apps/web/.data/bandlib.db \
+     S3_ENDPOINT=http://localhost:9000 S3_PUBLIC_ENDPOINT=http://localhost:9000 \
+     S3_BUCKET=bandlib S3_REGION=auto \
+     S3_ACCESS_KEY_ID=bandlib-dev S3_SECRET_ACCESS_KEY=bandlib-dev-secret \
+     pnpm --filter @bandlib/db run dev:upload-audio
    ```
 4. **Build and start the app.** For local dev, `pnpm --filter web dev` is
    fine. For a real deployment, build (`pnpm --filter web build`) and start
@@ -118,16 +149,26 @@ packages/
   mail/           Mailer implementations (console/null/capturing + SMTP,
                    the SMTP one behind its own `@bandlib/mail/smtp` entry
                    point so importing the barrel never pulls in nodemailer)
+  storage/        Object storage — `S3Storage` (aws4fetch, MinIO/R2-compatible
+                   SigV4 signing), runtime-agnostic. `InMemoryStorage` (a
+                   conformance-tested fake, `./testing` entry point only)
+                   is the one place in this package that uses `node:*`.
   ui/             Design tokens + shared UI primitives (button/field/banner,
                    Tailwind v4 theme)
+deploy/
+  node/           `compose.yml` — local-dev MinIO + bucket creation (see
+                   "First run" above); not a production deploy recipe.
 e2e/              (reserved for end-to-end tests, not yet populated)
 ```
 
-`packages/core`, `packages/db` and `packages/api` must run unmodified on
-Cloudflare Workers — no `node:*` imports or Node-only globals. `apps/web`
-runs on Node today and is where Node-specific code (env reads, the SMTP
-mailer, the libSQL client) is confined, so a future Workers profile
-(increment 7) can swap just that composition root.
+`packages/core`, `packages/db`, `packages/api` and `packages/storage` must
+run unmodified on Cloudflare Workers — no `node:*` imports or Node-only
+globals. `apps/web` runs on Node today and is where Node-specific code (env
+reads, the SMTP mailer, the libSQL client) is confined, so a future Workers
+profile (increment 7) can swap just that composition root — including
+swapping `packages/storage`'s `S3Storage` for one pointed at R2's
+S3-compatible endpoint (same class, no code change; see that package's own
+header comment for why NOT the R2 binding).
 
 Brand values (colors, fonts) are not hardwired into components — they live in
 `packages/ui/src/tokens/*.css` as a swappable token layer.

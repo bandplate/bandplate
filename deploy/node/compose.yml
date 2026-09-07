@@ -1,0 +1,115 @@
+# Local development stack: the app (source-mounted, running `astro dev`)
+# plus MinIO, the S3-compatible bucket the audio storage port
+# (`@bandlib/storage`'s `S3Storage`) talks to. `minio-init` creates the
+# bucket on first run, so `docker compose up` alone is enough — no manual
+# `mc` step.
+#
+# This is a DEV stack, not a production deployment recipe: the `app`
+# service runs the same `pnpm --filter web dev` command the non-Docker
+# README path uses, bind-mounting the repo, rather than a production
+# multi-stage image (this repo has no Dockerfile for a built image, and
+# building one is a separate concern from "someone cloning the repo should
+# get working audio" — the actual point of this file, per the brief). A
+# real deployment still builds and runs `apps/web` however it already
+# does (`pnpm build && pnpm start` — see the root README), pointed at
+# whatever S3-compatible bucket that environment uses (MinIO, R2, or real
+# S3); this compose file exists to make LOCAL audio playback work with
+# zero manual bucket setup, not to prescribe how to ship to production.
+#
+# --- The one trap this exists to avoid getting wrong ------------------
+#
+# `S3_ENDPOINT` (what the `app` container uses to reach MinIO) and
+# `S3_PUBLIC_ENDPOINT` (what the BROWSER on your host machine uses) are
+# deliberately different values below: `http://minio:9000` only resolves
+# on this compose network, and `http://localhost:9000` only resolves from
+# your host, via the `9000:9000` port mapping. Setting both to the same
+# value is exactly the misconfiguration `apps/web/src/server/config.ts`
+# warns about by name — every presigned playback URL would 403/hang with
+# no obvious cause.
+#
+# Usage:
+#   cd deploy/node
+#   docker compose up
+#   # then, in another terminal, seed real audio behind the seeded takes:
+#   BANDLIB_DATABASE_URL=file:../../apps/web/.data/bandlib.db \
+#     S3_ENDPOINT=http://localhost:9000 S3_PUBLIC_ENDPOINT=http://localhost:9000 \
+#     S3_BUCKET=bandlib S3_REGION=auto \
+#     S3_ACCESS_KEY_ID=bandlib-dev S3_SECRET_ACCESS_KEY=bandlib-dev-secret \
+#     pnpm --filter @bandlib/db run dev:upload-audio
+#   # visit http://localhost:4321
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000" # S3 API — also what S3_PUBLIC_ENDPOINT points the browser at
+      - "9001:9001" # Web console, optional (http://localhost:9001)
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-bandlib-dev}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-bandlib-dev-secret}
+    volumes:
+      - bandlib-minio-data:/data
+    # No HEALTHCHECK here: the official `minio/minio` image ships neither
+    # `curl` nor `mc` (a `docker run --entrypoint sh minio/minio -c "which
+    # curl mc"` comes back empty), so there's nothing to run a `CMD`
+    # healthcheck WITH from inside that container. `minio-init` below
+    # retries its own connection instead (it has `mc`, in ITS image),
+    # which is the standard workaround for this exact image.
+
+  # Creates the bucket once, then exits — `depends_on: condition:
+  # service_completed_successfully` on `app` below means the app never
+  # starts against a bucket that doesn't exist yet. Retries `mc alias
+  # set` itself (up to ~30s) since `minio` has no healthcheck to gate on
+  # (see the comment above) and may not be accepting connections yet.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      for i in $(seq 1 30); do
+        mc alias set local http://minio:9000 ${S3_ACCESS_KEY_ID:-bandlib-dev} ${S3_SECRET_ACCESS_KEY:-bandlib-dev-secret} && break;
+        sleep 1;
+      done &&
+      mc mb --ignore-existing local/${S3_BUCKET:-bandlib}
+      "
+
+  app:
+    image: node:20.18.1-slim
+    working_dir: /repo
+    command: >
+      /bin/sh -c "
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter web exec astro dev --host 0.0.0.0 --port 4321
+      "
+    ports:
+      - "4321:4321"
+    volumes:
+      - ../..:/repo
+      # Named volumes for node_modules so the container's own
+      # (Linux) native deps (esbuild, libsql) don't get shadowed by
+      # whatever the host already installed for its own platform.
+      - bandlib-node-modules:/repo/node_modules
+      - bandlib-web-node-modules:/repo/apps/web/node_modules
+    environment:
+      BANDLIB_DATABASE_URL: file:/repo/apps/web/.data/bandlib.db
+      BANDLIB_APP_ORIGIN: http://localhost:4321
+      BANDLIB_BOOTSTRAP_TOKEN: ${BANDLIB_BOOTSTRAP_TOKEN:-dev-bootstrap-token-change-me}
+      BANDLIB_ALLOW_DEV_MAILER: "true"
+      # Internal vs public endpoint — see the file header comment.
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_BUCKET: ${S3_BUCKET:-bandlib}
+      S3_REGION: auto
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-bandlib-dev}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-bandlib-dev-secret}
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+
+volumes:
+  bandlib-minio-data:
+  bandlib-node-modules:
+  bandlib-web-node-modules:

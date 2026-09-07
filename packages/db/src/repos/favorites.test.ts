@@ -83,6 +83,56 @@ describe("favorites repo", () => {
     expect(list.length).toBe(1);
   });
 
+  it("listTargetIdsByMember returns only ids of the given target type, as a Set", async () => {
+    const member = await members.create(db, {
+      displayName: "Fav Tester 4",
+      slug: "fav-tester-4",
+      email: "fav4@example.com",
+      createdAt: Date.now(),
+    });
+    const song = await songs.create(db, {
+      title: "Fav Song 4",
+      slug: "fav-song-4",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: Date.now(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    await favorites.add(db, {
+      memberId: member.id,
+      targetType: "song",
+      targetId: song.id,
+      createdAt: 1000,
+    });
+    await favorites.add(db, {
+      memberId: member.id,
+      targetType: "event",
+      targetId: event.id,
+      createdAt: 2000,
+    });
+
+    const songIds = await favorites.listTargetIdsByMember(db, member.id, "song");
+    expect(songIds).toEqual(new Set([song.id]));
+    expect(songIds.has(event.id)).toBe(false);
+  });
+
+  it("listTargetIdsByMember returns an empty Set for a member with none", async () => {
+    const member = await members.create(db, {
+      displayName: "Fav Tester 5",
+      slug: "fav-tester-5",
+      email: "fav5@example.com",
+      createdAt: Date.now(),
+    });
+
+    const ids = await favorites.listTargetIdsByMember(db, member.id, "take");
+    expect(ids).toEqual(new Set());
+  });
+
   it("remove deletes the favorite", async () => {
     const member = await members.create(db, {
       displayName: "Fav Tester 3",

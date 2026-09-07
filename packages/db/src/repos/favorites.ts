@@ -48,3 +48,22 @@ export async function listByMember(db: Db, memberId: string): Promise<Favorite[]
     .where(eq(favorites.memberId, memberId))
     .orderBy(desc(favorites.createdAt));
 }
+
+/**
+ * Just the target ids of one type, as a `Set` for O(1) membership checks —
+ * `/takes/[id]` and `/search` (Task 6 review round 1's per-row favorite
+ * marker, F4) each need "is THIS take one of this member's favorites"
+ * without fetching every favorite row and its full target object the way
+ * `listByMember` does for the home/`/me` favorites sections.
+ */
+export async function listTargetIdsByMember(
+  db: Db,
+  memberId: string,
+  targetType: FavoriteTargetType,
+): Promise<Set<string>> {
+  const rows = await db
+    .select({ targetId: favorites.targetId })
+    .from(favorites)
+    .where(and(eq(favorites.memberId, memberId), eq(favorites.targetType, targetType)));
+  return new Set(rows.map((r) => r.targetId));
+}

@@ -17,7 +17,13 @@
 // entirely per the CSS View Transitions spec. Only the first occurrence of
 // a given take id keeps the name; later ones simply don't get one (the
 // link/row still works, it just isn't the View Transitions morph target).
+//
+// `<TakeTransitionRetarget />` (Fix round 3): JS-progressive-enhancement
+// that moves the claimed name onto whichever occurrence the member
+// actually clicks, so the transition morphs from the right place on
+// screen. See that component's own header comment.
 import TakeRow from "../../components/TakeRow.astro";
+import TakeTransitionRetarget from "../../components/TakeTransitionRetarget.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { SESSION_COOKIE_NAME } from "../../server/cookies.js";
@@ -65,6 +71,7 @@ function claimTakeTransition(takeId: string): string | null {
 ---
 
 <AppLayout title="Me" principal={principal} current="me">
+  <TakeTransitionRetarget />
   <div class="bl-stack">
     <h1 class="bl-page-title">Me</h1>
 
@@ -187,6 +194,7 @@ function claimTakeTransition(takeId: string): string | null {
                       href={`/takes/${take.id}`}
                       class="bl-vote-row-song"
                       transition:name={claimTakeTransition(take.id) ?? undefined}
+                      data-take-id={take.id}
                     >
                       {take.song?.title ?? "Untitled take"}
                       {favorited && (

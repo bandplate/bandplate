@@ -79,6 +79,15 @@
 // is one of the current member's favorites — real, row-specific
 // information on pages that mix favorited and non-favorited takes (`/`'s
 // recent-events/needs-your-vote sections, `/search`, `/takes/[id]`'s hero).
+//
+// --- `data-take-id` (Task 6, Fix round 3) ------------------------------
+//
+// The link that carries `transition:name` also carries `data-take-id`, a
+// plain hook for `TakeTransitionRetarget.astro`'s click-delegated script
+// (imported only by the pages that can render the same take twice — see
+// that component's own header comment). It has no effect at all without
+// that script: with JS off, this attribute just sits there unused and
+// round 1's first-occurrence-wins naming is exactly what still happens.
 import type { instrumentsRepo, takesRepo } from "@bandlib/db";
 import { formatDuration, formatShortDate } from "../server/format.js";
 import { TAKE_STATE_LABEL } from "../server/take-state.js";
@@ -121,7 +130,12 @@ const showDate = context.kind === "full";
 <div class="bl-take-row">
   <slot name="leading" />
   <div class="bl-take-row-main">
-    <a href={`/takes/${take.id}`} class="bl-take-label" transition:name={resolvedTransitionName}>
+    <a
+      href={`/takes/${take.id}`}
+      class="bl-take-label"
+      transition:name={resolvedTransitionName}
+      data-take-id={take.id}
+    >
       {primaryLabel}
     </a>
     {favorited && (

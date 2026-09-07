@@ -19,7 +19,13 @@
 // section to render a given take id keeps the name; later occurrences
 // don't get one (the row still works, it just isn't a morph target). See
 // `TakeRow.astro`'s own header comment for the prop this composes with.
+//
+// `<TakeTransitionRetarget />` (Fix round 3): JS-progressive-enhancement
+// that moves the claimed name onto whichever occurrence the member
+// actually clicks, so the transition morphs from the right place on
+// screen. See that component's own header comment.
 import TakeRow from "../components/TakeRow.astro";
+import TakeTransitionRetarget from "../components/TakeTransitionRetarget.astro";
 import AppLayout from "../layouts/AppLayout.astro";
 import { getAppDeps } from "../server/app.js";
 import { eventLabel, formatLongDate } from "../server/format.js";
@@ -48,6 +54,7 @@ function claimTakeTransition(takeId: string): string | null {
 ---
 
 <AppLayout title="Home" principal={principal} current="home">
+  <TakeTransitionRetarget />
   <div class="bl-stack">
     <h1 class="bl-page-title">Welcome back</h1>
 

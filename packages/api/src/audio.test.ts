@@ -167,6 +167,62 @@ describe("GET /assets/:id/audio", () => {
     expect(res.status).toBe(404);
   });
 
+  it("404s for a ready 'peaks' asset — waveform data, never audio (fix round 1, item 5)", async () => {
+    // The pre-existing coverage never actually exercised the
+    // `kind !== "master" && kind !== "stem"` guard: every fixture used is
+    // a 'master'. Mutating that guard to `if (false)` (i.e. removing it
+    // entirely) survived the whole suite — a 'peaks' asset would then
+    // happily presign as if it were audio. This seeds a real 'peaks' row,
+    // status='ready' (so it's NOT caught by the earlier status check
+    // instead), and asserts the guard itself is what 404s it.
+    testApp = await buildTestApp();
+    const cookie = await loginAsMember(testApp);
+    const now = testApp.clock.now();
+    const song = await songsRepo.create(testApp.db, {
+      title: "Peaks Asset Song",
+      slug: "peaks-asset-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(testApp.db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const take = await takesRepo.create(testApp.db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const [peaksAsset] = await assetsRepo.createMany(testApp.db, [
+      {
+        takeId: take.id,
+        kind: "peaks",
+        tier: "lossy",
+        format: "json",
+        storageKey: `takes/${take.id}/peaks.json`,
+        contentType: "application/json",
+        bytes: 1000,
+        status: "ready",
+        createdAt: now,
+        readyAt: now,
+      },
+    ]);
+    if (!peaksAsset) {
+      throw new Error("expected createMany to return the inserted asset");
+    }
+
+    const res = await testApp.app.request(`/assets/${peaksAsset.id}/audio`, {
+      headers: { cookie: `bl_session=${cookie}` },
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(404);
+  });
+
   it("the redirected-to URL actually serves the asset's bytes", async () => {
     testApp = await buildTestApp();
     const cookie = await loginAsMember(testApp);

@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@bandlib/mail": "workspace:*",
+    "@bandlib/storage": "workspace:*",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

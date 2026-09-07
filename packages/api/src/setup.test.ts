@@ -1,6 +1,7 @@
 import { type Mailer, createInMemoryRateLimiter } from "@bandlib/core";
 import { membersRepo } from "@bandlib/db";
 import { createTestDb } from "@bandlib/db/testing";
+import { createInMemoryStorage } from "@bandlib/storage/testing";
 import { describe, expect, it } from "vitest";
 import { buildRoutedApp } from "./index.js";
 import {
@@ -102,11 +103,13 @@ describe("POST /setup", () => {
       },
     };
 
+    const { storage } = await createInMemoryStorage();
     const { app } = buildRoutedApp({
       db,
       mailer: failingMailer,
       clock,
       rateLimiter,
+      storage,
       config: {
         appOrigin: TEST_APP_ORIGIN,
         bootstrapToken: TEST_BOOTSTRAP_TOKEN,

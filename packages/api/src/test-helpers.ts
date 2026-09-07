@@ -1,10 +1,12 @@
 // Test-only helper: builds a fully wired app (in-memory libSQL, capturing
-// mailer, fake advanceable clock, in-memory rate limiter) for `app.request()`
-// tests. Not part of the runtime library surface.
-import { type Clock, createInMemoryRateLimiter } from "@bandlib/core";
+// mailer, fake advanceable clock, in-memory rate limiter, in-memory
+// storage) for `app.request()` tests. Not part of the runtime library
+// surface.
+import { type Clock, type Storage, createInMemoryRateLimiter } from "@bandlib/core";
 import type { Db } from "@bandlib/db";
 import { createTestDb } from "@bandlib/db/testing";
 import { type CapturingMailer, createCapturingMailer } from "@bandlib/mail";
+import { createInMemoryStorage } from "@bandlib/storage/testing";
 import type { Hono } from "hono";
 import { type AppConfig, buildRoutedApp } from "./index.js";
 import type { GuardedRouter } from "./route-registry.js";
@@ -34,6 +36,9 @@ export interface TestApp {
   mailer: CapturingMailer;
   clock: FakeClock;
   config: AppConfig;
+  storage: Storage;
+  /** Stops the in-memory storage fake's backing HTTP server. Call in `afterEach` for a test file that exercises the audio route. */
+  closeStorage: () => Promise<void>;
 }
 
 export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<TestApp> {
@@ -41,6 +46,19 @@ export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<
   const mailer = createCapturingMailer();
   const clock = createFakeClock();
   const rateLimiter = createInMemoryRateLimiter(clock);
+  // Deliberately NOT `{ clock }` — `clock` here is the app's fake,
+  // freely-advanceable auth-flow clock (tests move it to exercise
+  // token/session expiry), which starts pinned at a fixed historical
+  // instant, not real time. `InMemoryStorage`'s own expiry check is
+  // necessarily judged against REAL wall-clock time (an actual `fetch()`
+  // against its presigned URL happens at real "now", exactly like a real
+  // request to MinIO would) — signing against a clock frozen in the past
+  // would make every presigned URL this test app hands out already
+  // expired by the time a test fetches it. Quantisation/expiry semantics
+  // themselves are already covered thoroughly by
+  // `@bandlib/storage`'s own conformance suite; this just needs a
+  // working default.
+  const storageHandle = await createInMemoryStorage();
   const config: AppConfig = {
     appOrigin: TEST_APP_ORIGIN,
     bootstrapToken: TEST_BOOTSTRAP_TOKEN,
@@ -59,10 +77,20 @@ export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<
     mailer,
     clock,
     rateLimiter,
+    storage: storageHandle.storage,
     config,
     sleep: async () => {},
   });
-  return { app, router, db, mailer, clock, config };
+  return {
+    app,
+    router,
+    db,
+    mailer,
+    clock,
+    config,
+    storage: storageHandle.storage,
+    closeStorage: storageHandle.close,
+  };
 }
 
 /** Extract the raw login token from the last captured login-link email. */

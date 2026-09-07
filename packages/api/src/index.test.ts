@@ -1,6 +1,7 @@
 import { createInMemoryRateLimiter } from "@bandlib/core";
 import type { Db } from "@bandlib/db";
 import { createCapturingMailer } from "@bandlib/mail";
+import { createInMemoryStorage } from "@bandlib/storage/testing";
 import { describe, expect, it } from "vitest";
 import { buildRoutedApp } from "./index.js";
 import {
@@ -55,11 +56,13 @@ describe("createApp", () => {
       },
     }) as Db;
 
+    const { storage } = await createInMemoryStorage();
     const { app } = buildRoutedApp({
       db: poisonedDb,
       mailer: createCapturingMailer(),
       clock: createFakeClock(),
       rateLimiter: createInMemoryRateLimiter(createFakeClock()),
+      storage,
       config: {
         appOrigin: TEST_APP_ORIGIN,
         bootstrapToken: TEST_BOOTSTRAP_TOKEN,

@@ -1,4 +1,4 @@
-import type { AuthDeps, Clock, Mailer, RateLimiter, Sleep } from "@bandlib/core";
+import type { AuthDeps, Clock, Mailer, RateLimiter, Sleep, Storage } from "@bandlib/core";
 import type { Db } from "@bandlib/db";
 import { Hono } from "hono";
 import { errorResponse } from "./errors.js";
@@ -8,6 +8,7 @@ import { GuardedRouter, assertEveryRouteIsGuarded, publicRoute } from "./route-r
 import { registerAdminInstrumentRoutes } from "./routes/admin-instruments.js";
 import { registerAdminMemberRoutes } from "./routes/admin-members.js";
 import { registerAdminTokenRoutes } from "./routes/admin-tokens.js";
+import { registerAudioRoutes } from "./routes/audio.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerSetupRoutes } from "./routes/setup.js";
 import type { AppEnv } from "./types.js";
@@ -37,6 +38,7 @@ export interface AppDeps {
   mailer: Mailer;
   clock: Clock;
   rateLimiter: RateLimiter;
+  storage: Storage;
   config: AppConfig;
   /**
    * Overrides for `requestLogin`'s timing-side-channel clamp (see
@@ -106,6 +108,7 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
   registerAdminMemberRoutes(router, { db: deps.db, auth });
   registerAdminInstrumentRoutes(router, { db: deps.db, clock: deps.clock });
   registerAdminTokenRoutes(router, { db: deps.db, auth });
+  registerAudioRoutes(router, { db: deps.db, storage: deps.storage });
 
   // The structural backstop: fails app construction itself if any route on
   // the live Hono instance doesn't correspond to a GuardedRouter

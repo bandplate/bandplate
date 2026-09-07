@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import {
   type Tally,
+  UNVOTED_LIST_EMPTY_STATE_HTML,
   computeOptimisticTally,
   formatVoteTallyClient,
 } from "../client/vote-favorite-actions.js";
@@ -115,24 +116,42 @@ function applyVoteState(takeId: string, myVote: boolean | undefined, tally: Tall
  * called after the server confirms success — never as part of the
  * optimistic step itself, so a rollback never has to "un-remove" a row
  * that's already gone from the DOM.
+ *
+ * If this was the LAST row, removing it bare would leave a `<h2>` over an
+ * empty container — exactly the blank panel §3 forbids, and wrong until
+ * the next reload. So when the container is about to become empty, the
+ * container itself is swapped for the same `.bl-empty-state` markup
+ * `index.astro` renders server-side for `unvotedTakes.length === 0`
+ * (`UNVOTED_LIST_EMPTY_STATE_HTML`), not just left behind empty.
  */
 function removeFromUnvotedList(takeId: string): void {
-  const row = document
-    .querySelector<HTMLElement>(
-      `[data-unvoted-list] [data-vote-form][data-take-id="${CSS.escape(takeId)}"]`,
-    )
+  const list = document.querySelector<HTMLElement>("[data-unvoted-list]");
+  const row = list
+    ?.querySelector<HTMLElement>(`[data-vote-form][data-take-id="${CSS.escape(takeId)}"]`)
     ?.closest<HTMLElement>(".bl-take-row");
-  if (!row) {
+  if (!list || !row) {
     return;
   }
+  const isLastRow = list.querySelectorAll(".bl-take-row").length === 1;
+
+  function finish(): void {
+    row?.remove();
+    if (isLastRow && list) {
+      const emptyState = document.createElement("div");
+      emptyState.className = "bl-empty-state";
+      emptyState.innerHTML = UNVOTED_LIST_EMPTY_STATE_HTML;
+      list.replaceWith(emptyState);
+    }
+  }
+
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduceMotion) {
-    row.remove();
+    finish();
     return;
   }
   row.style.transition = "opacity 0.2s ease";
   row.style.opacity = "0";
-  setTimeout(() => row.remove(), 200);
+  setTimeout(finish, 200);
 }
 
 /** Applies a favorite state to EVERY occurrence of this target on the page. */
@@ -237,18 +256,29 @@ export default function VoteFavorite() {
 
       applyFavoriteState(targetType, targetId, optimisticFavorited);
 
+      // The form's own hidden `favorited` field was computed once, at
+      // server-render time — correct for a single no-JS submit, but stale
+      // for a second JS-driven click on the same control with no page
+      // reload in between (its value never changes on its own). Overwrite
+      // it with the SAME desired state just applied to the DOM above, so
+      // the request always carries the true next state, not a fixed
+      // render-time guess — see `favoritesRepo.setFavorited`'s comment for
+      // why the desired state (not a flip) is what the server needs.
+      const requestBody = new FormData(form);
+      requestBody.set("favorited", String(optimisticFavorited));
+
       try {
         const res = await fetch(form.action, {
           method: "POST",
           credentials: "same-origin",
           headers: { accept: "application/json" },
-          body: new FormData(form),
+          body: requestBody,
         });
         if (!res.ok) {
           throw new Error(`favorite request failed (${res.status})`);
         }
-        const body = (await res.json()) as { favorited: boolean };
-        applyFavoriteState(targetType, targetId, body.favorited);
+        const responseBody = (await res.json()) as { favorited: boolean };
+        applyFavoriteState(targetType, targetId, responseBody.favorited);
       } catch {
         applyFavoriteState(targetType, targetId, previousFavorited);
         showToast("Couldn't update your favorites. Try again.");

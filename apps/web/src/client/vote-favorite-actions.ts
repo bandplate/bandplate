@@ -60,3 +60,20 @@ export function formatVoteTallyClient(
   }
   return `${keeperVotes} of ${totalVotes} ${totalVotes === 1 ? "vote says" : "votes say"} keeper (${Math.round(ratingScore * 100)}%).`;
 }
+
+/**
+ * Markup `VoteFavorite.tsx#removeFromUnvotedList` swaps in for
+ * `[data-unvoted-list]` once removing a voted-on row leaves it empty —
+ * deliberately duplicated from, not read out of, `index.astro`'s own
+ * `unvotedTakes.length === 0` branch, same reasoning as
+ * `formatVoteTallyClient` above (a client-bundled module never imports
+ * `server/`-side rendering, and this module's own test file is what keeps
+ * the duplicate honest).
+ *
+ * Voting the LAST "needs your vote" take used to leave a bare `<h2>` over
+ * an empty `[data-unvoted-list]` — the blank panel the brief's §3
+ * explicitly forbids, correct only after a reload. This is the fix: match
+ * the server's empty state exactly instead of leaving nothing behind.
+ */
+export const UNVOTED_LIST_EMPTY_STATE_HTML =
+  "<p><strong>You're all caught up.</strong> Every published take has your vote — check back once the band records something new.</p>";

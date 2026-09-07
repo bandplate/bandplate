@@ -41,6 +41,39 @@ export interface WorkersRuntimeConfig extends RuntimeConfig {
   mail: { provider: "resend" | "postmark"; apiKey: string; from: string };
 }
 
+// CRITICAL: `wrangler.toml`'s `[vars]` ships with placeholder values
+// (`https://bandlib.example`, `bandlib@bandlib.example`,
+// `https://<account-id>.r2.cloudflarestorage.com`) that a self-deployer
+// must replace. Every one of them is a non-empty, well-formed-looking
+// string, so a plain `.min(1)` (or even the origin-shape check above)
+// passes them straight through — and the *first* symptom is not an
+// error, it's a same-origin check silently rejecting every form POST
+// (`isSameOrigin` compares the real `Origin` header against a
+// `bandlib.example` that never arrives), which looks exactly like a
+// working app whose submit buttons just don't do anything. Refuse to
+// start on the known placeholder shapes instead, naming the offending
+// variable — the same fail-fast treatment every other misconfiguration
+// here already gets.
+const PLACEHOLDER_PATTERNS: RegExp[] = [
+  // `bandlib.example` / `bandlib@bandlib.example` — the doc's own
+  // "e.g." example values, verbatim, left uncustomized.
+  /\bbandlib\.example\b/i,
+  // `<account-id>` and similar angle-bracket template slots.
+  /<[a-z0-9_-]+>/i,
+];
+
+function isPlaceholder(value: string): boolean {
+  return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+const NOT_A_PLACEHOLDER = {
+  message:
+    "is still set to the placeholder value shipped in wrangler.toml — replace it with your " +
+    "real value before deploying (see docs/deploy-cloudflare.md's numbered [vars] step). " +
+    "Left as-is, this fails silently instead: e.g. a placeholder BANDLIB_APP_ORIGIN makes " +
+    "every form POST 403 with no visible error.",
+};
+
 const EnvSchema = z.object({
   BANDLIB_APP_ORIGIN: z
     .string()
@@ -55,7 +88,8 @@ const EnvSchema = z.object({
         }
       },
       { message: "must be a bare origin — scheme + host only, e.g. https://bandlib.example" },
-    ),
+    )
+    .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
   BANDLIB_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
   BANDLIB_TRUSTED_PROXY_DEPTH: z
     .string()
@@ -70,9 +104,21 @@ const EnvSchema = z.object({
     errorMap: () => ({ message: 'is required and must be "resend" or "postmark"' }),
   }),
   MAIL_API_KEY: z.string().min(1, "is required — the app has no non-email way in after bootstrap"),
-  MAIL_FROM: z.string().trim().min(1, "is required"),
-  S3_ENDPOINT: z.string().trim().min(1, "is required"),
-  S3_PUBLIC_ENDPOINT: z.string().trim().min(1, "is required"),
+  MAIL_FROM: z
+    .string()
+    .trim()
+    .min(1, "is required")
+    .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
+  S3_ENDPOINT: z
+    .string()
+    .trim()
+    .min(1, "is required")
+    .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
+  S3_PUBLIC_ENDPOINT: z
+    .string()
+    .trim()
+    .min(1, "is required")
+    .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
   S3_BUCKET: z.string().trim().min(1, "is required"),
   S3_REGION: z.string().trim().min(1, 'is required — use "auto" for R2'),
   S3_ACCESS_KEY_ID: z.string().trim().min(1, "is required"),

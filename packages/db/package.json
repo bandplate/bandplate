@@ -26,6 +26,7 @@
     "@bandlib/storage": "workspace:*",
     "@cloudflare/workers-types": "^5.20260907.1",
     "drizzle-kit": "0.30.6",
+    "esbuild": "^0.24.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

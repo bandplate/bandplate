@@ -53,9 +53,10 @@ Tokens are issued from the bandlib admin UI (`/admin/tokens`), carry an explicit
 scope set, and are revocable. The secret is shown **once** at creation and is
 stored only as a hash — if it is lost, issue a new token.
 
-An ingest token needs `ingest:write`, plus the reads it uses to resolve
-vocabulary: `songs:read`, `events:read`, `takes:read`. Grant nothing else, so a
-token that leaks out of a script on a laptop cannot read votes or touch members.
+An ingest token needs `ingest:write`. That is the only scope any ingest route
+checks (`requireServiceScopes("ingest:write")` on every one of them) — grant
+nothing else, so a token that leaks out of a script on a laptop cannot read
+votes or touch members.
 
 Ingest requests are exempt from the browser Origin/CSRF check — they carry no
 cookies and no ambient authority.
@@ -175,12 +176,28 @@ filter axis in the UI ("every take with horns on it") and is deliberately
 **not** the same as which stems exist — a take can capture the whole band in the
 master mix and have isolated files for only three players.
 
+**`sha256` is optional** on every asset, including `peaks`. Send it whenever
+you have it — it's the strongest retry/corruption signal the server has (see
+below) — but a bridge that genuinely cannot compute it can omit it; the
+server then matches a retry on `bytes` alone. **`tier` on `peaks` is
+optional too**, defaulting to `"lossy"`; the examples in this document always
+send both, which is the recommended shape, not a hard requirement.
+
 **Retry semantics.** Re-posting the same `takes.clientRef` returns the existing
 take with freshly signed URLs. Per asset:
-- declared `sha256` and `bytes` match a row already `ready` → returned as
-  `status: "ready"` with **no** `url`; skip it.
-- hash differs → the slot resets to `pending` and a new URL is issued; the upload
-  overwrites the same key.
+- declared `bytes` match a row already `ready`, **and** either `sha256` was
+  omitted or it matches too → returned as `status: "ready"` with **no** `url`;
+  skip it.
+- `bytes` or `sha256` differ from what's on the row → the slot resets to
+  `pending` and a new URL is issued.
+- for a `master`/`stem`, a **different `format`** also forces a reset, even if
+  `bytes`/`sha256` happen to coincide — the upload then goes to a **new**
+  storage key (the extension is part of the key), and the server deletes the
+  superseded object so the take never ends up with two masters.
+- for `peaks` specifically, a **different `tier`** updates the existing row's
+  metadata in place; `peaks`' storage key never varies by tier, so this never
+  moves the object or creates a second row.
+- otherwise (same key, hash mismatch) the upload overwrites the same key.
 
 This is what lets a bridge crash mid-session and resume without re-uploading
 gigabytes.
@@ -222,8 +239,12 @@ declared, flips matching assets to `ready`, enforces that **at least one** maste
 or stem exists, and publishes. `publish: false` leaves the take in `new` — use
 that if you want to review before the band sees it.
 
-Committing an already-published take is a no-op returning `200`. Commit is safe
-to retry.
+Committing an already-published take is a no-op returning `200` — it does not
+un-publish or re-run the incomplete-assets check. It **does** still `HEAD`
+any not-yet-`ready` asset first, so a take re-declared with a changed hash
+(§3/§4 — the band re-rendered the master) converges back to fully playable
+once the new bytes are uploaded and commit is called again, even though the
+take was already published the whole time. Commit is safe to retry.
 
 ---
 
@@ -254,6 +275,14 @@ Resolution order, first match wins:
    and lyrics filled in by a human.
 5. No match and `createIfMissing: false` → `409 song_not_found` with fuzzy
    candidates, so the bridge can prompt.
+
+A sixth value, `songMatch: "existing"`, is returned whenever `takes.clientRef`
+already matched an existing take (§3/§4's retry path) — song identity is
+resolved **once**, on a take's first successful declaration, and never
+re-derived from a later retry's `song` object even if it differs. This is the
+dominant case in practice: every re-POST of an already-declared take (fresh
+upload URLs, a changed-hash re-upload, a plain retry) reports `"existing"`,
+not `"created-stub"` — that only fires once, on the take's first declaration.
 
 Normalization lowercases, strips diacritics (NFKD — this matters for Czech:
 `Přítel` → `pritel`), collapses whitespace, and strips a trailing take/version
@@ -295,13 +324,20 @@ responses which carry extra structured context alongside (`missing`,
 
 | Status | Code | Meaning |
 |---|---|---|
+| 400 | `invalid_request` | Malformed request, e.g. a missing `takeId` path parameter |
 | 401 | `unauthorized` | Missing, malformed, unknown, or revoked token |
 | 403 | `forbidden` | Valid token, missing scope (names the scope) |
-| 422 | `unknown_instrument` | Slug not in vocabulary; lists valid slugs |
-| 422 | `validation_failed` | Body failed schema validation |
+| 404 | `event_not_found` | `takes.eventClientRef` doesn't match a declared event; `POST /events` first |
+| 404 | `not_found` | No take with the given id (`GET .../uploads`, `POST .../commit`, `DELETE`) |
 | 409 | `song_not_found` | No match and `createIfMissing: false`; lists candidates |
 | 409 | `assets_incomplete` | Commit before all assets uploaded; lists missing |
-| 429 | `rate_limited` | Backoff; `Retry-After` is set |
+| 409 | `take_not_deletable` | `DELETE` on a take that isn't `uploading` or `new`; reject a published take through the UI instead |
+| 422 | `unknown_instrument` | Slug not in vocabulary; lists valid slugs |
+| 422 | `validation_failed` | Body failed schema validation |
+
+There is no rate limiting on the ingest surface in v1 — no `429` is returned.
+A future revision may add one; don't build retry-on-429 handling around a
+code that doesn't exist yet.
 
 ---
 

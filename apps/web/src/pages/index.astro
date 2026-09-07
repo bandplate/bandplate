@@ -94,6 +94,7 @@ function claimTakeTransition(takeId: string): string | null {
                       instruments={take.instruments}
                       context={{ kind: "full", song: take.song, event: take.event }}
                       transitionName={claimTakeTransition(take.id)}
+                      playableAssetId={take.playableAssetId}
                     />
                   ))}
                 </div>
@@ -142,6 +143,7 @@ function claimTakeTransition(takeId: string): string | null {
                         context={{ kind: "event", song: take.song }}
                         transitionName={claimTakeTransition(take.id)}
                         favorited={take.favorited}
+                        playableAssetId={take.playableAssetId}
                       />
                     ))}
                   </div>
@@ -169,6 +171,7 @@ function claimTakeTransition(takeId: string): string | null {
                 context={{ kind: "full", song: take.song, event: take.event }}
                 transitionName={claimTakeTransition(take.id)}
                 favorited={take.favorited}
+                playableAssetId={take.playableAssetId}
               />
             ))}
           </div>

@@ -25,6 +25,15 @@ export interface SmtpConfig {
   auth?: { user: string; pass: string };
 }
 
+export interface S3Config {
+  endpoint: string;
+  publicEndpoint: string;
+  bucket: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
 export interface RuntimeConfig {
   databaseUrl: string;
   appOrigin: string;
@@ -33,6 +42,7 @@ export interface RuntimeConfig {
   trustedProxyDepth: number;
   allowDevMailer: boolean;
   smtp?: SmtpConfig;
+  s3: S3Config;
   isProduction: boolean;
 }
 
@@ -95,6 +105,33 @@ const EnvSchema = z
     BANDLIB_SMTP_FROM: z.string().trim().min(1).optional(),
     BANDLIB_SMTP_SECURE: BOOLEAN_STRING.optional(),
     BANDLIB_ALLOW_DEV_MAILER: BOOLEAN_STRING.optional(),
+    // --- Object storage (audio) ---------------------------------------
+    // Six variables, all required — this app has no meaningful "no
+    // storage configured" mode (every take's audio lives here). The
+    // ENDPOINT/PUBLIC_ENDPOINT split is the one that's easy to get wrong:
+    // behind Docker Compose the app reaches MinIO at `http://minio:9000`,
+    // but a presigned URL signed against that host is useless to a
+    // browser, which can't resolve it — see `S3_PUBLIC_ENDPOINT`'s own
+    // message below and `deploy/node/compose.yml`, `.env.example`.
+    S3_ENDPOINT: z
+      .string()
+      .trim()
+      .min(1, "is required — the endpoint THIS SERVER uses to reach the bucket"),
+    S3_PUBLIC_ENDPOINT: z
+      .string()
+      .trim()
+      .min(
+        1,
+        "is required — the endpoint the BROWSER uses to reach the bucket for presigned " +
+          "URLs. Behind Docker Compose this is NOT the same value as S3_ENDPOINT (e.g. " +
+          "http://localhost:9000, not http://minio:9000) — the browser cannot resolve the " +
+          "compose network's internal hostname, and every playback would 403/hang with no " +
+          "obvious cause if this were left equal to S3_ENDPOINT.",
+      ),
+    S3_BUCKET: z.string().trim().min(1, "is required"),
+    S3_REGION: z.string().trim().min(1, 'is required — use "auto" for R2'),
+    S3_ACCESS_KEY_ID: z.string().trim().min(1, "is required"),
+    S3_SECRET_ACCESS_KEY: z.string().min(1, "is required"),
   })
   .superRefine((env, ctx) => {
     const isProduction = env.NODE_ENV === "production";
@@ -231,6 +268,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
       : 1,
     allowDevMailer: data.BANDLIB_ALLOW_DEV_MAILER === "true",
     smtp,
+    s3: {
+      endpoint: data.S3_ENDPOINT,
+      publicEndpoint: data.S3_PUBLIC_ENDPOINT,
+      bucket: data.S3_BUCKET,
+      region: data.S3_REGION,
+      accessKeyId: data.S3_ACCESS_KEY_ID,
+      secretAccessKey: data.S3_SECRET_ACCESS_KEY,
+    },
     isProduction,
   };
   return cached;

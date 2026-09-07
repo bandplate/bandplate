@@ -1,0 +1,59 @@
+---
+// The play/pause affordance — shared markup for `TakeRow.astro`'s leading
+// slot and the take-detail hero, so both stay wired to the persistent
+// player (`Player.tsx`) the exact same way rather than two copies of the
+// same `data-*` contract drifting apart. Plain markup, no island of its
+// own — see `Player.tsx`'s header comment for why (one shared document
+// click delegate, not N per-row islands).
+//
+// Never rendered for a take with no playable asset — that decision is the
+// CALLER's (a take with none renders no `<PlayToggleButton>` at all, not
+// this component with a disabled prop), per the brief's "no fake play
+// affordance" rule.
+export interface Props {
+  takeId: string;
+  assetId: string;
+  /** Song title or a fallback label — the accessible name this control announces (`Play <title>` / `Pause <title>`). */
+  title: string;
+  /** Event/date context or the take's own label. */
+  subtitle?: string;
+  size?: "sm" | "lg";
+}
+
+const { takeId, assetId, title, subtitle = "", size = "sm" } = Astro.props;
+---
+
+<button
+  type="button"
+  class={`bl-play-toggle ${size === "lg" ? "bl-play-toggle-lg" : ""}`}
+  data-audio-source
+  data-take-id={takeId}
+  data-asset-id={assetId}
+  data-title={title}
+  data-subtitle={subtitle}
+  data-source-label="Master"
+  data-role="toggle"
+  aria-pressed="false"
+  aria-label={`Play ${title}`}
+>
+  <svg
+    class="bl-play-icon-play"
+    aria-hidden="true"
+    width={size === "lg" ? "28" : "18"}
+    height={size === "lg" ? "28" : "18"}
+    viewBox="0 0 16 16"
+    fill="currentColor"
+  >
+    <path d="M4 2.5v11l10-5.5-10-5.5z" />
+  </svg>
+  <svg
+    class="bl-play-icon-pause"
+    aria-hidden="true"
+    width={size === "lg" ? "28" : "18"}
+    height={size === "lg" ? "28" : "18"}
+    viewBox="0 0 16 16"
+    fill="currentColor"
+  >
+    <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
+  </svg>
+</button>

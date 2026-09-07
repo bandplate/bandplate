@@ -1,5 +1,5 @@
 import type { Db } from "@bandlib/db";
-import { eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
+import { assetsRepo, eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
 import { createTestDb } from "@bandlib/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getEventDetail, listEventsForArchive, parseEventsListKindFilter } from "./events.js";
@@ -120,5 +120,46 @@ describe("listEventsForArchive / getEventDetail", () => {
     expect(detail?.takes.map((t) => t.id)).toEqual([first.id, second.id]);
     expect(detail?.takes[0]?.song?.slug).toBe("session-song");
     expect(detail?.takes[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
+    // `first` has no assets at all — no play control.
+    expect(detail?.takes[0]?.playableAssetId).toBeUndefined();
+  });
+
+  it("getEventDetail attaches playableAssetId for a take with a ready master", async () => {
+    const event = await eventsRepo.create(db, {
+      kind: "concert",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const song = await songsRepo.create(db, {
+      title: "Concert Song",
+      slug: "concert-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const take = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const [masterAsset] = await assetsRepo.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 1000,
+        status: "ready",
+        createdAt: 1000,
+        readyAt: 1000,
+      },
+    ]);
+
+    const detail = await getEventDetail(db, event.id);
+    expect(detail?.takes[0]?.playableAssetId).toBe(masterAsset?.id);
   });
 });

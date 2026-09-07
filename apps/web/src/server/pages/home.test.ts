@@ -4,6 +4,7 @@
 // the actual route). Same split as `songs.test.ts`/`events.test.ts`.
 import type { Db } from "@bandlib/db";
 import {
+  assetsRepo,
   eventsRepo,
   favoritesRepo,
   instrumentsRepo,
@@ -139,6 +140,48 @@ describe("getHomeData", () => {
     expect(data.recentEvents[0]?.takes.map((t) => t.id)).toEqual([take.id]);
     expect(data.recentEvents[0]?.takes[0]?.song?.slug).toBe("recent-event-song");
     expect(data.recentEvents[0]?.takes[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
+    // No assets created for this take — no play control.
+    expect(data.recentEvents[0]?.takes[0]?.playableAssetId).toBeUndefined();
+  });
+
+  it("recent events' takes get playableAssetId when a ready master exists", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Playable Recent Song",
+      slug: "playable-recent-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "concert",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const take = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const [masterAsset] = await assetsRepo.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 1000,
+        status: "ready",
+        createdAt: now,
+        readyAt: now,
+      },
+    ]);
+
+    const data = await getHomeData(db, memberId);
+    expect(data.recentEvents[0]?.takes[0]?.playableAssetId).toBe(masterAsset?.id);
   });
 
   it("an event with zero takes still appears, with an empty takes array (a real empty state, not an omission)", async () => {

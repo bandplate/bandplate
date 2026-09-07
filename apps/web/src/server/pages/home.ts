@@ -2,7 +2,7 @@
 // favorites (display only — the toggle is increment 5's), recent events
 // with their takes, and "needs your vote" (published takes this member
 // hasn't voted on — also display only, no vote control yet).
-import type { Db } from "@bandlib/db";
+import { type Db, assetsRepo } from "@bandlib/db";
 import { eventsRepo, favoritesRepo, type instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
@@ -46,6 +46,8 @@ export async function getFavorites(db: Db, memberId: string): Promise<HomeFavori
 interface RecentEventTake {
   instruments: instrumentsRepo.Instrument[];
   song: songsRepo.Song | undefined;
+  /** See `assetsRepo.listPlayableMastersByTakeIds` — undefined means "no play control", not "disabled". */
+  playableAssetId: string | undefined;
 }
 
 export interface RecentEventWithTakes {
@@ -81,9 +83,10 @@ async function getRecentEventsWithTakes(db: Db): Promise<RecentEventWithTakesRaw
   const takeIds = allTakes.map((t) => t.id);
   const songIds = [...new Set(allTakes.map((t) => t.songId))];
 
-  const [instrumentsByTake, songs] = await Promise.all([
+  const [instrumentsByTake, songs, playableByTakeId] = await Promise.all([
     takesRepo.listInstrumentsForTakes(db, takeIds),
     songsRepo.getByIds(db, songIds),
+    assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
   ]);
   const songById = new Map(songs.map((s) => [s.id, s]));
 
@@ -93,6 +96,7 @@ async function getRecentEventsWithTakes(db: Db): Promise<RecentEventWithTakesRaw
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],
       song: songById.get(take.songId),
+      playableAssetId: playableByTakeId.get(take.id)?.id,
     })),
   }));
 }

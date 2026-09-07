@@ -10,6 +10,7 @@ import { ClientRouter } from "astro:transitions";
 // `prefers-reduced-motion` itself (Astro's built-in behavior).
 import type { MemberPrincipal } from "@bandlib/core";
 import NavIcon from "../components/NavIcon.astro";
+import Player from "../components/Player.tsx";
 import Layout from "./Layout.astro";
 
 export interface Props {
@@ -89,6 +90,7 @@ const navItems = [
         ))
       }
     </nav>
+    <Player client:load transition:persist="bl-player" />
   </div>
 </Layout>
 

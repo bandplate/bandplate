@@ -6,10 +6,20 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ConfigError, loadConfig, resetConfigForTesting } from "./config.js";
 
+const S3_ENV = {
+  S3_ENDPOINT: "http://minio:9000",
+  S3_PUBLIC_ENDPOINT: "http://localhost:9000",
+  S3_BUCKET: "bandlib-test",
+  S3_REGION: "auto",
+  S3_ACCESS_KEY_ID: "test-access-key",
+  S3_SECRET_ACCESS_KEY: "test-secret-key",
+};
+
 const BASE_ENV = {
   BANDLIB_DATABASE_URL: "file:./test.db",
   BANDLIB_BOOTSTRAP_TOKEN: "test-token",
   BANDLIB_ALLOW_DEV_MAILER: "true",
+  ...S3_ENV,
 };
 
 beforeEach(() => {
@@ -55,6 +65,7 @@ describe("loadConfig", () => {
       BANDLIB_SMTP_HOST: "smtp.example.com",
       BANDLIB_SMTP_PORT: "587",
       BANDLIB_SMTP_FROM: "bandlib@example.com",
+      ...S3_ENV,
     });
     expect(config.appOrigin).toBe("https://bandlib.example");
   });
@@ -84,6 +95,7 @@ describe("loadConfig", () => {
       BANDLIB_SMTP_FROM: "bandlib@example.com",
       BANDLIB_SMTP_USER: "user",
       BANDLIB_SMTP_PASS: "pass",
+      ...S3_ENV,
     });
     expect(config.smtp).toEqual({
       host: "smtp.example.com",
@@ -134,6 +146,7 @@ describe("loadConfig", () => {
       BANDLIB_SMTP_HOST: "smtp.example.com",
       BANDLIB_SMTP_PORT: "587",
       BANDLIB_SMTP_FROM: "bandlib@example.com",
+      ...S3_ENV,
     });
     expect(config.isProduction).toBe(true);
     expect(config.allowDevMailer).toBe(false);
@@ -157,6 +170,60 @@ describe("loadConfig", () => {
   it("accepts a bare BANDLIB_APP_ORIGIN with a port", () => {
     const config = loadConfig({ ...BASE_ENV, BANDLIB_APP_ORIGIN: "http://localhost:5000" });
     expect(config.appOrigin).toBe("http://localhost:5000");
+  });
+
+  it("fails, naming S3_ENDPOINT, when it is missing", () => {
+    const env = { ...BASE_ENV };
+    // biome-ignore lint/performance/noDelete: test-only env manipulation
+    delete (env as Record<string, string | undefined>).S3_ENDPOINT;
+    expect(() => loadConfig(env)).toThrow(/S3_ENDPOINT/);
+  });
+
+  it("fails, naming S3_PUBLIC_ENDPOINT, when it is missing", () => {
+    const env = { ...BASE_ENV };
+    // biome-ignore lint/performance/noDelete: test-only env manipulation
+    delete (env as Record<string, string | undefined>).S3_PUBLIC_ENDPOINT;
+    expect(() => loadConfig(env)).toThrow(/S3_PUBLIC_ENDPOINT/);
+  });
+
+  it("fails, naming S3_BUCKET, when it is missing", () => {
+    const env = { ...BASE_ENV };
+    // biome-ignore lint/performance/noDelete: test-only env manipulation
+    delete (env as Record<string, string | undefined>).S3_BUCKET;
+    expect(() => loadConfig(env)).toThrow(/S3_BUCKET/);
+  });
+
+  it("fails, naming S3_REGION, when it is missing", () => {
+    const env = { ...BASE_ENV };
+    // biome-ignore lint/performance/noDelete: test-only env manipulation
+    delete (env as Record<string, string | undefined>).S3_REGION;
+    expect(() => loadConfig(env)).toThrow(/S3_REGION/);
+  });
+
+  it("fails, naming S3_ACCESS_KEY_ID, when it is missing", () => {
+    const env = { ...BASE_ENV };
+    // biome-ignore lint/performance/noDelete: test-only env manipulation
+    delete (env as Record<string, string | undefined>).S3_ACCESS_KEY_ID;
+    expect(() => loadConfig(env)).toThrow(/S3_ACCESS_KEY_ID/);
+  });
+
+  it("fails, naming S3_SECRET_ACCESS_KEY, when it is missing", () => {
+    const env = { ...BASE_ENV };
+    // biome-ignore lint/performance/noDelete: test-only env manipulation
+    delete (env as Record<string, string | undefined>).S3_SECRET_ACCESS_KEY;
+    expect(() => loadConfig(env)).toThrow(/S3_SECRET_ACCESS_KEY/);
+  });
+
+  it("builds an S3Config with endpoint and publicEndpoint kept distinct", () => {
+    const config = loadConfig({ ...BASE_ENV });
+    expect(config.s3).toEqual({
+      endpoint: "http://minio:9000",
+      publicEndpoint: "http://localhost:9000",
+      bucket: "bandlib-test",
+      region: "auto",
+      accessKeyId: "test-access-key",
+      secretAccessKey: "test-secret-key",
+    });
   });
 
   it("memoizes: a second call returns the same object without re-reading env", () => {

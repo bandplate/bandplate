@@ -1,5 +1,5 @@
 import type { Db } from "@bandlib/db";
-import { eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
+import { assetsRepo, eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
 import { createTestDb } from "@bandlib/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSongDetail, listSongsForLibrary, parseSongsListQuery } from "./songs.js";
@@ -107,6 +107,58 @@ describe("listSongsForLibrary / getSongDetail", () => {
     expect(detail?.takes.map((t) => t.id)).toEqual([newer.id, older.id]);
     expect(detail?.takes[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
     expect(detail?.takes[0]?.event?.id).toBe(event.id);
+  });
+
+  it("getSongDetail attaches playableAssetId for a take with a ready master, and leaves it undefined otherwise", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Playable Song",
+      slug: "playable-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const playable = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const [masterAsset] = await assetsRepo.createMany(db, [
+      {
+        takeId: playable.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${playable.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 1000,
+        status: "ready",
+        createdAt: now,
+        readyAt: now,
+      },
+    ]);
+
+    const silent = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const detail = await getSongDetail(db, "playable-song");
+    const playableTake = detail?.takes.find((t) => t.id === playable.id);
+    const silentTake = detail?.takes.find((t) => t.id === silent.id);
+    expect(playableTake?.playableAssetId).toBe(masterAsset?.id);
+    expect(silentTake?.playableAssetId).toBeUndefined();
   });
 
   it("listSongsForLibrary applies the instrument AND filter through to real results", async () => {

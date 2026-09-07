@@ -1,6 +1,6 @@
 // `/events` and `/events/[id]` page logic. Read-only, same shape as
 // `server/pages/songs.ts`.
-import type { Db } from "@bandlib/db";
+import { type Db, assetsRepo } from "@bandlib/db";
 import { eventsRepo, type instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
 
 export type EventListItem = eventsRepo.EventWithTakeCount;
@@ -26,6 +26,8 @@ export async function listEventsForArchive(
 export interface TakeWithContext extends takesRepo.Take {
   instruments: instrumentsRepo.Instrument[];
   song: songsRepo.Song | undefined;
+  /** See `assetsRepo.listPlayableMastersByTakeIds` — undefined means "no play control", not "disabled". */
+  playableAssetId: string | undefined;
 }
 
 export interface EventDetail {
@@ -48,9 +50,10 @@ export async function getEventDetail(db: Db, id: string): Promise<EventDetail | 
   const takes = await takesRepo.listByEvent(db, event.id, { order: "asc" });
   const takeIds = takes.map((t) => t.id);
   const songIds = [...new Set(takes.map((t) => t.songId))];
-  const [instrumentsByTake, songs] = await Promise.all([
+  const [instrumentsByTake, songs, playableByTakeId] = await Promise.all([
     takesRepo.listInstrumentsForTakes(db, takeIds),
     songsRepo.getByIds(db, songIds),
+    assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
   ]);
   const songById = new Map(songs.map((s) => [s.id, s]));
 
@@ -60,6 +63,7 @@ export async function getEventDetail(db: Db, id: string): Promise<EventDetail | 
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],
       song: songById.get(take.songId),
+      playableAssetId: playableByTakeId.get(take.id)?.id,
     })),
   };
 }

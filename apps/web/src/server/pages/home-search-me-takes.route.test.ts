@@ -271,6 +271,16 @@ function startBuiltServer(): ChildProcess {
       BANDLIB_APP_ORIGIN: ORIGIN,
       BANDLIB_ALLOW_DEV_MAILER: "true",
       BANDLIB_COOKIE_SECURE: "false",
+      // Dummy S3 config — none of these route tests exercise the audio
+      // endpoint, so this never needs to actually reach a bucket. It only
+      // has to be PRESENT (config validation requires it) and internally
+      // consistent enough that `createS3Storage` can be constructed.
+      S3_ENDPOINT: "http://127.0.0.1:1",
+      S3_PUBLIC_ENDPOINT: "http://127.0.0.1:1",
+      S3_BUCKET: "unused-in-this-test",
+      S3_REGION: "auto",
+      S3_ACCESS_KEY_ID: "unused",
+      S3_SECRET_ACCESS_KEY: "unused",
       NODE_ENV: "test",
     },
     stdio: "ignore",
@@ -351,11 +361,19 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).toContain("Master");
       expect(body).toContain("Bass");
       expect(body).toContain("A lossless master is available.");
-      // No playback affordance yet (increment 4) — no <audio> element and
-      // no play-button markup, not just an absent "play" substring (which
-      // "display" itself would trip).
-      expect(body).not.toContain("<audio");
-      expect(body).not.toContain("bl-btn-play");
+      // Increment 4: this take HAS a ready master (lossless-only here —
+      // `listPlayableMastersByTakeIds` falls back to it when there's no
+      // lossy tier), so it gets a real play control wired to that asset,
+      // plus a Solo drawer chip for its one ready stem. The persistent
+      // player's own `<audio>` element is a global, once-per-page thing
+      // (rendered by `AppLayout.astro`), not per-take — its presence here
+      // is expected on every member-facing page, not evidence specific to
+      // this take.
+      expect(body).toContain("bl-play-toggle");
+      expect(body).toContain('data-role="toggle"');
+      expect(body).toMatch(/data-audio-source[^>]*data-take-id="[^"]*"[^>]*data-asset-id="[^"]*"/);
+      expect(body).toContain("Solo: Bass");
+      expect(body).toContain("<audio");
     });
 
     it("never ships the take-transition retarget script (a take-detail hero can't be duplicated on its own page)", async () => {
@@ -373,6 +391,20 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(res.status).toBe(200);
       const body = await res.text();
       expect(body).toContain("No assets uploaded for this take yet.");
+    });
+
+    it("renders NO play control for a take with no playable asset — not a disabled one", async () => {
+      const res = await fetch(`${ORIGIN}/takes/${takeWithNoAssetsId}`, {
+        headers: { cookie: sessionCookie },
+      });
+      const body = await res.text();
+      // Absent entirely, not present-and-disabled: no `bl-play-toggle`
+      // markup and no `data-audio-source` referencing this take's id
+      // anywhere on the page (the persistent player's own always-present
+      // `<audio>` element is fine — see the previous test's comment — but
+      // nothing should point AT this take).
+      expect(body).not.toContain("bl-play-toggle");
+      expect(body).not.toContain(`data-take-id="${takeWithNoAssetsId}"`);
     });
 
     it("404s for an unknown take id", async () => {

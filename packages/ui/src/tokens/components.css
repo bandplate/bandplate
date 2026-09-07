@@ -606,6 +606,11 @@ a.bl-btn {
 
 .bl-shell {
   min-height: 100vh;
+  /* Referenced by `.bl-player` (its own vertical placement) AND
+     `.bl-shell-main` (reserved bottom padding so page content never sits
+     underneath the fixed player bar) — one number, one place, so the two
+     can't drift out of sync. */
+  --bl-player-height: 4.75rem;
 }
 
 .bl-shell-header {
@@ -642,7 +647,14 @@ a.bl-btn {
   width: 100%;
   max-width: 60rem;
   margin: 0 auto;
-  padding: 1.25rem 1.25rem 6rem;
+  /* 6rem clears the tab bar (56px + safe-area); the player bar sits ABOVE
+     the tab bar (see `.bl-player`'s own `bottom` below), so its height has
+     to be reserved here too, on top of that, or the last take row on a
+     tall list would render underneath it. Always reserved — even with no
+     track loaded — rather than toggled by JS: a fixed bottom-padding
+     number can't itself cause the width-based scrollWidth-blowout bugs a
+     JS-computed one already has, elsewhere in this project. */
+  padding: 1.25rem 1.25rem calc(6rem + var(--bl-player-height));
   box-sizing: border-box;
 }
 
@@ -683,6 +695,181 @@ a.bl-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Persistent player — one instance, rendered by `AppLayout.astro`,        */
+/* `transition:persist`ed across navigation (see `Player.tsx`'s header     */
+/* comment). Sits ABOVE the tab bar on phones (its own fixed element,      */
+/* not part of the tab bar), full-width at the very bottom past `lg`       */
+/* (no tab bar there to stack above). Always in the DOM at a fixed         */
+/* height (see `--bl-player-height` on `.bl-shell`) — only `[hidden]`      */
+/* toggles when nothing is loaded, so `.bl-shell-main`'s reserved bottom   */
+/* padding above never has to change at runtime (a JS-computed layout      */
+/* shift is exactly the kind of thing that has caused a real horizontal-   */
+/* scroll bug on this project before).                                    */
+/*                                                                          */
+/* Contrast (WCAG relative luminance, computed for this task — every       */
+/* combination this component actually paints):                           */
+/*   title (--bl-color-fg) on this bar's own surface (--bl-color-surface)  */
+/*     light: #2f0c02 on #fbf8ef -> 16.84:1   dark: #f4efe2 on #3a1206 -> 14.41:1 */
+/*   subtitle (--bl-color-muted) on the same surface                       */
+/*     light: #7c6758 on #fbf8ef -> 5.02:1    dark: #b89c86 on #3a1206 -> 6.41:1  */
+/*   an active/playing toggle's icon (--bl-component-accent-success) on    */
+/*   both the surface above AND the plain page background it also renders  */
+/*   against in TakeRow/take-detail (--bl-color-bg) — NOT the raw fixed    */
+/*   --bl-color-accent-alt, which measures 1.93:1/1.79:1 in dark mode      */
+/*   (see roost.css's header comment; this is that exact regression,       */
+/*   avoided by using the theme-aware component token instead):            */
+/*     on bg:      light 8.06:1   dark 5.14:1                              */
+/*     on surface: light 8.71:1   dark 4.76:1                              */
+/* All comfortably clear WCAG AA's 4.5:1 (text) / 3:1 (non-text UI) floor  */
+/* in both themes.                                                         */
+/* ---------------------------------------------------------------------- */
+
+.bl-player {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  z-index: 42; /* above the tab bar's 40 */
+  min-height: var(--bl-player-height);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--bl-color-surface);
+  border-top: 1px solid var(--bl-color-border);
+}
+
+.bl-player[hidden] {
+  display: none;
+}
+
+.bl-player-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bl-player-title {
+  color: var(--bl-color-fg);
+  font-family: var(--bl-font-body);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bl-player-subtitle {
+  color: var(--bl-color-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bl-player-audio {
+  width: 100%;
+  height: 2.25rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Play/solo controls — plain markup (`[data-audio-source]`), not their    */
+/* own islands; `Player.tsx` delegates clicks and toggles these classes.   */
+/* ---------------------------------------------------------------------- */
+
+.bl-play-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--bl-color-fg);
+  cursor: pointer;
+  padding: 0;
+}
+
+.bl-play-toggle[aria-pressed="true"] {
+  color: var(--bl-component-accent-success);
+}
+
+/* The take-detail hero's own, larger play control — same button, same
+   data attribute and aria contract, just a bigger hit target and glyph
+   since it is the page's primary action rather than one icon among a
+   list of rows. */
+.bl-play-toggle-lg {
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 1px solid var(--bl-color-border);
+  border-radius: 999px;
+  background: var(--bl-color-surface);
+}
+
+.bl-play-toggle .bl-play-icon-pause {
+  display: none;
+}
+
+.bl-play-toggle[aria-pressed="true"] .bl-play-icon-play {
+  display: none;
+}
+
+.bl-play-toggle[aria-pressed="true"] .bl-play-icon-pause {
+  display: inline;
+}
+
+/* The take-detail page's play section — the big play control plus (when
+   the take has stems) the Solo drawer underneath it. */
+.bl-take-play-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+/* The stems ("Solo") drawer — a row of source-select chips, "Full mix"
+   plus one per available stem. Deliberately labelled "Solo", never
+   "Mixer": switching sources plays exactly one stream at a time (see
+   task-7-report.md for why synchronised multi-track playback isn't
+   attempted). */
+.bl-solo-drawer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.bl-solo-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--bl-color-border);
+  border-radius: 999px;
+  background: var(--bl-color-surface);
+  color: var(--bl-color-fg);
+  font-family: var(--bl-font-body);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.bl-solo-chip.is-active {
+  border-color: var(--bl-component-accent-success);
+  color: var(--bl-component-accent-success);
+}
+
+@media (min-width: 1024px) {
+  .bl-player {
+    bottom: 0;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* Sidebar — hidden below `lg`, shown (as a flex row with `.bl-shell-body`) at and above it. */
@@ -760,7 +947,10 @@ a.bl-btn {
   }
 
   .bl-shell-main {
-    padding: 2.25rem 2.5rem 3rem;
+    /* No tab bar past this breakpoint (sidebar takes over) — the player
+       bar is the only fixed bottom element, so only its own height needs
+       reserving here, not the 6rem tab-bar clearance mobile carries too. */
+    padding: 2.25rem 2.5rem calc(1.5rem + var(--bl-player-height));
     max-width: 56rem;
     margin: 0;
   }

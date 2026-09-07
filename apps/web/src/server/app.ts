@@ -1,5 +1,5 @@
 // Composition root — builds the one `Db`/`Mailer`/`Clock`/`RateLimiter`/
-// `AppDeps`/`AuthDeps` set this process uses, memoized so both the JSON API
+// `Storage`/`AppDeps`/`AuthDeps` set this process uses, memoized so both the JSON API
 // mount (`pages/api/[...path].ts`) and the Astro pages (`server/pages/*`)
 // share the same database connection and rate-limiter state rather than
 // each building their own.
@@ -14,6 +14,7 @@ import { type AppDeps, createApp } from "@bandlib/api";
 import { type AuthDeps, type Mailer, createInMemoryRateLimiter, systemClock } from "@bandlib/core";
 import { createDb } from "@bandlib/db";
 import { createDevMailer } from "@bandlib/mail";
+import { createS3Storage } from "@bandlib/storage";
 import { createClient } from "@libsql/client";
 import { type RuntimeConfig, loadConfig } from "./config.js";
 
@@ -50,12 +51,22 @@ async function buildRuntime(): Promise<Runtime> {
   const clock = systemClock;
   const rateLimiter = createInMemoryRateLimiter(clock);
   const mailer = await buildMailer(config);
+  const storage = createS3Storage({
+    endpoint: config.s3.endpoint,
+    publicEndpoint: config.s3.publicEndpoint,
+    bucket: config.s3.bucket,
+    region: config.s3.region,
+    accessKeyId: config.s3.accessKeyId,
+    secretAccessKey: config.s3.secretAccessKey,
+    clock,
+  });
 
   const deps: AppDeps = {
     db,
     mailer,
     clock,
     rateLimiter,
+    storage,
     config: {
       appOrigin: config.appOrigin,
       bootstrapToken: config.bootstrapToken,
@@ -86,7 +97,7 @@ export async function getApiApp(): Promise<ApiApp> {
   return (await getRuntime()).app;
 }
 
-/** The shared `AppDeps` — `db`, `mailer`, `clock`, `rateLimiter`, `config`. */
+/** The shared `AppDeps` — `db`, `mailer`, `clock`, `rateLimiter`, `storage`, `config`. */
 export async function getAppDeps(): Promise<AppDeps> {
   return (await getRuntime()).deps;
 }

@@ -114,6 +114,16 @@ function startBuiltServer(): ChildProcess {
       BANDLIB_APP_ORIGIN: ORIGIN,
       BANDLIB_ALLOW_DEV_MAILER: "true",
       BANDLIB_COOKIE_SECURE: "false",
+      // Dummy S3 config — none of these route tests exercise the audio
+      // endpoint, so this never needs to actually reach a bucket. It only
+      // has to be PRESENT (config validation requires it) and internally
+      // consistent enough that `createS3Storage` can be constructed.
+      S3_ENDPOINT: "http://127.0.0.1:1",
+      S3_PUBLIC_ENDPOINT: "http://127.0.0.1:1",
+      S3_BUCKET: "unused-in-this-test",
+      S3_REGION: "auto",
+      S3_ACCESS_KEY_ID: "unused",
+      S3_SECRET_ACCESS_KEY: "unused",
       NODE_ENV: "test",
     },
     stdio: "ignore",

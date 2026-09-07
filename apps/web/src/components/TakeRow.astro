@@ -91,6 +91,7 @@
 import type { instrumentsRepo, takesRepo } from "@bandlib/db";
 import { formatDuration, formatShortDate } from "../server/format.js";
 import { TAKE_STATE_LABEL } from "../server/take-state.js";
+import PlayToggleButton from "./PlayToggleButton.astro";
 import type { TakeRowContext } from "./take-row-context.js";
 
 export interface Props {
@@ -105,9 +106,26 @@ export interface Props {
   /** Shows the gold favorite marker next to the take's label. Defaults to
    *  `false` — see this file's header comment. */
   favorited?: boolean;
+  /**
+   * Increment 4's play control (see this file's header comment on the
+   * `leading` slot) — the id of this take's ready master asset, when it
+   * has one. `undefined` (the default) renders NO play control at all,
+   * not a disabled one: the brief is explicit that a take with no
+   * playable asset gets nothing, and every caller already has to compute
+   * this (or not) per take, so there's no correct default other than
+   * "omit it".
+   */
+  playableAssetId?: string;
 }
 
-const { take, instruments, context, transitionName, favorited = false } = Astro.props;
+const {
+  take,
+  instruments,
+  context,
+  transitionName,
+  favorited = false,
+  playableAssetId,
+} = Astro.props;
 const resolvedTransitionName =
   transitionName === null ? undefined : (transitionName ?? `take-${take.id}`);
 
@@ -125,10 +143,26 @@ const primaryLabel = song ? song.title : formatShortDate(take.recordedAt);
 // where the date isn't implied by the page (a song page's rows already
 // linger under that song; an event page's rows already share one date).
 const showDate = context.kind === "full";
+// The play control's own accessible subtitle (announced by the player,
+// not shown visually here — the row's own markup already shows this same
+// information) — mirrors whichever of date/label this row doesn't already
+// use as its primary link text.
+const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (take.label ?? "");
 ---
 
 <div class="bl-take-row">
-  <slot name="leading" />
+  <slot name="leading">
+    {
+      playableAssetId && (
+        <PlayToggleButton
+          takeId={take.id}
+          assetId={playableAssetId}
+          title={primaryLabel}
+          subtitle={playSubtitle}
+        />
+      )
+    }
+  </slot>
   <div class="bl-take-row-main">
     <a
       href={`/takes/${take.id}`}

@@ -22,6 +22,7 @@
 // that moves the claimed name onto whichever occurrence the member
 // actually clicks, so the transition morphs from the right place on
 // screen. See that component's own header comment.
+import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import TakeTransitionRetarget from "../../components/TakeTransitionRetarget.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -168,6 +169,7 @@ function claimTakeTransition(takeId: string): string | null {
                     instruments={take.instruments}
                     context={{ kind: "full", song: take.song, event: take.event }}
                     transitionName={claimTakeTransition(take.id)}
+                    playableAssetId={take.playableAssetId}
                   />
                 ))}
               </div>
@@ -189,6 +191,13 @@ function claimTakeTransition(takeId: string): string | null {
             {votes.map(({ vote, take, favorited }) => (
               <li class="bl-vote-row">
                 <div class="bl-vote-row-main">
+                  {take?.playableAssetId && (
+                    <PlayToggleButton
+                      takeId={take.id}
+                      assetId={take.playableAssetId}
+                      title={take.song?.title ?? "Untitled take"}
+                    />
+                  )}
                   {take ? (
                     <a
                       href={`/takes/${take.id}`}

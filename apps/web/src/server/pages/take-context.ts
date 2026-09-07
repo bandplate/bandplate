@@ -8,13 +8,15 @@
 // Same batching shape as `server/pages/songs.ts#getSongDetail` and
 // `server/pages/events.ts#getEventDetail`: one query per kind of data
 // (songs, events, instruments), never one round trip per take.
-import type { Db } from "@bandlib/db";
+import { type Db, assetsRepo } from "@bandlib/db";
 import { eventsRepo, type instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
 
 export interface TakeWithFullContext extends takesRepo.Take {
   instruments: instrumentsRepo.Instrument[];
   song: songsRepo.Song | undefined;
   event: eventsRepo.Event | undefined;
+  /** See `assetsRepo.listPlayableMastersByTakeIds` — undefined means "no play control", not "disabled". */
+  playableAssetId: string | undefined;
 }
 
 export async function attachFullContext(
@@ -29,10 +31,11 @@ export async function attachFullContext(
   const songIds = [...new Set(takes.map((t) => t.songId))];
   const eventIds = [...new Set(takes.map((t) => t.eventId))];
 
-  const [instrumentsByTake, songs, events] = await Promise.all([
+  const [instrumentsByTake, songs, events, playableByTakeId] = await Promise.all([
     takesRepo.listInstrumentsForTakes(db, takeIds),
     songsRepo.getByIds(db, songIds),
     eventsRepo.getByIds(db, eventIds),
+    assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
   ]);
   const songById = new Map(songs.map((s) => [s.id, s]));
   const eventById = new Map(events.map((e) => [e.id, e]));
@@ -42,5 +45,6 @@ export async function attachFullContext(
     instruments: instrumentsByTake.get(take.id) ?? [],
     song: songById.get(take.songId),
     event: eventById.get(take.eventId),
+    playableAssetId: playableByTakeId.get(take.id)?.id,
   }));
 }

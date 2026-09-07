@@ -3,7 +3,7 @@
 // plain GET form (works with JS off — see `songs/index.astro`); this module
 // parses that query string and calls the one repo query that backs it,
 // `songsRepo.listWithStats`.
-import type { Db } from "@bandlib/db";
+import { type Db, assetsRepo } from "@bandlib/db";
 import { eventsRepo, type instrumentsRepo, songsRepo, takesRepo } from "@bandlib/db";
 
 export type SongListItem = songsRepo.SongWithStats;
@@ -40,6 +40,8 @@ export async function listSongsForLibrary(db: Db, query: SongsListQuery): Promis
 export interface TakeWithContext extends takesRepo.Take {
   instruments: instrumentsRepo.Instrument[];
   event: eventsRepo.Event | undefined;
+  /** See `assetsRepo.listPlayableMastersByTakeIds` — undefined means "no play control", not "disabled". */
+  playableAssetId: string | undefined;
 }
 
 export interface SongDetail {
@@ -69,9 +71,10 @@ export async function getSongDetail(db: Db, slug: string): Promise<SongDetail | 
 
   const takeIds = takes.map((t) => t.id);
   const eventIds = [...new Set(takes.map((t) => t.eventId))];
-  const [instrumentsByTake, events] = await Promise.all([
+  const [instrumentsByTake, events, playableByTakeId] = await Promise.all([
     takesRepo.listInstrumentsForTakes(db, takeIds),
     eventsRepo.getByIds(db, eventIds),
+    assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
   ]);
   const eventById = new Map(events.map((e) => [e.id, e]));
 
@@ -83,6 +86,7 @@ export async function getSongDetail(db: Db, slug: string): Promise<SongDetail | 
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],
       event: eventById.get(take.eventId),
+      playableAssetId: playableByTakeId.get(take.id)?.id,
     })),
   };
 }

@@ -1,0 +1,249 @@
+// The persistent player — one `<audio>` element, rendered once in
+// `AppLayout.astro` and kept alive across navigation via
+// `transition:persist` on its usage there. Astro persists an island's DOM
+// node instead of destroying and recreating it on a ClientRouter
+// navigation, so this component itself is never unmounted mid-session —
+// which is what makes "keeps playing while you browse to another page"
+// work with zero custom cross-page state transfer: the `<audio>` element
+// (and its `currentTime`/`paused` state, which the browser owns, not us)
+// simply never goes away.
+//
+// Every play/solo control on the site (TakeRow's leading slot, the take
+// detail hero, the stems drawer) is PLAIN MARKUP, not its own island — a
+// `<button data-audio-source data-take-id=... data-asset-id=... ...>`
+// with no JS of its own. This component delegates clicks from `document`
+// (the same pattern `ConfirmDialog.tsx` uses for `[data-confirm]`, and for
+// the same reason: Astro replaces `<body>` on every view-transition
+// navigation, so a listener bound to a specific element goes stale the
+// moment the user navigates — delegating from `document`, which itself
+// persists, and re-querying inside the handler is what survives that).
+// One hydrated island instead of N per-row islands keeps the JS budget to
+// one shared chunk regardless of how many take rows are on a page — see
+// task-7-report.md for its gzipped size.
+//
+// State lives in `player-store.ts` (nanostores) rather than component
+// state for the reason the brief calls out directly: a `.astro` page needs
+// to read "is take X currently playing" to render a row's initial
+// aria-pressed correctly on first paint — impossible if the only source of
+// truth were inside this Preact tree. In practice every row is rendered
+// server-side unaware of playback state (it can't know — playback is a
+// client-only, cross-page concept) and instead gets its correct
+// pressed/playing state from `syncButtons()` below, right after hydration
+// and again after every navigation.
+import { useStore } from "@nanostores/preact";
+import { useEffect, useRef } from "preact/hooks";
+import { decidePlayerClickAction } from "../client/player-actions.js";
+import {
+  AUDIO_SOURCE_ATTR,
+  type PlayerTrack,
+  audioUrl,
+  currentTrack,
+  isPlaying,
+} from "../client/player-store.js";
+
+interface SourceButtonData {
+  takeId: string;
+  assetId: string;
+  title: string;
+  subtitle: string;
+  sourceLabel: string;
+  /** "source-select" (the stems drawer) gets different aria-label phrasing than the default play/pause toggle. */
+  role: string;
+}
+
+function readButtonData(el: HTMLElement): SourceButtonData | null {
+  const { takeId, assetId, title } = el.dataset;
+  if (!takeId || !assetId || !title) {
+    return null;
+  }
+  return {
+    takeId,
+    assetId,
+    title,
+    subtitle: el.dataset.subtitle ?? "",
+    sourceLabel: el.dataset.sourceLabel ?? "Master",
+    role: el.dataset.role ?? "toggle",
+  };
+}
+
+/** Updates every `[data-audio-source]` element currently in the DOM to reflect the live player state — aria-pressed, a couple of CSS hooks, and (for plain toggle buttons) the aria-label. Called on every store change and after every navigation (`astro:page-load`), since Astro swaps in fresh, unsynced elements on each page. */
+function syncButtons(track: PlayerTrack | null, playing: boolean): void {
+  for (const el of document.querySelectorAll<HTMLElement>(`[${AUDIO_SOURCE_ATTR}]`)) {
+    const data = readButtonData(el);
+    if (!data) {
+      continue;
+    }
+    const isActiveSource =
+      track !== null && track.takeId === data.takeId && track.sourceAssetId === data.assetId;
+    const isActivePlaying = isActiveSource && playing;
+    el.setAttribute("aria-pressed", String(isActivePlaying));
+    el.classList.toggle("is-active", isActiveSource);
+    el.classList.toggle("is-playing", isActivePlaying);
+    if (data.role !== "source-select") {
+      el.setAttribute("aria-label", `${isActivePlaying ? "Pause" : "Play"} ${data.title}`);
+    }
+  }
+}
+
+export default function Player() {
+  const track = useStore(currentTrack);
+  const playing = useStore(isPlaying);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  // A source switch on the take already playing must preserve
+  // `currentTime` — `loadedmetadata` for the NEW source is the first
+  // point `currentTime` can be legally set, so the seek (and any pending
+  // resume) is applied there instead of immediately after `audio.src = `.
+  const pendingSeekRef = useRef<number | null>(null);
+  const pendingAutoplayRef = useRef(false);
+
+  // Wires the real DOM events (not our own click handler's optimistic
+  // guess) to `isPlaying` — this is what keeps the store honest when the
+  // native `<audio controls>` UI itself is used to pause/play, not just
+  // when a `[data-audio-source]` button is clicked.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+    const onPlay = () => isPlaying.set(true);
+    const onPause = () => isPlaying.set(false);
+    const onEnded = () => isPlaying.set(false);
+    const onLoadedMetadata = () => {
+      if (pendingSeekRef.current !== null) {
+        audio.currentTime = pendingSeekRef.current;
+        pendingSeekRef.current = null;
+      }
+      if (pendingAutoplayRef.current) {
+        pendingAutoplayRef.current = false;
+        void audio.play();
+      }
+    };
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    return () => {
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+    };
+  }, []);
+
+  // The delegated click handler — the one piece of JS every play/solo
+  // control on the site actually depends on. Registered once; this
+  // component is never unmounted mid-session (see the header comment), so
+  // there's no re-binding-after-navigation problem the way a
+  // page-scoped script would have.
+  useEffect(() => {
+    function onClick(event: MouseEvent) {
+      const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+        `[${AUDIO_SOURCE_ATTR}]`,
+      );
+      if (!target) {
+        return;
+      }
+      const data = readButtonData(target);
+      const audio = audioRef.current;
+      if (!data || !audio) {
+        return;
+      }
+      event.preventDefault();
+
+      // The decision (which of "toggle" / "switch source, preserve
+      // position" / "start a new track" applies) is a pure function —
+      // see `player-actions.ts` and its own test for the logic itself.
+      // Only the DOM/audio-element side effects happen here.
+      const action = decidePlayerClickAction(currentTrack.get(), data);
+
+      switch (action.kind) {
+        case "toggle-playback":
+          if (audio.paused) {
+            void audio.play();
+          } else {
+            audio.pause();
+          }
+          break;
+        case "switch-source":
+          pendingSeekRef.current = audio.currentTime;
+          pendingAutoplayRef.current = !audio.paused;
+          audio.src = audioUrl(action.track.sourceAssetId);
+          // `preload="none"` means changing `.src` alone does NOT start
+          // fetching — `loadedmetadata` (which applies the pending seek
+          // below) would never fire while paused, silently stranding the
+          // position at 0. `.load()` forces the fetch unconditionally,
+          // whether or not this switch also resumes playback.
+          audio.load();
+          currentTrack.set(action.track);
+          break;
+        case "start-track":
+          pendingSeekRef.current = null;
+          pendingAutoplayRef.current = false;
+          currentTrack.set(action.track);
+          audio.src = audioUrl(action.track.sourceAssetId);
+          // No pending seek to wait for — start playing immediately.
+          // `.play()` itself invokes the resource-selection/load algorithm
+          // per spec (same as the `.load()` calls above), so this does not
+          // need to wait for `loadedmetadata` the way a preserved-position
+          // switch does.
+          void audio.play();
+          break;
+      }
+    }
+
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+
+  // Keep every on-page control in sync with the store — on every state
+  // change, AND after every view-transition navigation (fresh, unsynced
+  // elements land in the DOM with no memory of the player's state).
+  useEffect(() => {
+    syncButtons(track, playing);
+  }, [track, playing]);
+  useEffect(() => {
+    function onPageLoad() {
+      syncButtons(currentTrack.get(), isPlaying.get());
+    }
+    document.addEventListener("astro:page-load", onPageLoad);
+    return () => document.removeEventListener("astro:page-load", onPageLoad);
+  }, []);
+
+  const announced =
+    track && track.sourceLabel !== "Master"
+      ? `Now playing: ${track.title} — ${track.sourceLabel}`
+      : track
+        ? `Now playing: ${track.title}`
+        : "";
+
+  return (
+    <div class="bl-player" hidden={!track} data-testid="bl-player">
+      {/* Track-change-only announcements — never touched by a timeupdate
+          handler (there isn't one), which is what keeps this from
+          spamming a screen reader on every second of playback. */}
+      <p class="sr-only" aria-live="polite">
+        {announced}
+      </p>
+      <div class="bl-player-meta">
+        <span class="bl-player-title">{track?.title ?? ""}</span>
+        <span class="bl-player-subtitle">
+          {track
+            ? [track.subtitle, track.sourceLabel !== "Master" ? track.sourceLabel : null]
+                .filter(Boolean)
+                .join(" · ")
+            : ""}
+        </span>
+      </div>
+      {/* Native controls deliberately, not a custom seek bar: keyboard
+          operability, per-control labelling, and correct Range-seek
+          behavior all come from the platform for free — the exact
+          category of thing this project's past a11y/contrast defects
+          came from hand-rolling (see task-7-report.md). Always present in
+          the DOM (never conditionally rendered) for assistive tech, per
+          the brief — only the surrounding chrome's visibility toggles via
+          the `hidden` attribute above. */}
+      {/* biome-ignore lint/a11y/useMediaCaption: a captions track has no meaningful content for a band's own instrumental/vocal recordings — there's no dialogue to transcribe */}
+      <audio ref={audioRef} controls preload="none" class="bl-player-audio" />
+    </div>
+  );
+}

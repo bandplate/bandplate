@@ -151,6 +151,7 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
                   take={take}
                   instruments={take.instruments}
                   context={{ kind: "song", event: take.event }}
+                  playableAssetId={take.playableAssetId}
                 />
               ))}
             </div>

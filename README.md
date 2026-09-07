@@ -48,14 +48,18 @@ pnpm build
    cd deploy/node && docker compose up -d minio minio-init
    ```
    Then fill in the `.env`'s `S3_*` block — the defaults there
-   (`S3_ENDPOINT=http://minio:9000`, `S3_PUBLIC_ENDPOINT=http://localhost:9000`,
+   (`S3_ENDPOINT=http://localhost:9000`, `S3_PUBLIC_ENDPOINT=http://localhost:9000`,
    `S3_BUCKET=bandlib`, `S3_ACCESS_KEY_ID=bandlib-dev`,
-   `S3_SECRET_ACCESS_KEY=bandlib-dev-secret`) already match this compose
-   stack — but if you're running `apps/web` directly on the host (not
-   inside the `app` compose service), point `S3_ENDPOINT` at
-   `http://localhost:9000` too, since `minio` only resolves on the compose
-   network. **`S3_ENDPOINT` and `S3_PUBLIC_ENDPOINT` are allowed to
-   differ, and behind Docker they usually must** — see the `.env.example`
+   `S3_SECRET_ACCESS_KEY=bandlib-dev-secret`) already match this path —
+   `apps/web` running directly on the host (`pnpm --filter web dev`, or
+   `pnpm build && pnpm start`), reaching the compose-started MinIO at
+   `localhost`. The one case that needs a DIFFERENT `S3_ENDPOINT` is
+   running `apps/web` itself inside `deploy/node/compose.yml`'s own `app`
+   service — point `S3_ENDPOINT` at `http://minio:9000` there instead
+   (the compose network's internal hostname; `S3_PUBLIC_ENDPOINT` stays
+   `http://localhost:9000` regardless, since the browser is never on that
+   network). **`S3_ENDPOINT` and `S3_PUBLIC_ENDPOINT` are allowed to
+   differ, and inside that `app` service they must** — see the `.env.example`
    comment on those two variables for exactly why (a presigned URL signed
    against the wrong one 403s/hangs in the browser with no obvious cause).
 

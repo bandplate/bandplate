@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-13",
+      "name": "M4 \u2014 Takes"
+    },
+    {
       "id": "page-12",
       "name": "M4 \u2014 Songs"
     },
@@ -50,6 +54,15 @@
     }
   ],
   "artboards": [
+    {
+      "file": "Takes.dc.html",
+      "title": "Takes",
+      "page": "page-13",
+      "x": 0,
+      "y": 0,
+      "w": 2360,
+      "h": 1040
+    },
     {
       "file": "Songs.dc.html",
       "title": "Songs",
@@ -369,6 +382,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-12"
+    "page": "page-13"
   }
 }

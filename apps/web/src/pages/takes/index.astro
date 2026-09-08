@@ -1,30 +1,30 @@
 ---
-// The takes archive: every take in the band's history, filtered by song,
-// instrument (AND), date range, rating and state. A plain GET form — every
-// filter round-trips through the URL, so a search is shareable/bookmarkable
-// and works with JS off (same approach `/songs`'s instrument filter uses;
-// see that page's header comment for why no client script is worth adding
-// just to progressively enhance a form this page doesn't otherwise need
-// any script for).
+// The takes archive: every take the band has, narrowed by song, instrument,
+// date, rating and "not voted by me".
 //
-// Layout: a filter panel BESIDE the results on desktop, a collapsed
-// `<details>` above them on phones (brief §4, "as /songs does") — reusing
-// `/songs`'s exact `<details>`-collapse-plus-force-open-past-lg mechanism
-// (`.bp-toolbar-details`, see components.css), generalized here to wrap
-// every filter fieldset (not just one instrument checkbox group) inside a
-// single `.bp-search-filters-body` child, so the same one CSS override
-// that already forces that one child visible past `lg` covers the whole
-// filter set instead of needing a rule per fieldset.
+// Direction T2 from the canvas, with its phone question settled as B — the
+// filters are a SHEET on a phone and a PANEL beside the results on desktop.
+// One trick makes that one set of controls rather than two: the panel IS a
+// `<dialog>`, styled as a plain static column past `lg` and opened with
+// `showModal()` below it. A second copy of these fields would mean a second set
+// of ids, and the first thing to rot would be the `<label for>` pairs.
+//
+// No Apply and no Clear. Changing any control submits the form, the same
+// gesture `/events` and `/songs` now use; the sheet stays open across that
+// navigation, so its footer count ("Show 18 takes") is live rather than a
+// promise. That is the whole reason the sheet won over an in-place expander:
+// on a phone the count is the only way to know a combination isn't about to
+// give you nothing.
+//
+// It degrades honestly: with no JS the sheet's `<summary>`-free trigger is
+// hidden, the dialog renders as a plain block (a `<dialog>` with no `open` is
+// `display: none`, which the no-JS rule below overrides), and the form's own
+// submit button applies the filters.
 import { instrumentsRepo, songsRepo } from "@bandplate/db";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import {
-  type SearchRating,
-  hasAnyFilter,
-  parseSearchQuery,
-  searchTakes,
-} from "../../server/pages/search.js";
+import { hasAnyFilter, parseSearchQuery, searchTakes } from "../../server/pages/search.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -44,49 +44,77 @@ const [{ results, truncated }, instruments, songs] = await Promise.all([
   songsRepo.list(appDeps.db),
 ]);
 
-const STATE_OPTIONS = [
-  { value: "new", label: "New" },
-  { value: "published", label: "Published" },
-  { value: "keeper", label: "Keeper" },
-  { value: "rejected", label: "Rejected" },
-] as const;
-
-const RATING_OPTIONS: Array<{ value: SearchRating; label: string }> = [
-  { value: "50", label: "50% keeper or better" },
-  { value: "75", label: "75% keeper or better" },
-  { value: "100", label: "Unanimous keeper" },
-];
+// How many filters are actually on — the number on the trigger, so a member
+// who left one set two days ago sees that before wondering where their takes
+// went. Sort is not a filter and is not counted.
+const activeFilterCount = [
+  Boolean(query.songId),
+  query.instrumentIds.length > 0,
+  Boolean(query.dateFrom) || Boolean(query.dateTo),
+  query.unvotedOnly,
+].filter(Boolean).length;
 
 // When truncated, `results.length` is only the page size (`SEARCH_LIMIT`),
 // not the true match count — stating it as a count directly above the
 // truncation notice below would contradict that notice ("N takes match" /
 // "showing the first N — narrow to see the rest" reads as if N were the
 // whole truth). Qualify it as "at least N" instead so the two lines agree.
-const resultsLabel = truncated
-  ? `${results.length}+ ${results.length === 1 ? "take matches" : "takes match"}`
-  : filtersApplied
-    ? `${results.length} ${results.length === 1 ? "take matches" : "takes match"}`
-    : `${results.length} ${results.length === 1 ? "take" : "takes"}`;
+const countLabel = truncated
+  ? `${results.length}+ ${results.length === 1 ? "take" : "takes"}`
+  : `${results.length} ${results.length === 1 ? "take" : "takes"}`;
 ---
 
 <AppLayout title="Takes" principal={principal} current="takes">
-  <div class="bp-stack">
-    <h1 class="bp-page-title">Search</h1>
+  <div class="bp-takes">
+    <div class="bp-takes-bar">
+      <h1 class="bp-page-title bp-m0">Takes</h1>
+      <button type="button" class="bp-filter-trigger" data-filter-open>
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M3 6h18M7 12h10M11 18h2" />
+        </svg>
+        Filters
+        {activeFilterCount > 0 && <span class="bp-badge bp-badge-keeper">{activeFilterCount}</span>}
+      </button>
+    </div>
 
-    <form method="get" class="bp-search-layout">
-      <details class="bp-toolbar-details bp-search-filters" open={filtersApplied}>
-        <summary class="bp-toolbar-details-summary">
-          Filters
-          {filtersApplied && " (applied)"}
-        </summary>
-        <div class="bp-search-filters-body bp-stack">
+    {/* `transition:persist` is load-bearing, not a nicety. Applying a filter is a
+      soft navigation, and without this the dialog element is destroyed and
+      rebuilt mid-transition — the modal drops out of the top layer for a frame
+      and the results underneath bleed through it. Persisting the node keeps
+      the sheet in the top layer across the swap, which is also what keeps its
+      count live while the member is still choosing. */}
+    <dialog
+      class="bp-filter-sheet"
+      data-filter-sheet
+      aria-label="Filters"
+      transition:persist="takes-filters"
+    >
+      <form method="get" class="bp-filter-form" data-filter-form>
+        <div class="bp-filter-sheet-head">
+          <span class="bp-filter-sheet-grip" aria-hidden="true"></span>
+          <div class="bp-filter-sheet-head-row">
+            <h2 class="bp-filter-sheet-title bp-m0">Filters</h2>
+            <a href="/takes" class="bp-filter-clear">Clear all</a>
+          </div>
+        </div>
+
+        <div class="bp-filter-groups">
           {/* A picker, not a text field. Typing a title asked the member to
               spell a song the way the archive stores it — diacritics and all —
               to reach takes they can see listed on the next page over. Every
               take belongs to exactly one song, so picking one is exact where
               typing was a guess. */}
-          <div class="bp-field">
-            <label class="bp-field-label" for="search-song">Song</label>
+          <div class="bp-filter-group">
+            <label class="bp-eyebrow bp-filter-legend" for="search-song">Song</label>
             <select class="bp-select" id="search-song" name="song">
               <option value="">Any song</option>
               {songs.map((song) => (
@@ -97,16 +125,16 @@ const resultsLabel = truncated
             </select>
           </div>
 
-          <fieldset class="bp-checkbox-group">
-            <legend>
+          <fieldset class="bp-filter-group">
+            <legend class="bp-eyebrow bp-filter-legend">
               Instruments
               {query.instrumentIds.length > 1 && (
-                <span class="bp-field-hint">— must have a take with all of these</span>
+                <span class="bp-filter-legend-note">— all of these</span>
               )}
             </legend>
-            {
-              instruments.map((instrument) => (
-                <span class="bp-checkbox-item">
+            <div class="bp-filter-pills">
+              {instruments.map((instrument) => (
+                <label class="bp-filter-pill-check">
                   <input
                     type="checkbox"
                     id={`search-instrument-${instrument.id}`}
@@ -114,15 +142,16 @@ const resultsLabel = truncated
                     value={instrument.id}
                     checked={query.instrumentIds.includes(instrument.id)}
                   />
-                  <label for={`search-instrument-${instrument.id}`}>{instrument.label}</label>
-                </span>
-              ))
-            }
+                  <span class="bp-filter-pill">{instrument.label}</span>
+                </label>
+              ))}
+            </div>
           </fieldset>
 
-          <div class="bp-form-grid">
-            <div class="bp-field">
-              <label class="bp-field-label" for="search-date-from">Recorded from</label>
+          <fieldset class="bp-filter-group">
+            <legend class="bp-eyebrow bp-filter-legend">Recorded</legend>
+            <div class="bp-filter-dates">
+              <label class="bp-visually-hidden" for="search-date-from">Recorded from</label>
               <input
                 class="bp-input"
                 type="date"
@@ -130,9 +159,8 @@ const resultsLabel = truncated
                 name="dateFrom"
                 value={query.dateFrom ?? ""}
               />
-            </div>
-            <div class="bp-field">
-              <label class="bp-field-label" for="search-date-to">Recorded to</label>
+              <span class="bp-filter-dates-sep" aria-hidden="true">to</span>
+              <label class="bp-visually-hidden" for="search-date-to">Recorded to</label>
               <input
                 class="bp-input"
                 type="date"
@@ -141,106 +169,184 @@ const resultsLabel = truncated
                 value={query.dateTo ?? ""}
               />
             </div>
-          </div>
+          </fieldset>
 
-          <div class="bp-field">
-            <label class="bp-field-label" for="search-sort">Sort by</label>
+          {/* Where `/me`'s count sends you. A filter rather than a separate
+              view, so it stacks with everything else here — "what haven't I
+              judged from last month, with horns on it" is one query. */}
+          <fieldset class="bp-filter-group">
+            <legend class="bp-eyebrow bp-filter-legend">Yours</legend>
+            <div class="bp-filter-pills">
+              <label class="bp-filter-pill-check">
+                <input
+                  type="checkbox"
+                  id="search-unvoted"
+                  name="unvoted"
+                  value="1"
+                  checked={query.unvotedOnly}
+                />
+                <span class="bp-filter-pill">Not voted by me</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="bp-filter-group">
+            <label class="bp-eyebrow bp-filter-legend" for="search-sort">Sort by</label>
             <select class="bp-select" id="search-sort" name="sort">
               <option value="recent" selected={query.sort === "recent"}>Most recent</option>
-              <option value="rating" selected={query.sort === "rating"}>
-                Most keeper votes
-              </option>
+              <option value="rating" selected={query.sort === "rating"}>Most keeper votes</option>
             </select>
-          </div>
-
-          <div class="bp-field">
-            <label class="bp-field-label" for="search-rating">Minimum rating</label>
-            <select class="bp-select" id="search-rating" name="rating">
-              <option value="" selected={!query.rating}>Any rating</option>
-              {
-                RATING_OPTIONS.map((option) => (
-                  <option value={option.value} selected={query.rating === option.value}>
-                    {option.label}
-                  </option>
-                ))
-              }
-            </select>
-          </div>
-
-          {/* Where `/me`'s count sends you. A checkbox rather than a separate
-              view, so it stacks with everything else in this panel — "what
-              haven't I judged from last month, with horns on it" is one query,
-              not three pages. */}
-          <fieldset class="bp-checkbox-group">
-            <legend>Yours</legend>
-            <span class="bp-checkbox-item">
-              <input type="checkbox" id="search-unvoted" name="unvoted" value="1" checked={query.unvotedOnly} />
-              <label for="search-unvoted">Not voted by me</label>
-            </span>
-          </fieldset>
-
-          <fieldset class="bp-checkbox-group">
-            <legend>State</legend>
-            {
-              STATE_OPTIONS.map((option) => (
-                <span class="bp-checkbox-item">
-                  <input
-                    type="checkbox"
-                    id={`search-state-${option.value}`}
-                    name="state"
-                    value={option.value}
-                    checked={query.states.includes(option.value)}
-                  />
-                  <label for={`search-state-${option.value}`}>{option.label}</label>
-                </span>
-              ))
-            }
-          </fieldset>
-
-          <div class="bp-toolbar-actions">
-            <button type="submit" class="bp-btn bp-btn-primary">Search</button>
-            {filtersApplied && (
-              <a href="/takes" class="bp-btn bp-btn-secondary">
-                Clear
-              </a>
-            )}
           </div>
         </div>
-      </details>
 
-      <div class="bp-search-results">
-        <p class="bp-field-hint bp-m0">{resultsLabel}</p>
-        {
-          truncated && (
-            <p class="bp-field-hint bp-m0">
-              Showing the first {results.length} matches — narrow your filters to see the rest.
+        {/* Two jobs, and which one it does depends on JS. Without it, this is
+            the plain submit that applies the filters. With it, changing a
+            control has already applied them, so the button's only job is to
+            close the sheet — and its label is the live count of what closing
+            it will show you. */}
+        <div class="bp-filter-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary bp-filter-apply" data-filter-apply>
+            Show {countLabel}
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="bp-search-results">
+      <p class="bp-takes-count bp-m0">
+        {countLabel}
+        {filtersApplied && <span class="bp-kind">filtered</span>}
+      </p>
+      {
+        truncated && (
+          <p class="bp-field-hint bp-m0">
+            Showing the first {results.length} — narrow the filters to see the rest.
+          </p>
+        )
+      }
+      {
+        results.length === 0 ? (
+          <div class="bp-empty-state">
+            <p>
+              {filtersApplied
+                ? "No takes match those filters — try turning one off."
+                : "No takes in the archive yet."}
             </p>
-          )
-        }
-        {
-          results.length === 0 ? (
-            <div class="bp-empty-state">
-              <p>
-                {filtersApplied
-                  ? "No takes match those filters — try clearing one."
-                  : "No takes in the archive yet."}
-              </p>
-            </div>
-          ) : (
-            <div class="bp-take-list bp-take-list--wide">
-              {results.map((take) => (
-                <TakeRow
-                  take={take}
-                  instruments={take.instruments}
-                  context={{ kind: "full", song: take.song, event: take.event }}
-                  favorited={take.favorited}
-                  playableAssetId={take.playableAssetId}
-                />
-              ))}
-            </div>
-          )
-        }
-      </div>
-    </form>
+          </div>
+        ) : (
+          <div class="bp-take-list bp-take-list--wide">
+            {results.map((take) => (
+              <TakeRow
+                take={take}
+                instruments={take.instruments}
+                context={{ kind: "full", song: take.song, event: take.event }}
+                playableAssetId={take.playableAssetId}
+                favorited={take.favorited}
+              />
+            ))}
+          </div>
+        )
+      }
+    </div>
   </div>
 </AppLayout>
+
+<script>
+  // The sheet, and the auto-apply that makes its count honest.
+  //
+  // Everything here is enhancement: with no JS the dialog renders as a plain
+  // block (see the `.bp-no-js` rule in components.css), the trigger is hidden,
+  // and the form's submit button applies the filters the ordinary way.
+  const OPEN_KEY = "bp:takes-filters-open";
+
+  function sheet(): HTMLDialogElement | null {
+    const el = document.querySelector("[data-filter-sheet]");
+    return el instanceof HTMLDialogElement ? el : null;
+  }
+
+  function open() {
+    const el = sheet();
+    if (!el || el.open) {
+      return;
+    }
+    el.showModal();
+    try {
+      sessionStorage.setItem(OPEN_KEY, "1");
+    } catch {
+      // Private mode, or site data blocked. The sheet still opens; it just
+      // won't reopen itself after the next filter change.
+    }
+  }
+
+  function close() {
+    const el = sheet();
+    if (el?.open) {
+      el.close();
+    }
+    try {
+      sessionStorage.removeItem(OPEN_KEY);
+    } catch {
+      // See `open`.
+    }
+  }
+
+  // Delegated from `document` and re-resolved per event: `<ClientRouter />`
+  // replaces the document on every filter change, so a listener bound to the
+  // first render's elements would be gone after the first one.
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (target.closest("[data-filter-open]")) {
+      open();
+      return;
+    }
+    // The apply button's server-side job is submitting. Once this script is
+    // running the filters are already applied, so it only has to close.
+    if (target.closest("[data-filter-apply]")) {
+      event.preventDefault();
+      close();
+    }
+  });
+
+  // Escape and the backdrop close the dialog natively; catch that so the
+  // reopen flag does not outlive the sheet.
+  document.addEventListener("close", (event) => {
+    if (event.target instanceof HTMLDialogElement && event.target.matches("[data-filter-sheet]")) {
+      try {
+        sessionStorage.removeItem(OPEN_KEY);
+      } catch {
+        // See `open`.
+      }
+    }
+  });
+
+  // Applying a filter is a navigation, so the sheet's element is replaced.
+  // Reopening it from a flag is what keeps the count on its button live while
+  // the member is still choosing — the reason this is a sheet at all.
+  document.addEventListener("astro:after-swap", () => {
+    let wanted = false;
+    try {
+      wanted = sessionStorage.getItem(OPEN_KEY) === "1";
+    } catch {
+      // See `open`.
+    }
+    // Only below the breakpoint where it IS a sheet: past `lg` the same
+    // element is a static panel and must never go modal.
+    if (wanted && !window.matchMedia("(min-width: 64rem)").matches) {
+      sheet()?.showModal();
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const form = target.closest("form[data-filter-form]");
+    if (form instanceof HTMLFormElement) {
+      form.requestSubmit();
+    }
+  });
+</script>

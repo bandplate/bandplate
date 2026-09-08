@@ -84,6 +84,13 @@
   --bp-rust: #9c2f10;
   --bp-olive: #3d5c17;
 
+  /* Native widgets — the date picker's calendar glyph, a `<select>`'s popup,
+     scrollbars, form-control focus rings — are drawn by the UA, and they take
+     their colours from `color-scheme` rather than from anything here. Without
+     it the browser assumes light, which is why the date inputs rendered a
+     black calendar icon on the dark ground. */
+  color-scheme: light;
+
   /* ---- semantic: light ---- */
   --bp-color-bg: var(--bp-bone);
   --bp-color-surface: var(--bp-card);
@@ -133,6 +140,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
     --bp-color-bg: var(--bp-lacquer);
     --bp-color-surface: var(--bp-sleeve);
     --bp-color-border: var(--bp-groove);
@@ -157,6 +166,8 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
+
   --bp-color-bg: var(--bp-lacquer);
   --bp-color-surface: var(--bp-sleeve);
   --bp-color-border: var(--bp-groove);

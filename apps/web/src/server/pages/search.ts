@@ -1,24 +1,21 @@
-// `/takes` — cross-cutting take search: instrument (AND), date range,
-// rating, state, and free text across song titles and aliases. A plain GET
-// form (see search/index.astro) — this module parses the query string into
-// `takesRepo.SearchFilters` and calls the one repo query that backs it, the
-// same shape `server/pages/songs.ts` uses for its own GET-form filtering.
+// `/takes` — the archive, narrowed by song, instrument (AND), date range,
+// and "not voted by me". A plain GET form (see takes/index.astro) —
+// this module parses the query string into `takesRepo.SearchFilters` and calls
+// the one repo query that backs it, the same shape `server/pages/songs.ts`
+// uses for its own GET-form filtering.
+//
+// There is no STATE filter. A member browsing the archive is not asking which
+// takes are `uploading` or `purged`; the states that mean anything to them —
+// keeper and rejected — are already visible on every row. It was six
+// checkboxes for a lifecycle only the ingest pipeline and the admin surfaces
+// care about.
+//
+// There is no RATING filter either. "75% keeper or better" asks a member to
+// think in percentages about a tally of at most seven votes, and the keeper
+// badge already says the thing they actually wanted to find.
 import type { Db } from "@bandplate/db";
 import { favoritesRepo, takesRepo } from "@bandplate/db";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
-
-const VALID_STATES: readonly takesRepo.TakeState[] = [
-  "uploading",
-  "new",
-  "published",
-  "keeper",
-  "rejected",
-  "purged",
-];
-
-export type SearchRating = "50" | "75" | "100";
-const VALID_RATINGS: readonly SearchRating[] = ["50", "75", "100"];
-const RATING_THRESHOLDS: Record<SearchRating, number> = { "50": 0.5, "75": 0.75, "100": 1 };
 
 export interface SearchQuery {
   /**
@@ -34,10 +31,8 @@ export interface SearchQuery {
   /** `yyyy-mm-dd`, kept as the raw string so the date input can redisplay it. */
   dateFrom?: string;
   dateTo?: string;
-  rating?: SearchRating;
   /** Defaults to `"recent"` — see `takesRepo.TakeSort`'s own comment for why `"rating"` isn't just `ratingScore DESC`. */
   sort: takesRepo.TakeSort;
-  states: takesRepo.TakeState[];
   /**
    * "Only takes I haven't voted on." This is where `/me`'s count sends you —
    * the count is the question, this is the answer, and making it a filter
@@ -85,22 +80,11 @@ export function parseSearchQuery(searchParams: URLSearchParams): SearchQuery {
   const instrumentIds = [...new Set(searchParams.getAll("instrument").filter(Boolean))];
   const dateFrom = parseDateInput(searchParams.get("dateFrom"));
   const dateTo = parseDateInput(searchParams.get("dateTo"));
-  const rawRating = searchParams.get("rating");
-  const rating = VALID_RATINGS.includes(rawRating as SearchRating)
-    ? (rawRating as SearchRating)
-    : undefined;
-  const states = [
-    ...new Set(
-      searchParams
-        .getAll("state")
-        .filter((s): s is takesRepo.TakeState => (VALID_STATES as readonly string[]).includes(s)),
-    ),
-  ];
   const rawSort = searchParams.get("sort");
   const sort: takesRepo.TakeSort = rawSort === "rating" ? "rating" : "recent";
   const unvotedOnly = searchParams.get("unvoted") === "1";
 
-  return { songId, instrumentIds, dateFrom, dateTo, rating, sort, states, unvotedOnly };
+  return { songId, instrumentIds, dateFrom, dateTo, sort, unvotedOnly };
 }
 
 export function hasAnyFilter(query: SearchQuery): boolean {
@@ -109,8 +93,6 @@ export function hasAnyFilter(query: SearchQuery): boolean {
     query.instrumentIds.length > 0 ||
     Boolean(query.dateFrom) ||
     Boolean(query.dateTo) ||
-    Boolean(query.rating) ||
-    query.states.length > 0 ||
     query.unvotedOnly
   );
 }
@@ -125,8 +107,6 @@ function toFilters(query: SearchQuery, memberId: string): takesRepo.SearchFilter
     // component, and a naive `<=` against midnight would silently exclude
     // every take recorded later that same day.
     dateTo: query.dateTo ? Date.parse(`${query.dateTo}T23:59:59.999Z`) : undefined,
-    minRating: query.rating ? RATING_THRESHOLDS[query.rating] : undefined,
-    states: query.states.length > 0 ? query.states : undefined,
   };
 }
 

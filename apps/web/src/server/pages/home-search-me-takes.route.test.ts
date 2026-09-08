@@ -485,14 +485,19 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).toContain("Home Favorite Song");
     });
 
-    it("filters by state via a plain GET query string", async () => {
-      const res = await fetch(`${ORIGIN}/takes?state=published`, {
-        headers: { cookie: sessionCookie },
-      });
-      expect(res.status).toBe(200);
-      const body = resultsRegion(await res.text());
-      expect(body).toContain("Neon Skyline Searchable");
-      expect(body).not.toContain("Home Favorite Song");
+    it("ignores a state param — the archive has no state filter", () => {
+      // Kept as a route-level check, not just a parser one: a stale bookmark
+      // has to come back with the whole archive rather than a silently
+      // narrowed slice of it.
+      return fetch(`${ORIGIN}/takes?state=published`, { headers: { cookie: sessionCookie } })
+        .then((res) => {
+          expect(res.status).toBe(200);
+          return res.text();
+        })
+        .then((body) => {
+          expect(resultsRegion(body)).toContain("Neon Skyline Searchable");
+          expect(resultsRegion(body)).toContain("Home Favorite Song");
+        });
     });
 
     it("submitting the form filters results AND re-populates the controls from the URL (F8, review round 1)", async () => {
@@ -513,7 +518,7 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
 
       const submitted = new URLSearchParams();
       submitted.set("song", searchableSongId);
-      submitted.set("state", "published");
+      submitted.set("unvoted", "1");
       const url = `${ORIGIN}/takes?${submitted.toString()}`;
 
       const first = await fetch(url, { headers: { cookie: sessionCookie } });
@@ -537,14 +542,12 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
           `value="${searchableSongId}"[^>]*selected|selected[^>]*value="${searchableSongId}"`,
         ),
       );
-      expect(firstBody).toMatch(
-        /id="search-state-published"[^>]*checked|checked[^>]*id="search-state-published"/,
-      );
-      // A DIFFERENT state checkbox must NOT be checked — proves this is
-      // real per-field re-population, not e.g. every checkbox rendering
-      // checked regardless of the query string.
+      expect(firstBody).toMatch(/id="search-unvoted"[^>]*checked|checked[^>]*id="search-unvoted"/);
+      // A DIFFERENT checkbox must NOT be checked — proves this is real
+      // per-field re-population, not every checkbox rendering checked
+      // regardless of the query string.
       expect(firstBody).not.toMatch(
-        /id="search-state-keeper"[^>]*checked|checked[^>]*id="search-state-keeper"/,
+        new RegExp(`id="search-instrument-${bassInstrumentId}"[^>]*checked`),
       );
 
       // Pasting the identical URL again reproduces the identical page —

@@ -26,25 +26,21 @@ describe("parseSearchQuery", () => {
       instrumentIds: [],
       dateFrom: undefined,
       dateTo: undefined,
-      rating: undefined,
       sort: "recent",
-      states: [],
       unvotedOnly: false,
     });
   });
 
   it("parses song, repeated instrument/state params, dates, and rating", () => {
     const params = new URLSearchParams(
-      "song=song-1&instrument=abc&instrument=def&dateFrom=2026-01-01&dateTo=2026-02-01&rating=75&state=published&state=keeper",
+      "song=song-1&instrument=abc&instrument=def&dateFrom=2026-01-01&dateTo=2026-02-01",
     );
     expect(parseSearchQuery(params)).toEqual({
       songId: "song-1",
       instrumentIds: ["abc", "def"],
       dateFrom: "2026-01-01",
       dateTo: "2026-02-01",
-      rating: "75",
       sort: "recent",
-      states: ["published", "keeper"],
       unvotedOnly: false,
     });
   });
@@ -60,13 +56,17 @@ describe("parseSearchQuery", () => {
     expect(parseSearchQuery(params).instrumentIds).toEqual(["abc"]);
   });
 
-  it("drops an invalid rating value rather than passing it through", () => {
-    expect(parseSearchQuery(new URLSearchParams("rating=nonsense")).rating).toBeUndefined();
+  it("ignores a rating param — the archive has no rating filter", () => {
+    // "75% keeper or better" asked a member to think in percentages about a
+    // tally of at most seven votes. A stale bookmark must not keep applying it.
+    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("rating=75")))).toBe(false);
   });
 
-  it("drops an invalid state value rather than passing it through", () => {
-    const query = parseSearchQuery(new URLSearchParams("state=nonsense&state=published"));
-    expect(query.states).toEqual(["published"]);
+  it("ignores a state param — the archive has no state filter", () => {
+    // Six checkboxes for a lifecycle only ingest and the admin surfaces care
+    // about. A stale bookmark must not keep hiding takes by a rule the page
+    // shows no control for.
+    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("state=published")))).toBe(false);
   });
 
   it("drops a malformed date string", () => {
@@ -91,9 +91,7 @@ describe("parseSearchQuery", () => {
       instrumentIds: [],
       dateFrom: undefined,
       dateTo: undefined,
-      rating: undefined,
       sort: "recent",
-      states: [],
       unvotedOnly: false,
     });
   });
@@ -108,8 +106,7 @@ describe("hasAnyFilter", () => {
     expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("song=s-1")))).toBe(true);
     expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("instrument=a")))).toBe(true);
     expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("dateFrom=2026-01-01")))).toBe(true);
-    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("rating=50")))).toBe(true);
-    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("state=new")))).toBe(true);
+    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("unvoted=1")))).toBe(true);
   });
 });
 

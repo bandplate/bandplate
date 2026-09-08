@@ -125,12 +125,14 @@ function assetLabel(asset: assetsRepo.Asset): string {
             <span transition:name={`take-${take.id}`}>Take</span>
           )
         }
-        {/* The take's STATE, as on the canvas. It is the one fact about a take
-            that only this page shows, and it belongs next to the take's name
-            rather than buried in the reference strip at the bottom. The event's
-            KIND is a fact about the event, so it sits with the event's name on
-            the line below. */}
-        {take.state !== "published" && (
+        {/* Only a DECIDED state — keeper or rejected. `new` is what every take
+            is until someone acts on it, so a `new` badge marks nothing: it
+            appeared on most of the archive and said only that the take exists.
+            The state badge is here rather than in the reference strip because
+            it is the one fact about a take that only this page shows; the
+            event's KIND is a fact about the event, so it sits with the event's
+            name on the line below. */}
+        {(take.state === "keeper" || take.state === "rejected") && (
           <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
             {TAKE_STATE_LABEL[take.state]}
           </span>

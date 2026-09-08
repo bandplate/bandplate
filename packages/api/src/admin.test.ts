@@ -87,6 +87,22 @@ describe("admin members routes", () => {
     expect(res.status).toBe(409);
   });
 
+  it("refuses to create a member whose email isn't a real address", async () => {
+    const testApp = await buildTestApp();
+    const cookie = await loginAsAdmin(testApp);
+
+    const res = await testApp.app.request("/admin/members", {
+      method: "POST",
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
+      body: JSON.stringify({ displayName: "Bailey", email: "not-an-email" }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("invalid_body");
+    expect(await membersRepo.list(testApp.db)).toHaveLength(1); // just the admin
+  });
+
   it("404s patching an unknown member id", async () => {
     const testApp = await buildTestApp();
     const cookie = await loginAsAdmin(testApp);

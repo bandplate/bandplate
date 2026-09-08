@@ -1,0 +1,1 @@
+ALTER TABLE `instruments` ADD `icon` text;

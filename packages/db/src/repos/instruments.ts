@@ -9,6 +9,8 @@ export interface CreateInstrumentInput {
   slug: string;
   label: string;
   sortOrder?: number;
+  /** A key from `@bandplate/ui/icons/instruments`, or null for initials. */
+  icon?: string | null;
 }
 
 export async function create(db: Db, input: CreateInstrumentInput): Promise<Instrument> {
@@ -19,6 +21,7 @@ export async function create(db: Db, input: CreateInstrumentInput): Promise<Inst
       slug: input.slug,
       label: input.label,
       sortOrder: input.sortOrder ?? 0,
+      icon: input.icon ?? null,
     })
     .returning();
 
@@ -53,6 +56,13 @@ export interface UpdateInstrumentInput {
   sortOrder?: number;
   /** `null` unarchives; a number archives at that timestamp. */
   archivedAt?: number | null;
+  /**
+   * A key from `@bandplate/ui/icons/instruments`, or `null` to clear it back
+   * to initials. `undefined` (the key absent) leaves the current icon alone —
+   * `update` only writes the keys it is given, so a caller editing a label
+   * cannot silently erase the icon.
+   */
+  icon?: string | null;
 }
 
 export async function update(db: Db, id: string, input: UpdateInstrumentInput): Promise<void> {

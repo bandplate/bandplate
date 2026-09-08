@@ -2,6 +2,7 @@
 // `packages/api/src/routes/admin-instruments.ts`. Instruments are archived,
 // never deleted, so historical takes keep rendering an instrument the band
 // has dropped (see the schema comment in `packages/db`).
+import { INSTRUMENT_GLYPHS } from "@bandplate/ui/icons/instruments.js";
 import type { Db } from "@bandplate/db";
 import { instrumentsRepo } from "@bandplate/db";
 import { z } from "zod";
@@ -58,6 +59,15 @@ export async function updateInstrument(
 ): Promise<UpdateInstrumentResult> {
   const label = formData.get("label");
   const sortOrder = formData.get("sortOrder");
+  // `icon` is optional and tri-state: absent leaves it alone, "" clears it
+  // back to initials, and a key sets it. Validated against the vendored
+  // library rather than trusted — the column is free text at the database
+  // level, and an unknown key would render nothing at all.
+  const rawIcon = formData.get("icon");
+  const iconField = rawIcon === null ? undefined : String(rawIcon);
+  if (iconField !== undefined && iconField !== "" && !(iconField in INSTRUMENT_GLYPHS)) {
+    return { kind: "invalid" };
+  }
   const parsed = renameSchema.safeParse({
     label: label ? String(label) : undefined,
     sortOrder: sortOrder ? String(sortOrder) : undefined,
@@ -75,6 +85,9 @@ export async function updateInstrument(
   }
   if (parsed.data.sortOrder !== undefined) {
     update.sortOrder = parsed.data.sortOrder;
+  }
+  if (iconField !== undefined) {
+    update.icon = iconField === "" ? null : iconField;
   }
   await instrumentsRepo.update(db, id, update);
   return { kind: "ok" };

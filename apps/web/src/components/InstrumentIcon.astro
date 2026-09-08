@@ -1,0 +1,52 @@
+---
+// A take's instruments, drawn rather than spelled out.
+//
+// Written out in full ("Drums, Bass, Guitar, Vocals") the list ran longer than
+// the song title above it and blurred into the take's own label on the same
+// muted line — two different things reading as one sentence.
+//
+// The glyph comes from `instrument.icon`, a key chosen by an admin and stored
+// on the row. NOT a lookup on `slug`: the instruments table is admin-managed
+// data, so a slug-keyed map could never be complete. An instrument with no
+// icon — the default for every row until someone picks one — renders its own
+// initials, which is a real presentation rather than an error state.
+//
+// Icons are `aria-hidden`; the group in `TakeRow` carries one label naming
+// every instrument, which reads better than seven separate announcements.
+import { INSTRUMENT_GLYPHS } from "@bandplate/ui/icons/instruments.js";
+
+export interface Props {
+  label: string;
+  /** Key into `INSTRUMENT_GLYPHS`. Null, or unknown, falls back to initials. */
+  icon?: string | null;
+  size?: number;
+}
+
+const { label, icon, size = 20 } = Astro.props;
+
+// An unknown key is treated exactly like no key. The column is free text at
+// the database level, and a glyph removed from the library in a later release
+// would otherwise render nothing at all.
+const glyph = icon ? INSTRUMENT_GLYPHS[icon] : undefined;
+
+/** First letter of each of the first two words — "Trombone" → "TR", "French Horn" → "FH". */
+const initials = label
+  .split(/\s+/)
+  .slice(0, 2)
+  .map((word) => word[0] ?? "")
+  .join("")
+  .toUpperCase()
+  .slice(0, 2);
+---
+
+<span class="bp-instrument" style={`--bp-instrument-size:${size}px`} title={label}>
+  {
+    glyph ? (
+      <svg viewBox={glyph.viewBox} fill="currentColor" aria-hidden="true" set:html={glyph.body} />
+    ) : (
+      <span class="bp-instrument-initials" aria-hidden="true">
+        {initials}
+      </span>
+    )
+  }
+</span>

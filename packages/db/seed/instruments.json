@@ -1,9 +1,44 @@
 [
-  { "slug": "drums", "label": "Drums", "sortOrder": 0 },
-  { "slug": "bass", "label": "Bass", "sortOrder": 1 },
-  { "slug": "guitar", "label": "Guitar", "sortOrder": 2 },
-  { "slug": "keys", "label": "Keys", "sortOrder": 3 },
-  { "slug": "vocals", "label": "Vocals", "sortOrder": 4 },
-  { "slug": "trumpet", "label": "Trumpet", "sortOrder": 5 },
-  { "slug": "trombone", "label": "Trombone", "sortOrder": 6 }
+  {
+    "slug": "drums",
+    "label": "Drums",
+    "sortOrder": 0,
+    "icon": "drum-kit"
+  },
+  {
+    "slug": "bass",
+    "label": "Bass",
+    "sortOrder": 1,
+    "icon": "guitar-bass-head"
+  },
+  {
+    "slug": "guitar",
+    "label": "Guitar",
+    "sortOrder": 2,
+    "icon": "guitar"
+  },
+  {
+    "slug": "keys",
+    "label": "Keys",
+    "sortOrder": 3,
+    "icon": "piano-keys"
+  },
+  {
+    "slug": "vocals",
+    "label": "Vocals",
+    "sortOrder": 4,
+    "icon": "microphone"
+  },
+  {
+    "slug": "trumpet",
+    "label": "Trumpet",
+    "sortOrder": 5,
+    "icon": "trumpet"
+  },
+  {
+    "slug": "trombone",
+    "label": "Trombone",
+    "sortOrder": 6,
+    "icon": "trombone"
+  }
 ]

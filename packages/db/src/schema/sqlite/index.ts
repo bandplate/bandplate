@@ -112,6 +112,21 @@ export const instruments = sqliteTable("instruments", {
   slug: text("slug").notNull().unique(),
   label: text("label").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  /**
+   * Which vendored glyph this instrument shows, or null for none.
+   *
+   * A CHOICE, not a lookup on `slug`: this table is admin-managed data, so a
+   * slug-keyed icon map could never be complete — a band adds a melodica and
+   * the map has no entry. Storing the key here makes the set open, and makes
+   * adding an instrument a matter of picking a glyph rather than shipping code.
+   *
+   * Nullable with no default and no backfill: null renders the instrument's
+   * initials, which is a real presentation and also exactly what every
+   * existing row shows on the day this ships. Keys come from
+   * `@bandplate/ui/icons/instruments` and are validated against it on write —
+   * an unknown key would render nothing at all.
+   */
+  icon: text("icon"),
   archivedAt: ts("archived_at"),
 });
 

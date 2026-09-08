@@ -1,6 +1,8 @@
 ---
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import { INSTRUMENT_GLYPHS, INSTRUMENT_GLYPH_CREDIT } from "@bandplate/ui/icons/instruments.js";
+import InstrumentIcon from "../../../components/InstrumentIcon.astro";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
@@ -95,6 +97,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
         <table class="bp-table">
           <thead>
             <tr>
+              <th scope="col">Icon</th>
               <th scope="col">Label</th>
               <th scope="col">Slug</th>
               <th scope="col">Order</th>
@@ -105,8 +108,11 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
           <tbody>
             {instruments.map((instrument) => (
               <tr>
+                <td data-label="Icon">
+                  <InstrumentIcon icon={instrument.icon} label={instrument.label} size={24} />
+                </td>
                 <td data-label="Label">
-                  <form method="post" class="bp-inline-form">
+                  <form method="post" class="bp-inline-form bp-instrument-form">
                     <input type="hidden" name="intent" value="update" />
                     <input type="hidden" name="instrumentId" value={instrument.id} />
                     <label class="sr-only" for={`label-${instrument.id}`}>
@@ -128,6 +134,33 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                       type="number"
                       value={instrument.sortOrder}
                     />
+                    {/* A no-JS disclosure: the picker is a plain radio group
+                    inside the row's own form, so choosing a glyph and pressing
+                    Save is one submission. Collapsed by default because
+                    nineteen 44px tiles per row would bury the table. */}
+                    <details class="bp-icon-picker">
+                      <summary>Icon</summary>
+                      <fieldset class="bp-icon-grid">
+                        <legend class="sr-only">Icon for {instrument.label}</legend>
+                        <label class="bp-icon-choice" title="No icon — show initials">
+                          <input type="radio" name="icon" value="" checked={!instrument.icon} />
+                          <span class="bp-icon-choice-face bp-icon-choice-none">None</span>
+                        </label>
+                        {Object.entries(INSTRUMENT_GLYPHS).map(([key, glyph]) => (
+                          <label class="bp-icon-choice" title={glyph.label}>
+                            <input
+                              type="radio"
+                              name="icon"
+                              value={key}
+                              checked={instrument.icon === key}
+                            />
+                            <span class="bp-icon-choice-face">
+                              <InstrumentIcon icon={key} label={glyph.label} size={22} />
+                            </span>
+                          </label>
+                        ))}
+                      </fieldset>
+                    </details>
                     <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save</button>
                   </form>
                 </td>
@@ -162,4 +195,13 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
       </div>
     )}
   </section>
+  <p class="bp-credit">
+    Instrument icons from{" "}
+    <a href={INSTRUMENT_GLYPH_CREDIT.url} rel="noopener noreferrer" target="_blank">
+      {INSTRUMENT_GLYPH_CREDIT.set}
+    </a>, licensed{" "}
+    <a href={INSTRUMENT_GLYPH_CREDIT.licenceUrl} rel="noopener noreferrer" target="_blank">
+      {INSTRUMENT_GLYPH_CREDIT.licence}
+    </a>.
+  </p>
 </AdminLayout>

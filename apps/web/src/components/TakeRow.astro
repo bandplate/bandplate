@@ -108,7 +108,13 @@
 // that script: with JS off, this attribute just sits there unused and
 // round 1's first-occurrence-wins naming is exactly what still happens.
 import type { instrumentsRepo, takesRepo } from "@bandplate/db";
-import { eventKindLabel, eventLabel, formatDuration, formatShortDate } from "../server/format.js";
+import {
+  eventKindLabel,
+  eventLabel,
+  formatDuration,
+  formatShortDate,
+  takeNote,
+} from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
 import InstrumentIcon from "./InstrumentIcon.astro";
 import PlayToggleButton from "./PlayToggleButton.astro";
@@ -178,14 +184,7 @@ const eventName = event
   ? eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
   : "";
 const eventKind = event ? eventKindLabel(event.kind) : "";
-// A take's own note, unless it only repeats the kind badge sitting beside the
-// title. The seeded concert takes were labelled "live" back when the row had no
-// badge to say that, and ingest can produce the same thing from a Reaper region
-// name — either way the row rendered the word twice, once as a badge and once
-// as a note. Compared case-insensitively against the label actually rendered,
-// so it stays true if `eventKindLabel` ever maps a kind differently.
-const noteText =
-  take.label && take.label.trim().toLowerCase() === eventKind.toLowerCase() ? null : take.label;
+const noteText = takeNote(take.label, eventKind);
 ---
 
 <div class="bp-take-row">

@@ -70,6 +70,24 @@ export function eventKindLabel(kind: string): string {
   return kind === "concert" ? "live" : kind;
 }
 
+/**
+ * A take's own note, unless it only repeats the kind badge rendered beside it.
+ * The seeded concert takes are labelled "live" from back when nothing on the
+ * row said so, and ingest can produce the same thing from a Reaper region
+ * name — either way the word appeared twice, once as a badge and once as a
+ * note. Compared against the label actually rendered rather than against the
+ * raw kind, so it stays true if `eventKindLabel` maps a kind differently.
+ *
+ * Shared by `TakeRow.astro` and `/takes/[id]`: both show a badge and a note,
+ * so both had the duplicate.
+ */
+export function takeNote(label: string | null | undefined, kindLabel: string): string | null {
+  if (!label) {
+    return null;
+  }
+  return label.trim().toLowerCase() === kindLabel.toLowerCase() ? null : label;
+}
+
 /** Byte count as a human `MB`/`KB`/`B` figure — `/takes/[id]`'s asset list. */
 export function formatBytes(bytes: number): string {
   if (bytes >= 1_000_000) {

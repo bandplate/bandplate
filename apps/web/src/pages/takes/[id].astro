@@ -39,6 +39,7 @@ import {
   formatBytes,
   formatDuration,
   formatLongDate,
+  takeNote,
 } from "../../server/format.js";
 import { getTakeDetail } from "../../server/pages/takes.js";
 import { TAKE_STATE_LABEL } from "../../server/take-state.js";
@@ -90,6 +91,7 @@ const kindLabel = event ? eventKindLabel(event.kind) : "";
 const eventName = event
   ? eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
   : "";
+const noteText = takeNote(take.label, kindLabel);
 const heroTitle = song ? song.title : `Take from ${formatLongDate(take.recordedAt)}`;
 const heroSubtitle = event ? `${kindLabel} — ${formatLongDate(event.heldAt)}` : (take.label ?? "");
 
@@ -123,7 +125,16 @@ function assetLabel(asset: assetsRepo.Asset): string {
             <span transition:name={`take-${take.id}`}>Take</span>
           )
         }
-        {kindLabel && <span class="bp-badge bp-badge-kind">{kindLabel}</span>}
+        {/* The take's STATE, as on the canvas. It is the one fact about a take
+            that only this page shows, and it belongs next to the take's name
+            rather than buried in the reference strip at the bottom. The event's
+            KIND is a fact about the event, so it sits with the event's name on
+            the line below. */}
+        {take.state !== "published" && (
+          <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
+            {TAKE_STATE_LABEL[take.state]}
+          </span>
+        )}
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
             targetType="take"
@@ -135,17 +146,29 @@ function assetLabel(asset: assetsRepo.Asset): string {
         </span>
       </h1>
       <p class="bp-take-detail-subline bp-m0">
+        {/* An untitled event has nothing to say beyond its kind, and the badge
+            already says that — "this rehearsal" next to a `rehearsal` badge was
+            the same word twice. So a named event gets its name as the link with
+            the badge beside it, and an unnamed one makes the badge itself the
+            link. Either way the kind is stated once. */}
         {
-          event ? (
-            <a href={`/events/${event.id}`} class="bp-take-event-link">
-              {eventName || `this ${kindLabel}`}
+          event && eventName ? (
+            <>
+              <a href={`/events/${event.id}`} class="bp-take-event-link">
+                {eventName}
+              </a>
+              {kindLabel && <span class="bp-badge bp-badge-kind">{kindLabel}</span>}
+            </>
+          ) : event ? (
+            <a href={`/events/${event.id}`} class="bp-take-event-link" aria-label={`View this ${kindLabel}`}>
+              <span class="bp-badge bp-badge-kind">{kindLabel}</span>
             </a>
           ) : null
         }
-        {event && <span class="bp-take-detail-sep" aria-hidden="true" />}
+        <span class="bp-take-detail-sep" aria-hidden="true" />
         <span>{formatLongDate(event ? event.heldAt : take.recordedAt)}</span>
       </p>
-      {take.label && <p class="bp-take-detail-note bp-m0">{take.label}</p>}
+      {noteText && <p class="bp-take-detail-note bp-m0">{noteText}</p>}
     </div>
 
     {
@@ -153,13 +176,25 @@ function assetLabel(asset: assetsRepo.Asset): string {
         <section class="bp-take-strip">
           <h2 class="bp-strip-label">Listen</h2>
           <div class="bp-take-play-section">
-            <PlayToggleButton
-              takeId={take.id}
-              assetId={playableMaster.id}
-              title={heroTitle}
-              subtitle={heroSubtitle}
-              size="lg"
-            />
+            <div class="bp-take-play-lead">
+              <PlayToggleButton
+                takeId={take.id}
+                assetId={playableMaster.id}
+                title={heroTitle}
+                subtitle={heroSubtitle}
+                size="lg"
+              />
+              <div class="bp-take-play-lead-text">
+                <p class="bp-take-play-title">Play this take</p>
+                {/* Names the SOURCE, not the length. The duration lives one strip
+                    down in "This take", where it is still there for a take that
+                    has no playable asset and so renders no play control at all —
+                    saying it in both places put the same number on screen twice. */}
+                <p class="bp-take-play-sub">
+                  <span>{playableMaster.tier === "lossless" ? "lossless master" : "master mix"}</span>
+                </p>
+              </div>
+            </div>
             {playableStems.length > 0 && (
               <div class="bp-solo-drawer" role="group" aria-label="Solo an instrument">
                 <button
@@ -255,10 +290,6 @@ function assetLabel(asset: assetsRepo.Asset): string {
         <h2 class="bp-strip-label">This take</h2>
         <div class="bp-take-detail-facts">
           <span>{formatDuration(take.durationMs)}</span>
-          <span class="bp-take-detail-sep" aria-hidden="true" />
-          <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-            {TAKE_STATE_LABEL[take.state]}
-          </span>
           {
             instruments.length > 0 && (
               <>

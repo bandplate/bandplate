@@ -9,12 +9,17 @@
 // `showModal()` below it. A second copy of these fields would mean a second set
 // of ids, and the first thing to rot would be the `<label for>` pairs.
 //
-// No Apply and no Clear. Changing any control submits the form, the same
-// gesture `/events` and `/songs` now use; the sheet stays open across that
-// navigation, so its footer count ("Show 18 takes") is live rather than a
-// promise. That is the whole reason the sheet won over an in-place expander:
-// on a phone the count is the only way to know a combination isn't about to
-// give you nothing.
+// The two contexts apply filters differently, and deliberately:
+//
+//   - The PANEL (desktop) applies on change. It is beside the results, so a
+//     change and its effect are on screen together and a confirm step would
+//     be a button you press to see what you already asked for.
+//   - The SHEET (phone) applies on CONFIRM. It covers the results, so applying
+//     on change would fire a navigation the member cannot see the result of,
+//     once per tap, while they are still assembling a query.
+//
+// The one control both share is the form; what differs is what triggers its
+// submit, which is the whole of the script at the bottom.
 //
 // It degrades honestly: with no JS the sheet's `<summary>`-free trigger is
 // hidden, the dialog renders as a plain block (a `<dialog>` with no `open` is
@@ -211,15 +216,10 @@ const countLabel = truncated
           </div>
         </div>
 
-        {/* Two jobs, and which one it does depends on JS. Without it, this is
-            the plain submit that applies the filters. With it, changing a
-            control has already applied them, so the button's only job is to
-            close the sheet — and its label is the live count of what closing
-            it will show you. */}
+        {/* The sheet's confirm, and the no-JS submit for every context. It is
+            hidden past `lg`, where a change applies itself. */}
         <div class="bp-filter-sheet-foot">
-          <button type="submit" class="bp-btn bp-btn-primary bp-filter-apply" data-filter-apply>
-            Show {countLabel}
-          </button>
+          <button type="submit" class="bp-btn bp-btn-primary bp-filter-apply">Show takes</button>
         </div>
       </form>
     </dialog>
@@ -264,37 +264,13 @@ const countLabel = truncated
 </AppLayout>
 
 <script>
-  // The sheet, and the auto-apply that makes its count honest.
-  //
-  // Everything here is enhancement: with no JS the dialog renders as a plain
-  // block (see the `.bp-no-js` rule in components.css), the trigger is hidden,
-  // and the form's submit button applies the filters the ordinary way.
-  const OPEN_KEY = "bp:takes-filters-open";
-
+  // Opening and dismissing the sheet, and applying on change ONLY where that
+  // makes sense. Everything here is enhancement: with no JS the dialog renders
+  // as a plain block (see `.bp-no-js` in components.css), the trigger is
+  // hidden, and the form's own submit button applies the filters.
   function sheet(): HTMLDialogElement | null {
     const el = document.querySelector("[data-filter-sheet]");
     return el instanceof HTMLDialogElement ? el : null;
-  }
-
-  function remember(open: boolean) {
-    try {
-      if (open) {
-        sessionStorage.setItem(OPEN_KEY, "1");
-      } else {
-        sessionStorage.removeItem(OPEN_KEY);
-      }
-    } catch {
-      // Private mode, or site data blocked. The sheet still works; it just
-      // won't reopen itself after a filter change.
-    }
-  }
-
-  function open() {
-    const el = sheet();
-    if (el && !el.open) {
-      el.showModal();
-      remember(true);
-    }
   }
 
   // Delegated from `document` and re-resolved per event: `<ClientRouter />`
@@ -306,19 +282,10 @@ const countLabel = truncated
       return;
     }
     if (target.closest("[data-filter-open]")) {
-      open();
-      return;
-    }
-    // Confirming is the one deliberate "I'm done" — it closes for good, and
-    // the flag goes with it so the next page does not bring the sheet back.
-    if (target.closest("[data-filter-apply]")) {
-      event.preventDefault();
-      remember(false);
-      sheet()?.close();
+      sheet()?.showModal();
       return;
     }
     if (target.closest("[data-filter-close]")) {
-      remember(false);
       sheet()?.close();
       return;
     }
@@ -328,33 +295,9 @@ const countLabel = truncated
     // click landed on the element itself rather than on anything inside it.
     const el = sheet();
     if (el?.open && target === el) {
-      remember(false);
       el.close();
     }
-    // A pill inside the sheet is a LINK (the "All instruments" shortcut), so
-    // it navigates rather than submitting. Same rule as a change: close now,
-    // reopen on the other side.
-    if (target.closest("[data-filter-sheet] a[href]") && sheet()?.open) {
-      remember(true);
-      sheet()?.close();
-    }
   });
-
-  // Escape and a backdrop click close the dialog natively. Neither means "keep
-  // it open next time", so clear the flag — otherwise dismissing the sheet and
-  // then touching any filter would bring it straight back.
-  document.addEventListener("close", (event) => {
-    if (event.target instanceof HTMLDialogElement && event.target.matches("[data-filter-sheet]")) {
-      // A close we performed ourselves already set the flag it wants; only an
-      // unattributed one (Escape, backdrop) should clear it.
-      if (!closingForNavigation) {
-        remember(false);
-      }
-      closingForNavigation = false;
-    }
-  });
-
-  let closingForNavigation = false;
 
   document.addEventListener("change", (event) => {
     const target = event.target;
@@ -365,34 +308,13 @@ const countLabel = truncated
     if (!(form instanceof HTMLFormElement)) {
       return;
     }
-    // Close BEFORE navigating. A modal dialog lives in the top layer, and the
-    // view transition swaps the document out from under it: the element is
-    // rebuilt as a plain `<dialog open>`, which is no longer modal and renders
-    // as an ordinary block shoved into the page. Closing first means nothing is
-    // in the top layer during the swap — which also removes the frame where the
-    // results used to bleed through the sheet — and the flag below brings it
-    // back on the other side.
-    const el = sheet();
-    if (el?.open) {
-      closingForNavigation = true;
-      remember(true);
-      el.close();
+    // Only the panel applies on change. While the sheet is up it is covering
+    // the results, so submitting here would navigate once per tap to a page
+    // the member cannot see — and each navigation would take the modal with
+    // it. The sheet's own button is what applies its filters.
+    if (sheet()?.open) {
+      return;
     }
     form.requestSubmit();
-  });
-
-  // The other side of that close. Only below the breakpoint where this IS a
-  // sheet: past `lg` the same element is a static panel and must never go
-  // modal.
-  document.addEventListener("astro:after-swap", () => {
-    let wanted = false;
-    try {
-      wanted = sessionStorage.getItem(OPEN_KEY) === "1";
-    } catch {
-      // See `remember`.
-    }
-    if (wanted && !window.matchMedia("(min-width: 64rem)").matches) {
-      sheet()?.showModal();
-    }
   });
 </script>

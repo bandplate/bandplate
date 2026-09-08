@@ -4039,8 +4039,12 @@ a.bp-btn {
   overflow: hidden;
 }
 
+/* Opaque, not the 92% overlay the rest of the app uses. At 8% transparency
+   the fixed bottom tab bar read straight through the backdrop above the sheet —
+   a strip of nav floating over a modal. A sheet's backdrop has one job, which
+   is to stop the page behind it being part of the picture. */
 .bp-filter-sheet::backdrop {
-  background: var(--bp-color-overlay);
+  background: var(--bp-color-bg);
 }
 
 /* The sheet slides up from the edge it is anchored to, and the backdrop fades

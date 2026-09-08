@@ -269,12 +269,18 @@ function claimTakeTransition(takeId: string): string | null {
                   )}
                   {vote.comment && <p class="bp-field-hint bp-m0">&ldquo;{vote.comment}&rdquo;</p>}
                 </div>
+                {/* This list IS the member's own votes, so `vote.keeper` is
+                    exactly what `myVote` means — the toggle renders pressed on
+                    the side they already chose. It was dropped when `myVote` was
+                    stripped from the row component; the property is required, so
+                    `astro check` was the only thing still reporting it. */}
                 {take && (
                   <VoteToggle
                     takeId={take.id}
                     keeperVotes={take.keeperVotes}
                     totalVotes={take.totalVotes}
                     ratingScore={take.ratingScore}
+                    myVote={vote.keeper}
                   />
                 )}
               </li>

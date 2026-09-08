@@ -1,4 +1,5 @@
 ---
+import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 // The component gallery's body. Rendered TWICE by `/dev/ui`, once inside a
 // `[data-theme="light"]` container and once inside `[data-theme="dark"]`, so
 // every primitive is visible in both themes without a reload — which is the
@@ -10,8 +11,8 @@
 // changes with it — that duplication is the cost of a gallery that always
 // renders.
 import Banner from "@bandplate/ui/components/Banner.astro";
-import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 import TakeRow from "../TakeRow.astro";
+import type { TakeRowEventRef } from "../take-row-context.js";
 
 // Fixtures for the REAL `TakeRow`. Rendering the actual component rather than a
 // hand-copied mirror of it is the point: a mirror drifts, and every defect this
@@ -56,18 +57,60 @@ function take(over: Partial<takesRepo.Take> & { id: string }): takesRepo.Take {
   } as takesRepo.Take;
 }
 
-// One row per state worth looking at, not a sampler: playable vs not, with and
-// without a note, and each badge that changes what the row says.
-const TAKE_ROWS = [
-  { t: take({ id: "t-1", state: "keeper", durationMs: 216_000 }), play: "a-1", fav: true,
-    note: "playable, favourited, keeper" },
-  { t: take({ id: "t-2", label: "second half only", state: "new", durationMs: 224_000 }), play: "a-2",
-    fav: false, note: "playable, with its own note" },
-  { t: take({ id: "t-3", state: "rejected", durationMs: 188_000 }), play: undefined, fav: false,
-    note: "no ready asset — the plate, not a play button" },
-  { t: take({ id: "t-4", state: "published", durationMs: null }), play: "a-4", fav: false,
-    note: "no duration — renders an em dash, not a blank" },
-] as const;
+// One row per state worth looking at, not a sampler. State badges are gone from
+// this row (they live on `/takes/[id]` now), so what varies here is the shape of
+// the row itself: playable vs not, with and without its own note, with and
+// without a duration — and, critically, the EVENT LINE, which is the part that
+// broke. Two of the four carry an event so the gallery shows both what a long
+// venue name does to the line and what the bare-`kind` fallback looks like when
+// an event has no title; a list where every row's event line is the same length
+// is a list that cannot show you the wrapping bug.
+const TAKE_ROWS: {
+  t: takesRepo.Take;
+  play: string | undefined;
+  fav: boolean;
+  event: TakeRowEventRef | undefined;
+  note: string;
+}[] = [
+  {
+    t: take({ id: "t-1", state: "keeper", durationMs: 216_000 }),
+    play: "a-1",
+    fav: true,
+    event: {
+      id: "e-1",
+      heldAt: NOW,
+      kind: "concert",
+      title: "Live at The Attic",
+      venue: "The Attic",
+    },
+    note: "playable, favourited, named event with a venue",
+  },
+  {
+    t: take({ id: "t-2", label: "second half only", state: "new", durationMs: 224_000 }),
+    play: "a-2",
+    fav: false,
+    event: { id: "e-2", heldAt: NOW, kind: "rehearsal", title: null, venue: null },
+    note: "its own note, and an untitled event — the bare kind",
+  },
+  {
+    t: take({ id: "t-3", state: "rejected", durationMs: 188_000 }),
+    play: undefined,
+    fav: false,
+    event: undefined,
+    note: "no ready asset — the plate, not a play button",
+  },
+  {
+    t: take({ id: "t-4", state: "published", durationMs: null }),
+    play: "a-4",
+    fav: false,
+    event: undefined,
+    note: "no duration — renders an em dash, not a blank",
+  },
+  // No `as const`: it froze every fixture field readonly, and `TakeRowEventRef`
+  // (like every prop type here) is mutable, so the event refs above would not
+  // assign. The literal types it was buying are already pinned by `take()`'s
+  // own parameter type.
+];
 
 const swatches = [
   ["--bp-color-bg", "ground"],
@@ -271,7 +314,7 @@ const scale = [
           <TakeRow
             take={row.t}
             instruments={BAND}
-            context={{ kind: "event", song: { id: "s-1", title: "Píseň o cestách" } }}
+            context={{ kind: "song", event: row.event }}
             playableAssetId={row.play}
             favorited={row.fav}
             transitionName={null}

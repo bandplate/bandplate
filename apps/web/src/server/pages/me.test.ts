@@ -1,11 +1,13 @@
-// `/me` composition logic: the member, their sessions (with the current
-// one marked), favorites, and votes so far — against a real test database.
-import { hashToken } from "@bandplate/core";
+// `/me` composition logic: the member, their instruments, the votes they have
+// cast and the count of takes they have not — against a real test database.
+//
+// Sessions and favourites came off this page (see `me.ts`'s header for why), so
+// the tests that covered the current-session marking and the favourites split
+// went with them. The favourites split itself is still tested — it moved to
+// `home.test.ts` along with the code, where the pinned list now lives.
 import type { Db } from "@bandplate/db";
 import {
-  authSessionsRepo,
   eventsRepo,
-  favoritesRepo,
   instrumentsRepo,
   membersRepo,
   songsRepo,
@@ -32,74 +34,14 @@ describe("getMeData", () => {
   });
 
   it("returns undefined for an unknown member id", async () => {
-    const result = await getMeData(db, "00000000-0000-0000-0000-000000000000", undefined);
+    const result = await getMeData(db, "00000000-0000-0000-0000-000000000000");
     expect(result).toBeUndefined();
   });
 
-  it("empty favorites and empty votes on a fresh member — real empty states, not omissions", async () => {
-    const data = await getMeData(db, memberId, undefined);
-    expect(data?.favorites.songs).toEqual([]);
-    expect(data?.favorites.takes).toEqual([]);
+  it("empty votes and a zero count on a fresh member — real empty states, not omissions", async () => {
+    const data = await getMeData(db, memberId);
     expect(data?.votes).toEqual([]);
-    expect(data?.sessions).toEqual([]);
-  });
-
-  it("marks the session matching the supplied cookie as current, and no other", async () => {
-    const now = Date.now();
-    const otherToken = "other-raw-session-token";
-    const currentToken = "current-raw-session-token";
-    await authSessionsRepo.create(db, {
-      memberId,
-      tokenHash: await hashToken(otherToken),
-      createdAt: now,
-      expiresAt: now + 100_000,
-    });
-    await authSessionsRepo.create(db, {
-      memberId,
-      tokenHash: await hashToken(currentToken),
-      createdAt: now,
-      expiresAt: now + 100_000,
-    });
-
-    const expectedSession = await authSessionsRepo.getByHash(db, await hashToken(currentToken));
-
-    const data = await getMeData(db, memberId, currentToken);
-    expect(data?.sessions).toHaveLength(2);
-    const current = data?.sessions.filter((s) => s.isCurrent);
-    expect(current).toHaveLength(1);
-    expect(current?.[0]?.id).toBe(expectedSession?.id);
-  });
-
-  it("no session is marked current when no cookie is supplied", async () => {
-    const now = Date.now();
-    await authSessionsRepo.create(db, {
-      memberId,
-      tokenHash: await hashToken("some-token"),
-      createdAt: now,
-      expiresAt: now + 100_000,
-    });
-
-    const data = await getMeData(db, memberId, undefined);
-    expect(data?.sessions.some((s) => s.isCurrent)).toBe(false);
-  });
-
-  it("favorites split into songs and takes, same as the home page's", async () => {
-    const now = Date.now();
-    const song = await songsRepo.create(db, {
-      title: "Me Favorite Song",
-      slug: "me-favorite-song",
-      createdAt: now,
-      updatedAt: now,
-    });
-    await favoritesRepo.add(db, {
-      memberId,
-      targetType: "song",
-      targetId: song.id,
-      createdAt: now,
-    });
-
-    const data = await getMeData(db, memberId, undefined);
-    expect(data?.favorites.songs.map((s) => s.slug)).toEqual(["me-favorite-song"]);
+    expect(data?.unvotedCount).toBe(0);
   });
 
   it("votes so far pairs each vote with its take (song/event/instruments attached)", async () => {
@@ -125,11 +67,53 @@ describe("getMeData", () => {
     });
     await votesRepo.castVote(db, { takeId: take.id, memberId, keeper: true, comment: "nice", now });
 
-    const data = await getMeData(db, memberId, undefined);
+    const data = await getMeData(db, memberId);
     expect(data?.votes).toHaveLength(1);
     expect(data?.votes[0]?.vote.keeper).toBe(true);
     expect(data?.votes[0]?.vote.comment).toBe("nice");
     expect(data?.votes[0]?.take?.song?.slug).toBe("voted-song");
+  });
+
+  it("counts the published takes this member has not voted on, and stops counting one once they do", async () => {
+    // The number that replaced home's "needs your vote" queue. It has to move
+    // when a vote is cast, or it is a stale nag on the one page that exists to
+    // tell you where you stand.
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Unvoted Song",
+      slug: "unvoted-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const takes = [];
+    for (let i = 0; i < 2; i++) {
+      const take = await takesRepo.create(db, {
+        songId: song.id,
+        eventId: event.id,
+        recordedAt: now + i,
+        state: "published",
+        createdAt: now,
+        updatedAt: now,
+      });
+      takes.push(take);
+    }
+
+    expect((await getMeData(db, memberId))?.unvotedCount).toBe(2);
+
+    await votesRepo.castVote(db, {
+      takeId: takes[0]?.id ?? "",
+      memberId,
+      keeper: true,
+      comment: null,
+      now,
+    });
+    expect((await getMeData(db, memberId))?.unvotedCount).toBe(1);
   });
 
   // Data-model gap, closed via `memberInstruments` — see its schema comment.
@@ -139,71 +123,8 @@ describe("getMeData", () => {
     await membersRepo.setInstruments(db, memberId, [drums.id, trombone.id]);
     await instrumentsRepo.archive(db, trombone.id, Date.now());
 
-    const data = await getMeData(db, memberId, undefined);
+    const data = await getMeData(db, memberId);
     expect(data?.instruments.map((i) => i.id)).toEqual([drums.id, trombone.id]);
     expect(data?.instruments.find((i) => i.id === trombone.id)?.archivedAt).not.toBeNull();
-  });
-
-  // F4 (review round 1): the gold favorite marker on the votes list is
-  // real per-row information — whether the voted-on take is ALSO one of
-  // this member's favorites, independent of the vote itself.
-  it("marks a voted take as favorited when it is also one of this member's favorites", async () => {
-    const now = Date.now();
-    const song = await songsRepo.create(db, {
-      title: "Voted And Favorited Song",
-      slug: "voted-and-favorited-song",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const event = await eventsRepo.create(db, {
-      kind: "rehearsal",
-      heldAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const take = await takesRepo.create(db, {
-      songId: song.id,
-      eventId: event.id,
-      recordedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-    await votesRepo.castVote(db, { takeId: take.id, memberId, keeper: true, now });
-    await favoritesRepo.add(db, {
-      memberId,
-      targetType: "take",
-      targetId: take.id,
-      createdAt: now,
-    });
-
-    const data = await getMeData(db, memberId, undefined);
-    expect(data?.votes[0]?.favorited).toBe(true);
-  });
-
-  it("does not mark a voted take as favorited when it isn't one", async () => {
-    const now = Date.now();
-    const song = await songsRepo.create(db, {
-      title: "Voted Only Song",
-      slug: "voted-only-song",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const event = await eventsRepo.create(db, {
-      kind: "rehearsal",
-      heldAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const take = await takesRepo.create(db, {
-      songId: song.id,
-      eventId: event.id,
-      recordedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-    await votesRepo.castVote(db, { takeId: take.id, memberId, keeper: true, now });
-
-    const data = await getMeData(db, memberId, undefined);
-    expect(data?.votes[0]?.favorited).toBe(false);
   });
 });

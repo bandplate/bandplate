@@ -563,35 +563,45 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(res.headers.get("location")).toBe("/login");
     });
 
-    it("renders the member's name, sessions, favorites, and votes", async () => {
+    it("renders the member's name, instruments and votes", async () => {
       const res = await fetch(`${ORIGIN}/me`, { headers: { cookie: sessionCookie } });
       expect(res.status).toBe(200);
       const body = await res.text();
       expect(body).toContain("Robin Home-Test");
-      expect(body).toContain("this device");
-      expect(body).toContain("Home Favorite Song");
       expect(body).toContain("Neon Skyline Searchable"); // the take voted on
       expect(body).toContain("keeper");
-      // The member's instruments — including the archived one (the
-      // data-model gap's own verification requirement).
-      expect(body).toContain("Bass");
-      expect(body).toContain("Trombone");
-      expect(body).toContain("(archived)");
+      // Instruments are icons now, so the LABELS live in the run's
+      // accessible name rather than in visible text — including the archived
+      // one, which is the data-model gap's own verification requirement.
+      expect(body).toContain("Plays: Bass, Trombone");
     });
 
-    it("has no duplicate view-transition-name, even though the favorite take was also voted on (F1, review round 1)", async () => {
+    it("no longer renders sessions or a second copy of the pinned list", async () => {
+      // Both came off this page deliberately (see `me.ts`): home is the shelf,
+      // and a device list answered a question nobody in a five-piece band asks.
+      // The fixture has both a favorited song and a live session, so their
+      // absence is meaningful rather than vacuous.
+      //
+      // Probing the SECTION rather than a song title: the member also voted on
+      // a take of the favorited song, so its title legitimately appears in the
+      // votes list below and asserting on it would fail for the wrong reason.
       const res = await fetch(`${ORIGIN}/me`, { headers: { cookie: sessionCookie } });
       const body = await res.text();
-      const names = extractViewTransitionNames(body);
-      expect(names.length).toBeGreaterThan(0);
-      expect(new Set(names).size).toBe(names.length);
+      expect(body).not.toContain("Favorites");
+      expect(body).not.toContain("this device");
     });
 
-    it("marks every take row with data-take-id and ships the transition-retarget script (Fix round 3)", async () => {
+    it("ships no transition-retarget script anywhere any more", async () => {
+      // `TakeTransitionRetarget.astro` is deleted. It existed because one take
+      // could appear twice on a page, which assigns the same
+      // `view-transition-name` twice and aborts the transition for the whole
+      // page. Home has one pinned list now and `/me` has one vote per take per
+      // member, so no page can repeat a take and the machinery has nothing to
+      // fix. A vote row still carries `data-take-id` for the morph itself.
       const res = await fetch(`${ORIGIN}/me`, { headers: { cookie: sessionCookie } });
       const body = await res.text();
       expect(body).toContain(`data-take-id="${favoriteTakeId}"`);
-      expect(body).toContain(TAKE_TRANSITION_RETARGET_MARKER);
+      expect(body).not.toContain(TAKE_TRANSITION_RETARGET_MARKER);
     });
   });
 });

@@ -2638,7 +2638,6 @@ a.bp-btn {
 /* desktop layout instead of a phone layout stretched wide.                */
 /* ---------------------------------------------------------------------- */
 
-.bp-session-list,
 .bp-vote-list {
   list-style: none;
   margin: 0;
@@ -2646,16 +2645,10 @@ a.bp-btn {
   border-top: 1px solid var(--bp-color-border);
 }
 
-@media (min-width: 1024px) {
-  .bp-session-list,
-  .bp-vote-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 1.5rem;
-  }
-}
-
-.bp-session-row,
+/* One column, not two. The two-up grid was right when `/me` was a single
+   full-width stack of four sections; the page is now a main column beside an
+   aside, and splitting the votes again inside it made two short lists where the
+   member is reading one history. */
 .bp-vote-row {
   display: flex;
   flex-wrap: wrap;
@@ -2667,49 +2660,35 @@ a.bp-btn {
   border-bottom: 1px solid var(--bp-color-border);
 }
 
-.bp-session-row-main,
 .bp-vote-row-main {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   min-width: 0;
   /* Explicit basis (not just `min-width: 0`) so this shrinks predictably
-     against its row's other child instead of the row wrapping the OTHER
-     child onto its own line — see `.bp-session-row-agent`/
-     `.bp-session-row-action` just below for the fix this was paired with
-     (F3: "Sign out" was orphaning onto its own line at every width). */
+     against the verdict badge beside it, instead of the row wrapping the badge
+     onto a line of its own. */
   flex: 1 1 12rem;
 }
 
-/* F3: a long mono user-agent string used to force `.bp-session-row` (which
-   wraps) to push the "Sign out" form onto its own line at BOTH 375px and
-   1440px — not a width bug, a content-can't-shrink bug. Truncating this one
-   line instead of letting it grow is what lets the row's flexbox actually
-   shrink it, so the button stays on the same line as the row's own
-   content whenever there's room for it. */
-.bp-session-row-agent {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-.bp-session-row-action {
-  flex-shrink: 0;
-}
-
+/* No standing underline — a column of them reads as a list of links rather than
+   a history of decisions, and every other row in the app announces itself on
+   hover instead. The display face at row size matches the take rows this list
+   points at. */
 .bp-vote-row-song {
   display: inline-flex;
   align-items: center;
+  font-family: var(--bp-font-display);
   font-weight: 600;
+  font-size: var(--text-row, 1.1875rem);
   color: var(--bp-color-fg);
-  text-decoration: underline;
-  text-decoration-color: var(--bp-color-muted);
-  text-underline-offset: 0.15em;
+  text-decoration: none;
 }
 
 .bp-vote-row-song:hover {
-  text-decoration-color: currentColor;
+  text-decoration: underline;
+  text-decoration-color: var(--bp-color-muted);
+  text-underline-offset: 0.15em;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -3769,4 +3748,139 @@ a.bp-btn {
 
 .bp-filter-pill[aria-pressed="false"] .bp-filter-pill-mark {
   opacity: 0.35;
+}
+
+/* ---------------------------------------------------------------------- */
+/* /me — what you have done on the left, who you are on the right.        */
+/* ---------------------------------------------------------------------- */
+
+.bp-me {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Identity leads on a phone, where the aside would otherwise be a footer
+   nobody scrolls to; past `lg` it moves to the side and the votes lead. */
+.bp-me-aside {
+  order: -1;
+}
+
+@media (min-width: 64rem) {
+  .bp-me {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
+    gap: 0 2.875rem;
+    align-items: start;
+  }
+
+  .bp-me-aside {
+    order: 0;
+  }
+}
+
+.bp-me-heading {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: var(--text-title, 1.6875rem);
+  line-height: 1.05;
+  margin: 0 0 0.875rem;
+}
+
+/* A line, not a card. It was the only `.bp-card` left in the member-facing
+   app, which made the one page that is ABOUT the member the one page with a
+   box on it. */
+.bp-me-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.bp-me-avatar {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.bp-me-identity-text {
+  min-width: 0;
+}
+
+.bp-me-name {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: var(--text-section, 1.25rem);
+  line-height: 1.1;
+}
+
+.bp-me-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.625rem;
+  margin-top: 0.25rem;
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+}
+
+/* The same glyph run every take row uses, not the text tags this page had —
+   an instrument is an instrument wherever it appears. */
+.bp-me-instruments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  color: var(--bp-color-muted);
+}
+
+.bp-me-admin-link {
+  margin-top: 1.25rem;
+}
+
+/* The unvoted count: a fact with a number in front of it, not a banner. The
+   member came looking for it, so it takes no fill, no icon and no border. */
+.bp-me-unvoted {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  margin-bottom: 1.25rem;
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-me-unvoted-count {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--bp-color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-vote-row-song--gone {
+  color: var(--bp-color-muted);
+}
+
+.bp-vote-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.625rem;
+  margin-top: 0.1875rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-vote-row-comment {
+  font-style: normal;
 }

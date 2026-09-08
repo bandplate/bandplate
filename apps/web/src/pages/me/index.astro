@@ -1,37 +1,23 @@
 ---
-// The signed-in member's own page: name, instruments, sessions (sign out of
-// THIS one — reusing the existing `POST /logout`, not a new endpoint),
-// favorites, and votes so far. Replaces Task 5's placeholder.
+// `/me` — who you are, and what you've done.
 //
-// Instruments (Task 6 review round 1's data-model gap, now closed via the
-// `memberInstruments` join table — see its schema comment): rendered as
-// plain tags, same visual vocabulary `.bp-take-instrument-tag` already
-// established for a take's instruments, INCLUDING archived ones (a member
-// who plays an instrument the band has since dropped still sees it here —
-// see `membersRepo.listInstrumentsForMember`).
+// Direction M2 from the design canvas. Two things came off this page:
 //
-// `transitionName`/`claimTakeTransition`: see F1 in the review — a take
-// that's BOTH a favorite and voted-on would otherwise get the same
-// `view-transition-name` twice on this one page (favorites' TakeRow AND
-// the votes list's own link), which aborts the page's view transition
-// entirely per the CSS View Transitions spec. Only the first occurrence of
-// a given take id keeps the name; later ones simply don't get one (the
-// link/row still works, it just isn't the View Transitions morph target).
+//   - FAVOURITES. Home is now a shelf of exactly these things, so listing them
+//     again here was the same duplication we removed from home itself — and it
+//     was listing them under Songs / Events / Takes, the taxonomy home rejected.
+//   - SESSIONS. Raw user-agent strings and a status badge answered a question
+//     no member of a five-piece band asks; signing out lives in the shell,
+//     where it is reachable from every page. See `server/pages/me.ts` for the
+//     one capability that trade gives up.
 //
-// `<TakeTransitionRetarget />` (Fix round 3): JS-progressive-enhancement
-// that moves the claimed name onto whichever occurrence the member
-// actually clicks, so the transition morphs from the right place on
-// screen. See that component's own header comment.
-import EventLedger from "../../components/EventLedger.astro";
-import FavoriteToggle from "../../components/FavoriteToggle.astro";
-import PlayToggleButton from "../../components/PlayToggleButton.astro";
-import TakeRow from "../../components/TakeRow.astro";
-import TakeTransitionRetarget from "../../components/TakeTransitionRetarget.astro";
-import VoteToggle from "../../components/VoteToggle.astro";
+// What is left is the page's actual subject: the takes still waiting for your
+// ear, and the calls you have already made. Identity is a line at the top, not
+// a card — this is the one page where the app already knows who is looking.
+import InstrumentIcon from "../../components/InstrumentIcon.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { SESSION_COOKIE_NAME } from "../../server/cookies.js";
-import { eventLabel, formatLongDate, formatTimestamp } from "../../server/format.js";
+import { formatShortDate } from "../../server/format.js";
 import { getMeData } from "../../server/pages/me.js";
 
 const principal = Astro.locals.principal;
@@ -40,261 +26,144 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
-const cookieValue = Astro.cookies.get(SESSION_COOKIE_NAME)?.value;
-const data = await getMeData(appDeps.db, principal.memberId, cookieValue);
+const data = await getMeData(appDeps.db, principal.memberId);
 if (!data) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { member, instruments, sessions, favorites, votes, unvotedCount } = data;
-const now = appDeps.clock.now();
+const { member, instruments, votes, unvotedCount } = data;
 
-function sessionStatus(session: (typeof sessions)[number]): "active" | "revoked" | "expired" {
-  if (session.revokedAt !== null) {
-    return "revoked";
-  }
-  if (session.expiresAt <= now) {
-    return "expired";
-  }
-  return "active";
-}
-
-const hasFavorites =
-  favorites.songs.length > 0 || favorites.takes.length > 0 || favorites.events.length > 0;
-const favoriteKindCount = [
-  favorites.songs.length > 0,
-  favorites.events.length > 0,
-  favorites.takes.length > 0,
-].filter(Boolean).length;
-
-const usedTakeTransitionIds = new Set<string>();
-/** First call for a given take id gets the real name; every later call on
- *  this same page render gets `null` (no `transition:name` at all) — see
- *  this file's header comment (F1). */
-function claimTakeTransition(takeId: string): string | null {
-  if (usedTakeTransitionIds.has(takeId)) {
-    return null;
-  }
-  usedTakeTransitionIds.add(takeId);
-  return `take-${takeId}`;
-}
+// Initials for the identity disc — first letters of the first two words, which
+// handles "František Voráč" and a single-word stage name alike.
+const initials = member.displayName
+  .split(/\s+/)
+  .slice(0, 2)
+  .map((word) => word.charAt(0).toUpperCase())
+  .join("");
 ---
 
 <AppLayout title="Me" principal={principal} current="me">
-  <TakeTransitionRetarget />
-  <div class="bp-stack">
-    <h1 class="bp-page-title">Me</h1>
+  <div class="bp-me">
+    <section class="bp-me-main">
+      <h1 class="bp-me-heading">Your votes</h1>
 
-    <section class="bp-card">
-      <h2 class="bp-section-title bp-m0">{member.displayName}</h2>
-      <p class="bp-field-hint bp-m0">
-        {member.email}
-        <span class={`bp-badge ${member.role === "admin" ? "bp-badge-admin" : ""}`}>
-          {member.role}
-        </span>
-      </p>
-      {instruments.length > 0 && (
-        <div class="bp-take-instruments">
-          {instruments.map((instrument) => (
-            <span class="bp-take-instrument-tag">
-              {instrument.label}
-              {instrument.archivedAt !== null && " (archived)"}
-            </span>
-          ))}
-        </div>
-      )}
-      {member.role === "admin" && (
-        <p>
-          <a href="/admin" class="bp-btn bp-btn-secondary bp-btn-sm">
-            Go to admin
-          </a>
-        </p>
-      )}
-    </section>
-
-    <section>
-      <h2 class="bp-section-title">Sessions</h2>
-      <ul class="bp-session-list">
-        {
-          sessions.map((session) => {
-            const status = sessionStatus(session);
-            return (
-              <li class="bp-session-row">
-                <div class="bp-session-row-main">
-                  <p class="bp-mono bp-session-row-agent bp-m0">
-                    {session.userAgent ?? "Unknown device"}
-                  </p>
-                  <p class="bp-field-hint bp-m0">
-                    Signed in {formatTimestamp(session.createdAt)} — last active{" "}
-                    {formatTimestamp(session.lastSeenAt)}
-                    {session.isCurrent && " — this device"}
-                  </p>
-                  <span class={`bp-badge ${status === "active" ? "bp-badge-active" : ""}`}>
-                    {status}
-                  </span>
-                </div>
-                {session.isCurrent && (
-                  <form method="post" action="/logout" class="bp-session-row-action">
-                    <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">
-                      Sign out
-                    </button>
-                  </form>
-                )}
-              </li>
-            );
-          })
-        }
-      </ul>
-    </section>
-
-    <section>
-      <h2 class="bp-section-title">Favorites</h2>
+      {/* The count home used to render as a queue of six rows. Here it is a
+          number you went looking for rather than one pushed at you, and it
+          links into the archive because there is no queue view to send you to:
+          "what haven't I judged" is a question about the archive. */}
       {
-        !hasFavorites ? (
-          <div class="bp-empty-state">
-            <p>
-              Nothing pinned yet — tap the star on a song, take, or event to pin it here.{" "}
-              <a href="/search">Browse the archive</a>.
-            </p>
-          </div>
-        ) : (
-          <div class="bp-stack bp-stack-tight">
-            {favorites.songs.length > 0 && (
-              <div>
-                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Songs</p>}
-                <div class="bp-song-list">
-                  {favorites.songs.map((song) => (
-                    <div class="bp-song-row">
-                      <a href={`/songs/${song.slug}`} class="bp-song-row-link">
-                        <div class="bp-song-row-main">
-                          <p class="bp-song-title bp-m0">{song.title}</p>
-                        </div>
-                      </a>
-                      <FavoriteToggle
-                        targetType="song"
-                        targetId={song.id}
-                        favorited={true}
-                        label={song.title}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {favorites.events.length > 0 && (
-              <div>
-                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Events</p>}
-                {/* The one event row in the app. `/me` used to draw its own —
-                    a date, a kind badge and a venue in a different order from
-                    every other list of events — which is how two vocabularies
-                    for the same object stayed alive. */}
-                <EventLedger
-                  events={favorites.events.map((event) => ({ ...event, takeCount: 0 }))}
-                  favoritedIds={new Set(favorites.events.map((e) => e.id))}
-                />
-              </div>
-            )}
-            {favorites.takes.length > 0 && (
-              <div>
-                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Takes</p>}
-                <div class="bp-take-list bp-take-list--wide">
-                  {favorites.takes.map((take) => (
-                    <TakeRow
-                      take={take}
-                      instruments={take.instruments}
-                      context={{ kind: "full", song: take.song, event: take.event }}
-                      transitionName={claimTakeTransition(take.id)}
-                      favorited={true}
-                      playableAssetId={take.playableAssetId}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )
-      }
-    </section>
-
-    <section>
-      <h2 class="bp-section-title">Votes so far</h2>
-      {/* The count home used to render as a queue. It lives here because this
-          is the page you open to see your own state — a number you went looking
-          for, rather than six rows pushed at you on the page everyone opens.
-          It links to search rather than to a queue view: there is no such view
-          any more, and "what haven't I judged" is a filter over the archive. */}
-      {
-        unvotedCount > 0 && (
+        unvotedCount > 0 ? (
           <p class="bp-me-unvoted bp-m0">
             <span class="bp-me-unvoted-count">{unvotedCount}</span>
             <span>
-              published {unvotedCount === 1 ? "take has" : "takes have"} no vote from you.{" "}
+              {unvotedCount === 1 ? "take is" : "takes are"} still waiting for your ear.{" "}
               <a href="/search">Find them in the archive</a>.
             </span>
           </p>
+        ) : (
+          <p class="bp-me-unvoted bp-m0">
+            <span>You've had your say on every published take.</span>
+          </p>
         )
       }
+
       {
         votes.length === 0 ? (
           <div class="bp-empty-state">
             <p>
-              You haven't voted on anything yet. Open a take and the keeper / not-a-keeper choice is
-              right under the player.
+              Nothing yet. Open a take and the keeper / not-a-keeper choice is right under the
+              player.
             </p>
           </div>
         ) : (
           <ul class="bp-vote-list">
-            {votes.map(({ vote, take, favorited }) => (
+            {votes.map(({ vote, take }) => (
               <li class="bp-vote-row">
                 <div class="bp-vote-row-main">
-                  {take?.playableAssetId && (
-                    <PlayToggleButton
-                      takeId={take.id}
-                      assetId={take.playableAssetId}
-                      title={take.song?.title ?? "Untitled take"}
-                    />
-                  )}
+                  {/* A plain `transition:name`, no claim-and-retarget dance:
+                      votes are one per take per member, so a take cannot appear
+                      twice in this list and the duplicate-name problem that
+                      machinery existed for cannot arise here. */}
                   {take ? (
-                    <>
-                      <a
-                        href={`/takes/${take.id}`}
-                        class="bp-vote-row-song"
-                        transition:name={claimTakeTransition(take.id) ?? undefined}
-                        data-take-id={take.id}
-                      >
-                        {take.song?.title ?? "Untitled take"}
-                      </a>
-                      <FavoriteToggle
-                        targetType="take"
-                        targetId={take.id}
-                        favorited={favorited}
-                        label={take.song?.title ?? "this take"}
-                      />
-                    </>
+                    <a
+                      href={`/takes/${take.id}`}
+                      class="bp-vote-row-song"
+                      transition:name={`take-${take.id}`}
+                      data-take-id={take.id}
+                    >
+                      {take.song?.title ?? "Untitled take"}
+                    </a>
                   ) : (
-                    <span class="bp-vote-row-song">A take that's since been removed</span>
+                    <span class="bp-vote-row-song bp-vote-row-song--gone">
+                      A take that's since been removed
+                    </span>
                   )}
-                  {vote.comment && <p class="bp-field-hint bp-m0">&ldquo;{vote.comment}&rdquo;</p>}
+                  <p class="bp-vote-row-meta bp-m0">
+                    {take?.event && <span>{formatShortDate(take.recordedAt)}</span>}
+                    {vote.comment && <span class="bp-vote-row-comment">{vote.comment}</span>}
+                  </p>
                 </div>
-                {/* This list IS the member's own votes, so `vote.keeper` is
-                    exactly what `myVote` means — the toggle renders pressed on
-                    the side they already chose. It was dropped when `myVote` was
-                    stripped from the row component; the property is required, so
-                    `astro check` was the only thing still reporting it. */}
-                {take && (
-                  <VoteToggle
-                    takeId={take.id}
-                    keeperVotes={take.keeperVotes}
-                    totalVotes={take.totalVotes}
-                    ratingScore={take.ratingScore}
-                    myVote={vote.keeper}
-                  />
-                )}
+                {/* The call, not a control. This is a record of what you decided,
+                    and changing your mind happens on the take's own page where
+                    you can hear it again first — a toggle here would let you
+                    flip a verdict on a recording you are not listening to. */}
+                <span class={`bp-badge ${vote.keeper ? "bp-badge-keeper" : ""}`}>
+                  {vote.keeper ? "keeper" : "not a keeper"}
+                </span>
               </li>
             ))}
           </ul>
         )
       }
     </section>
+
+    <aside class="bp-me-aside">
+      <div class="bp-me-identity">
+        <span class="bp-me-avatar" aria-hidden="true">{initials}</span>
+        <div class="bp-me-identity-text">
+          <p class="bp-me-name bp-m0">{member.displayName}</p>
+          <p class="bp-me-contact bp-m0">
+            <span>{member.email}</span>
+            {member.role === "admin" && <span class="bp-kind">Admin</span>}
+          </p>
+        </div>
+      </div>
+
+      {
+        instruments.length > 0 && (
+          <p
+            class="bp-me-instruments bp-m0"
+            role="img"
+            aria-label={`Plays: ${instruments.map((i) => i.label).join(", ")}`}
+          >
+            {instruments.map((instrument) => (
+              <InstrumentIcon icon={instrument.icon} label={instrument.label} />
+            ))}
+          </p>
+        )
+      }
+
+      {
+        member.role === "admin" && (
+          <a href="/admin" class="bp-btn bp-btn-quiet bp-btn-sm bp-me-admin-link">
+            Go to admin
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h13" />
+              <path d="M13 6l6 6-6 6" />
+            </svg>
+          </a>
+        )
+      }
+    </aside>
   </div>
 </AppLayout>

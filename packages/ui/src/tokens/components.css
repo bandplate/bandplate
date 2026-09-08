@@ -2666,20 +2666,29 @@ a.bp-btn {
   color: var(--bp-color-muted);
 }
 
-.bp-take-verdict {
-  display: flex;
-  flex-wrap: wrap;
+.bp-take-detail-verdict {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: var(--text-note, 0.71875rem);
-  color: var(--bp-color-muted);
+  gap: 0.625rem;
 }
 
-/* No rule between strips. The eyebrow label already separates them — it is the
-   loudest thing at the top of each — and a hairline above every one of four
-   short blocks drew the page as a stack of boxes rather than one column. Space
-   does the dividing. */
+/* Below `lg` the verdict takes a row of its own. The subline already carries an
+   event name, a date and a kind badge, and on a phone a fourth item wrapped to
+   a second line anyway — but wrapped BEHIND whatever fitted, so where it landed
+   depended on how long the venue's name was. Given its own row it lands in the
+   same place every time. Same breakpoint as the rest of the app's
+   tablet-follows-phone rule, not a narrower one. */
+@media (max-width: 63.9375rem) {
+  .bp-take-detail-verdict {
+    flex-basis: 100%;
+    margin-top: 0.1875rem;
+  }
+
+  .bp-take-detail-verdict .bp-take-detail-sep {
+    display: none;
+  }
+}
+
 .bp-take-strip {
   padding: 1.625rem 0 0;
 }

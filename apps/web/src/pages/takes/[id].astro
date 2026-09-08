@@ -168,6 +168,21 @@ function assetLabel(asset: assetsRepo.Asset): string {
             )
           ) : null
         }
+        {/* The band's call, on the same line as everything else that is a fact
+            about this take. It sat in the vote strip with a sentence explaining
+            it; a settled state is one word and it reads here without one, next
+            to the date it was settled about. Only keeper or rejected — `new` is
+            every take until someone acts. */}
+        {
+          (take.state === "keeper" || take.state === "rejected") && (
+            <span class="bp-take-detail-verdict">
+              <span class="bp-take-detail-sep" aria-hidden="true" />
+              <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
+                {TAKE_STATE_LABEL[take.state]}
+              </span>
+            </span>
+          )
+        }
       </p>
       {noteText && <p class="bp-take-detail-note bp-m0">{noteText}</p>}
       {/* The same line a take row carries, with the same treatment: the note
@@ -265,21 +280,6 @@ function assetLabel(asset: assetsRepo.Asset): string {
 
     <section class="bp-take-strip">
       <h2 class="bp-strip-label">Your vote</h2>
-      {/* The band's decision, beside the votes that informed it. It used to sit
-          next to the take's name, where it competed with the title for the
-          first thing you read; `keeper` is not what the take IS, it is what was
-          decided about it, so it belongs with the deciding. Only a settled
-          state shows — `new` is every take until someone acts. */}
-      {
-        (take.state === "keeper" || take.state === "rejected") && (
-          <p class="bp-take-verdict bp-m0">
-            <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-              {TAKE_STATE_LABEL[take.state]}
-            </span>
-            <span>the band's call on this take</span>
-          </p>
-        )
-      }
       <VoteToggle
         takeId={take.id}
         keeperVotes={take.keeperVotes}

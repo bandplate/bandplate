@@ -22,6 +22,7 @@
 // that moves the claimed name onto whichever occurrence the member
 // actually clicks, so the transition morphs from the right place on
 // screen. See that component's own header comment.
+import EventLedger from "../../components/EventLedger.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import TakeRow from "../../components/TakeRow.astro";
@@ -183,27 +184,14 @@ function claimTakeTransition(takeId: string): string | null {
             {favorites.events.length > 0 && (
               <div>
                 {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Events</p>}
-                <div class="bp-event-list">
-                  {favorites.events.map((event) => (
-                    <div class={`bp-event-row bp-event-row--${event.kind}`}>
-                      <a href={`/events/${event.id}`} class="bp-event-row-link">
-                        <div class="bp-event-row-main">
-                          <p class="bp-event-row-date bp-m0">{formatLongDate(event.heldAt)}</p>
-                          <p class="bp-event-row-venue bp-m0">
-                            <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
-                            {eventLabel(event) && ` ${eventLabel(event)}`}
-                          </p>
-                        </div>
-                      </a>
-                      <FavoriteToggle
-                        targetType="event"
-                        targetId={event.id}
-                        favorited={true}
-                        label={eventLabel(event) || `this ${event.kind}`}
-                      />
-                    </div>
-                  ))}
-                </div>
+                {/* The one event row in the app. `/me` used to draw its own —
+                    a date, a kind badge and a venue in a different order from
+                    every other list of events — which is how two vocabularies
+                    for the same object stayed alive. */}
+                <EventLedger
+                  events={favorites.events.map((event) => ({ ...event, takeCount: 0 }))}
+                  favoritedIds={new Set(favorites.events.map((e) => e.id))}
+                />
               </div>
             )}
             {favorites.takes.length > 0 && (

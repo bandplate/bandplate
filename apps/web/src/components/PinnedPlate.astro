@@ -10,8 +10,8 @@
 // play) and bone for a song or an event (a container, not a recording). The
 // caption under the plate says it in words too — colour alone is never the only
 // carrier of meaning here, same rule the vote buttons follow.
-import { eventKindLabel, eventLabel, formatShortDate } from "../server/format.js";
-import type { PinnedItem } from "../server/pages/home.js";
+import { eventLabel, formatShortDate } from "../server/format.js";
+import { type PinnedItem, pinnedKindWord } from "../server/pages/home.js";
 
 export interface Props {
   item: PinnedItem;
@@ -51,8 +51,7 @@ const label =
 // The caption: what this IS, then what it has. A member scanning the rail
 // should not have to work out from a row's shape whether they pinned the song
 // or one take of it.
-const kindWord =
-  item.kind === "take" ? "Take" : item.kind === "song" ? "Song" : eventKindLabel(item.event.kind);
+const kindWord = pinnedKindWord(item);
 
 const detail =
   item.kind === "take"

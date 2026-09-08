@@ -3,10 +3,9 @@
 // filterable by kind. The kind filter is a plain GET form (checkboxes),
 // same JS-off approach as /songs.
 import { favoritesRepo } from "@bandplate/db";
-import FavoriteToggle from "../../components/FavoriteToggle.astro";
+import EventLedger from "../../components/EventLedger.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { eventLabel, formatLongDate } from "../../server/format.js";
 import { listEventsForArchive, parseEventsListKindFilter } from "../../server/pages/events.js";
 
 const principal = Astro.locals.principal;
@@ -26,77 +25,80 @@ const KIND_OPTIONS = [
   { value: "concert", label: "Concerts" },
   { value: "session", label: "Sessions" },
 ] as const;
+
+// Every kind is on when nothing is filtered — `parseEventsListKindFilter`
+// already reads an empty list as "all", so an unfiltered URL and an all-three
+// URL mean the same thing and the pills show the same state for both.
+const allKinds = KIND_OPTIONS.map((o) => o.value);
+const selected = kindFilter.length > 0 ? kindFilter : [...allKinds];
+
+/**
+ * Where a pill points: the current selection with this kind flipped. Plain
+ * links, so one tap applies the filter and the page still works with no JS —
+ * the same bar the checkbox form met, without its Apply and Clear buttons.
+ *
+ * Two cases are deliberately collapsed to a bare `/events`: everything
+ * selected, and nothing selected. The parser reads both as "all", so a URL
+ * carrying all three kinds would be a longer way to say the same thing — and
+ * turning the last pill off has to land somewhere honest rather than on an
+ * empty list that claims there are no events.
+ */
+function toggleHref(kind: (typeof allKinds)[number]): string {
+  const next = selected.includes(kind) ? selected.filter((k) => k !== kind) : [...selected, kind];
+  if (next.length === 0 || next.length === allKinds.length) {
+    return "/events";
+  }
+  const params = new URLSearchParams();
+  for (const k of allKinds.filter((k) => next.includes(k))) {
+    params.append("kind", k);
+  }
+  return `/events?${params.toString()}`;
+}
 ---
 
 <AppLayout title="Events" principal={principal} current="events">
   <div class="bp-stack">
     <h1 class="bp-page-title">Events</h1>
 
-    <form method="get" class="bp-toolbar">
-      <fieldset class="bp-checkbox-group">
-        <legend>Kind</legend>
-        {
-          KIND_OPTIONS.map((option) => (
-            <span class="bp-checkbox-item">
-              <input
-                type="checkbox"
-                id={`kind-${option.value}`}
-                name="kind"
-                value={option.value}
-                checked={kindFilter.includes(option.value)}
-              />
-              <label for={`kind-${option.value}`}>{option.label}</label>
-            </span>
-          ))
-        }
-      </fieldset>
-      <div class="bp-toolbar-actions">
-        <button type="submit" class="bp-btn bp-btn-primary">Apply</button>
-        {kindFilter.length > 0 && (
-          <a href="/events" class="bp-btn bp-btn-secondary">
-            Clear
-          </a>
-        )}
-      </div>
-    </form>
+    <div class="bp-filter-pills">
+      {
+        KIND_OPTIONS.map((option) => {
+          const on = selected.includes(option.value);
+          return (
+            <a href={toggleHref(option.value)} class="bp-filter-pill" aria-pressed={on ? "true" : "false"}>
+              <span class="bp-filter-pill-mark" aria-hidden="true">
+                {on ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12.5l5.5 5.5L20 6" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="9" />
+                  </svg>
+                )}
+              </span>
+              {option.label}
+            </a>
+          );
+        })
+      }
+    </div>
 
     {
       events.length === 0 ? (
         <div class="bp-empty-state">
           <p>
             {kindFilter.length > 0
-              ? "Nothing of that kind yet — try clearing the filter."
+              ? "Nothing of that kind yet — turn another one back on."
               : "No events yet — they'll show up here once a rehearsal or show is logged."}
           </p>
         </div>
       ) : (
-        <div class="bp-event-list">
-          {events.map((event) => (
-            <div class={`bp-event-row bp-event-row--${event.kind}`}>
-              <a href={`/events/${event.id}`} class="bp-event-row-link">
-                <div class="bp-event-row-main">
-                  <p class="bp-event-row-date bp-m0">{formatLongDate(event.heldAt)}</p>
-                  <p class="bp-event-row-venue bp-m0">
-                    <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
-                    {eventLabel(event) && ` ${eventLabel(event)}`}
-                    <span class="bp-event-row-count">
-                      {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
-                    </span>
-                  </p>
-                </div>
-                <div class="bp-event-row-stats">
-                  {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
-                </div>
-              </a>
-              <FavoriteToggle
-                targetType="event"
-                targetId={event.id}
-                favorited={favoriteEventIds.has(event.id)}
-                label={eventLabel(event) || `this ${event.kind}`}
-              />
-            </div>
-          ))}
-        </div>
+        // The same ledger home draws, with a star per row — this is where a
+        // member decides an event is worth keeping in reach, and pinning it
+        // here is how it reaches home's shelf. Home's own copy has no stars: a
+        // column of them down a chronology reads as a second list.
+        <EventLedger events={events} favoritedIds={favoriteEventIds} />
       )
     }
   </div>

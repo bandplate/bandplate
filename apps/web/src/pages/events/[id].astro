@@ -40,7 +40,7 @@ const kindLabel =
   <div class="bp-stack">
     <header class="bp-event-hero">
       <div class="bp-event-hero-line">
-        <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
+        <span class="bp-kind">{kindLabel}</span>
         {/* Not .bp-mono — that's for technical data (chord progressions,
         timestamps, durations), not a human title, and its word-break:
         break-all would mangle a long venue-derived title with no real word

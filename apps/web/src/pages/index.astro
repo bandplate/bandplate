@@ -23,11 +23,12 @@
 //     aborts the transition for the WHOLE page. With one pinned list and no
 //     take rows, a take cannot appear twice, so the problem and its two
 //     workarounds are gone together.
+import EventLedger from "../components/EventLedger.astro";
 import PinnedPlate from "../components/PinnedPlate.astro";
 import AppLayout from "../layouts/AppLayout.astro";
 import { getAppDeps } from "../server/app.js";
-import { eventKindLabel, eventLabel, formatShortDate } from "../server/format.js";
-import { getHomeData } from "../server/pages/home.js";
+import { eventLabel, formatShortDate } from "../server/format.js";
+import { getHomeData, pinnedKindWord } from "../server/pages/home.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -40,18 +41,6 @@ const { pinned, recentEvents } = await getHomeData(appDeps.db, principal.memberI
 // The most recently pinned thing leads the page — "back to" whatever you were
 // last on. The rest follow in the rail beneath it.
 const [hero, ...rail] = pinned;
-
-const monthFormatter = new Intl.DateTimeFormat("en-GB", { month: "short" });
-const ledger = recentEvents.map((event) => {
-  const held = new Date(event.heldAt);
-  return {
-    event,
-    day: String(held.getDate()),
-    month: monthFormatter.format(held),
-    venue: eventLabel(event),
-    kind: eventKindLabel(event.kind),
-  };
-});
 
 /** What the hero says under its title: the event it came from, then the date,
  *  on separate lines. No running time — this is an invitation back to a take,
@@ -100,13 +89,21 @@ function heroLines(item: typeof hero): string[] {
                       ? hero.song.title
                       : formatShortDate(hero.event.heldAt)}
                 </h1>
+                {/* The kind leads the meta line, exactly as it does on the
+                    rail plates below — the hero was the one pinned thing on the
+                    page that never said whether it was a song, a take or an
+                    event. */}
                 <p class="bp-pinned-hero-meta bp-m0">
-                  {heroLines(hero).map((line, i) => (
-                    <>
-                      {i > 0 && <br />}
-                      {line}
-                    </>
-                  ))}
+                  <span class="bp-kind">{pinnedKindWord(hero)}</span>
+                  <span class="bp-pinned-hero-sep" aria-hidden="true" />
+                  <span>
+                    {heroLines(hero).map((line, i) => (
+                      <>
+                        {i > 0 && <br />}
+                        {line}
+                      </>
+                    ))}
+                  </span>
                 </p>
               </div>
             </a>
@@ -133,7 +130,7 @@ function heroLines(item: typeof hero): string[] {
     <section class="bp-home-ledger">
       <h2 class="bp-section-title">Recent events</h2>
       {
-        ledger.length === 0 ? (
+        recentEvents.length === 0 ? (
           <div class="bp-empty-state">
             <p>
               No events yet. Ask whoever's running the session to log the next rehearsal or show —
@@ -141,42 +138,7 @@ function heroLines(item: typeof hero): string[] {
             </p>
           </div>
         ) : (
-          <div class="bp-ledger">
-            {ledger.map(({ event, day, month, venue, kind }, i) => (
-              <a href={`/events/${event.id}`} class={`bp-ledger-row${i === 0 ? " bp-ledger-row--latest" : ""}`}>
-                <span class="bp-ledger-date">
-                  <span class="bp-ledger-day">{day}</span>
-                  <span class="bp-ledger-month">{month}</span>
-                </span>
-                <span class="bp-ledger-main">
-                  <span class="bp-ledger-venue">{venue || "—"}</span>
-                  <span class="bp-kind">{kind}</span>
-                </span>
-                <span class="bp-ledger-count">
-                  {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
-                </span>
-              </a>
-            ))}
-            <div class="bp-ledger-footer">
-              <a href="/events" class="bp-btn bp-btn-quiet bp-btn-sm">
-                All events
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M5 12h13" />
-                  <path d="M13 6l6 6-6 6" />
-                </svg>
-              </a>
-            </div>
-          </div>
+          <EventLedger events={recentEvents} footerHref="/events" />
         )
       }
     </section>

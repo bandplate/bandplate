@@ -11,6 +11,7 @@ import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 // changes with it — that duplication is the cost of a gallery that always
 // renders.
 import Banner from "@bandplate/ui/components/Banner.astro";
+import EventLedger from "../EventLedger.astro";
 import PinnedPlate from "../PinnedPlate.astro";
 import TakeRow from "../TakeRow.astro";
 import type { TakeRowEventRef } from "../take-row-context.js";
@@ -142,6 +143,34 @@ const PINNED = [
     takeCount: 5,
   },
   // biome-ignore lint/suspicious/noExplicitAny: fixtures for a gallery, not app data
+] as any[];
+
+// biome-ignore lint/suspicious/noExplicitAny: gallery fixtures, not app data
+const LEDGER_EVENTS = [
+  {
+    id: "e-1",
+    kind: "concert",
+    heldAt: NOW,
+    title: "Live at The Attic",
+    venue: "The Attic",
+    takeCount: 6,
+  },
+  {
+    id: "e-2",
+    kind: "rehearsal",
+    heldAt: NOW - 86_400_000,
+    title: null,
+    venue: "Zkušebna Pardubice",
+    takeCount: 4,
+  },
+  {
+    id: "e-3",
+    kind: "rehearsal",
+    heldAt: NOW - 172_800_000,
+    title: null,
+    venue: null,
+    takeCount: 1,
+  },
 ] as any[];
 
 const swatches = [
@@ -367,30 +396,7 @@ const scale = [
       line, the kind in small caps, the count on the right. The newest entry has no rule above it
       and takes the accent on its date.
     </p>
-    <div class="bp-ledger">
-      {[
-        { day: "8", month: "Jul", venue: "Live at The Attic — The Attic", kind: "live", n: 6 },
-        { day: "9", month: "Jan", venue: "Zkušebna Pardubice", kind: "rehearsal", n: 4 },
-        { day: "9", month: "Dec", venue: "", kind: "rehearsal", n: 1 },
-      ].map((row, i) => (
-        <a href="#" class={`bp-ledger-row${i === 0 ? " bp-ledger-row--latest" : ""}`}>
-          <span class="bp-ledger-date">
-            <span class="bp-ledger-day">{row.day}</span>
-            <span class="bp-ledger-month">{row.month}</span>
-          </span>
-          <span class="bp-ledger-main">
-            <span class="bp-ledger-venue">{row.venue || "—"}</span>
-            <span class="bp-kind">{row.kind}</span>
-          </span>
-          <span class="bp-ledger-count">
-            {row.n} {row.n === 1 ? "take" : "takes"}
-          </span>
-        </a>
-      ))}
-      <div class="bp-ledger-footer">
-        <a href="#" class="bp-btn bp-btn-quiet bp-btn-sm">All events</a>
-      </div>
-    </div>
+    <EventLedger events={LEDGER_EVENTS} footerHref="#" />
   </section>
 
   <section class="flex flex-col gap-3">
@@ -438,25 +444,10 @@ const scale = [
   <section class="flex flex-col gap-3">
     <h2 class="bp-section-title bp-m0">Domain rows</h2>
     <p class="text-meta text-muted bp-m0">
-      The same container at list density, with the domain layout on top. Kind and state are carried
-      by a badge rather than by a border.
+      The same container at list density, with the domain layout on top. The event row that used to
+      sit here is gone — events are a ledger now (above), and keeping a second event vocabulary in
+      the gallery is how two of them stayed alive in the app for as long as they did.
     </p>
-    <div class="bp-event-list">
-      <div class="bp-event-row bp-event-row--rehearsal">
-        <div class="bp-event-row-main">
-          <span class="bp-event-row-date">14. 3. 2026</span>
-          <span class="bp-event-row-venue">Zkušebna Pardubice</span>
-        </div>
-        <div class="bp-event-row-stats"><span class="bp-event-row-count">7 takes</span></div>
-      </div>
-      <div class="bp-event-row bp-event-row--concert">
-        <div class="bp-event-row-main">
-          <span class="bp-event-row-date">2. 2. 2026</span>
-          <span class="bp-event-row-venue">Divadlo 29</span>
-        </div>
-        <div class="bp-event-row-stats"><span class="bp-badge bp-badge-concert">concert</span></div>
-      </div>
-    </div>
     <ul class="bp-song-list">
       <li class="bp-song-row">
         <div class="bp-song-row-main">

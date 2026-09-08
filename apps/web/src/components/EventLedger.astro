@@ -1,0 +1,109 @@
+---
+// The event ledger — a chronology, drawn as one: a date spine on the left, the
+// venue as the line, the kind in small caps under it, the take count on the
+// right, newest first with its date in the accent.
+//
+// It replaced the old event row, which was a take row wearing a different hat
+// (a leading plate, a 19px slab title, a badge, a star) and so made every list
+// of events look like a list of takes. Nothing here carries a plate or a slab
+// title, which is the whole point: on home it sits beside a shelf of plates and
+// has to be legible as a different KIND of thing at a glance.
+//
+// One component rather than three copies, because it now renders on home, on
+// `/events` and in the gallery — and the last label rule that lived in three
+// places drifted in two of them.
+import { eventKindLabel, eventLabel } from "../server/format.js";
+import FavoriteToggle from "./FavoriteToggle.astro";
+
+import type { eventsRepo } from "@bandplate/db";
+
+export interface Props {
+  events: eventsRepo.EventWithTakeCount[];
+  /**
+   * When given, each row gets a favourite star. Home deliberately passes
+   * nothing — pinning happens where you are looking at the thing, and a column
+   * of stars down a chronology reads as a second list.
+   */
+  favoritedIds?: Set<string>;
+  /** Renders a footer button when set — home's "All events". */
+  footerHref?: string;
+  footerLabel?: string;
+}
+
+const { events, favoritedIds, footerHref, footerLabel = "All events" } = Astro.props;
+
+// `en-GB` for the month abbreviation: the app's dates are already formatted in
+// that locale everywhere else, and "Sept" vs "Sep" differing between the spine
+// and the rest of the page is the kind of thing that reads as a bug.
+const monthFormatter = new Intl.DateTimeFormat("en-GB", { month: "short" });
+
+const rows = events.map((event) => {
+  const held = new Date(event.heldAt);
+  return {
+    event,
+    day: String(held.getDate()),
+    month: monthFormatter.format(held),
+    venue: eventLabel(event),
+    kind: eventKindLabel(event.kind),
+  };
+});
+---
+
+<div class="bp-ledger">
+  {
+    rows.map(({ event, day, month, venue, kind }, i) => (
+      <div class={`bp-ledger-row${i === 0 ? " bp-ledger-row--latest" : ""}`}>
+        <a href={`/events/${event.id}`} class="bp-ledger-link">
+          <span class="bp-ledger-date">
+            <span class="bp-ledger-day">{day}</span>
+            <span class="bp-ledger-month">{month}</span>
+          </span>
+          <span class="bp-ledger-main">
+            {/* "Unnamed", not an em dash. Most rehearsals have no venue and no
+                title, so the dash was the most common thing in the column — a
+                punctuation mark where a name goes reads as missing data rather
+                than as a fact about the event. */}
+            <span class={`bp-ledger-venue${venue ? "" : " bp-ledger-venue--none"}`}>
+              {venue || "Unnamed"}
+            </span>
+            <span class="bp-kind">{kind}</span>
+          </span>
+          <span class="bp-ledger-count">
+            {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+          </span>
+        </a>
+        {favoritedIds && (
+          <FavoriteToggle
+            targetType="event"
+            targetId={event.id}
+            favorited={favoritedIds.has(event.id)}
+            label={venue || `this ${kind}`}
+          />
+        )}
+      </div>
+    ))
+  }
+  {
+    footerHref && (
+      <div class="bp-ledger-footer">
+        <a href={footerHref} class="bp-btn bp-btn-quiet bp-btn-sm">
+          {footerLabel}
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h13" />
+            <path d="M13 6l6 6-6 6" />
+          </svg>
+        </a>
+      </div>
+    )
+  }
+</div>

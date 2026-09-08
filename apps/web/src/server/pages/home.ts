@@ -22,6 +22,7 @@ import {
   takesRepo,
   votesRepo,
 } from "@bandplate/db";
+import { eventKindLabel } from "../format.js";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
 /** How many events the ledger lists before pointing at `/events` for the rest. */
@@ -85,6 +86,23 @@ export type PinnedItem =
     }
   | { kind: "song"; id: string; song: songsRepo.Song; takeCount: number }
   | { kind: "event"; id: string; event: eventsRepo.Event; takeCount: number };
+
+/**
+ * The one word that says what a pinned thing IS — "Take", "Song", or the
+ * event's own kind. Defined next to `PinnedItem` rather than in either of the
+ * two components that render it, because both the plate's caption and the
+ * hero's meta line show it and they must never disagree; the last time a label
+ * rule lived in two places it drifted.
+ */
+export function pinnedKindWord(item: PinnedItem): string {
+  if (item.kind === "take") {
+    return "Take";
+  }
+  if (item.kind === "song") {
+    return "Song";
+  }
+  return eventKindLabel(item.event.kind);
+}
 
 /**
  * The member's favorites as one newest-first list. `favoritesRepo.listByMember`

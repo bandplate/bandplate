@@ -30,6 +30,13 @@ export interface SearchQuery {
   /** Defaults to `"recent"` — see `takesRepo.TakeSort`'s own comment for why `"rating"` isn't just `ratingScore DESC`. */
   sort: takesRepo.TakeSort;
   states: takesRepo.TakeState[];
+  /**
+   * "Only takes I haven't voted on." This is where `/me`'s count sends you —
+   * the count is the question, this is the answer, and making it a filter
+   * rather than a page of its own means it composes with everything else here
+   * ("what haven't I judged from last month", "…with horns on it").
+   */
+  unvotedOnly: boolean;
 }
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -83,8 +90,9 @@ export function parseSearchQuery(searchParams: URLSearchParams): SearchQuery {
   ];
   const rawSort = searchParams.get("sort");
   const sort: takesRepo.TakeSort = rawSort === "rating" ? "rating" : "recent";
+  const unvotedOnly = searchParams.get("unvoted") === "1";
 
-  return { search, instrumentIds, dateFrom, dateTo, rating, sort, states };
+  return { search, instrumentIds, dateFrom, dateTo, rating, sort, states, unvotedOnly };
 }
 
 export function hasAnyFilter(query: SearchQuery): boolean {
@@ -94,12 +102,14 @@ export function hasAnyFilter(query: SearchQuery): boolean {
     Boolean(query.dateFrom) ||
     Boolean(query.dateTo) ||
     Boolean(query.rating) ||
-    query.states.length > 0
+    query.states.length > 0 ||
+    query.unvotedOnly
   );
 }
 
-function toFilters(query: SearchQuery): takesRepo.SearchFilters {
+function toFilters(query: SearchQuery, memberId: string): takesRepo.SearchFilters {
   return {
+    unvotedByMemberId: query.unvotedOnly ? memberId : undefined,
     search: query.search,
     instrumentIds: query.instrumentIds.length > 0 ? query.instrumentIds : undefined,
     dateFrom: query.dateFrom ? Date.parse(`${query.dateFrom}T00:00:00.000Z`) : undefined,
@@ -126,7 +136,7 @@ export async function searchTakes(
   memberId: string,
 ): Promise<SearchTakesResult> {
   const [{ results, truncated }, favoriteTakeIds] = await Promise.all([
-    takesRepo.search(db, toFilters(query), { sort: query.sort }),
+    takesRepo.search(db, toFilters(query, memberId), { sort: query.sort }),
     favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
   ]);
   const withContext = await attachFullContext(db, results, memberId);

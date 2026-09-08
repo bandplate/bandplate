@@ -48,16 +48,17 @@ const initials = member.displayName
       <h1 class="bp-me-heading">Your votes</h1>
 
       {/* The count home used to render as a queue of six rows. Here it is a
-          number you went looking for rather than one pushed at you, and it
-          links into the archive because there is no queue view to send you to:
-          "what haven't I judged" is a question about the archive. */}
+          number you went looking for rather than one pushed at you, and its
+          link lands on the archive ALREADY FILTERED to exactly these takes —
+          `?unvoted=1` is the same question the number asks, so the member does
+          not have to reconstruct it from a filter panel. */}
       {
         unvotedCount > 0 ? (
           <p class="bp-me-unvoted bp-m0">
             <span class="bp-me-unvoted-count">{unvotedCount}</span>
             <span>
               {unvotedCount === 1 ? "take is" : "takes are"} still waiting for your ear.{" "}
-              <a href="/search">Find them in the archive</a>.
+              <a href="/search?unvoted=1">Hear {unvotedCount === 1 ? "it" : "them"}</a>.
             </span>
           </p>
         ) : (

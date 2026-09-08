@@ -158,6 +158,18 @@ const resultsLabel = truncated
             </select>
           </div>
 
+          {/* Where `/me`'s count sends you. A checkbox rather than a separate
+              view, so it stacks with everything else in this panel — "what
+              haven't I judged from last month, with horns on it" is one query,
+              not three pages. */}
+          <fieldset class="bp-checkbox-group">
+            <legend>Yours</legend>
+            <span class="bp-checkbox-item">
+              <input type="checkbox" id="search-unvoted" name="unvoted" value="1" checked={query.unvotedOnly} />
+              <label for="search-unvoted">Not voted by me</label>
+            </span>
+          </fieldset>
+
           <fieldset class="bp-checkbox-group">
             <legend>State</legend>
             {

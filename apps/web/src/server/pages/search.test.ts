@@ -12,6 +12,7 @@ import {
   membersRepo,
   songsRepo,
   takesRepo,
+  votesRepo,
 } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -28,6 +29,7 @@ describe("parseSearchQuery", () => {
       rating: undefined,
       sort: "recent",
       states: [],
+      unvotedOnly: false,
     });
   });
 
@@ -43,6 +45,7 @@ describe("parseSearchQuery", () => {
       rating: "75",
       sort: "recent",
       states: ["published", "keeper"],
+      unvotedOnly: false,
     });
   });
 
@@ -244,5 +247,126 @@ describe("searchTakes", () => {
     const { results } = await searchTakes(db, query, memberId);
 
     expect(results.map((t) => t.id)).toContain(lateInDay.id);
+  });
+});
+
+describe("the unvoted filter", () => {
+  let db: Db;
+  let memberId: string;
+  let otherMemberId: string;
+  let songId: string;
+  let eventId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    const member = await membersRepo.create(db, {
+      displayName: "Unvoted Test",
+      slug: "unvoted-test",
+      email: "unvoted-test@example.com",
+      createdAt: now,
+    });
+    memberId = member.id;
+    const other = await membersRepo.create(db, {
+      displayName: "Someone Else",
+      slug: "someone-else",
+      email: "someone-else@example.com",
+      createdAt: now,
+    });
+    otherMemberId = other.id;
+    const song = await songsRepo.create(db, {
+      title: "Unvoted Filter Song",
+      slug: "unvoted-filter-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    songId = song.id;
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    eventId = event.id;
+  });
+
+  async function publishedTake(offset: number) {
+    const now = Date.now();
+    return takesRepo.create(db, {
+      songId,
+      eventId,
+      recordedAt: now + offset,
+      state: "published",
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  it("returns only takes THIS member has not voted on", async () => {
+    const voted = await publishedTake(0);
+    const unvoted = await publishedTake(1);
+    await votesRepo.castVote(db, {
+      takeId: voted.id,
+      memberId,
+      keeper: true,
+      comment: null,
+      now: Date.now(),
+    });
+
+    const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
+    const { results } = await searchTakes(db, query, memberId);
+    expect(results.map((r) => r.id)).toEqual([unvoted.id]);
+  });
+
+  it("ignores other members' votes — it is MY ear that hasn't heard it", async () => {
+    const take = await publishedTake(0);
+    await votesRepo.castVote(db, {
+      takeId: take.id,
+      memberId: otherMemberId,
+      keeper: true,
+      comment: null,
+      now: Date.now(),
+    });
+
+    const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
+    const { results } = await searchTakes(db, query, memberId);
+    expect(results.map((r) => r.id)).toEqual([take.id]);
+  });
+
+  it("excludes takes that are not published — nobody is being asked to judge an upload in flight", async () => {
+    const now = Date.now();
+    await takesRepo.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      state: "uploading",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
+    const { results } = await searchTakes(db, query, memberId);
+    expect(results).toEqual([]);
+  });
+
+  it("composes with the other filters rather than replacing them", async () => {
+    // The reason this is a filter and not a page: "what haven't I judged from
+    // this event / with these horns" is one query. A date range that excludes
+    // the unvoted take must still exclude it.
+    const take = await publishedTake(0);
+    const query = parseSearchQuery(
+      new URLSearchParams(`unvoted=1&dateFrom=1990-01-01&dateTo=1990-12-31`),
+    );
+    const { results } = await searchTakes(db, query, memberId);
+    expect(results).toEqual([]);
+
+    const wide = parseSearchQuery(new URLSearchParams("unvoted=1&dateFrom=1990-01-01"));
+    expect((await searchTakes(db, wide, memberId)).results.map((r) => r.id)).toEqual([take.id]);
+  });
+
+  it("is off unless asked for, and counts as a filter when it is on", async () => {
+    expect(parseSearchQuery(new URLSearchParams()).unvotedOnly).toBe(false);
+    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams()))).toBe(false);
+    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("unvoted=1")))).toBe(true);
   });
 });

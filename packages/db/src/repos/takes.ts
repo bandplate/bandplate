@@ -344,6 +344,15 @@ export interface SearchFilters {
   states?: TakeState[];
   /** Case/diacritic-insensitive substring match against song title or alias. */
   search?: string;
+  /**
+   * Restrict to takes this member has NOT voted on. The same `NOT IN (voted
+   * take ids)` subquery `listUnvotedByMember` uses, expressed here as a filter
+   * so it COMPOSES: "what haven't I judged" is a question a member asks about
+   * a slice of the archive (this instrument, this month), and answering it by
+   * filtering `listUnvotedByMember`'s output afterwards would apply the search
+   * cap before the filter and silently return fewer takes than match.
+   */
+  unvotedByMemberId?: string;
 }
 
 /**
@@ -429,6 +438,18 @@ export async function search(
   }
   if (filters.states && filters.states.length > 0) {
     conditions.push(inArray(takes.state, filters.states));
+  }
+
+  if (filters.unvotedByMemberId) {
+    const votedTakeIds = db
+      .select({ takeId: votes.takeId })
+      .from(votes)
+      .where(eq(votes.memberId, filters.unvotedByMemberId));
+    // `published` is part of the filter, not a separate concern: an unpublished
+    // take is not something anyone is being asked to judge, so "waiting for my
+    // ear" would otherwise count takes still uploading.
+    conditions.push(eq(takes.state, "published"));
+    conditions.push(notInArray(takes.id, votedTakeIds));
   }
 
   // Fetch one row past the limit — if it comes back, there are more matches

@@ -55,8 +55,13 @@ export function formatVoteTallyClient(
   totalVotes: number,
   ratingScore: number,
 ): string {
+  // Empty, not "No votes yet." — an unvoted take is the common case in any
+  // list, so that sentence appeared under nearly every row and said nothing a
+  // reader needed. The element stays in the DOM and `.bp-vote-tally:empty`
+  // hides it, so the optimistic island can fill it the moment a vote lands
+  // without needing to unhide anything.
   if (totalVotes === 0) {
-    return "No votes yet.";
+    return "";
   }
   return `${keeperVotes} of ${totalVotes} ${totalVotes === 1 ? "vote says" : "votes say"} keeper (${Math.round(ratingScore * 100)}%).`;
 }

@@ -273,12 +273,24 @@ export default function Player() {
       </p>
       <div class="bp-player-meta">
         <span class="bp-player-title">{track?.title ?? ""}</span>
+        {/* The player subtitle is the one place a meta line genuinely has to
+            stay inline — there is no room for columns and no room for labels.
+            So it takes the third meta-line treatment from
+            docs/design-foundation.md: a 1px rule drawn between fields rather
+            than a separator character. `.bp-player-sep` is aria-hidden so the
+            fields read as separate phrases rather than as one run-on string. */}
         <span class="bp-player-subtitle">
-          {track
-            ? [track.subtitle, track.sourceLabel !== "Master" ? track.sourceLabel : null]
-                .filter(Boolean)
-                .join(" · ")
-            : ""}
+          {(track
+            ? [track.subtitle, track.sourceLabel !== "Master" ? track.sourceLabel : null].filter(
+                (part): part is string => Boolean(part),
+              )
+            : []
+          ).map((part, i) => (
+            <>
+              {i > 0 && <span class="bp-player-sep" aria-hidden="true" />}
+              {part}
+            </>
+          ))}
         </span>
       </div>
       {/* Native controls deliberately, not a custom seek bar: keyboard

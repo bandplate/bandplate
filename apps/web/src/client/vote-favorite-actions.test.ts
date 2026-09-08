@@ -64,7 +64,9 @@ describe("computeOptimisticTally", () => {
 
 describe("formatVoteTallyClient", () => {
   it("matches server/format.ts#formatVoteTally's wording exactly — see this module's own comment on why it's duplicated, not imported", () => {
-    expect(formatVoteTallyClient(0, 0, 0)).toBe("No votes yet.");
+    // Empty rather than a sentence — see the formatter. `.bp-vote-tally:empty`
+    // is what hides the element, so this must stay exactly "".
+    expect(formatVoteTallyClient(0, 0, 0)).toBe("");
     expect(formatVoteTallyClient(1, 1, 1)).toBe("1 of 1 vote says keeper (100%).");
     expect(formatVoteTallyClient(3, 5, 0.6)).toBe("3 of 5 votes say keeper (60%).");
   });

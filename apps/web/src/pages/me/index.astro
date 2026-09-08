@@ -218,7 +218,6 @@ function claimTakeTransition(takeId: string): string | null {
                       transitionName={claimTakeTransition(take.id)}
                       favorited={true}
                       playableAssetId={take.playableAssetId}
-                      myVote={take.myVote}
                     />
                   ))}
                 </div>
@@ -276,7 +275,6 @@ function claimTakeTransition(takeId: string): string | null {
                     keeperVotes={take.keeperVotes}
                     totalVotes={take.totalVotes}
                     ratingScore={take.ratingScore}
-                    myVote={vote.keeper}
                   />
                 )}
               </li>

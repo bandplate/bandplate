@@ -408,8 +408,15 @@ describe("vote/favorite/admin-keeper routes over real HTTP", () => {
     expect(take?.state).toBe("keeper");
   });
 
-  it("member B sees member A's vote reflected on the song page's take tally", async () => {
-    const res = await fetch(`${ORIGIN}/songs/${songSlug}`, {
+  it("member B sees member A's vote reflected on the take's own page", async () => {
+    // This used to assert the tally on the SONG page. Voting — and the tally
+    // with it — moved off every list and onto `/takes/[id]`: the control
+    // appeared on all six pages that render a take row, including on takes
+    // already decided, and a vote cast without playing the take is not worth
+    // much. The property being checked is unchanged and still the one that
+    // matters: one member's vote is visible to another. Only the place it is
+    // visible moved.
+    const res = await fetch(`${ORIGIN}/takes/${takeId}`, {
       headers: { cookie: memberBCookie },
     });
     expect(res.status).toBe(200);
@@ -417,5 +424,18 @@ describe("vote/favorite/admin-keeper routes over real HTTP", () => {
     // Both members have now voted (A: keeper, B: keeper after the mutation
     // check above) — the tally text should reflect 2 total votes.
     expect(body).toMatch(/2 (of|votes)/);
+  });
+
+  it("a take list shows no vote control — voting is take-detail only", async () => {
+    // The other half of that move, and the part a tally assertion cannot
+    // catch: a list must NOT offer the control. Without this, putting it back
+    // on a row would leave every test green.
+    const res = await fetch(`${ORIGIN}/songs/${songSlug}`, {
+      headers: { cookie: memberBCookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("bp-take-row");
+    expect(body).not.toContain("bp-vote-toggle");
   });
 });

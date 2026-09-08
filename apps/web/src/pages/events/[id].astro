@@ -38,8 +38,15 @@ const kindLabel =
 
 <AppLayout title={event.title ?? kindLabel} principal={principal} current="events">
   <div class="bp-stack">
-    <div>
-      <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
+    <header class="bp-event-hero">
+      <div class="bp-event-hero-line">
+        <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
+        {/* Not .bp-mono — that's for technical data (chord progressions,
+        timestamps, durations), not a human title, and its word-break:
+        break-all would mangle a long venue-derived title with no real word
+        boundaries to break at. */}
+        {event.venue && <span class="bp-event-hero-venue">{event.venue}</span>}
+      </div>
       <h1 class="bp-hero-date">
         {formatLongDate(event.heldAt)}
         <span class="bp-take-favorite-mark">
@@ -52,26 +59,17 @@ const kindLabel =
           />
         </span>
       </h1>
-      {/* Not .bp-mono — that's for technical data (chord progressions,
-      timestamps, durations), not a human title, and its word-break: break-all
-      would mangle a long venue-derived title with no real word boundaries
-      to break at. */}
-      {event.title && <p class="bp-m0">{event.title}</p>}
-      {event.venue && <p class="bp-m0">{event.venue}</p>}
-    </div>
-
-    {event.notes && (
-      <section class="bp-card">
-        <h2 class="bp-section-title">Notes</h2>
-        <p class="bp-m0">{event.notes}</p>
-      </section>
-    )}
+      {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
+      {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
+    </header>
 
     <section>
-      <h2 class="bp-section-title">
-        Takes recorded that day
-        {takes.length > 0 && <span class="bp-field-hint"> — in the order they were played</span>}
-      </h2>
+      <h2 class="bp-section-title bp-m0">Takes</h2>
+      {takes.length > 0 && (
+        <p class="bp-event-hero-hint bp-m0">
+          {takes.length} {takes.length === 1 ? "take" : "takes"}, in the order they were played
+        </p>
+      )}
       {
         takes.length === 0 ? (
           <div class="bp-empty-state">
@@ -86,7 +84,6 @@ const kindLabel =
                 context={{ kind: "event", song: take.song }}
                 playableAssetId={take.playableAssetId}
                 favorited={take.favorited}
-                myVote={take.myVote}
               />
             ))}
           </div>

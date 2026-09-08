@@ -44,11 +44,15 @@
 //     is given; omitted entirely (an empty `<slot>` emits no markup at all)
 //     when it isn't — satisfying the brief's "no fake play affordance" rule
 //     by construction, not by a conditional a caller has to remember.
-//   - `trailing` — Task 8's vote control, rendered in the same trailing
-//     column as the duration, so a take row ends with "how long" and "what
-//     the room thinks" side by side. Filled with `VoteToggle`, driven by
-//     `take.keeperVotes`/`totalVotes`/`ratingScore` (already on `take`) plus
-//     the new `myVote` prop.
+//   - `trailing` — the numbers column. It HELD the vote control until this
+//     row was looked at across all six pages that render it: keeper /
+//     not-a-keeper appeared everywhere, including on takes already decided,
+//     and two chunky buttons out-shouted the song title on every row. Voting
+//     now lives on `/takes/[id]` alone — a vote cast without playing the take
+//     is not worth much, and the page where you play it is the page where you
+//     decide. The slot stays for callers that want something here; its default
+//     content is now the instruments and the duration, which read as columns
+//     down a list rather than as more words on the take's own line.
 //
 // Both slots default to that content rather than requiring every caller to
 // pass a `<Fragment slot="...">` — a caller only needs to opt OUT (an
@@ -107,8 +111,8 @@ import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 import { formatDuration, formatShortDate } from "../server/format.js";
 import { TAKE_STATE_LABEL } from "../server/take-state.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
+import InstrumentIcon from "./InstrumentIcon.astro";
 import PlayToggleButton from "./PlayToggleButton.astro";
-import VoteToggle from "./VoteToggle.astro";
 import type { TakeRowContext } from "./take-row-context.js";
 
 export interface Props {
@@ -133,14 +137,6 @@ export interface Props {
    * "omit it".
    */
   playableAssetId?: string;
-  /**
-   * Task 8's vote control (see this file's header comment on the
-   * `trailing` slot). `undefined` (the default) means "this member hasn't
-   * voted on this take yet" — the same undefined-means-no-opinion contract
-   * `votesRepo.listByMemberForTakes` returns, so every caller can pass its
-   * `Map.get(take.id)` result straight through.
-   */
-  myVote?: boolean;
 }
 
 const {
@@ -150,7 +146,6 @@ const {
   transitionName,
   favorited = false,
   playableAssetId,
-  myVote,
 } = Astro.props;
 const resolvedTransitionName =
   transitionName === null ? undefined : (transitionName ?? `take-${take.id}`);
@@ -179,63 +174,76 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
 <div class="bp-take-row">
   <slot name="leading">
     {
-      playableAssetId && (
+      playableAssetId ? (
         <PlayToggleButton
           takeId={take.id}
           assetId={playableAssetId}
           title={primaryLabel}
           subtitle={playSubtitle}
         />
+      ) : (
+        /* A take with no ready asset gets NO play affordance — a disabled-looking
+           play button is the fake affordance the brief forbids. It gets a plate:
+           a ring with a still centre, aria-hidden, no role, no tabstop. A bullet,
+           not a control, so the list edge stays straight while an upload is in
+           flight. */
+        <span class="bp-take-plate" aria-hidden="true" />
       )
     }
   </slot>
   <div class="bp-take-row-main">
-    <a
-      href={`/takes/${take.id}`}
-      class="bp-take-label"
-      transition:name={resolvedTransitionName}
-      data-take-id={take.id}
-    >
-      {primaryLabel}
-    </a>
-    <span class="bp-take-favorite-mark">
-      <FavoriteToggle
-        targetType="take"
-        targetId={take.id}
-        favorited={favorited}
-        label={primaryLabel}
-      />
-    </span>
-    {take.label && <span class="bp-take-meta bp-take-sublabel">{take.label}</span>}
-    <div class="bp-take-meta bp-take-row-line">
-      <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-        {TAKE_STATE_LABEL[take.state]}
+    <div class="bp-take-row-line">
+      <a
+        href={`/takes/${take.id}`}
+        class="bp-take-label"
+        transition:name={resolvedTransitionName}
+        data-take-id={take.id}
+      >
+        {primaryLabel}
+      </a>
+      <span class="bp-take-favorite-mark">
+        <FavoriteToggle
+          targetType="take"
+          targetId={take.id}
+          favorited={favorited}
+          label={primaryLabel}
+        />
       </span>
-      {showDate && <span>{formatShortDate(take.recordedAt)}</span>}
-      {event && (
-        <a href={`/events/${event.id}`} class="bp-take-event-link">
-          View this {event.kind}
-        </a>
+      {take.state !== "published" && (
+        <span class={`bp-badge bp-badge-${take.state}`}>{TAKE_STATE_LABEL[take.state]}</span>
       )}
     </div>
-    {instruments.length > 0 && (
-      <div class="bp-take-instruments">
-        {instruments.map((instrument) => (
-          <span class="bp-take-instrument-tag">{instrument.label}</span>
-        ))}
+    {(take.label || showDate || event) && (
+      <div class="bp-take-meta bp-take-subline">
+        {take.label && <span class="bp-take-sublabel">{take.label}</span>}
+        {showDate && <span>{formatShortDate(take.recordedAt)}</span>}
+        {event && (
+          <a href={`/events/${event.id}`} class="bp-take-event-link">
+            View this {event.kind}
+          </a>
+        )}
       </div>
     )}
   </div>
+  {/* The trailing column is where the vote control used to be. Instruments moved
+      into it so they read as a COLUMN down the list rather than as more words on
+      the take's own line — the same reason the duration lives here. Voting is on
+      `/takes/[id]` only: a vote cast without playing the take is not worth much,
+      and putting the control on all six pages that render this row was what made
+      it shout. Callers that want something here still have the slot. */}
   <div class="bp-take-row-trailing">
+    <slot name="trailing" />
+    {instruments.length > 0 && (
+      <span
+        class="bp-take-instruments"
+        role="img"
+        aria-label={`Instruments: ${instruments.map((i) => i.label).join(", ")}`}
+      >
+        {instruments.map((instrument) => (
+          <InstrumentIcon icon={instrument.icon} label={instrument.label} />
+        ))}
+      </span>
+    )}
     <span class="bp-take-row-duration">{formatDuration(take.durationMs)}</span>
-    <slot name="trailing">
-      <VoteToggle
-        takeId={take.id}
-        keeperVotes={take.keeperVotes}
-        totalVotes={take.totalVotes}
-        ratingScore={take.ratingScore}
-        myVote={myVote}
-      />
-    </slot>
   </div>
 </div>

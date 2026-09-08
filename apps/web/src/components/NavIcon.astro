@@ -6,7 +6,7 @@
 // label" the brief rules out). Lives here rather than packages/ui because
 // it is specific to this one shell, not a primitive other pages compose.
 export interface Props {
-  name: "songs" | "events" | "takes" | "me";
+  name: "songs" | "events" | "takes" | "admin" | "me";
 }
 
 const { name } = Astro.props;
@@ -45,6 +45,20 @@ const { name } = Astro.props;
         <circle cx="12" cy="12" r="8.5" />
         <circle cx="12" cy="12" r="4" />
         <circle cx="12" cy="12" r="0.6" fill="currentColor" />
+      </g>
+    </svg>
+  )
+}
+{
+  /* Faders, not a cog. Admin here is where the band's own vocabulary is set —
+     the roster, the instrument list, the tokens — and a mixing desk is what
+     that looks like in a room full of musicians. A cog would also read as
+     "settings", which is the one thing this section is not. */
+  name === "admin" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3v6M6 15v6M12 3v10M12 19v2M18 3v2M18 11v10" />
+        <path d="M3.5 12h5M9.5 16h5M15.5 8h5" />
       </g>
     </svg>
   )

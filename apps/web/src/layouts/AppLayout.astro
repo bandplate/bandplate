@@ -21,15 +21,23 @@ export interface Props {
   // "home" (Task 6's `/`) matches no nav item — the wordmark link is home's
   // only nav entry point, same as before this task, so it's a valid value
   // with none of the four tabs rendering `aria-current`.
-  current: "home" | "songs" | "events" | "takes" | "me";
+  current: "home" | "songs" | "events" | "takes" | "admin" | "me";
 }
 
 const { title, principal, current } = Astro.props;
 
+// Admin is a nav item, not a link buried on `/me`: an admin reaches for it
+// from wherever they happen to be, and `role` is already on the principal, so
+// nothing extra is fetched to decide. It sits before Me because Me is where a
+// member's own things end, and the tab bar reads left to right from the band's
+// stuff to yours.
 const navItems = [
   { key: "songs", label: "Songs", href: "/songs" },
   { key: "events", label: "Events", href: "/events" },
   { key: "takes", label: "Takes", href: "/takes" },
+  ...(principal.role === "admin"
+    ? ([{ key: "admin", label: "Admin", href: "/admin" }] as const)
+    : []),
   { key: "me", label: "Me", href: "/me" },
 ] as const;
 ---

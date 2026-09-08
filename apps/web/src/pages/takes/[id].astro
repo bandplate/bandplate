@@ -168,21 +168,6 @@ function assetLabel(asset: assetsRepo.Asset): string {
             )
           ) : null
         }
-        {/* The band's call, on the same line as everything else that is a fact
-            about this take. It sat in the vote strip with a sentence explaining
-            it; a settled state is one word and it reads here without one, next
-            to the date it was settled about. Only keeper or rejected — `new` is
-            every take until someone acts. */}
-        {
-          (take.state === "keeper" || take.state === "rejected") && (
-            <span class="bp-take-detail-verdict">
-              <span class="bp-take-detail-sep" aria-hidden="true" />
-              <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-                {TAKE_STATE_LABEL[take.state]}
-              </span>
-            </span>
-          )
-        }
       </p>
       {noteText && <p class="bp-take-detail-note bp-m0">{noteText}</p>}
       {/* The same line a take row carries, with the same treatment: the note
@@ -206,6 +191,21 @@ function assetLabel(asset: assetsRepo.Asset): string {
                 ))}
               </span>
             </>
+          )
+        }
+        {/* The band's call, last on the take's own facts line. A settled state
+            is one word and needs no gloss — it sat in the vote strip with a
+            sentence explaining it, then on the event/date line, and it reads
+            best at the end of the run that describes the take itself. Only
+            keeper or rejected: `new` is every take until someone acts. */}
+        {
+          (take.state === "keeper" || take.state === "rejected") && (
+            <span class="bp-take-detail-verdict">
+              <span class="bp-take-detail-sep" aria-hidden="true" />
+              <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
+                {TAKE_STATE_LABEL[take.state]}
+              </span>
+            </span>
           )
         }
       </p>

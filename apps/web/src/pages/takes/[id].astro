@@ -156,14 +156,14 @@ function assetLabel(asset: assetsRepo.Asset): string {
         {
           event && kindLabel ? (
             eventName ? (
-              <span class="bp-badge bp-badge-kind">{kindLabel}</span>
+              <span class="bp-kind">{kindLabel}</span>
             ) : (
               <a
                 href={`/events/${event.id}`}
                 class="bp-take-event-link"
                 aria-label={`View this ${kindLabel}`}
               >
-                <span class="bp-badge bp-badge-kind">{kindLabel}</span>
+                <span class="bp-kind">{kindLabel}</span>
               </a>
             )
           ) : null

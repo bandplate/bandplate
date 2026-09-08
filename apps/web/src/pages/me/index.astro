@@ -45,7 +45,7 @@ if (!data) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { member, instruments, sessions, favorites, votes } = data;
+const { member, instruments, sessions, favorites, votes, unvotedCount } = data;
 const now = appDeps.clock.now();
 
 function sessionStatus(session: (typeof sessions)[number]): "active" | "revoked" | "expired" {
@@ -230,10 +230,29 @@ function claimTakeTransition(takeId: string): string | null {
 
     <section>
       <h2 class="bp-section-title">Votes so far</h2>
+      {/* The count home used to render as a queue. It lives here because this
+          is the page you open to see your own state — a number you went looking
+          for, rather than six rows pushed at you on the page everyone opens.
+          It links to search rather than to a queue view: there is no such view
+          any more, and "what haven't I judged" is a filter over the archive. */}
+      {
+        unvotedCount > 0 && (
+          <p class="bp-me-unvoted bp-m0">
+            <span class="bp-me-unvoted-count">{unvotedCount}</span>
+            <span>
+              published {unvotedCount === 1 ? "take has" : "takes have"} no vote from you.{" "}
+              <a href="/search">Find them in the archive</a>.
+            </span>
+          </p>
+        )
+      }
       {
         votes.length === 0 ? (
           <div class="bp-empty-state">
-            <p>You haven't voted on anything yet — check "Needs your vote" on the home page.</p>
+            <p>
+              You haven't voted on anything yet. Open a take and the keeper / not-a-keeper choice is
+              right under the player.
+            </p>
           </div>
         ) : (
           <ul class="bp-vote-list">

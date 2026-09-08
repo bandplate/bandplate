@@ -1,8 +1,18 @@
-// `/` — the home page. Three sections, in the order the brief specifies:
-// favorites, recent events with their takes (each with a real favorite
-// toggle on the event row itself — Task 8), and "needs your vote"
-// (published takes this member hasn't voted on, each with a real vote and
-// favorite control).
+// Home's data. Two questions only: what has this member PINNED, and what
+// has the band recorded lately.
+//
+// It used to answer a third — "which published takes haven't you voted on" —
+// and render them as a queue. That is gone: nothing on the page everyone opens
+// should nag, and a take usually arrives as a shared link anyway. The unvoted
+// count moved to `/me`, where it is something you go looking for. With it went
+// `getUnvotedTakes`, `UNVOTED_LIMIT` and this module's use of
+// `takesRepo.listUnvotedByMember` (the repo function stays — `/me` counts with
+// it now).
+//
+// Recent events no longer carry their takes either. Home lists EVENTS, and
+// opening one is how you reach its takes; fetching every take of the three
+// newest events to render a list nobody was reading cost four extra queries
+// per page load.
 import { type Db, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
@@ -14,10 +24,8 @@ import {
 } from "@bandplate/db";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
-/** How many recent events (each with their takes) the home page shows. */
-const RECENT_EVENTS_LIMIT = 3;
-/** How many unvoted takes to surface before pointing at /search for the rest. */
-const UNVOTED_LIMIT = 6;
+/** How many events the ledger lists before pointing at `/events` for the rest. */
+const RECENT_EVENTS_LIMIT = 5;
 
 export interface HomeFavorites {
   songs: songsRepo.Song[];
@@ -57,125 +65,121 @@ export async function getFavorites(db: Db, memberId: string): Promise<HomeFavori
   };
 }
 
-interface RecentEventTake {
-  instruments: instrumentsRepo.Instrument[];
-  song: songsRepo.Song | undefined;
-  /** See `assetsRepo.listPlayableMastersByTakeIds` — undefined means "no play control", not "disabled". */
-  playableAssetId: string | undefined;
-  /** `undefined` means this member hasn't voted on this take yet — see `TakeRow`'s own `myVote` prop. */
-  myVote: boolean | undefined;
-}
+/**
+ * One pinned thing, in the order the member pinned it — a single list, not
+ * three. A song, a take and an event are different enough to tell apart by
+ * their own shape (a take can be played, a song counts its takes, an event
+ * names its kind), so grouping them under three sub-headings only added
+ * furniture to the page's lead section — and two of the three groups are
+ * usually empty, since most people pin takes.
+ */
+export type PinnedItem =
+  | {
+      kind: "take";
+      id: string;
+      take: takesRepo.Take;
+      song: songsRepo.Song | undefined;
+      event: eventsRepo.Event | undefined;
+      /** See `assetsRepo.listPlayableMastersByTakeIds` — undefined means "no play control". */
+      playableAssetId: string | undefined;
+    }
+  | { kind: "song"; id: string; song: songsRepo.Song; takeCount: number }
+  | { kind: "event"; id: string; event: eventsRepo.Event; takeCount: number };
 
-export interface RecentEventWithTakes {
-  event: eventsRepo.EventWithTakeCount;
-  /** Whether THIS member has favorited the event itself — drives the row's `FavoriteToggle`. */
-  eventFavorited: boolean;
-  takes: Array<
-    takesRepo.Take &
-      RecentEventTake & {
-        /** Also one of this member's favorites — filled in by `getHomeData`
-         *  from a separate, already-concurrent query (see there). Real
-         *  per-row information (F4, review round 1): this list mixes
-         *  favorited and non-favorited takes. */
-        favorited: boolean;
-      }
-  >;
-}
-
-/** Pre-`favorited` shape — `getHomeData` fills that in once it has the
- *  member's favorite take ids, so this function doesn't need them. */
-interface RecentEventWithTakesRaw {
-  event: eventsRepo.EventWithTakeCount;
-  takes: Array<takesRepo.Take & RecentEventTake>;
-}
-
-async function getRecentEventsWithTakes(
-  db: Db,
-  memberId: string,
-): Promise<RecentEventWithTakesRaw[]> {
-  const events = await eventsRepo.listRecentWithTakeCounts(db, { limit: RECENT_EVENTS_LIMIT });
-  if (events.length === 0) {
+/**
+ * The member's favorites as one newest-first list. `favoritesRepo.listByMember`
+ * already orders by `createdAt DESC` across all three target types, so the
+ * merge is just a matter of keeping that order rather than re-sorting anything.
+ */
+async function getPinned(db: Db, memberId: string): Promise<PinnedItem[]> {
+  const rows = await favoritesRepo.listByMember(db, memberId);
+  if (rows.length === 0) {
     return [];
   }
 
-  const eventIds = events.map((e) => e.id);
-  const takesByEvent = await takesRepo.listByEvents(db, eventIds, { order: "asc" });
-  const allTakes = events.flatMap((e) => takesByEvent.get(e.id) ?? []);
-  const takeIds = allTakes.map((t) => t.id);
-  const songIds = [...new Set(allTakes.map((t) => t.songId))];
+  const songIds = rows.filter((r) => r.targetType === "song").map((r) => r.targetId);
+  const takeIds = rows.filter((r) => r.targetType === "take").map((r) => r.targetId);
+  const eventIds = rows.filter((r) => r.targetType === "event").map((r) => r.targetId);
 
-  const [instrumentsByTake, songs, playableByTakeId, myVoteByTakeId] = await Promise.all([
-    takesRepo.listInstrumentsForTakes(db, takeIds),
+  const [songs, takes, events, playableByTakeId, takesByPinnedEvent] = await Promise.all([
     songsRepo.getByIds(db, songIds),
+    takesRepo.getByIds(db, takeIds),
+    eventsRepo.getByIds(db, eventIds),
     assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
-    votesRepo.listByMemberForTakes(db, memberId, takeIds),
+    eventIds.length > 0 ? takesRepo.listByEvents(db, eventIds) : Promise.resolve(new Map()),
   ]);
-  const songById = new Map(songs.map((s) => [s.id, s]));
 
-  return events.map((event) => ({
-    event,
-    takes: (takesByEvent.get(event.id) ?? []).map((take) => ({
-      ...take,
-      instruments: instrumentsByTake.get(take.id) ?? [],
-      song: songById.get(take.songId),
-      playableAssetId: playableByTakeId.get(take.id)?.id,
-      myVote: myVoteByTakeId.get(take.id),
-    })),
-  }));
-}
+  // A pinned take names its own song and event; both may be missing if the
+  // row was pinned and the target later archived, which is why every lookup
+  // below is allowed to come back undefined rather than asserted.
+  const takeSongIds = [...new Set(takes.map((t) => t.songId))];
+  const takeEventIds = [...new Set(takes.map((t) => t.eventId).filter((id) => id !== null))];
+  const [takeSongs, takeEvents, takeCountsBySong] = await Promise.all([
+    songsRepo.getByIds(db, takeSongIds),
+    eventsRepo.getByIds(db, takeEventIds as string[]),
+    // Pinned songs are few, so one small query each beats loading the whole
+    // song table with its stats join to read three numbers off it.
+    Promise.all(
+      songIds.map(async (id) => [id, (await takesRepo.listBySong(db, id)).length] as const),
+    ),
+  ]);
 
-async function getUnvotedTakes(db: Db, memberId: string): Promise<TakeWithFullContext[]> {
-  const takes = await takesRepo.listUnvotedByMember(db, memberId, { limit: UNVOTED_LIMIT });
-  // Every one of these is, by definition (`listUnvotedByMember`'s own
-  // query), a take this member has NOT voted on — `attachFullContext`'s
-  // `myVote` would always resolve to `undefined` here anyway, but passing
-  // `memberId` through keeps this call honest rather than relying on that
-  // coincidence, and means a future reordering of this section (e.g. after
-  // an optimistic vote, before the next full reload) can't silently show a
-  // stale "pressed" state.
-  return attachFullContext(db, takes, memberId);
+  const songById = new Map([...songs, ...takeSongs].map((x) => [x.id, x]));
+  const eventById = new Map([...events, ...takeEvents].map((x) => [x.id, x]));
+  const takeById = new Map(takes.map((t) => [t.id, t]));
+  const songTakeCount = new Map(takeCountsBySong);
+
+  const items: PinnedItem[] = [];
+  for (const row of rows) {
+    if (row.targetType === "take") {
+      const take = takeById.get(row.targetId);
+      if (!take) {
+        continue;
+      }
+      items.push({
+        kind: "take",
+        id: take.id,
+        take,
+        song: songById.get(take.songId),
+        event: take.eventId ? eventById.get(take.eventId) : undefined,
+        playableAssetId: playableByTakeId.get(take.id)?.id,
+      });
+    } else if (row.targetType === "song") {
+      const song = songById.get(row.targetId);
+      if (song) {
+        items.push({
+          kind: "song",
+          id: song.id,
+          song,
+          takeCount: songTakeCount.get(song.id) ?? 0,
+        });
+      }
+    } else {
+      const event = eventById.get(row.targetId);
+      if (event) {
+        items.push({
+          kind: "event",
+          id: event.id,
+          event,
+          takeCount: (takesByPinnedEvent.get(event.id) ?? []).length,
+        });
+      }
+    }
+  }
+  return items;
 }
 
 export interface HomeData {
-  favorites: HomeFavorites;
-  /** Every one of `favorites.songs`' own ids — always favorited, but `FavoriteToggle` still needs an explicit `favorited` boolean per row. */
-  favoriteSongIds: Set<string>;
-  recentEvents: RecentEventWithTakes[];
-  unvotedTakes: Array<TakeWithFullContext & { favorited: boolean }>;
+  /** Newest-pinned first. The first entry is the page's hero. */
+  pinned: PinnedItem[];
+  /** The ledger — events only, newest first, each with its take count. */
+  recentEvents: eventsRepo.EventWithTakeCount[];
 }
 
 export async function getHomeData(db: Db, memberId: string): Promise<HomeData> {
-  const [
-    favorites,
-    favoriteTakeIds,
-    favoriteSongIds,
-    favoriteEventIds,
-    recentEvents,
-    unvotedTakes,
-  ] = await Promise.all([
-    getFavorites(db, memberId),
-    // Separate, lighter queries rather than deriving these from
-    // `favorites` above — keeps them concurrent with
-    // `recentEvents`/`unvotedTakes` rather than serialized behind
-    // `getFavorites`' own song+take lookups.
-    favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
-    favoritesRepo.listTargetIdsByMember(db, memberId, "song"),
-    favoritesRepo.listTargetIdsByMember(db, memberId, "event"),
-    getRecentEventsWithTakes(db, memberId),
-    getUnvotedTakes(db, memberId),
+  const [pinned, recentEvents] = await Promise.all([
+    getPinned(db, memberId),
+    eventsRepo.listRecentWithTakeCounts(db, { limit: RECENT_EVENTS_LIMIT }),
   ]);
-
-  return {
-    favorites,
-    favoriteSongIds,
-    recentEvents: recentEvents.map((entry) => ({
-      ...entry,
-      eventFavorited: favoriteEventIds.has(entry.event.id),
-      takes: entry.takes.map((take) => ({ ...take, favorited: favoriteTakeIds.has(take.id) })),
-    })),
-    unvotedTakes: unvotedTakes.map((take) => ({
-      ...take,
-      favorited: favoriteTakeIds.has(take.id),
-    })),
-  };
+  return { pinned, recentEvents };
 }

@@ -11,6 +11,7 @@ import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 // changes with it — that duplication is the cost of a gallery that always
 // renders.
 import Banner from "@bandplate/ui/components/Banner.astro";
+import PinnedPlate from "../PinnedPlate.astro";
 import TakeRow from "../TakeRow.astro";
 import type { TakeRowEventRef } from "../take-row-context.js";
 
@@ -111,6 +112,37 @@ const TAKE_ROWS: {
   // assign. The literal types it was buying are already pinned by `take()`'s
   // own parameter type.
 ];
+
+// Home's pinned plates. One of each kind, because the plate's centre label
+// colour is what distinguishes them and a gallery that shows only takes cannot
+// catch a bone label going missing.
+const PLATE_SONG = { id: "s-1", title: "Píseň o cestách", slug: "pisen-o-cestach" } as const;
+const PINNED = [
+  {
+    kind: "take" as const,
+    id: "t-1",
+    take: take({ id: "t-1", recordedAt: NOW, durationMs: 216_000 }),
+    song: { ...PLATE_SONG, title: "Neon Skyline", slug: "neon-skyline" },
+    event: undefined,
+    playableAssetId: "a-1",
+  },
+  {
+    kind: "take" as const,
+    id: "t-2",
+    take: take({ id: "t-2", recordedAt: NOW, durationMs: 224_000 }),
+    song: { ...PLATE_SONG, title: "Wildfire", slug: "wildfire" },
+    event: undefined,
+    playableAssetId: undefined,
+  },
+  { kind: "song" as const, id: "s-1", song: PLATE_SONG, takeCount: 7 },
+  {
+    kind: "event" as const,
+    id: "e-1",
+    event: { id: "e-1", kind: "rehearsal", heldAt: NOW, title: null, venue: null },
+    takeCount: 5,
+  },
+  // biome-ignore lint/suspicious/noExplicitAny: fixtures for a gallery, not app data
+] as any[];
 
 const swatches = [
   ["--bp-color-bg", "ground"],
@@ -299,6 +331,65 @@ const scale = [
           </tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Pinned plates</h2>
+    <p class="text-meta text-muted bp-m0">
+      Home's pinned section. The centre label says which kind of thing it is without a word — gold
+      for a take (the accent the play control already uses), bone for a song or an event — and the
+      caption says it again in words, since colour is never the only carrier. The hero is the most
+      recently pinned thing; the rail is everything else, scrolling sideways below <code>lg</code>
+      and wrapping above it.
+    </p>
+    <div class="bp-pinned-hero">
+      <PinnedPlate item={PINNED[0]} size="hero" />
+      <div class="bp-pinned-hero-text">
+        <p class="bp-eyebrow bp-pinned-hero-eyebrow bp-m0">Back to</p>
+        <h3 class="bp-pinned-hero-title bp-m0">
+          <a href="#">Neon Skyline</a>
+        </h3>
+        <p class="bp-pinned-hero-meta bp-m0">Live at The Attic<br />8 July 2026</p>
+      </div>
+    </div>
+    <div class="bp-pinned-rail">
+      {PINNED.slice(1).map((item) => (
+        <PinnedPlate item={item} size="rail" />
+      ))}
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Event ledger</h2>
+    <p class="text-meta text-muted bp-m0">
+      Home's other half, and deliberately nothing like a take row: a date spine, the venue as the
+      line, the kind in small caps, the count on the right. The newest entry has no rule above it
+      and takes the accent on its date.
+    </p>
+    <div class="bp-ledger">
+      {[
+        { day: "8", month: "Jul", venue: "Live at The Attic — The Attic", kind: "live", n: 6 },
+        { day: "9", month: "Jan", venue: "Zkušebna Pardubice", kind: "rehearsal", n: 4 },
+        { day: "9", month: "Dec", venue: "", kind: "rehearsal", n: 1 },
+      ].map((row, i) => (
+        <a href="#" class={`bp-ledger-row${i === 0 ? " bp-ledger-row--latest" : ""}`}>
+          <span class="bp-ledger-date">
+            <span class="bp-ledger-day">{row.day}</span>
+            <span class="bp-ledger-month">{row.month}</span>
+          </span>
+          <span class="bp-ledger-main">
+            <span class="bp-ledger-venue">{row.venue || "—"}</span>
+            <span class="bp-kind">{row.kind}</span>
+          </span>
+          <span class="bp-ledger-count">
+            {row.n} {row.n === 1 ? "take" : "takes"}
+          </span>
+        </a>
+      ))}
+      <div class="bp-ledger-footer">
+        <a href="#" class="bp-btn bp-btn-quiet bp-btn-sm">All events</a>
+      </div>
     </div>
   </section>
 

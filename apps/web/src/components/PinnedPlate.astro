@@ -1,0 +1,104 @@
+---
+// A pinned thing, drawn as a plate: a dark grooved disc with a centre label
+// carrying its name. This is the one place in the app that spends a real image
+// on an object, and it is the right place — the app is called bandplate, the
+// design direction is Dubplate, and these are the things a member reaches for.
+// A list of rows is what made home read as undifferentiated stuff.
+//
+// The label's colour says which KIND of thing it is without a word: gold for a
+// take (the same accent the play control uses, because a take is the thing you
+// play) and bone for a song or an event (a container, not a recording). The
+// caption under the plate says it in words too — colour alone is never the only
+// carrier of meaning here, same rule the vote buttons follow.
+import { eventKindLabel, eventLabel, formatShortDate } from "../server/format.js";
+import type { PinnedItem } from "../server/pages/home.js";
+
+export interface Props {
+  item: PinnedItem;
+  /** `hero` is the page's lead plate; `rail` is one of the small ones under it. */
+  size: "hero" | "rail";
+  /**
+   * Whether the plate is its own link. `false` for the hero, where the plate
+   * and the title beside it point at the same thing and must hover, focus and
+   * click as ONE target — two adjacent links to the same place is two tab
+   * stops, two hover states and a nested-anchor problem the moment the wrapper
+   * becomes the link. The wrapper takes the href instead and this renders as a
+   * plain element.
+   */
+  interactive?: boolean;
+}
+
+const { item, size, interactive = true } = Astro.props;
+const Tag = interactive ? "a" : "span";
+
+const href =
+  item.kind === "take"
+    ? `/takes/${item.id}`
+    : item.kind === "song"
+      ? `/songs/${item.song.slug}`
+      : `/events/${item.id}`;
+
+// What goes on the centre label. A take borrows its song's name — a take has no
+// name of its own, and "9 Dec 2025" on the label of a record is what an event
+// is actually called.
+const label =
+  item.kind === "take"
+    ? (item.song?.title ?? "Untitled")
+    : item.kind === "song"
+      ? item.song.title
+      : formatShortDate(item.event.heldAt);
+
+// The caption: what this IS, then what it has. A member scanning the rail
+// should not have to work out from a row's shape whether they pinned the song
+// or one take of it.
+const kindWord =
+  item.kind === "take" ? "Take" : item.kind === "song" ? "Song" : eventKindLabel(item.event.kind);
+
+const detail =
+  item.kind === "take"
+    ? formatShortDate(item.take.recordedAt)
+    : item.kind === "song"
+      ? `${item.takeCount} ${item.takeCount === 1 ? "take" : "takes"}`
+      : `${item.takeCount} ${item.takeCount === 1 ? "take" : "takes"}`;
+
+const accessibleName =
+  item.kind === "take"
+    ? `${label} — take from ${detail}`
+    : item.kind === "song"
+      ? `${label} — song, ${detail}`
+      : `${eventLabel(item.event) || kindWord} — ${detail}`;
+
+// Gold for a take, bone for a container. See the header comment.
+const labelTone = item.kind === "take" ? "take" : "container";
+// Only a take can be played, and only when it has a ready master.
+const playable = item.kind === "take" ? item.playableAssetId : undefined;
+---
+
+<Tag
+  href={interactive ? href : undefined}
+  class={`bp-plate bp-plate--${size} bp-plate--${labelTone}`}
+  aria-label={interactive ? accessibleName : undefined}
+>
+  <span class="bp-plate-disc" aria-hidden="true">
+    <span class="bp-plate-label">{label}</span>
+    <span class="bp-plate-spindle" />
+    {
+      playable && (
+        <span class="bp-plate-play">
+          <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 4.5v15l13-7.5-13-7.5z" fill="currentColor" />
+          </svg>
+        </span>
+      )
+    }
+  </span>
+  {
+    size === "rail" && (
+      <span class="bp-plate-caption" aria-hidden="true">
+        <span class="bp-kind">{kindWord}</span>
+        <span class="bp-plate-caption-sep" />
+        <span>{detail}</span>
+      </span>
+    )
+  }
+</Tag>

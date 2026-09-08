@@ -313,34 +313,35 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(res.headers.get("location")).toBe("/login");
     });
 
-    it("renders favorites, recent events, and needs-your-vote for a signed-in member", async () => {
+    it("renders the pinned things and the event ledger for a signed-in member", async () => {
       const res = await fetch(`${ORIGIN}/`, { headers: { cookie: sessionCookie } });
       expect(res.status).toBe(200);
       const body = await res.text();
-      expect(body).toContain(`/songs/${favoriteSongSlug}`); // favorite song, linked
-      expect(body).toContain(`/takes/${favoriteTakeId}`); // favorite take, linked
-      expect(body).toContain("Home Test Venue"); // recent event
-      expect(body).toContain(`/takes/${publishedUnvotedTakeId}`); // needs-your-vote, linked
+      expect(body).toContain(`/songs/${favoriteSongSlug}`); // pinned song, linked
+      expect(body).toContain(`/takes/${favoriteTakeId}`); // pinned take, linked
+      expect(body).toContain("Home Test Venue"); // the ledger's newest entry
     });
 
-    it("has no duplicate view-transition-name, even though the favorite take also appears under recent events (F1, review round 1)", async () => {
+    it("no longer renders the needs-your-vote queue", async () => {
+      // The queue is gone from the page everyone opens; its count lives on
+      // `/me` now (asserted below). This take is published and unvoted by this
+      // member, so it WOULD have been listed here before — which is what makes
+      // the absence meaningful rather than vacuous.
       const res = await fetch(`${ORIGIN}/`, { headers: { cookie: sessionCookie } });
       const body = await res.text();
-      const names = extractViewTransitionNames(body);
-      // Sanity: the fixture actually exercises the overlap this guards —
-      // if this list is too short, the test below would pass trivially.
-      expect(names.length).toBeGreaterThan(1);
+      expect(body).not.toContain(`/takes/${publishedUnvotedTakeId}`);
+      expect(body).not.toContain("Needs your vote");
+    });
+
+    it("emits no duplicate view-transition-name — structurally, not by accident", async () => {
+      // Home used to render one take in up to three sections at once, which
+      // assigns the same name twice and (per the spec) aborts the transition
+      // for the WHOLE page; `claimTakeTransition` existed to prevent it. With
+      // one pinned list there is nowhere for a take to appear twice, so this
+      // now guards the structure rather than the workaround.
+      const res = await fetch(`${ORIGIN}/`, { headers: { cookie: sessionCookie } });
+      const names = extractViewTransitionNames(await res.text());
       expect(new Set(names).size).toBe(names.length);
-    });
-
-    it("marks every take row with data-take-id and ships the transition-retarget script (Fix round 3)", async () => {
-      const res = await fetch(`${ORIGIN}/`, { headers: { cookie: sessionCookie } });
-      const body = await res.text();
-      // The clicked-row-retargeting script needs a stable hook to find
-      // both occurrences of a duplicated take by id — see
-      // `TakeRow.astro`'s `data-take-id`.
-      expect(body).toContain(`data-take-id="${favoriteTakeId}"`);
-      expect(body).toContain(TAKE_TRANSITION_RETARGET_MARKER);
     });
   });
 

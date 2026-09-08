@@ -230,7 +230,7 @@ const noteText = takeNote(take.label, eventKind);
       >
         {primaryLabel}
       </a>
-      {eventKind && <span class="bp-badge bp-badge-kind">{eventKind}</span>}
+
       <span class="bp-take-favorite-mark">
         <FavoriteToggle
           targetType="take"
@@ -240,11 +240,16 @@ const noteText = takeNote(take.label, eventKind);
         />
       </span>
     </div>
-    {event && eventName && (
+    {/* The event's name and its kind on one line — the kind as small caps, not
+        a pill. A pill is a thing you can press; a kind is a label on a fact, so
+        it takes the same voice the event ledger on home uses. An untitled event
+        has no name to print, so the kind stands alone and carries the link. */}
+    {event && (
       <div class="bp-take-meta bp-take-eventline">
         <a href={`/events/${event.id}`} class="bp-take-event-link">
-          {eventName}
+          {eventName || <span class="bp-kind">{eventKind}</span>}
         </a>
+        {eventName && eventKind && <span class="bp-kind">{eventKind}</span>}
       </div>
     )}
     {noteText && <div class="bp-take-meta bp-take-note">{noteText}</div>}

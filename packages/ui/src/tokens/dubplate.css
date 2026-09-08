@@ -120,6 +120,15 @@
   --bp-fill-alert: color-mix(in srgb, var(--bp-color-danger) 24%, transparent);
   --bp-fill-accent: color-mix(in srgb, var(--bp-color-accent) 24%, transparent);
   --bp-color-placeholder: color-mix(in srgb, var(--bp-color-fg) 70%, var(--bp-fill-subtle));
+
+  /* ---- the plate ----
+     Home draws pinned things as dubplates. Both values are FIXED across
+     themes on purpose: a record is a black disc with a printed paper label,
+     and inverting either in the light theme would give a bone label on a bone
+     page with nothing between them. They are named rather than inlined so a
+     brand swap can restyle the object without touching component CSS. */
+  --bp-plate-vinyl: #0d0704;
+  --bp-plate-label-bone: #e8dcc6;
 }
 
 @media (prefers-color-scheme: dark) {

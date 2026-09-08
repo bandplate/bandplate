@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-10",
+      "name": "M4 \u2014 Home"
+    },
+    {
       "id": "page-9",
       "name": "M4 \u2014 Take detail"
     },
@@ -38,6 +42,15 @@
     }
   ],
   "artboards": [
+    {
+      "file": "Home.dc.html",
+      "title": "Home",
+      "page": "page-10",
+      "x": 0,
+      "y": 0,
+      "w": 2000,
+      "h": 1060
+    },
     {
       "file": "TakeDetail.dc.html",
       "title": "Take detail",
@@ -330,6 +343,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-9"
+    "page": "page-10"
   }
 }

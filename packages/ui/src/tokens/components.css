@@ -2280,16 +2280,6 @@ a.bp-btn {
   letter-spacing: 0.02em;
 }
 
-/* The event's kind, beside the title — one word ("rehearsal", "live"), which
-   is the fact a listing actually needs about an event it isn't scoped to. It
-   takes the badge shape but the quietest fill: it sits next to the row's
-   loudest element and is true of every take in a list, so anything stronger
-   would be four identical shouts down the page. */
-.bp-badge-kind {
-  background: var(--bp-fill-subtle);
-  color: var(--bp-color-muted);
-}
-
 /* The event gets a line to itself, DIRECTLY under the title. It was the last
    item on the subline, where it wrapped mid-sentence behind the date and the
    instrument glyphs — an event is a NAME ("Live at The Attic — The Attic"), and
@@ -2299,6 +2289,10 @@ a.bp-btn {
    glyphs and sometimes after them, depending on how long its name was, so no
    two rows broke the same way. Fixed order, one line each, every row alike. */
 .bp-take-eventline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5rem;
   margin-top: 0.125rem;
   font-size: var(--text-note, 0.71875rem);
   line-height: 1.45;
@@ -3359,4 +3353,476 @@ a.bp-btn {
 
 .bp-credit a {
   color: var(--bp-color-accent);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Two labels used across the app, defined once here.                     */
+/* ---------------------------------------------------------------------- */
+
+/* An eyebrow: a caps label above a block. The type scale's own `eyebrow`
+   step, made a class because four screens were re-declaring the same five
+   properties inline. */
+.bp-eyebrow {
+  font-family: var(--bp-font-body);
+  font-weight: 900;
+  font-size: var(--text-eyebrow, 0.6875rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+}
+
+/* A KIND — "rehearsal", "live", "take", "song". It used to be a pill, and a
+   pill is a thing you can press. A kind is not: it is a label on a fact, the
+   same as the venue line it sits under in the ledger, so it takes that voice
+   instead. It also stops competing with the verdict badge beside it in a take
+   row, which IS a decision and keeps its pill. Tighter tracking than
+   `.bp-eyebrow` because it appears inline next to running text rather than
+   alone above a block. */
+.bp-kind {
+  font-family: var(--bp-font-body);
+  font-weight: 900;
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+  white-space: nowrap;
+}
+
+/* A quiet pill — the fill every other borderless control uses, no accent. For
+   a "go see the rest" action that must not outrank what it sits under. */
+.bp-btn-quiet {
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+}
+
+.bp-btn-quiet:hover:not([disabled]) {
+  background: var(--bp-fill-raised);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Home — plates and a ledger. The page's two sections deliberately share  */
+/* no type size, no leading element and no row shape: pinned things are    */
+/* OBJECTS you reach for, recent events are a CHRONOLOGY. When both were   */
+/* the same take row, home read as one long undifferentiated list.         */
+/* ---------------------------------------------------------------------- */
+
+.bp-home {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+/* --- the plate ------------------------------------------------------- */
+
+/* A dubplate: grooves cut as a repeating radial gradient rather than an
+   image, so it costs nothing to ship, scales to any size and recolours with
+   the theme. The groove pitch is fixed at 4px regardless of plate size —
+   real grooves do not scale with the record, and a 92px plate with 2px
+   grooves reads as a target, not a disc. */
+.bp-plate {
+  display: inline-flex;
+  flex-direction: column;
+  flex: none;
+  text-decoration: none;
+  color: inherit;
+}
+
+.bp-plate-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--bp-plate-size);
+  height: var(--bp-plate-size);
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--bp-color-fg) 7%, transparent) 0 1px,
+      transparent 1px 4px
+    ), var(--bp-plate-vinyl);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 10%, transparent), 0 6px 18px
+    rgb(0 0 0 / 0.45);
+}
+
+.bp-plate-label {
+  display: grid;
+  place-items: center;
+  /* 54% of the disc, not the 46% this started at. A real label is about half a
+     7", and the extra width is what lets a two-word title break at its SPACE:
+     at 46% the line box was narrower than the word "Basement", so "Basement
+     Tapes" broke as "Basemen / t Tapes". */
+  width: 54%;
+  height: 54%;
+  padding: 4%;
+  box-sizing: border-box;
+  border-radius: 50%;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  /* Proportional to the plate, with a hard 10px floor: at the rail's 92px the
+     ratio alone gives 8.5px, which is under the size at which Zilla Slab's
+     counters survive — a song title on a small plate became a smudge. */
+  font-size: max(0.625rem, calc(var(--bp-plate-size) * 0.093));
+  /* `break-word`, not `anywhere`: break a word only when it cannot fit on a
+     line of its own, so the space stays the preferred break point. */
+  overflow-wrap: break-word;
+  line-height: 1.02;
+  text-align: center;
+  overflow: hidden;
+  /* The label is a light disc in BOTH themes — a record label is printed
+     paper, and inverting it in light mode would leave a white disc on a
+     white page with nothing to separate them. The ink on it is the dark
+     ground colour for the same reason. */
+  color: var(--bp-lacquer, #150c07);
+}
+
+.bp-plate--take .bp-plate-label {
+  background: var(--bp-color-accent-gold);
+}
+
+.bp-plate--container .bp-plate-label {
+  background: var(--bp-plate-label-bone);
+}
+
+/* The spindle hole, scaled to the plate rather than fixed at 5px — on a 128px
+   rail plate a fixed dot was proportionally twice the hole a 7" actually has,
+   and it landed on a letter of the title often enough to read as a defect. */
+.bp-plate-spindle {
+  position: absolute;
+  width: max(3px, calc(var(--bp-plate-size) * 0.032));
+  height: max(3px, calc(var(--bp-plate-size) * 0.032));
+  border-radius: 50%;
+  background: var(--bp-plate-vinyl);
+}
+
+/* The play affordance rides the plate's edge rather than sitting in the
+   middle of the label, where it would cover the name the plate exists to
+   show. It is not a button — the whole plate is the link, and playing
+   starts on the take's own page. */
+.bp-plate-play {
+  position: absolute;
+  right: 2%;
+  bottom: 6%;
+  display: grid;
+  place-items: center;
+  width: calc(var(--bp-plate-size) * 0.28);
+  height: calc(var(--bp-plate-size) * 0.28);
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+}
+
+.bp-plate--hero {
+  --bp-plate-size: 168px;
+}
+
+.bp-plate--rail {
+  --bp-plate-size: 128px;
+}
+
+/* The cell sizes to its CAPTION, not to the plate: "9 December" wrapped to
+   two lines when the cell was pinned to the plate's 92px. */
+.bp-plate--rail {
+  min-width: var(--bp-plate-size);
+}
+
+.bp-plate-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin-top: 0.5625rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  white-space: nowrap;
+}
+
+.bp-plate-caption-sep {
+  display: inline-block;
+  width: 1px;
+  height: 0.6875rem;
+  flex: none;
+  background: var(--bp-color-border);
+}
+
+/* Hover lifts the plate off the page and deepens its shadow — the one
+   gesture a physical object affords that a row does not. A brightness bump on
+   the label alone (what this was) is invisible against a gold disc on a dark
+   ground, which left the only clickable object on the page looking inert.
+   Focus gets the same treatment plus the system's ring, so a keyboard reaches
+   it too. */
+.bp-plate-disc {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.bp-plate:hover .bp-plate-disc,
+.bp-plate:focus-visible .bp-plate-disc {
+  transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent), 0 12px 26px
+    rgb(0 0 0 / 0.5);
+}
+
+.bp-plate:hover .bp-plate-label,
+.bp-plate:focus-visible .bp-plate-label {
+  filter: brightness(1.08);
+}
+
+/* The caption follows the plate rather than staying muted, so the whole cell
+   reads as one hovered thing instead of a disc that moved on its own. */
+.bp-plate:hover .bp-plate-caption,
+.bp-plate:focus-visible .bp-plate-caption,
+.bp-plate:hover .bp-plate-caption .bp-kind,
+.bp-plate:focus-visible .bp-plate-caption .bp-kind {
+  /* `.bp-kind` sets its own muted colour, so it does not inherit the
+     caption's — the word TAKE stayed dim while the date beside it lit up. */
+  color: var(--bp-color-fg);
+}
+
+.bp-plate:focus-visible {
+  outline: none;
+}
+
+.bp-plate:focus-visible .bp-plate-disc {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-plate-disc {
+    transition: none;
+  }
+
+  .bp-plate:hover .bp-plate-disc,
+  .bp-plate:focus-visible .bp-plate-disc {
+    transform: none;
+  }
+}
+
+/* --- the pinned section ---------------------------------------------- */
+
+/* One link wrapping the plate and its title, so both react together. Every
+   hover rule below is written against this wrapper rather than `.bp-plate`,
+   which the hero's own plate no longer is (it renders as a plain element —
+   see `PinnedPlate.astro`'s `interactive` prop). */
+.bp-pinned-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.375rem;
+  margin-bottom: 1.5rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.bp-pinned-hero:hover .bp-plate-disc,
+.bp-pinned-hero:focus-visible .bp-plate-disc {
+  transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent), 0 12px 26px
+    rgb(0 0 0 / 0.5);
+}
+
+.bp-pinned-hero:hover .bp-plate-label,
+.bp-pinned-hero:focus-visible .bp-plate-label {
+  filter: brightness(1.08);
+}
+
+.bp-pinned-hero:hover .bp-pinned-hero-title {
+  text-decoration: underline;
+  text-decoration-color: var(--bp-color-muted);
+  text-underline-offset: 0.2em;
+}
+
+.bp-pinned-hero:focus-visible {
+  outline: none;
+}
+
+.bp-pinned-hero:focus-visible .bp-plate-disc {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-pinned-hero:hover .bp-plate-disc,
+  .bp-pinned-hero:focus-visible .bp-plate-disc {
+    transform: none;
+  }
+}
+
+.bp-pinned-hero-text {
+  min-width: 0;
+}
+
+.bp-pinned-hero-eyebrow {
+  color: var(--bp-color-accent);
+  margin-bottom: 0.5rem;
+}
+
+.bp-pinned-hero-title {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 2rem;
+  line-height: 1.02;
+}
+
+.bp-pinned-hero-meta {
+  margin-top: 0.4375rem;
+  font-size: var(--text-meta, 0.78125rem);
+  line-height: 1.45;
+  color: var(--bp-color-muted);
+}
+
+/* Below `lg` the rail scrolls sideways — a phone cannot show four plates in a
+   row, and a wrapping grid there would push the ledger off the first screen.
+   Past it the rail wraps instead, so every pin is visible at once without a
+   gesture. */
+.bp-pinned-rail {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  /* Room for the plates' own drop shadow, which a tight scroll box clips. */
+  padding-bottom: 0.5rem;
+  scrollbar-width: none;
+}
+
+.bp-pinned-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.bp-pinned-rail > * {
+  scroll-snap-align: start;
+}
+
+@media (min-width: 64rem) {
+  .bp-pinned-rail {
+    flex-wrap: wrap;
+    /* Wide enough to breathe: at the old 92px five plates crammed into one row
+       and the captions ran together into a single band of small caps. */
+    gap: 1.75rem 2rem;
+    overflow-x: visible;
+  }
+}
+
+/* --- the ledger ------------------------------------------------------ */
+
+/* A chronology, not a list of cards: a date spine on the left in the display
+   face, the venue as the line, the kind in small caps under it, the count on
+   the right. Nothing here carries a plate, a star or a 19px slab title, so no
+   row of it can be mistaken for a take. */
+.bp-ledger {
+  display: flex;
+  flex-direction: column;
+}
+
+.bp-ledger-row {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0 1rem;
+  padding: 0.8125rem 0;
+  border-top: 1px solid var(--bp-color-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The newest event opens the ledger, so it has no rule above it and takes the
+   accent on its date — the one thing on this page that says "this is what
+   just happened". */
+.bp-ledger-row--latest {
+  border-top-color: transparent;
+}
+
+.bp-ledger-row:hover .bp-ledger-venue {
+  text-decoration: underline;
+  text-decoration-color: var(--bp-color-muted);
+  text-underline-offset: 0.2em;
+}
+
+.bp-ledger-date {
+  display: block;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-ledger-day {
+  display: block;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.3125rem;
+  line-height: 1;
+  color: var(--bp-color-fg);
+}
+
+.bp-ledger-row--latest .bp-ledger-day {
+  color: var(--bp-color-accent);
+}
+
+.bp-ledger-month {
+  display: block;
+  margin-top: 0.1875rem;
+  font-family: var(--bp-font-body);
+  font-weight: 900;
+  font-size: 0.59375rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+}
+
+.bp-ledger-main {
+  display: block;
+  min-width: 0;
+}
+
+.bp-ledger-venue {
+  display: block;
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-fg);
+}
+
+.bp-ledger-main .bp-kind {
+  display: block;
+  margin-top: 0.125rem;
+}
+
+.bp-ledger-count {
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bp-ledger-footer {
+  padding-top: 1rem;
+  border-top: 1px solid var(--bp-color-border);
+}
+
+/* Past `lg` the two sections sit side by side: the shelf you reach for on the
+   left, what just happened on the right. */
+@media (min-width: 64rem) {
+  .bp-home {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 21rem);
+    gap: 0 2.875rem;
+    align-items: start;
+  }
+}
+
+/* The unvoted count on `/me` — a fact with a number in front of it, not a
+   banner. It is information the member came looking for, so it does not take a
+   fill, an icon or a border; the numeral does all the signalling. */
+.bp-me-unvoted {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-me-unvoted-count {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--bp-color-accent);
+  font-variant-numeric: tabular-nums;
 }

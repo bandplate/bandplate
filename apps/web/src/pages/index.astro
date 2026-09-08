@@ -1,35 +1,32 @@
 ---
-// Home — the page a member opens one-handed, mid-rehearsal (brief §3), so
-// it answers "what should I listen to" in the order the brief specifies:
-// favorites first (the things they reach for), then recent events with
-// their takes, then "needs your vote". No longer public (see
-// `server/guard.ts`) — this reads the signed-in member's own favorites and
-// unvoted takes, so it needs a principal like every other member-facing
-// page now that it's real.
+// Home — opened one-handed, mid-rehearsal. It answers two things and no more:
+// what you PINNED (the songs and takes you are working on), and what the band
+// recorded lately.
 //
-// Favorites and "needs your vote" both got their real controls in Task 8
-// (`FavoriteToggle`/`VoteToggle`, wired through `TakeRow`'s trailing slot
-// and per-row favorite mark) — see task-8-report.md.
+// Two sections, drawn so they cannot be mistaken for each other. Pinned items
+// are PLATES — the acetate the app is named for, a dark grooved disc with a
+// centre label — because they are things you reach for, and a list of rows was
+// what made this page read as undifferentiated stuff. Recent events are a
+// LEDGER: a date spine on the left, the venue as the line, the kind in small
+// caps, the take count on the right. A chronology drawn as one.
 //
-// `transitionName`/`claimTakeTransition` (review round 1, F1): a take that
-// is BOTH a favorite and also appears in "recent events" or "needs your
-// vote" would otherwise get the same `view-transition-name` twice on this
-// page — which, per the CSS View Transitions spec, silently aborts the
-// transition for the WHOLE page, not just those two rows. Only the first
-// section to render a given take id keeps the name; later occurrences
-// don't get one (the row still works, it just isn't a morph target). See
-// `TakeRow.astro`'s own header comment for the prop this composes with.
+// What used to be here and is deliberately gone:
 //
-// `<TakeTransitionRetarget />` (Fix round 3): JS-progressive-enhancement
-// that moves the claimed name onto whichever occurrence the member
-// actually clicks, so the transition morphs from the right place on
-// screen. See that component's own header comment.
-import FavoriteToggle from "../components/FavoriteToggle.astro";
-import TakeRow from "../components/TakeRow.astro";
-import TakeTransitionRetarget from "../components/TakeTransitionRetarget.astro";
+//   - "Needs your vote". Nothing on the page everyone opens should nag, and a
+//     new recording usually arrives as a shared link anyway. The count moved to
+//     `/me`, where it is something you go looking for.
+//   - Takes nested under each recent event. Home says an event happened;
+//     opening it is how you reach its takes.
+//   - `claimTakeTransition` / `<TakeTransitionRetarget />`. Both existed only
+//     because one take could appear in two sections of this page at once, which
+//     assigns the same `view-transition-name` twice and (per the spec) silently
+//     aborts the transition for the WHOLE page. With one pinned list and no
+//     take rows, a take cannot appear twice, so the problem and its two
+//     workarounds are gone together.
+import PinnedPlate from "../components/PinnedPlate.astro";
 import AppLayout from "../layouts/AppLayout.astro";
 import { getAppDeps } from "../server/app.js";
-import { eventLabel, formatLongDate } from "../server/format.js";
+import { eventKindLabel, eventLabel, formatShortDate } from "../server/format.js";
 import { getHomeData } from "../server/pages/home.js";
 
 const principal = Astro.locals.principal;
@@ -38,125 +35,105 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
-const { favorites, favoriteSongIds, recentEvents, unvotedTakes } = await getHomeData(
-  appDeps.db,
-  principal.memberId,
-);
+const { pinned, recentEvents } = await getHomeData(appDeps.db, principal.memberId);
 
-const hasFavorites =
-  favorites.songs.length > 0 || favorites.takes.length > 0 || favorites.events.length > 0;
-// Sub-headings ("Songs"/"Events"/"Takes") only earn their keep when more
-// than one kind is actually present — a single-kind favorites list needs
-// no label repeating what the section heading already said.
-const favoriteKindCount = [
-  favorites.songs.length > 0,
-  favorites.events.length > 0,
-  favorites.takes.length > 0,
-].filter(Boolean).length;
+// The most recently pinned thing leads the page — "back to" whatever you were
+// last on. The rest follow in the rail beneath it.
+const [hero, ...rail] = pinned;
 
-const usedTakeTransitionIds = new Set<string>();
-/** First call for a given take id gets the real name; every later call on
- *  this same page render gets `null` (no `transition:name` at all). */
-function claimTakeTransition(takeId: string): string | null {
-  if (usedTakeTransitionIds.has(takeId)) {
-    return null;
+const monthFormatter = new Intl.DateTimeFormat("en-GB", { month: "short" });
+const ledger = recentEvents.map((event) => {
+  const held = new Date(event.heldAt);
+  return {
+    event,
+    day: String(held.getDate()),
+    month: monthFormatter.format(held),
+    venue: eventLabel(event),
+    kind: eventKindLabel(event.kind),
+  };
+});
+
+/** What the hero says under its title: the event it came from, then the date,
+ *  on separate lines. No running time — this is an invitation back to a take,
+ *  not a spec sheet. */
+function heroLines(item: typeof hero): string[] {
+  if (!item) {
+    return [];
   }
-  usedTakeTransitionIds.add(takeId);
-  return `take-${takeId}`;
+  if (item.kind === "take") {
+    const name = item.event ? eventLabel(item.event) : "";
+    return [name, formatShortDate(item.take.recordedAt)].filter(Boolean);
+  }
+  if (item.kind === "song") {
+    return [`${item.takeCount} ${item.takeCount === 1 ? "take" : "takes"}`];
+  }
+  // An untitled event IS its date — that is what the plate's label and the
+  // title both say — so repeating it underneath told the member nothing twice.
+  // What it has instead is a count.
+  const name = eventLabel(item.event);
+  const count = `${item.takeCount} ${item.takeCount === 1 ? "take" : "takes"}`;
+  return name ? [name, formatShortDate(item.event.heldAt)] : [count];
 }
 ---
 
 <AppLayout title="Home" principal={principal} current="home">
-  <TakeTransitionRetarget />
-  <div class="bp-stack">
-    <h1 class="bp-page-title">Welcome back</h1>
-
-    <section>
-      <h2 class="bp-section-title">Your favorites</h2>
+  <div class="bp-home">
+    <section class="bp-home-pinned">
       {
-        !hasFavorites ? (
+        hero ? (
+          <>
+            {/* One link, not two. The plate and the title point at the same
+                thing, so they hover, focus and click together — the plate was
+                lifting on its own while the words beside it sat inert. The
+                heading stays an `<h1>` inside it so the page still has one. */}
+            <a
+              class="bp-pinned-hero"
+              href={hero.kind === "take" ? `/takes/${hero.id}` : hero.kind === "song" ? `/songs/${hero.song.slug}` : `/events/${hero.id}`}
+            >
+              <PinnedPlate item={hero} size="hero" interactive={false} />
+              <div class="bp-pinned-hero-text">
+                <p class="bp-eyebrow bp-pinned-hero-eyebrow bp-m0">Back to</p>
+                <h1 class="bp-pinned-hero-title bp-m0">
+                  {hero.kind === "take"
+                    ? (hero.song?.title ?? "Untitled take")
+                    : hero.kind === "song"
+                      ? hero.song.title
+                      : formatShortDate(hero.event.heldAt)}
+                </h1>
+                <p class="bp-pinned-hero-meta bp-m0">
+                  {heroLines(hero).map((line, i) => (
+                    <>
+                      {i > 0 && <br />}
+                      {line}
+                    </>
+                  ))}
+                </p>
+              </div>
+            </a>
+            {rail.length > 0 && (
+              <div class="bp-pinned-rail">
+                {rail.map((item) => (
+                  <PinnedPlate item={item} size="rail" />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
           <div class="bp-empty-state">
             <p>
-              Nothing pinned yet — tap the star on a song, take, or event to pin it here.{" "}
-              <a href="/search">Browse the archive</a> for what to listen to next.
+              <strong>Nothing pinned yet.</strong> Tap the star on a song, take or event and it
+              lands here — this is the shelf you reach for. <a href="/search">Browse the archive</a>{" "}
+              to find something.
             </p>
-          </div>
-        ) : (
-          <div class="bp-stack bp-stack-tight">
-            {favorites.songs.length > 0 && (
-              <div>
-                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Songs</p>}
-                <div class="bp-song-list">
-                  {favorites.songs.map((song) => (
-                    <div class="bp-song-row">
-                      <a href={`/songs/${song.slug}`} class="bp-song-row-link">
-                        <div class="bp-song-row-main">
-                          <p class="bp-song-title bp-m0">{song.title}</p>
-                        </div>
-                      </a>
-                      <FavoriteToggle
-                        targetType="song"
-                        targetId={song.id}
-                        favorited={favoriteSongIds.has(song.id)}
-                        label={song.title}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {favorites.events.length > 0 && (
-              <div>
-                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Events</p>}
-                <div class="bp-event-list">
-                  {favorites.events.map((event) => (
-                    <div class={`bp-event-row bp-event-row--${event.kind}`}>
-                      <a href={`/events/${event.id}`} class="bp-event-row-link">
-                        <div class="bp-event-row-main">
-                          <p class="bp-event-row-date bp-m0">{formatLongDate(event.heldAt)}</p>
-                          <p class="bp-event-row-venue bp-m0">
-                            <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
-                            {eventLabel(event) && ` ${eventLabel(event)}`}
-                          </p>
-                        </div>
-                      </a>
-                      <FavoriteToggle
-                        targetType="event"
-                        targetId={event.id}
-                        favorited={true}
-                        label={eventLabel(event) || `this ${event.kind}`}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {favorites.takes.length > 0 && (
-              <div>
-                {favoriteKindCount > 1 && <p class="bp-field-label bp-m0">Takes</p>}
-                <div class="bp-take-list bp-take-list--wide">
-                  {favorites.takes.map((take) => (
-                    <TakeRow
-                      take={take}
-                      instruments={take.instruments}
-                      context={{ kind: "full", song: take.song, event: take.event }}
-                      transitionName={claimTakeTransition(take.id)}
-                      favorited={true}
-                      playableAssetId={take.playableAssetId}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )
       }
     </section>
 
-    <section>
+    <section class="bp-home-ledger">
       <h2 class="bp-section-title">Recent events</h2>
       {
-        recentEvents.length === 0 ? (
+        ledger.length === 0 ? (
           <div class="bp-empty-state">
             <p>
               No events yet. Ask whoever's running the session to log the next rehearsal or show —
@@ -164,75 +141,41 @@ function claimTakeTransition(takeId: string): string | null {
             </p>
           </div>
         ) : (
-          <div class="bp-stack">
-            {recentEvents.map(({ event, eventFavorited, takes }) => (
-              <div class="bp-home-event-group">
-                <div class={`bp-event-row bp-event-row--${event.kind}`}>
-                  <a href={`/events/${event.id}`} class="bp-event-row-link">
-                    <div class="bp-event-row-main">
-                      <p class="bp-event-row-date bp-m0">{formatLongDate(event.heldAt)}</p>
-                      <p class="bp-event-row-venue bp-m0">
-                        <span class={`bp-badge bp-badge-${event.kind}`}>{event.kind}</span>
-                        {eventLabel(event) && ` ${eventLabel(event)}`}
-                        <span class="bp-event-row-count">
-                          {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
-                        </span>
-                      </p>
-                    </div>
-                    <div class="bp-event-row-stats">
-                      {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
-                    </div>
-                  </a>
-                  <FavoriteToggle
-                    targetType="event"
-                    targetId={event.id}
-                    favorited={eventFavorited}
-                    label={eventLabel(event) || `this ${event.kind}`}
-                  />
-                </div>
-                {takes.length > 0 && (
-                  <div class="bp-take-list bp-take-list--wide">
-                    {takes.map((take) => (
-                      <TakeRow
-                        take={take}
-                        instruments={take.instruments}
-                        context={{ kind: "event", song: take.song }}
-                        transitionName={claimTakeTransition(take.id)}
-                        favorited={take.favorited}
-                        playableAssetId={take.playableAssetId}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+          <div class="bp-ledger">
+            {ledger.map(({ event, day, month, venue, kind }, i) => (
+              <a href={`/events/${event.id}`} class={`bp-ledger-row${i === 0 ? " bp-ledger-row--latest" : ""}`}>
+                <span class="bp-ledger-date">
+                  <span class="bp-ledger-day">{day}</span>
+                  <span class="bp-ledger-month">{month}</span>
+                </span>
+                <span class="bp-ledger-main">
+                  <span class="bp-ledger-venue">{venue || "—"}</span>
+                  <span class="bp-kind">{kind}</span>
+                </span>
+                <span class="bp-ledger-count">
+                  {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+                </span>
+              </a>
             ))}
-          </div>
-        )
-      }
-    </section>
-
-    <section>
-      <h2 class="bp-section-title">Needs your vote</h2>
-      {
-        unvotedTakes.length === 0 ? (
-          <div class="bp-empty-state">
-            <p>
-              <strong>You're all caught up.</strong> Every published take has your vote — check back
-              once the band records something new.
-            </p>
-          </div>
-        ) : (
-          <div class="bp-take-list bp-take-list--wide" data-unvoted-list>
-            {unvotedTakes.map((take) => (
-              <TakeRow
-                take={take}
-                instruments={take.instruments}
-                context={{ kind: "full", song: take.song, event: take.event }}
-                transitionName={claimTakeTransition(take.id)}
-                favorited={take.favorited}
-                playableAssetId={take.playableAssetId}
-              />
-            ))}
+            <div class="bp-ledger-footer">
+              <a href="/events" class="bp-btn bp-btn-quiet bp-btn-sm">
+                All events
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h13" />
+                  <path d="M13 6l6 6-6 6" />
+                </svg>
+              </a>
+            </div>
           </div>
         )
       }

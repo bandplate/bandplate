@@ -1,13 +1,16 @@
-// `/` composition logic — the three home sections (favorites, recent
-// events with their takes, needs-your-vote), exercised against a real test
-// database (not over HTTP — `home-search-me-takes.route.test.ts` covers
-// the actual route). Same split as `songs.test.ts`/`events.test.ts`.
+// `/` composition logic — the two home sections (the pinned list and the
+// event ledger), exercised against a real test database (not over HTTP —
+// `home-search-me-takes.route.test.ts` covers the actual route). Same split
+// as `songs.test.ts`/`events.test.ts`.
+//
+// The old "needs your vote" third section is gone from home (its count lives
+// on `/me` now), and recent events no longer carry their takes, so the tests
+// that covered both went with them.
 import type { Db } from "@bandplate/db";
 import {
   assetsRepo,
   eventsRepo,
   favoritesRepo,
-  instrumentsRepo,
   membersRepo,
   songsRepo,
   takesRepo,
@@ -31,45 +34,109 @@ describe("getHomeData", () => {
     memberId = member.id;
   });
 
-  it("returns empty favorites, no recent events, and no unvoted takes on a fresh database", async () => {
+  it("returns nothing pinned and no events on a fresh database", async () => {
     const data = await getHomeData(db, memberId);
-    expect(data.favorites.songs).toEqual([]);
-    expect(data.favorites.takes).toEqual([]);
-    expect(data.favorites.events).toEqual([]);
+    expect(data.pinned).toEqual([]);
     expect(data.recentEvents).toEqual([]);
-    expect(data.unvotedTakes).toEqual([]);
   });
 
-  it("includes a favorited event in favorites.events — the brief's DoD requires it on / and /me", async () => {
+  it("merges all three kinds of favorite into ONE newest-pinned-first list", async () => {
+    // The whole point of the merge: a member's pins are a working set, not
+    // three taxonomies. Pinned in a deliberate order — song, then event, then
+    // take — so "newest first" has to invert it rather than happening to
+    // match whatever order the per-kind lookups return in.
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Pinned Song",
+      slug: "pinned-song",
+      createdAt: now,
+      updatedAt: now,
+    });
     const event = await eventsRepo.create(db, {
       kind: "concert",
-      heldAt: Date.now(),
-      venue: "Favorited Venue",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      heldAt: now,
+      venue: "Pinned Venue",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const take = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "song",
+      targetId: song.id,
+      createdAt: now,
     });
     await favoritesRepo.add(db, {
       memberId,
       targetType: "event",
       targetId: event.id,
-      createdAt: Date.now(),
+      createdAt: now + 1,
+    });
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "take",
+      targetId: take.id,
+      createdAt: now + 2,
     });
 
     const data = await getHomeData(db, memberId);
-    expect(data.favorites.events.map((e) => e.id)).toEqual([event.id]);
+    expect(data.pinned.map((p) => p.kind)).toEqual(["take", "event", "song"]);
+    expect(data.pinned.map((p) => p.id)).toEqual([take.id, event.id, song.id]);
   });
 
-  it("splits favorites into songs and takes, preserving newest-first order, and ignores a favorited event", async () => {
+  it("a pinned take carries the song and event it needs to name itself", async () => {
     const now = Date.now();
-    const songA = await songsRepo.create(db, {
-      title: "Older Favorite Song",
-      slug: "older-favorite-song",
+    const song = await songsRepo.create(db, {
+      title: "Neon Skyline",
+      slug: "neon-skyline",
       createdAt: now,
       updatedAt: now,
     });
-    const songB = await songsRepo.create(db, {
-      title: "Newer Favorite Song",
-      slug: "newer-favorite-song",
+    const event = await eventsRepo.create(db, {
+      kind: "concert",
+      heldAt: now,
+      venue: "The Attic",
+      title: "Live at The Attic",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const take = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "take",
+      targetId: take.id,
+      createdAt: now,
+    });
+
+    const [pinned] = (await getHomeData(db, memberId)).pinned;
+    expect(pinned?.kind).toBe("take");
+    if (pinned?.kind !== "take") {
+      throw new Error("expected a pinned take");
+    }
+    // A take has no name of its own — the plate borrows its song's, and the
+    // caption names the event. Both have to be here or the plate is blank.
+    expect(pinned.song?.title).toBe("Neon Skyline");
+    expect(pinned.event?.title).toBe("Live at The Attic");
+  });
+
+  it("a pinned take gets playableAssetId only when a ready master exists", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Playable",
+      slug: "playable",
       createdAt: now,
       updatedAt: now,
     });
@@ -79,231 +146,163 @@ describe("getHomeData", () => {
       createdAt: now,
       updatedAt: now,
     });
-    const take = await takesRepo.create(db, {
-      songId: songA.id,
-      eventId: event.id,
-      recordedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await favoritesRepo.add(db, {
-      memberId,
-      targetType: "song",
-      targetId: songA.id,
-      createdAt: 1000,
-    });
-    await favoritesRepo.add(db, {
-      memberId,
-      targetType: "song",
-      targetId: songB.id,
-      createdAt: 2000,
-    });
-    await favoritesRepo.add(db, {
-      memberId,
-      targetType: "take",
-      targetId: take.id,
-      createdAt: 3000,
-    });
-    // A favorited EVENT is deliberately not surfaced on home (brief scopes
-    // the section to "pinned songs and takes") — this proves it's ignored,
-    // not merely untested.
-    await favoritesRepo.add(db, {
-      memberId,
-      targetType: "event",
-      targetId: event.id,
-      createdAt: 4000,
-    });
-
-    const data = await getHomeData(db, memberId);
-
-    // Newest favorite first, per favoritesRepo.listByMember's own ordering.
-    expect(data.favorites.songs.map((s) => s.slug)).toEqual([
-      "newer-favorite-song",
-      "older-favorite-song",
-    ]);
-    expect(data.favorites.takes.map((t) => t.id)).toEqual([take.id]);
-    expect(data.favorites.takes[0]?.song?.slug).toBe("older-favorite-song");
-    expect(data.favorites.takes[0]?.event?.id).toBe(event.id);
-  });
-
-  it("recent events come with their takes, song, and instruments attached", async () => {
-    const now = Date.now();
-    const song = await songsRepo.create(db, {
-      title: "Recent Event Song",
-      slug: "recent-event-song",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const bass = await instrumentsRepo.create(db, { slug: "bass", label: "Bass" });
-    const event = await eventsRepo.create(db, {
-      kind: "concert",
-      heldAt: now,
-      venue: "Test Venue",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const take = await takesRepo.create(db, {
-      songId: song.id,
-      eventId: event.id,
-      recordedAt: now,
-      createdAt: now,
-      updatedAt: now,
-      instrumentIds: [bass.id],
-    });
-
-    const data = await getHomeData(db, memberId);
-
-    expect(data.recentEvents).toHaveLength(1);
-    expect(data.recentEvents[0]?.event.id).toBe(event.id);
-    expect(data.recentEvents[0]?.event.takeCount).toBe(1);
-    expect(data.recentEvents[0]?.takes.map((t) => t.id)).toEqual([take.id]);
-    expect(data.recentEvents[0]?.takes[0]?.song?.slug).toBe("recent-event-song");
-    expect(data.recentEvents[0]?.takes[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
-    // No assets created for this take — no play control.
-    expect(data.recentEvents[0]?.takes[0]?.playableAssetId).toBeUndefined();
-  });
-
-  it("recent events' takes get playableAssetId when a ready master exists", async () => {
-    const now = Date.now();
-    const song = await songsRepo.create(db, {
-      title: "Playable Recent Song",
-      slug: "playable-recent-song",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const event = await eventsRepo.create(db, {
-      kind: "concert",
-      heldAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const take = await takesRepo.create(db, {
+    const withAsset = await takesRepo.create(db, {
       songId: song.id,
       eventId: event.id,
       recordedAt: now,
       createdAt: now,
       updatedAt: now,
     });
-    const [masterAsset] = await assetsRepo.createMany(db, [
+    const withoutAsset = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await assetsRepo.createMany(db, [
       {
-        takeId: take.id,
+        takeId: withAsset.id,
         kind: "master",
         tier: "lossy",
-        format: "mp3",
-        storageKey: `takes/${take.id}/master/lossy.mp3`,
-        contentType: "audio/mpeg",
+        format: "opus",
+        storageKey: `takes/${withAsset.id}/master/lossy.opus`,
+        contentType: "audio/opus",
         bytes: 1000,
         status: "ready",
         createdAt: now,
         readyAt: now,
       },
     ]);
-
-    const data = await getHomeData(db, memberId);
-    expect(data.recentEvents[0]?.takes[0]?.playableAssetId).toBe(masterAsset?.id);
-  });
-
-  it("an event with zero takes still appears, with an empty takes array (a real empty state, not an omission)", async () => {
-    const now = Date.now();
-    await eventsRepo.create(db, {
-      kind: "rehearsal",
-      heldAt: now,
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "take",
+      targetId: withAsset.id,
       createdAt: now,
-      updatedAt: now,
-    });
-
-    const data = await getHomeData(db, memberId);
-    expect(data.recentEvents).toHaveLength(1);
-    expect(data.recentEvents[0]?.takes).toEqual([]);
-  });
-
-  it("needs-your-vote includes a published take this member hasn't voted on", async () => {
-    const now = Date.now();
-    const song = await songsRepo.create(db, {
-      title: "Unvoted Song",
-      slug: "unvoted-song-home",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const event = await eventsRepo.create(db, {
-      kind: "rehearsal",
-      heldAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const take = await takesRepo.create(db, {
-      songId: song.id,
-      eventId: event.id,
-      recordedAt: now,
-      createdAt: now,
-      updatedAt: now,
-      state: "published",
-    });
-
-    const data = await getHomeData(db, memberId);
-    expect(data.unvotedTakes.map((t) => t.id)).toEqual([take.id]);
-    expect(data.unvotedTakes[0]?.song?.slug).toBe("unvoted-song-home");
-  });
-
-  // F4 (review round 1): the gold favorite marker is per-row, real
-  // information — a take can be BOTH "needs your vote"/"recent events" AND
-  // a favorite at once (this is also the exact shape F1's duplicate
-  // `view-transition-name` bug needed — see index.astro's `claimTakeTransition`).
-  it("marks a take as favorited in recentEvents/unvotedTakes when it's also one of this member's favorites, and not otherwise", async () => {
-    const now = Date.now();
-    const song = await songsRepo.create(db, {
-      title: "Doubly Listed Song",
-      slug: "doubly-listed-song",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const otherSong = await songsRepo.create(db, {
-      title: "Not Favorited Song",
-      slug: "not-favorited-song",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const event = await eventsRepo.create(db, {
-      kind: "rehearsal",
-      heldAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const favoritedUnvoted = await takesRepo.create(db, {
-      songId: song.id,
-      eventId: event.id,
-      recordedAt: now,
-      createdAt: now,
-      updatedAt: now,
-      state: "published",
-    });
-    const plainUnvoted = await takesRepo.create(db, {
-      songId: otherSong.id,
-      eventId: event.id,
-      recordedAt: now - 1,
-      createdAt: now - 1,
-      updatedAt: now - 1,
-      state: "published",
     });
     await favoritesRepo.add(db, {
       memberId,
       targetType: "take",
-      targetId: favoritedUnvoted.id,
-      createdAt: now,
+      targetId: withoutAsset.id,
+      createdAt: now + 1,
     });
 
-    const data = await getHomeData(db, memberId);
+    const byId = new Map(
+      (await getHomeData(db, memberId)).pinned.map((p) => [
+        p.id,
+        p.kind === "take" ? p.playableAssetId : undefined,
+      ]),
+    );
+    expect(byId.get(withAsset.id)).toBeDefined();
+    // Not "disabled" — undefined, which is what makes the plate render no play
+    // affordance at all rather than a dead one.
+    expect(byId.get(withoutAsset.id)).toBeUndefined();
+  });
 
-    const favoritedRow = data.unvotedTakes.find((t) => t.id === favoritedUnvoted.id);
-    const plainRow = data.unvotedTakes.find((t) => t.id === plainUnvoted.id);
-    expect(favoritedRow?.favorited).toBe(true);
-    expect(plainRow?.favorited).toBe(false);
+  it("counts takes for a pinned song and a pinned event — that count is the plate's caption", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Counted",
+      slug: "counted",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    for (let i = 0; i < 3; i++) {
+      await takesRepo.create(db, {
+        songId: song.id,
+        eventId: event.id,
+        recordedAt: now + i,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "song",
+      targetId: song.id,
+      createdAt: now,
+    });
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "event",
+      targetId: event.id,
+      createdAt: now + 1,
+    });
 
-    // Same take, same favorited status, in the "recent events" section too
-    // — it's the same event's take list.
-    const recentTakes = data.recentEvents[0]?.takes ?? [];
-    expect(recentTakes.find((t) => t.id === favoritedUnvoted.id)?.favorited).toBe(true);
-    expect(recentTakes.find((t) => t.id === plainUnvoted.id)?.favorited).toBe(false);
+    const pinned = (await getHomeData(db, memberId)).pinned;
+    const songEntry = pinned.find((p) => p.kind === "song");
+    const eventEntry = pinned.find((p) => p.kind === "event");
+    expect(songEntry?.kind === "song" && songEntry.takeCount).toBe(3);
+    expect(eventEntry?.kind === "event" && eventEntry.takeCount).toBe(3);
+  });
+
+  it("drops a pinned row whose target no longer exists rather than rendering a blank plate", async () => {
+    // `favorites` has no foreign key to its polymorphic target, so a pin can
+    // outlive what it points at. The page must skip it, not crash and not draw
+    // a plate with no name on it.
+    await favoritesRepo.add(db, {
+      memberId,
+      targetType: "take",
+      targetId: "01a00000-0000-7000-8000-000000000000",
+      createdAt: Date.now(),
+    });
+    expect((await getHomeData(db, memberId)).pinned).toEqual([]);
+  });
+
+  it("lists recent events newest-first with their take counts, and no takes attached", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Ledger Song",
+      slug: "ledger-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const older = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now - 86_400_000,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const newer = await eventsRepo.create(db, {
+      kind: "concert",
+      heldAt: now,
+      venue: "Newer Venue",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await takesRepo.create(db, {
+      songId: song.id,
+      eventId: newer.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const { recentEvents } = await getHomeData(db, memberId);
+    expect(recentEvents.map((e) => e.id)).toEqual([newer.id, older.id]);
+    expect(recentEvents[0]?.takeCount).toBe(1);
+    // The ledger says an event happened and how much is in it; opening the
+    // event is how you reach the takes. Fetching them here cost four queries
+    // per page load for a list nobody was reading.
+    expect(recentEvents[0]).not.toHaveProperty("takes");
+  });
+
+  it("an event with zero takes still appears — a real empty rehearsal, not an omission", async () => {
+    const now = Date.now();
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const { recentEvents } = await getHomeData(db, memberId);
+    expect(recentEvents.map((e) => e.id)).toEqual([event.id]);
+    expect(recentEvents[0]?.takeCount).toBe(0);
   });
 });

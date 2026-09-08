@@ -36,6 +36,15 @@ export interface MeData {
   sessions: SessionWithCurrent[];
   favorites: HomeFavorites;
   votes: VoteWithTake[];
+  /**
+   * How many published takes this member has never voted on. Home used to
+   * render these as a "needs your vote" queue; nothing on the page everyone
+   * opens should nag, so what is left is a count HERE — on the page you visit
+   * to see your own state, where it is something you went looking for rather
+   * than something shoved at you. A number, not a list: the list was six rows
+   * of the same take row that made home long.
+   */
+  unvotedCount: number;
 }
 
 /**
@@ -78,12 +87,13 @@ export async function getMeData(
     return undefined;
   }
 
-  const [instruments, sessions, currentSessionId, favorites, votes] = await Promise.all([
+  const [instruments, sessions, currentSessionId, favorites, votes, unvoted] = await Promise.all([
     membersRepo.listInstrumentsForMember(db, memberId),
     authSessionsRepo.listByMember(db, memberId),
     resolveCurrentSessionId(db, sessionCookieValue),
     getFavorites(db, memberId),
     getVotes(db, memberId),
+    takesRepo.listUnvotedByMember(db, memberId),
   ]);
 
   // No extra query — `favorites.takes` (already fetched above) is this
@@ -96,5 +106,6 @@ export async function getMeData(
     sessions: sessions.map((s) => ({ ...s, isCurrent: s.id === currentSessionId })),
     favorites,
     votes: votes.map((v) => ({ ...v, favorited: v.take ? favoriteTakeIds.has(v.take.id) : false })),
+    unvotedCount: unvoted.length,
   };
 }

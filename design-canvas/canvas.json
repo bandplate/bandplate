@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-16",
+      "name": "M6 \u2014 Admin editing"
+    },
+    {
       "id": "page-15",
       "name": "M6 \u2014 Auth"
     },
@@ -62,6 +66,33 @@
     }
   ],
   "artboards": [
+    {
+      "file": "AdminEdit.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1398,
+      "h": 1020,
+      "page": "page-16",
+      "title": "E1 \u2014 The drawer row"
+    },
+    {
+      "file": "AdminEditSheet.dc.html",
+      "x": 1518,
+      "y": 0,
+      "w": 1398,
+      "h": 1020,
+      "page": "page-16",
+      "title": "E2 \u2014 The record sheet"
+    },
+    {
+      "file": "AdminEditInline.dc.html",
+      "x": 3036,
+      "y": 0,
+      "w": 1398,
+      "h": 1020,
+      "page": "page-16",
+      "title": "E3 \u2014 In place"
+    },
     {
       "file": "Auth.dc.html",
       "x": 0,
@@ -435,6 +466,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-15"
+    "page": "page-16"
   }
 }

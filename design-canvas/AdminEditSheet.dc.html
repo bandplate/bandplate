@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .S { --bg:#150c07; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a; --gold:#f6aa1c; --flare:#d94a1f;
+         --display:'Zilla Slab',Georgia,serif; --body:'Chivo',Helvetica,sans-serif;
+         font-family:var(--body); color:var(--fg); }
+    .S a { color:var(--gold); text-decoration:none; }
+    .S a:hover { color:#f2e8d8; }
+    .S .cap { font-weight:900; font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+    .S .frame { border:1px solid var(--border); border-radius:5px; overflow:hidden; position:relative;
+      background: repeating-radial-gradient(circle at 92% 0%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px),
+        radial-gradient(120% 30% at 92% 0%, rgba(246,170,28,.09), transparent 62%), var(--bg); }
+    .S .th { font-weight:900; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+    .S .lbl { font-weight:900; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+    .S .ctl { min-height:44px; display:flex; align-items:center; justify-content:space-between; padding:8px 12px;
+              border-radius:3px; background:rgba(242,232,216,.12); font-size:16px; }
+    .S .pill { min-height:44px; display:inline-flex; align-items:center; justify-content:center;
+               padding:10px 20px; border-radius:999px; font-weight:600; font-size:16px; }
+  </style>
+</helmet>
+
+<div class="S" style="width:1398px;box-sizing:border-box;padding:40px 42px 46px;background:repeating-radial-gradient(circle at 97% 2%, rgba(246,170,28,.04) 0 1px, transparent 1px 7px),radial-gradient(115% 20% at 97% 1%, rgba(246,170,28,.09), transparent 62%), #150c07;">
+
+  <div style="margin-bottom:26px;">
+    <div style="font-weight:900;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#a9917a;margin-bottom:10px;">Admin editing — E2</div>
+    <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:40px;line-height:1;">The record sheet</div>
+    <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:11px;max-width:96ch;text-wrap:pretty;">Editing opens the same sheet the takes filters already use — off the right on a desktop, up from the bottom on a phone — titled with the record and footed with Save and Cancel. <b style="color:#f2e8d8;">The bet:</b> the machinery, the animation and the dismissal rules exist and are already debugged, and one pattern then covers members, instruments and tokens no matter how many fields each has. <b style="color:#f2e8d8;">The cost:</b> it is modal. You lose sight of the roster while you edit, which is the one thing the table was kept for.</div>
+  </div>
+
+  <div style="display:flex;gap:24px;align-items:flex-start;">
+
+    <div>
+      <div class="cap">Desktop 900 — the sheet off the right</div>
+      <div class="frame" style="width:900px;height:560px;padding:22px 26px;box-sizing:border-box;">
+        <div style="opacity:.42;">
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:24px;margin-bottom:16px;">Members</div>
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) 84px 110px 78px;gap:0 16px;padding:0 0 8px;border-bottom:1px solid #3a2413;">
+            <span class="th">Name</span><span class="th">Email</span><span class="th">Role</span><span class="th">Last seen</span><span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) 84px 110px 78px;gap:0 16px;align-items:center;padding:12px 0;border-bottom:1px solid #3a2413;">
+            <span style="font-size:15px;">Alex Admin</span><span style="font-size:13px;color:#a9917a;">admin@example.com</span><span style="font-weight:900;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9917a;">admin</span><span style="font-size:13px;color:#a9917a;">2026-09-08</span><span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) 84px 110px 78px;gap:0 16px;align-items:center;padding:12px 0;border-bottom:1px solid #3a2413;">
+            <span style="font-size:15px;">Bailey</span><span style="font-size:13px;color:#a9917a;">bailey@example.com</span><span style="font-weight:900;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9917a;">member</span><span style="font-size:13px;color:#a9917a;">&mdash;</span><span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) 84px 110px 78px;gap:0 16px;align-items:center;padding:12px 0;border-bottom:1px solid #3a2413;">
+            <span style="font-size:15px;">Cass</span><span style="font-size:13px;color:#a9917a;">cass@example.com</span><span style="font-weight:900;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9917a;">member</span><span style="font-size:13px;color:#a9917a;">&mdash;</span><span></span>
+          </div>
+        </div>
+
+        <div style="position:absolute;inset:0;background:rgba(21,12,7,.72);"></div>
+        <div style="position:absolute;top:0;right:0;bottom:0;width:400px;background:#1b1008;border-left:1px solid #3a2413;padding:24px 26px;box-sizing:border-box;display:flex;flex-direction:column;box-shadow:-18px 0 40px rgba(0,0,0,.5);">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="flex-grow:1;min-width:0;">
+              <div class="lbl">Editing member</div>
+              <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:26px;line-height:1.1;margin-top:6px;">Bailey</div>
+              <div style="font-size:13px;color:#a9917a;margin-top:3px;">bailey@example.com</div>
+            </div>
+            <span style="width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:50%;background:rgba(242,232,216,.12);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f2e8d8" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </span>
+          </div>
+
+          <div style="height:1px;background:#3a2413;margin:20px 0;"></div>
+
+          <div style="display:flex;flex-direction:column;gap:16px;flex-grow:1;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span class="lbl">Role</span>
+              <div class="ctl">member
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a9917a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span class="lbl">Status</span>
+              <div class="ctl">active
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a9917a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span class="lbl">Instruments</span>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:15px;">Drums</span>
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:15px;">Bass</span>
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:rgba(242,232,216,.12);font-weight:600;font-size:15px;">Guitar</span>
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:rgba(242,232,216,.12);font-weight:600;font-size:15px;">Keys</span>
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:rgba(242,232,216,.12);font-weight:600;font-size:15px;">Vocals</span>
+              </div>
+            </div>
+            <div style="margin-top:4px;font-size:15px;font-weight:600;color:#d94a1f;">Revoke sessions</div>
+          </div>
+
+          <div style="height:1px;background:#3a2413;margin:16px 0 14px;"></div>
+          <div style="display:flex;gap:10px;">
+            <span class="pill" style="background:#f6aa1c;color:#150c07;flex-grow:1;">Save changes</span>
+            <span class="pill" style="background:rgba(242,232,216,.12);color:#f2e8d8;">Cancel</span>
+          </div>
+        </div>
+      </div>
+      <div style="width:900px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">Same shape for every record type — an instrument's nineteen-tile icon picker finally has somewhere to live, and a token's eight scope checkboxes stop being a wrapped block inside a table cell.</div>
+    </div>
+
+    <div>
+      <div class="cap">Phone 390 — the bottom sheet, as the filters do it</div>
+      <div class="frame" style="width:390px;height:640px;padding:20px 22px;box-sizing:border-box;">
+        <div style="opacity:.42;">
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:22px;margin-bottom:14px;">Members</div>
+          <div style="padding:12px 0;border-bottom:1px solid #3a2413;">
+            <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;">Alex Admin</div>
+            <div style="font-size:12.5px;color:#a9917a;margin-top:4px;">admin@example.com</div>
+          </div>
+          <div style="padding:12px 0;border-bottom:1px solid #3a2413;">
+            <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;">Bailey</div>
+            <div style="font-size:12.5px;color:#a9917a;margin-top:4px;">bailey@example.com</div>
+          </div>
+        </div>
+
+        <div style="position:absolute;inset:0;background:rgba(21,12,7,.72);"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:456px;background:#1b1008;border-top:1px solid #3a2413;border-radius:14px 14px 0 0;padding:14px 22px 22px;box-sizing:border-box;display:flex;flex-direction:column;">
+          <span style="width:44px;height:4px;border-radius:999px;background:rgba(242,232,216,.28);align-self:center;"></span>
+          <div style="margin-top:16px;">
+            <div class="lbl">Editing member</div>
+            <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:24px;line-height:1.1;margin-top:6px;">Bailey</div>
+          </div>
+          <div style="height:1px;background:#3a2413;margin:16px 0;"></div>
+          <div style="display:flex;flex-direction:column;gap:14px;flex-grow:1;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span class="lbl">Role</span>
+              <div class="ctl">member
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a9917a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span class="lbl">Status</span>
+              <div class="ctl">active
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a9917a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span class="lbl">Instruments</span>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:15px;">Drums</span>
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:15px;">Bass</span>
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:rgba(242,232,216,.12);font-weight:600;font-size:15px;">Guitar</span>
+                <span style="min-height:36px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;background:rgba(242,232,216,.12);font-weight:600;font-size:15px;">Keys</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:14px;">
+            <span class="pill" style="background:#f6aa1c;color:#150c07;flex-grow:1;">Save changes</span>
+            <span class="pill" style="background:rgba(242,232,216,.12);color:#f2e8d8;">Cancel</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

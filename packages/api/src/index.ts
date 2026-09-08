@@ -111,7 +111,11 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
     enableDeferredMailSend: deps.config.enableDeferredMailSend,
   });
   registerSetupRoutes(router, { db: deps.db, auth, cookieSecure: deps.config.cookieSecure });
-  registerAdminMemberRoutes(router, { db: deps.db, auth });
+  registerAdminMemberRoutes(router, {
+    db: deps.db,
+    auth,
+    appOrigin: deps.config.appOrigin,
+  });
   registerAdminInstrumentRoutes(router, { db: deps.db, clock: deps.clock });
   registerAdminTokenRoutes(router, { db: deps.db, auth });
   registerAudioRoutes(router, { db: deps.db, storage: deps.storage });

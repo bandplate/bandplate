@@ -3,6 +3,7 @@ import {
   createMemberSchema,
   patchMemberSchema,
   revokeAllSessionsForMember,
+  sendMemberInvite,
   slugify,
   updateMemberWithGuards,
 } from "@bandplate/core";
@@ -13,6 +14,8 @@ import { type GuardedRouter, requireScopes } from "../route-registry.js";
 export interface AdminMemberRouteDeps {
   db: Db;
   auth: AuthDeps;
+  /** Where the invitation email points. See `sendMemberInvite`. */
+  appOrigin: string;
 }
 
 export function registerAdminMemberRoutes(router: GuardedRouter, deps: AdminMemberRouteDeps): void {
@@ -41,7 +44,15 @@ export function registerAdminMemberRoutes(router: GuardedRouter, deps: AdminMemb
       createdAt: deps.auth.clock.now(),
     });
 
-    return c.json({ member }, 201);
+    // Same as the admin page does, so the JSON surface cannot drift from it —
+    // this is the divergence `services/members.ts` exists to rule out. The
+    // 201 still stands if the mail fails; `invited` says whether it went.
+    const invited = await sendMemberInvite(
+      { mailer: deps.auth.mailer, appOrigin: deps.appOrigin },
+      member,
+    );
+
+    return c.json({ member, invited }, 201);
   });
 
   router.patch("/admin/members/:id", requireScopes("members:admin"), async (c) => {

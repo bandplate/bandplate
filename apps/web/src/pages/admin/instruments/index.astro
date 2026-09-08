@@ -4,6 +4,7 @@ import Field from "@bandplate/ui/components/Field.astro";
 import { INSTRUMENT_GLYPHS, INSTRUMENT_GLYPH_CREDIT } from "@bandplate/ui/icons/instruments.js";
 import AdminHeader from "../../../components/AdminHeader.astro";
 import InstrumentIcon from "../../../components/InstrumentIcon.astro";
+import RecordSheet from "../../../components/RecordSheet.astro";
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
@@ -128,39 +129,51 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                     rendering a STATUS label with a blank beside it. */}
                 <td data-label="Status">{instrument.archivedAt && <span class="bp-kind">archived</span>}</td>
                 <td data-label="Actions">
-                  <details class="bp-cell-editor">
-                    <summary class="bp-btn bp-btn-secondary bp-btn-sm">Edit</summary>
-                    <div class="bp-cell-editor-body">
-                      <form method="post" class="bp-inline-form">
-                        <input type="hidden" name="intent" value="update" />
-                        <input type="hidden" name="instrumentId" value={instrument.id} />
-                        <label class="sr-only" for={`label-${instrument.id}`}>
-                          Label for {instrument.slug}
-                        </label>
-                        <input
-                          class="bp-input bp-input-inline-label"
-                          id={`label-${instrument.id}`}
-                          name="label"
-                          value={instrument.label}
-                        />
-                        <label class="sr-only" for={`order-${instrument.id}`}>
-                          Sort order for {instrument.slug}
-                        </label>
-                        <input
-                          class="bp-input bp-input-inline-number"
-                          id={`order-${instrument.id}`}
-                          name="sortOrder"
-                          type="number"
-                          value={instrument.sortOrder}
-                        />
-                        {/* A no-JS disclosure inside the row's own form, so
-                        choosing a glyph and pressing Save is one submission.
-                        Collapsed because nineteen 44px tiles would bury
-                        everything else in here. */}
-                        <details class="bp-icon-picker">
-                          <summary>Icon</summary>
-                          <fieldset class="bp-icon-grid">
-                            <legend class="sr-only">Icon for {instrument.label}</legend>
+                  <button
+                    type="button"
+                    class="bp-btn bp-btn-secondary bp-btn-sm"
+                    data-sheet-open={`instrument-${instrument.id}`}
+                  >
+                    Edit
+                  </button>
+                  <RecordSheet
+                    id={`instrument-${instrument.id}`}
+                    eyebrow="Editing instrument"
+                    title={instrument.label}
+                    subtitle={instrument.slug}
+                  >
+                    <form method="post" class="bp-sheet-form">
+                      <input type="hidden" name="intent" value="update" />
+                      <input type="hidden" name="instrumentId" value={instrument.id} />
+                      <div class="bp-sheet-body">
+                        <div class="bp-sheet-field">
+                          <label class="bp-eyebrow" for={`label-${instrument.id}`}>Label</label>
+                          <input
+                            class="bp-input"
+                            id={`label-${instrument.id}`}
+                            name="label"
+                            value={instrument.label}
+                          />
+                          <p class="bp-sheet-hint bp-m0">What members see on a take.</p>
+                        </div>
+
+                        <div class="bp-sheet-field">
+                          <label class="bp-eyebrow" for={`order-${instrument.id}`}>Sort order</label>
+                          <input
+                            class="bp-input bp-input-inline-number"
+                            id={`order-${instrument.id}`}
+                            name="sortOrder"
+                            type="number"
+                            value={instrument.sortOrder}
+                          />
+                        </div>
+
+                        {/* No disclosure around it any more. Nineteen 44px
+                            tiles had to be collapsed inside a table cell; in
+                            a panel this wide they are just the field. */}
+                        <fieldset class="bp-sheet-field">
+                          <legend class="bp-eyebrow">Icon</legend>
+                          <div class="bp-icon-grid">
                             <label class="bp-icon-choice" title="No icon — show initials">
                               <input type="radio" name="icon" value="" checked={!instrument.icon} />
                               <span class="bp-icon-choice-face bp-icon-choice-none">None</span>
@@ -178,29 +191,49 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                                 </span>
                               </label>
                             ))}
-                          </fieldset>
-                        </details>
-                        <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save</button>
-                      </form>
-                      {instrument.archivedAt ? (
-                        <form method="post" action={`/admin/instruments/${instrument.id}/archive?unarchive=1`}>
-                          <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Unarchive</button>
-                        </form>
-                      ) : (
-                        <a
-                          href={`/admin/instruments/${instrument.id}/archive`}
-                          class="bp-btn bp-btn-danger bp-btn-sm"
-                          data-confirm
-                          data-confirm-title={`Archive ${instrument.label}?`}
-                          data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}
-                          data-confirm-action={`/admin/instruments/${instrument.id}/archive`}
-                          data-confirm-cta="Archive"
-                        >
-                          Archive
-                        </a>
-                      )}
-                    </div>
-                  </details>
+                          </div>
+                        </fieldset>
+
+                        <div class="bp-sheet-extras">
+                          {instrument.archivedAt ? (
+                            <button
+                              type="submit"
+                              form={`unarchive-${instrument.id}`}
+                              class="bp-btn bp-btn-quiet bp-btn-sm"
+                            >
+                              Unarchive
+                            </button>
+                          ) : (
+                            <a
+                              href={`/admin/instruments/${instrument.id}/archive`}
+                              class="bp-sheet-danger"
+                              data-confirm
+                              data-confirm-title={`Archive ${instrument.label}?`}
+                              data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}
+                              data-confirm-action={`/admin/instruments/${instrument.id}/archive`}
+                              data-confirm-cta="Archive"
+                            >
+                              Archive
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div class="bp-sheet-foot">
+                        <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
+                        <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                    {instrument.archivedAt && (
+                      <form
+                        method="post"
+                        id={`unarchive-${instrument.id}`}
+                        class="bp-sheet-aux"
+                        action={`/admin/instruments/${instrument.id}/archive?unarchive=1`}
+                      />
+                    )}
+                  </RecordSheet>
                 </td>
               </tr>
             ))}

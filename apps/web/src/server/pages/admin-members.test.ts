@@ -1,13 +1,14 @@
 import { type AuthDeps, systemClock } from "@bandplate/core";
 import { instrumentsRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
-import { createNullMailer } from "@bandplate/mail";
+import { type CapturingMailer, createCapturingMailer } from "@bandplate/mail";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   createMember,
   listAllInstruments,
   listMembers,
   listMembersWithLastSeen,
+  resendMemberInvite,
   revokeMemberSessions,
   updateMember,
   updateMemberInstruments,
@@ -23,10 +24,14 @@ function formData(fields: Record<string, string>): FormData {
 
 describe("admin members page logic", () => {
   let auth: AuthDeps;
+  let mailer: CapturingMailer;
+  let invite: { mailer: CapturingMailer; appOrigin: string };
 
   beforeEach(async () => {
     const db = await createTestDb();
-    auth = { db, mailer: createNullMailer(), clock: systemClock };
+    mailer = createCapturingMailer();
+    auth = { db, mailer, clock: systemClock };
+    invite = { mailer, appOrigin: "https://bandplate.example" };
   });
 
   it("creates a member from a plain form submission", async () => {
@@ -34,6 +39,7 @@ describe("admin members page logic", () => {
       auth.db,
       1_000,
       formData({ displayName: "Bailey", email: "bailey@example.com" }),
+      invite,
     );
     expect(result.kind).toBe("ok");
 
@@ -43,12 +49,78 @@ describe("admin members page logic", () => {
     expect(members[0]?.role).toBe("member");
   });
 
+  // Being added and being TOLD you were added are not the same thing — until
+  // this shipped, only the first happened and a new member sat in the roster
+  // with no idea the archive existed.
+  it("emails the new member an invitation naming the sign-in page", async () => {
+    const result = await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "bailey@example.com" }),
+      invite,
+    );
+    expect(result).toMatchObject({ kind: "ok", invited: true });
+
+    const sent = mailer.sent.filter((m) => m.kind === "message");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ to: "bailey@example.com" });
+    const body = sent[0]?.kind === "message" ? sent[0].text : "";
+    expect(body).toContain("https://bandplate.example/login");
+    // No token, deliberately: an invitation is a notification, not a
+    // credential. See `sendMemberInvite`.
+    expect(body).not.toMatch(/\/login\/[A-Za-z0-9_-]{10,}/);
+  });
+
+  it("still creates the member when the invitation cannot be sent, and says so", async () => {
+    const broken = {
+      mailer: {
+        async sendLoginLink() {},
+        async send() {
+          throw new Error("provider down");
+        },
+      },
+      appOrigin: "https://bandplate.example",
+    };
+    const result = await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "bailey@example.com" }),
+      broken,
+    );
+    expect(result).toMatchObject({ kind: "ok", invited: false });
+    expect(await listMembers(auth.db)).toHaveLength(1);
+  });
+
+  it("resends the invitation on demand, and reports an unknown member", async () => {
+    const created = await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "bailey@example.com" }),
+      invite,
+    );
+    const id = created.kind === "ok" ? created.member.id : "";
+    mailer.clear();
+
+    expect(await resendMemberInvite(auth.db, id, invite)).toEqual({ kind: "ok", invited: true });
+    expect(mailer.sent).toHaveLength(1);
+
+    expect(
+      await resendMemberInvite(auth.db, "00000000-0000-0000-0000-000000000000", invite),
+    ).toEqual({ kind: "not_found" });
+  });
+
   it("rejects a duplicate email without creating a second row", async () => {
-    await createMember(auth.db, 1_000, formData({ displayName: "Bailey", email: "b@example.com" }));
+    await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "b@example.com" }),
+      invite,
+    );
     const second = await createMember(
       auth.db,
       1_000,
       formData({ displayName: "Bailey 2", email: "b@example.com" }),
+      invite,
     );
     expect(second.kind).toBe("email_taken");
     expect(await listMembers(auth.db)).toHaveLength(1);
@@ -59,6 +131,7 @@ describe("admin members page logic", () => {
       auth.db,
       1_000,
       formData({ displayName: "Bailey", email: "not-an-email" }),
+      invite,
     );
     expect(result.kind).toBe("invalid");
     if (result.kind === "invalid") {
@@ -72,6 +145,7 @@ describe("admin members page logic", () => {
       auth.db,
       1_000,
       formData({ displayName: "", email: "bailey@example.com" }),
+      invite,
     );
     expect(result.kind).toBe("invalid");
     if (result.kind === "invalid") {
@@ -80,7 +154,12 @@ describe("admin members page logic", () => {
   });
 
   it("updates role and status together in one call", async () => {
-    await createMember(auth.db, 1_000, formData({ displayName: "Bailey", email: "b@example.com" }));
+    await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "b@example.com" }),
+      invite,
+    );
     const [member] = await listMembers(auth.db);
     if (!member) throw new Error("expected a member");
 
@@ -108,7 +187,12 @@ describe("admin members page logic", () => {
   });
 
   it("rejects a patch with neither status nor role set (the dropped .refine)", async () => {
-    await createMember(auth.db, 1_000, formData({ displayName: "Bailey", email: "b@example.com" }));
+    await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "b@example.com" }),
+      invite,
+    );
     const [member] = await listMembers(auth.db);
     if (!member) throw new Error("expected a member");
 
@@ -126,6 +210,7 @@ describe("admin members page logic", () => {
       auth.db,
       1_000,
       formData({ displayName: "Alex", email: "alex@example.com" }),
+      invite,
     );
     const [admin] = await listMembers(auth.db);
     if (!admin) throw new Error("expected a member");
@@ -147,6 +232,7 @@ describe("admin members page logic", () => {
       auth.db,
       1_000,
       formData({ displayName: "Alex", email: "alex@example.com" }),
+      invite,
     );
     const [alex] = await listMembers(auth.db);
     if (!alex) throw new Error("expected a member");
@@ -157,7 +243,12 @@ describe("admin members page logic", () => {
       "bootstrap",
     );
 
-    await createMember(auth.db, 1_000, formData({ displayName: "Bailey", email: "b@example.com" }));
+    await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "b@example.com" }),
+      invite,
+    );
     const members = await listMembers(auth.db);
     const bailey = members.find((m) => m.email === "b@example.com");
     if (!bailey) throw new Error("expected bailey");
@@ -175,8 +266,14 @@ describe("admin members page logic", () => {
       auth.db,
       1_000,
       formData({ displayName: "Alex", email: "alex@example.com" }),
+      invite,
     );
-    await createMember(auth.db, 1_000, formData({ displayName: "Bailey", email: "b@example.com" }));
+    await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "b@example.com" }),
+      invite,
+    );
     const members = await listMembers(auth.db);
     const alex = members.find((m) => m.email === "alex@example.com");
     const bailey = members.find((m) => m.email === "b@example.com");
@@ -215,8 +312,14 @@ describe("admin members page logic", () => {
         auth.db,
         1_000,
         formData({ displayName: "Bailey", email: "b@example.com" }),
+        invite,
       );
-      await createMember(auth.db, 1_000, formData({ displayName: "Cass", email: "c@example.com" }));
+      await createMember(
+        auth.db,
+        1_000,
+        formData({ displayName: "Cass", email: "c@example.com" }),
+        invite,
+      );
       const [bailey, cass] = await listMembers(auth.db);
       if (!bailey || !cass) throw new Error("expected both members");
       const drums = await instrumentsRepo.create(auth.db, { slug: "drums", label: "Drums" });
@@ -236,6 +339,7 @@ describe("admin members page logic", () => {
         auth.db,
         1_000,
         formData({ displayName: "Bailey", email: "b@example.com" }),
+        invite,
       );
       const [bailey] = await listMembers(auth.db);
       if (!bailey) throw new Error("expected a member");
@@ -290,6 +394,7 @@ describe("admin members page logic", () => {
         auth.db,
         1_000,
         formData({ displayName: "Bailey", email: "b@example.com" }),
+        invite,
       );
       const [bailey] = await listMembers(auth.db);
       if (!bailey) throw new Error("expected a member");

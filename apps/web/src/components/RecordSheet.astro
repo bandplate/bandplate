@@ -1,0 +1,109 @@
+---
+// One admin record, opened for editing — direction E2, "the record sheet".
+//
+// The editors used to be `<details>` disclosures inside a table cell: raw
+// stacked controls with no label over them, no rule between the fields and
+// what you could do with them, and no way out but pressing Escape on your own
+// initiative. This is the same sheet the takes filters already use — off the
+// right past `lg`, up from the bottom below it — so the app has one shape for
+// "a panel of controls about one thing", and an instrument's nineteen-tile
+// icon picker or a token's eight scopes finally have somewhere to live.
+//
+// ONE `<dialog>` PER RECORD, rather than one shared sheet the page fills in.
+// A shared sheet has to be populated by script, which would make editing a
+// JS-only feature on pages that work without it today. Rendering each
+// record's real form up front keeps the no-JS path honest: with scripting
+// off (see `@media (scripting: none)` in components.css) each sheet renders
+// as a plain block under its own row — E1's drawer, permanently open — and
+// every form still submits.
+export interface Props {
+  /** Unique per page; forms the dialog's id and the trigger's target. */
+  id: string;
+  /** Small caps above the name — "Editing member", "Editing instrument". */
+  eyebrow: string;
+  title: string;
+  subtitle?: string;
+}
+
+const { id, eyebrow, title, subtitle } = Astro.props;
+---
+
+<dialog class="bp-sheet" id={`sheet-${id}`} data-sheet aria-label={`Editing ${title}`}>
+  <div class="bp-sheet-head">
+    {/* The phone's grip. A button with a 44px target and a 4px bar drawn
+        inside it — a bare 4px strip is the right shape and an impossible
+        thing to hit. Hidden past `lg`, where the X takes over. */}
+    <button type="button" class="bp-sheet-grip" data-sheet-close>
+      <span class="bp-visually-hidden">Close without saving</span>
+    </button>
+    <div class="bp-sheet-head-row">
+      <div class="bp-sheet-heading">
+        <p class="bp-eyebrow bp-m0">{eyebrow}</p>
+        <h2 class="bp-sheet-title bp-m0">{title}</h2>
+        {subtitle && <p class="bp-sheet-sub bp-m0">{subtitle}</p>}
+      </div>
+      <button type="button" class="bp-sheet-x" data-sheet-close>
+        <span class="bp-visually-hidden">Close without saving</span>
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <slot />
+</dialog>
+
+<script>
+  // Opening and dismissing. Nothing else — every sheet's form submits on its
+  // own, so this page works unchanged with no JS beyond the sheets never
+  // opening (they render as plain blocks instead; see the `scripting: none`
+  // rule in components.css).
+  //
+  // Astro hoists and bundles a component's script once however many times the
+  // component renders, so this is one delegated listener per page rather than
+  // one per record.
+  function sheetFor(el: Element): HTMLDialogElement | null {
+    const id = el.getAttribute("data-sheet-open");
+    const found = id ? document.getElementById(`sheet-${id}`) : null;
+    return found instanceof HTMLDialogElement ? found : null;
+  }
+
+  // Delegated from `document` and re-resolved per event: `<ClientRouter />`
+  // replaces the document on every navigation, so a listener bound to the
+  // first render's elements would be gone after the first save.
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const opener = target.closest("[data-sheet-open]");
+    if (opener) {
+      sheetFor(opener)?.showModal();
+      return;
+    }
+
+    const closer = target.closest("[data-sheet-close]");
+    if (closer) {
+      closer.closest("dialog")?.close();
+      return;
+    }
+
+    // Tap outside to dismiss, the way every sheet on a phone behaves. A
+    // `<dialog>` does not do this on its own: a click on the backdrop is
+    // dispatched with the DIALOG as its target, so this is the check — the
+    // click landed on the element itself rather than on anything inside it.
+    if (target instanceof HTMLDialogElement && target.open && target.matches("[data-sheet]")) {
+      target.close();
+    }
+  });
+</script>

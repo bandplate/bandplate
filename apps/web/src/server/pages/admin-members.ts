@@ -7,11 +7,12 @@
 // task-4-report.md "Fix round 2": the API route used to have no
 // self-demotion/last-admin guard of its own at all, which this shared
 // function structurally rules out going forward.
-import type { AuthDeps } from "@bandplate/core";
+import type { AuthDeps, SendMemberInviteDeps } from "@bandplate/core";
 import {
   createMemberSchema,
   patchMemberSchema,
   revokeAllSessionsForMember,
+  sendMemberInvite,
   slugify,
   updateMemberWithGuards,
 } from "@bandplate/core";
@@ -119,7 +120,12 @@ export async function updateMemberInstruments(
 export type CreateMemberField = "displayName" | "email";
 
 export type CreateMemberResult =
-  | { kind: "ok"; member: Member }
+  // `invited` is whether the invitation email actually went out. Creating the
+  // member never fails because the mailer is broken — they are on the
+  // whitelist either way and can sign in without ever seeing it — but the
+  // admin has to be told, or a broken mail pipeline is discovered by the
+  // person who cannot get in.
+  | { kind: "ok"; member: Member; invited: boolean }
   | { kind: "invalid"; error: string; field: CreateMemberField }
   | { kind: "email_taken" };
 
@@ -127,6 +133,7 @@ export async function createMember(
   db: Db,
   now: number,
   formData: FormData,
+  invite: SendMemberInviteDeps,
 ): Promise<CreateMemberResult> {
   const parsed = createMemberSchema.safeParse({
     displayName: formData.get("displayName"),
@@ -151,7 +158,32 @@ export async function createMember(
     role: parsed.data.role,
     createdAt: now,
   });
-  return { kind: "ok", member };
+
+  // Being added and being TOLD you were added are not the same thing, and
+  // until now only the first happened: a member appeared in the roster with
+  // no idea the archive existed, waiting for an admin to message them out of
+  // band. See `sendMemberInvite` for why the invitation carries no token.
+  const invited = await sendMemberInvite(invite, member);
+  return { kind: "ok", member, invited };
+}
+
+export type ResendInviteResult = { kind: "ok"; invited: boolean } | { kind: "not_found" };
+
+/**
+ * The same invitation again, for the admin fielding "I never got it". Safe to
+ * press as often as they like, precisely because the mail is a notification
+ * rather than a credential — nothing is minted, nothing is invalidated.
+ */
+export async function resendMemberInvite(
+  db: Db,
+  id: string,
+  invite: SendMemberInviteDeps,
+): Promise<ResendInviteResult> {
+  const member = await membersRepo.getById(db, id);
+  if (!member) {
+    return { kind: "not_found" };
+  }
+  return { kind: "ok", invited: await sendMemberInvite(invite, member) };
 }
 
 export type UpdateMemberResult =

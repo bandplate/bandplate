@@ -4,6 +4,7 @@ import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AdminHeader from "../../../components/AdminHeader.astro";
 import CopyButton from "../../../components/CopyButton.tsx";
+import RecordSheet from "../../../components/RecordSheet.astro";
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { getAppDeps, getAuthDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
@@ -140,49 +141,75 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                 <td data-label="Created" class="bp-table-quiet bp-table-when">{formatTimestamp(token.createdAt)}</td>
                 <td data-label="Last used" class="bp-table-quiet bp-table-when">{formatTimestamp(token.lastUsedAt)}</td>
                 <td data-label="Actions">
-                  <div class="bp-table-actions">
-                    {!token.revokedAt && (
-                      <>
-                        <details>
-                          {/* No cursor utility needed — .bp-btn already sets cursor: pointer. */}
-                          <summary class="bp-btn bp-btn-secondary bp-btn-sm">Edit scopes</summary>
-                          <form method="post" class="mt-3">
-                            <input type="hidden" name="intent" value="update" />
-                            <input type="hidden" name="tokenId" value={token.id} />
-                            <fieldset class="bp-checkbox-group">
-                              <legend class="sr-only">
-                                Scopes for {token.label}
-                              </legend>
-                              {SCOPES.map((scope) => (
-                                <span class="bp-checkbox-item">
-                                  <input
-                                    type="checkbox"
-                                    id={`scope-${token.id}-${scope}`}
-                                    name="scopes"
-                                    value={scope}
-                                    checked={token.scopes.includes(scope)}
-                                  />
-                                  <label for={`scope-${token.id}-${scope}`}>{scope}</label>
-                                </span>
-                              ))}
+                  {!token.revokedAt && (
+                    <>
+                      <button
+                        type="button"
+                        class="bp-btn bp-btn-secondary bp-btn-sm"
+                        data-sheet-open={`token-${token.id}`}
+                      >
+                        Edit
+                      </button>
+                      <RecordSheet
+                        id={`token-${token.id}`}
+                        eyebrow="Editing token"
+                        title={token.label}
+                        subtitle={token.scopes.join(", ")}
+                      >
+                        <form method="post" class="bp-sheet-form">
+                          <input type="hidden" name="intent" value="update" />
+                          <input type="hidden" name="tokenId" value={token.id} />
+                          <div class="bp-sheet-body">
+                            {/* Eight checkboxes behind a `<details>` inside a
+                                table cell was the worst of the three editors.
+                                They are the only decision this record carries,
+                                so here they are the body of the panel. */}
+                            <fieldset class="bp-sheet-field">
+                              <legend class="bp-eyebrow">Scopes</legend>
+                              <div class="bp-checkbox-group">
+                                {SCOPES.map((scope) => (
+                                  <span class="bp-checkbox-item">
+                                    <input
+                                      type="checkbox"
+                                      id={`scope-${token.id}-${scope}`}
+                                      name="scopes"
+                                      value={scope}
+                                      checked={token.scopes.includes(scope)}
+                                    />
+                                    <label for={`scope-${token.id}-${scope}`}>{scope}</label>
+                                  </span>
+                                ))}
+                              </div>
+                              <p class="bp-sheet-hint bp-m0">
+                                Whatever holds this token can do exactly these things and nothing
+                                else. Choose at least one.
+                              </p>
                             </fieldset>
-                            <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save scopes</button>
-                          </form>
-                        </details>
-                        <a
-                          href={`/admin/tokens/${token.id}/revoke`}
-                          class="bp-btn bp-btn-danger bp-btn-sm"
-                          data-confirm
-                          data-confirm-title={`Revoke the token ${token.label}?`}
-                          data-confirm-body={`Anything using ${token.label} will stop being able to authenticate immediately. This can't be undone.`}
-                          data-confirm-action={`/admin/tokens/${token.id}/revoke`}
-                          data-confirm-cta="Revoke token"
-                        >
-                          Revoke
-                        </a>
-                      </>
-                    )}
-                  </div>
+
+                            <div class="bp-sheet-extras">
+                              <a
+                                href={`/admin/tokens/${token.id}/revoke`}
+                                class="bp-sheet-danger"
+                                data-confirm
+                                data-confirm-title={`Revoke the token ${token.label}?`}
+                                data-confirm-body={`Anything using ${token.label} will stop being able to authenticate immediately. This can't be undone.`}
+                                data-confirm-action={`/admin/tokens/${token.id}/revoke`}
+                                data-confirm-cta="Revoke token"
+                              >
+                                Revoke this token
+                              </a>
+                            </div>
+                          </div>
+                          <div class="bp-sheet-foot">
+                            <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
+                            <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </RecordSheet>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

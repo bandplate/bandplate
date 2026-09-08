@@ -3,6 +3,7 @@ import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AdminHeader from "../../../components/AdminHeader.astro";
 import InstrumentIcon from "../../../components/InstrumentIcon.astro";
+import RecordSheet from "../../../components/RecordSheet.astro";
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
@@ -11,6 +12,7 @@ import {
   createMember,
   listAllInstruments,
   listMembersWithLastSeen,
+  resendMemberInvite,
   updateMember,
   updateMemberInstruments,
 } from "../../../server/pages/admin-members.js";
@@ -33,10 +35,17 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const intent = formData.get("intent");
 
+    const invite = { mailer: appDeps.mailer, appOrigin: appDeps.config.appOrigin };
+
     if (intent === "create") {
-      const result = await createMember(appDeps.db, appDeps.clock.now(), formData);
+      const result = await createMember(appDeps.db, appDeps.clock.now(), formData, invite);
       if (result.kind === "ok") {
-        return Astro.redirect("/admin/members?created=1");
+        // The banner distinguishes the two, because "member added" while the
+        // invitation silently failed is how a broken mail pipeline stays
+        // hidden until someone cannot get in.
+        return Astro.redirect(
+          result.invited ? "/admin/members?created=1" : "/admin/members?created=1&nomail=1",
+        );
       }
       if (result.kind === "email_taken") {
         createError = "A member with this email already exists.";
@@ -45,29 +54,43 @@ if (Astro.request.method === "POST") {
         createError = result.error;
         createErrorField = result.field;
       }
-    } else if (intent === "update") {
+    } else if (intent === "record") {
+      // ONE save for the whole record. The sheet shows role, status and
+      // instruments together, so pressing Save has to mean "save what I see"
+      // — two intents behind one button would let half a change land.
       const id = String(formData.get("memberId") ?? "");
-      const result = await updateMember(appDeps.db, id, formData, principal.memberId);
-      if (result.kind === "ok") {
+
+      const instruments = await updateMemberInstruments(appDeps.db, id, formData);
+      if (instruments.kind === "not_found") {
+        formError = "Couldn't find that member — reload and try again.";
+      } else if (instruments.kind !== "ok") {
+        formError = "That instrument selection didn't look right — reload and try again.";
+      } else if (!formData.has("role")) {
+        // Your own row renders no role/status controls (see the sheet), so
+        // there is nothing else to write.
         return Astro.redirect("/admin/members?updated=1");
-      }
-      if (result.kind === "self") {
-        formError = "You can't change your own role or status — ask another admin to do it.";
-      } else if (result.kind === "last_admin") {
-        formError = "That would leave the band with no active admin. Promote someone else first.";
       } else {
-        formError = "Couldn't update that member — reload and try again.";
+        const result = await updateMember(appDeps.db, id, formData, principal.memberId);
+        if (result.kind === "ok") {
+          return Astro.redirect("/admin/members?updated=1");
+        }
+        if (result.kind === "self") {
+          formError = "You can't change your own role or status — ask another admin to do it.";
+        } else if (result.kind === "last_admin") {
+          formError = "That would leave the band with no active admin. Promote someone else first.";
+        } else {
+          formError = "Couldn't update that member — reload and try again.";
+        }
       }
-    } else if (intent === "instruments") {
+    } else if (intent === "invite") {
       const id = String(formData.get("memberId") ?? "");
-      const result = await updateMemberInstruments(appDeps.db, id, formData);
-      if (result.kind === "ok") {
-        return Astro.redirect("/admin/members?updated=1");
-      }
+      const result = await resendMemberInvite(appDeps.db, id, invite);
       if (result.kind === "not_found") {
         formError = "Couldn't find that member — reload and try again.";
       } else {
-        formError = "That instrument selection didn't look right — reload and try again.";
+        return Astro.redirect(
+          result.invited ? "/admin/members?invited=1" : "/admin/members?nomail=1",
+        );
       }
     }
   }
@@ -80,13 +103,25 @@ const [members, allInstruments] = await Promise.all([
 const justCreated = Astro.url.searchParams.get("created") === "1";
 const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justRevoked = Astro.url.searchParams.get("revoked") === "1";
+const justInvited = Astro.url.searchParams.get("invited") === "1";
+const mailFailed = Astro.url.searchParams.get("nomail") === "1";
 ---
 
 <AppLayout title="Admin — Members" principal={principal} current="admin" adminSection="members">
   <div class="bp-stack">
     <AdminHeader title="Members" current="members" />
 
-    {justCreated && <Banner kind="success">Member added.</Banner>}
+    {justCreated && !mailFailed && (
+      <Banner kind="success">Member added, and their invitation is on its way.</Banner>
+    )}
+    {justCreated && mailFailed && <Banner kind="success">Member added.</Banner>}
+    {justInvited && <Banner kind="success">Invitation sent again.</Banner>}
+    {mailFailed && (
+      <Banner kind="error" title="The invitation email didn't send">
+        They're on the whitelist and can still sign in from the login page themselves — but check
+        your mail configuration, because login links go out the same way.
+      </Banner>
+    )}
     {justUpdated && <Banner kind="success">Member updated.</Banner>}
     {justRevoked && <Banner kind="success">Sessions revoked. They'll need a new login link.</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
@@ -160,111 +195,128 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                     <span class="bp-kind">member</span>
                   )}
                 </td>
-                {/* A disclosure, not a four-row `<select multiple>`. The
-                    select made every roster row five lines tall, which is the
-                    one thing a table of hairline rows cannot afford — you
-                    could no longer scan a column, which is what the table is
-                    for. Closed, the cell answers "what do they play"; open, it
-                    is the same pill group the filters use. */}
                 <td data-label="Instruments">
-                  <details class="bp-cell-editor">
-                    <summary>
-                      <span class="bp-visually-hidden">
-                        Edit instruments for {member.displayName}
-                      </span>
-                      {memberInstruments.length > 0 ? (
-                        <span class="bp-cell-editor-icons" aria-hidden="true">
-                          {memberInstruments.map((instrument) => (
-                            <InstrumentIcon
-                              icon={instrument.icon}
-                              label={instrument.label}
-                              size={18}
-                            />
-                          ))}
-                        </span>
-                      ) : (
-                        <span class="bp-kind">none</span>
-                      )}
-                    </summary>
-                    <form method="post" class="bp-cell-editor-body">
-                      <input type="hidden" name="intent" value="instruments" />
-                      <input type="hidden" name="memberId" value={member.id} />
-                      <fieldset class="bp-filter-pills">
-                        <legend class="sr-only">Instruments for {member.displayName}</legend>
-                        {allInstruments.map((instrument) => (
-                          <label class="bp-filter-pill-check">
-                            <input
-                              type="checkbox"
-                              name="instrumentIds"
-                              value={instrument.id}
-                              checked={member.instrumentIds.includes(instrument.id)}
-                            />
-                            <span class="bp-filter-pill">
-                              {instrument.label}
-                              {instrument.archivedAt !== null ? " (archived)" : ""}
-                            </span>
-                          </label>
-                        ))}
-                      </fieldset>
-                      <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">
-                        Save instruments
-                      </button>
-                    </form>
-                  </details>
+                  {memberInstruments.length > 0 ? (
+                    <span class="bp-cell-editor-icons" role="img" aria-label={`Plays: ${memberInstruments.map((i) => i.label).join(", ")}`}>
+                      {memberInstruments.map((instrument) => (
+                        <InstrumentIcon icon={instrument.icon} label={instrument.label} size={18} />
+                      ))}
+                    </span>
+                  ) : (
+                    <span class="bp-kind">none</span>
+                  )}
                 </td>
                 <td data-label="Last seen" class="bp-table-quiet bp-table-when">{formatTimestamp(member.lastSeenAt)}</td>
-                {/* One control per row, same as the instruments cell. Role,
-                    status and the destructive one all live behind it — a
-                    roster where every row carries a red button reads as a page
-                    about revoking sessions. */}
+                {/* The row carries no controls at all now — one trigger, and
+                    everything you can do to the record lives in its sheet. */}
                 <td data-label="Actions">
-                  <details class="bp-cell-editor">
-                    <summary class="bp-btn bp-btn-secondary bp-btn-sm">Edit</summary>
-                    <div class="bp-cell-editor-body">
-                      {member.id === principal.memberId ? (
-                        // An admin can't change their own role/status here —
-                        // the server rejects it anyway (see updateMember's
-                        // self-demotion guard), but hiding the controls means
-                        // there's no dead-end control to click in the first
-                        // place, and no way to lock yourself out via this row
-                        // at all. Instruments aren't a self-demotion concern,
-                        // so that cell is still editable for this row.
-                        <p class="bp-field-hint bp-m0">This is you — ask another admin.</p>
-                      ) : (
-                        <form method="post" class="bp-inline-form">
-                          <input type="hidden" name="intent" value="update" />
-                          <input type="hidden" name="memberId" value={member.id} />
-                          <label class="sr-only" for={`role-${member.id}`}>
-                            Role for {member.displayName}
-                          </label>
-                          <select class="bp-select bp-input-compact" id={`role-${member.id}`} name="role">
-                            <option value="member" selected={member.role === "member"}>member</option>
-                            <option value="admin" selected={member.role === "admin"}>admin</option>
-                          </select>
-                          <label class="sr-only" for={`status-${member.id}`}>
-                            Status for {member.displayName}
-                          </label>
-                          <select class="bp-select bp-input-compact" id={`status-${member.id}`} name="status">
-                            <option value="invited" selected={member.status === "invited"}>invited</option>
-                            <option value="active" selected={member.status === "active"}>active</option>
-                            <option value="disabled" selected={member.status === "disabled"}>disabled</option>
-                          </select>
-                          <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save</button>
-                        </form>
-                      )}
-                      <a
-                        href={`/admin/members/${member.id}/revoke-sessions`}
-                        class="bp-btn bp-btn-danger bp-btn-sm"
-                        data-confirm
-                        data-confirm-title={`Revoke sessions for ${member.displayName}?`}
-                        data-confirm-body={`${member.displayName} will be signed out everywhere and will need a new login link to get back in.`}
-                        data-confirm-action={`/admin/members/${member.id}/revoke-sessions`}
-                        data-confirm-cta="Revoke sessions"
-                      >
-                        Revoke sessions
-                      </a>
-                    </div>
-                  </details>
+                  <button
+                    type="button"
+                    class="bp-btn bp-btn-secondary bp-btn-sm"
+                    data-sheet-open={`member-${member.id}`}
+                  >
+                    Edit
+                  </button>
+                  <RecordSheet
+                    id={`member-${member.id}`}
+                    eyebrow="Editing member"
+                    title={member.displayName}
+                    subtitle={member.email}
+                  >
+                    {/* Resending the invitation is its own POST, and HTML has
+                        no nested forms — so the form is an empty, hidden one
+                        and its button lives in the body via `form=`, where it
+                        belongs, rather than stranded under the footer. */}
+                    <form method="post" id={`invite-${member.id}`} class="bp-sheet-aux">
+                      <input type="hidden" name="intent" value="invite" />
+                      <input type="hidden" name="memberId" value={member.id} />
+                    </form>
+                    <form method="post" class="bp-sheet-form">
+                      <input type="hidden" name="intent" value="record" />
+                      <input type="hidden" name="memberId" value={member.id} />
+                      <div class="bp-sheet-body">
+                        {member.id === principal.memberId ? (
+                          // An admin can't change their own role or status —
+                          // the server rejects it anyway (see updateMember's
+                          // self-demotion guard), but rendering no control at
+                          // all means there is no dead end to press and no way
+                          // to lock yourself out from this row. Instruments
+                          // are not a self-demotion concern, so they stay.
+                          <p class="bp-sheet-hint bp-m0">
+                            This is you — another admin has to change your role or status.
+                          </p>
+                        ) : (
+                          <>
+                            <div class="bp-sheet-field">
+                              <label class="bp-eyebrow" for={`role-${member.id}`}>Role</label>
+                              <select class="bp-select" id={`role-${member.id}`} name="role">
+                                <option value="member" selected={member.role === "member"}>member</option>
+                                <option value="admin" selected={member.role === "admin"}>admin</option>
+                              </select>
+                            </div>
+                            <div class="bp-sheet-field">
+                              <label class="bp-eyebrow" for={`status-${member.id}`}>Status</label>
+                              <select class="bp-select" id={`status-${member.id}`} name="status">
+                                <option value="invited" selected={member.status === "invited"}>invited</option>
+                                <option value="active" selected={member.status === "active"}>active</option>
+                                <option value="disabled" selected={member.status === "disabled"}>disabled</option>
+                              </select>
+                            </div>
+                          </>
+                        )}
+
+                        <fieldset class="bp-sheet-field">
+                          <legend class="bp-eyebrow">Instruments</legend>
+                          <div class="bp-filter-pills">
+                            {allInstruments.map((instrument) => (
+                              <label class="bp-filter-pill-check">
+                                <input
+                                  type="checkbox"
+                                  name="instrumentIds"
+                                  value={instrument.id}
+                                  checked={member.instrumentIds.includes(instrument.id)}
+                                />
+                                <span class="bp-filter-pill">
+                                  {instrument.label}
+                                  {instrument.archivedAt !== null ? " (archived)" : ""}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+
+                        <div class="bp-sheet-extras">
+                          <button
+                            type="submit"
+                            form={`invite-${member.id}`}
+                            class="bp-btn bp-btn-quiet bp-btn-sm"
+                          >
+                            Send the invitation again
+                          </button>
+                          <a
+                            href={`/admin/members/${member.id}/revoke-sessions`}
+                            class="bp-sheet-danger"
+                            data-confirm
+                            data-confirm-title={`Revoke sessions for ${member.displayName}?`}
+                            data-confirm-body={`${member.displayName} will be signed out everywhere and will need a new login link to get back in.`}
+                            data-confirm-action={`/admin/members/${member.id}/revoke-sessions`}
+                            data-confirm-cta="Revoke sessions"
+                          >
+                            Revoke sessions
+                          </a>
+                        </div>
+                      </div>
+                      <div class="bp-sheet-foot">
+                        <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
+                        {/* The way out. There wasn't one before — the only
+                            escape from an open editor was Escape, which is
+                            not a control anybody can see. */}
+                        <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </RecordSheet>
                 </td>
               </tr>
               );

@@ -131,28 +131,17 @@
       "indexes": {
         "assets_storage_key_unique": {
           "name": "assets_storage_key_unique",
-          "columns": [
-            "storage_key"
-          ],
+          "columns": ["storage_key"],
           "isUnique": true
         },
         "assets_slot_idx": {
           "name": "assets_slot_idx",
-          "columns": [
-            "take_id",
-            "kind",
-            "coalesce(\"instrument_id\", '')",
-            "tier",
-            "format"
-          ],
+          "columns": ["take_id", "kind", "coalesce(\"instrument_id\", '')", "tier", "format"],
           "isUnique": true
         },
         "assets_take_id_status_idx": {
           "name": "assets_take_id_status_idx",
-          "columns": [
-            "take_id",
-            "status"
-          ],
+          "columns": ["take_id", "status"],
           "isUnique": false
         }
       },
@@ -161,12 +150,8 @@
           "name": "assets_take_id_takes_id_fk",
           "tableFrom": "assets",
           "tableTo": "takes",
-          "columnsFrom": [
-            "take_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["take_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -174,12 +159,8 @@
           "name": "assets_instrument_id_instruments_id_fk",
           "tableFrom": "assets",
           "tableTo": "instruments",
-          "columnsFrom": [
-            "instrument_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["instrument_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -251,16 +232,12 @@
       "indexes": {
         "auth_sessions_token_hash_unique": {
           "name": "auth_sessions_token_hash_unique",
-          "columns": [
-            "token_hash"
-          ],
+          "columns": ["token_hash"],
           "isUnique": true
         },
         "auth_sessions_member_id_idx": {
           "name": "auth_sessions_member_id_idx",
-          "columns": [
-            "member_id"
-          ],
+          "columns": ["member_id"],
           "isUnique": false
         }
       },
@@ -269,12 +246,8 @@
           "name": "auth_sessions_member_id_members_id_fk",
           "tableFrom": "auth_sessions",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -353,16 +326,12 @@
       "indexes": {
         "events_client_ref_unique": {
           "name": "events_client_ref_unique",
-          "columns": [
-            "client_ref"
-          ],
+          "columns": ["client_ref"],
           "isUnique": true
         },
         "events_held_at_idx": {
           "name": "events_held_at_idx",
-          "columns": [
-            "held_at"
-          ],
+          "columns": ["held_at"],
           "isUnique": false
         }
       },
@@ -406,10 +375,7 @@
       "indexes": {
         "favorites_member_id_created_at_idx": {
           "name": "favorites_member_id_created_at_idx",
-          "columns": [
-            "member_id",
-            "created_at"
-          ],
+          "columns": ["member_id", "created_at"],
           "isUnique": false
         }
       },
@@ -418,23 +384,15 @@
           "name": "favorites_member_id_members_id_fk",
           "tableFrom": "favorites",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "favorites_member_id_target_type_target_id_pk": {
-          "columns": [
-            "member_id",
-            "target_type",
-            "target_id"
-          ],
+          "columns": ["member_id", "target_type", "target_id"],
           "name": "favorites_member_id_target_type_target_id_pk"
         }
       },
@@ -491,9 +449,7 @@
       "indexes": {
         "instruments_slug_unique": {
           "name": "instruments_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         }
       },
@@ -558,16 +514,12 @@
       "indexes": {
         "login_tokens_token_hash_unique": {
           "name": "login_tokens_token_hash_unique",
-          "columns": [
-            "token_hash"
-          ],
+          "columns": ["token_hash"],
           "isUnique": true
         },
         "login_tokens_member_id_idx": {
           "name": "login_tokens_member_id_idx",
-          "columns": [
-            "member_id"
-          ],
+          "columns": ["member_id"],
           "isUnique": false
         }
       },
@@ -576,12 +528,8 @@
           "name": "login_tokens_member_id_members_id_fk",
           "tableFrom": "login_tokens",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -611,10 +559,7 @@
       "indexes": {
         "member_instruments_instrument_id_member_id_idx": {
           "name": "member_instruments_instrument_id_member_id_idx",
-          "columns": [
-            "instrument_id",
-            "member_id"
-          ],
+          "columns": ["instrument_id", "member_id"],
           "isUnique": false
         }
       },
@@ -623,12 +568,8 @@
           "name": "member_instruments_member_id_members_id_fk",
           "tableFrom": "member_instruments",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -636,22 +577,15 @@
           "name": "member_instruments_instrument_id_instruments_id_fk",
           "tableFrom": "member_instruments",
           "tableTo": "instruments",
-          "columnsFrom": [
-            "instrument_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["instrument_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "member_instruments_member_id_instrument_id_pk": {
-          "columns": [
-            "member_id",
-            "instrument_id"
-          ],
+          "columns": ["member_id", "instrument_id"],
           "name": "member_instruments_member_id_instrument_id_pk"
         }
       },
@@ -723,16 +657,12 @@
       "indexes": {
         "members_slug_unique": {
           "name": "members_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "members_email_unique": {
           "name": "members_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
@@ -798,9 +728,7 @@
       "indexes": {
         "service_tokens_token_hash_unique": {
           "name": "service_tokens_token_hash_unique",
-          "columns": [
-            "token_hash"
-          ],
+          "columns": ["token_hash"],
           "isUnique": true
         }
       },
@@ -844,9 +772,7 @@
       "indexes": {
         "song_aliases_alias_norm_unique": {
           "name": "song_aliases_alias_norm_unique",
-          "columns": [
-            "alias_norm"
-          ],
+          "columns": ["alias_norm"],
           "isUnique": true
         }
       },
@@ -855,12 +781,8 @@
           "name": "song_aliases_song_id_songs_id_fk",
           "tableFrom": "song_aliases",
           "tableTo": "songs",
-          "columnsFrom": [
-            "song_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["song_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -907,12 +829,8 @@
           "name": "song_instrument_notes_song_id_songs_id_fk",
           "tableFrom": "song_instrument_notes",
           "tableTo": "songs",
-          "columnsFrom": [
-            "song_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["song_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -920,22 +838,15 @@
           "name": "song_instrument_notes_instrument_id_instruments_id_fk",
           "tableFrom": "song_instrument_notes",
           "tableTo": "instruments",
-          "columnsFrom": [
-            "instrument_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["instrument_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "song_instrument_notes_song_id_instrument_id_pk": {
-          "columns": [
-            "song_id",
-            "instrument_id"
-          ],
+          "columns": ["song_id", "instrument_id"],
           "name": "song_instrument_notes_song_id_instrument_id_pk"
         }
       },
@@ -1041,16 +952,12 @@
       "indexes": {
         "songs_slug_unique": {
           "name": "songs_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "songs_title_norm_idx": {
           "name": "songs_title_norm_idx",
-          "columns": [
-            "title_norm"
-          ],
+          "columns": ["title_norm"],
           "isUnique": true
         }
       },
@@ -1080,10 +987,7 @@
       "indexes": {
         "take_instruments_instrument_id_take_id_idx": {
           "name": "take_instruments_instrument_id_take_id_idx",
-          "columns": [
-            "instrument_id",
-            "take_id"
-          ],
+          "columns": ["instrument_id", "take_id"],
           "isUnique": false
         }
       },
@@ -1092,12 +996,8 @@
           "name": "take_instruments_take_id_takes_id_fk",
           "tableFrom": "take_instruments",
           "tableTo": "takes",
-          "columnsFrom": [
-            "take_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["take_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1105,22 +1005,15 @@
           "name": "take_instruments_instrument_id_instruments_id_fk",
           "tableFrom": "take_instruments",
           "tableTo": "instruments",
-          "columnsFrom": [
-            "instrument_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["instrument_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "take_instruments_take_id_instrument_id_pk": {
-          "columns": [
-            "take_id",
-            "instrument_id"
-          ],
+          "columns": ["take_id", "instrument_id"],
           "name": "take_instruments_take_id_instrument_id_pk"
         }
       },
@@ -1250,41 +1143,27 @@
       "indexes": {
         "takes_client_ref_unique": {
           "name": "takes_client_ref_unique",
-          "columns": [
-            "client_ref"
-          ],
+          "columns": ["client_ref"],
           "isUnique": true
         },
         "takes_song_id_recorded_at_idx": {
           "name": "takes_song_id_recorded_at_idx",
-          "columns": [
-            "song_id",
-            "recorded_at"
-          ],
+          "columns": ["song_id", "recorded_at"],
           "isUnique": false
         },
         "takes_event_id_recorded_at_idx": {
           "name": "takes_event_id_recorded_at_idx",
-          "columns": [
-            "event_id",
-            "recorded_at"
-          ],
+          "columns": ["event_id", "recorded_at"],
           "isUnique": false
         },
         "takes_state_recorded_at_idx": {
           "name": "takes_state_recorded_at_idx",
-          "columns": [
-            "state",
-            "recorded_at"
-          ],
+          "columns": ["state", "recorded_at"],
           "isUnique": false
         },
         "takes_state_rating_score_idx": {
           "name": "takes_state_rating_score_idx",
-          "columns": [
-            "state",
-            "rating_score"
-          ],
+          "columns": ["state", "rating_score"],
           "isUnique": false
         }
       },
@@ -1293,12 +1172,8 @@
           "name": "takes_song_id_songs_id_fk",
           "tableFrom": "takes",
           "tableTo": "songs",
-          "columnsFrom": [
-            "song_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["song_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1306,12 +1181,8 @@
           "name": "takes_event_id_events_id_fk",
           "tableFrom": "takes",
           "tableTo": "events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1369,10 +1240,7 @@
       "indexes": {
         "votes_member_id_updated_at_idx": {
           "name": "votes_member_id_updated_at_idx",
-          "columns": [
-            "member_id",
-            "updated_at"
-          ],
+          "columns": ["member_id", "updated_at"],
           "isUnique": false
         }
       },
@@ -1381,12 +1249,8 @@
           "name": "votes_take_id_takes_id_fk",
           "tableFrom": "votes",
           "tableTo": "takes",
-          "columnsFrom": [
-            "take_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["take_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1394,22 +1258,15 @@
           "name": "votes_member_id_members_id_fk",
           "tableFrom": "votes",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "votes_take_id_member_id_pk": {
-          "columns": [
-            "take_id",
-            "member_id"
-          ],
+          "columns": ["take_id", "member_id"],
           "name": "votes_take_id_member_id_pk"
         }
       },

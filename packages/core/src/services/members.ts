@@ -11,6 +11,7 @@
 // layer can get this rule from.
 import { type Db, membersRepo } from "@bandplate/db";
 import { z } from "zod";
+import type { Mailer } from "../ports/mailer.js";
 
 export const createMemberSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name.").max(200),
@@ -113,4 +114,92 @@ export async function updateMemberWithGuards(
     return { kind: "not_found" };
   }
   return { kind: "ok", member: updated };
+}
+
+// ---------------------------------------------------------------------------
+// sendMemberInvite
+// ---------------------------------------------------------------------------
+
+/**
+ * Bounds the send so a wedged mail provider cannot hang the admin's request.
+ * Local copy rather than an import from `services/auth.ts`: that module's is
+ * private, and exporting it to share eight lines would put a timing helper in
+ * the package's public surface for no one else's benefit.
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+const DEFAULT_INVITE_MAIL_TIMEOUT_MS = 8_000;
+
+export interface SendMemberInviteDeps {
+  mailer: Mailer;
+  /** The app's own origin. The invite points at `${appOrigin}/login`. */
+  appOrigin: string;
+  inviteMailTimeoutMs?: number;
+}
+
+/**
+ * Tell someone they have been added to the band's archive.
+ *
+ * Deliberately carries NO login token. A login token lives fifteen minutes and
+ * is single-use, which is right for a link someone asked for thirty seconds
+ * ago and useless for one that lands in an inbox they may not open until
+ * tomorrow — an invitation built on one would be dead on arrival for most of
+ * the people who get it, and lengthening the TTL for this case would put a
+ * long-lived credential in a mailbox for the sake of a convenience.
+ *
+ * So the invitation is a NOTIFICATION, not a credential: it says the address
+ * is now on the whitelist and where to go to get a link of their own. That
+ * also makes re-sending it free and safe, which is what an admin fielding
+ * "I never got it" actually needs.
+ *
+ * Returns whether the mail went out. Creating the member must not fail because
+ * the mailer is misconfigured — the member IS created and can sign in without
+ * ever seeing this email — but the admin has to be told, or a broken mail
+ * pipeline is discovered by the person who cannot get in.
+ */
+export async function sendMemberInvite(
+  deps: SendMemberInviteDeps,
+  member: { displayName: string; email: string },
+): Promise<boolean> {
+  const signInUrl = `${deps.appOrigin.replace(/\/+$/, "")}/login`;
+  const text = [
+    `Hi ${member.displayName},`,
+    "",
+    "You've been added to bandplate — your band's rehearsal and recording archive.",
+    "",
+    `There's no password to set up. Go to ${signInUrl}, enter this address`,
+    `(${member.email}), and we'll email you a link that signs you in.`,
+    "",
+    signInUrl,
+  ].join("\n");
+
+  try {
+    await withTimeout(
+      deps.mailer.send({
+        to: member.email,
+        subject: "You've been added to bandplate",
+        text,
+      }),
+      deps.inviteMailTimeoutMs ?? DEFAULT_INVITE_MAIL_TIMEOUT_MS,
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -17,7 +17,7 @@
 // window too — see task-7-report.md for the proof (a real cache hit,
 // verified in a browser).
 import type { Storage } from "@bandplate/core";
-import { type Db, assetsRepo } from "@bandplate/db";
+import { type Db, assetsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";
 
@@ -34,6 +34,54 @@ export interface AudioRouteDeps {
  * every request within a given hour gets a byte-identical Location.
  */
 const DOWNLOAD_URL_MIN_VALIDITY_SECONDS = 5 * 60 * 60;
+
+/**
+ * The filename a member sees in their Downloads folder. Built from what the
+ * take IS — song, date, which mix — rather than from the storage key, which is
+ * a UUID path and tells a human nothing:
+ *
+ *   Neon Skyline - 2026-07-08 - full mix.opus
+ *   Neon Skyline - 2026-07-08 - bass stem (lossless).flac
+ *
+ * `tier` only appears when it is lossless: for a band that mostly downloads the
+ * lossy copy, "(lossy)" on every file is noise, while the lossless one is the
+ * file you went looking for deliberately.
+ */
+function downloadFilename(input: {
+  songTitle: string | undefined;
+  recordedAt: number;
+  kind: assetsRepo.AssetKind;
+  tier: assetsRepo.AssetTier;
+  format: assetsRepo.AssetFormat;
+  instrumentLabel: string | undefined;
+}): string {
+  const date = new Date(input.recordedAt).toISOString().slice(0, 10);
+  const what =
+    input.kind === "stem" ? `${input.instrumentLabel ?? "unknown"} stem`.toLowerCase() : "full mix";
+  const tier = input.tier === "lossless" ? " (lossless)" : "";
+  return `${input.songTitle ?? "Take"} - ${date} - ${what}${tier}.${input.format}`;
+}
+
+/**
+ * `Content-Disposition` for a filename that is very likely to carry Czech
+ * diacritics. Both forms are required, and for different readers: `filename`
+ * is a bare-ASCII fallback that every client understands, and `filename*`
+ * (RFC 5987, percent-encoded UTF-8) is what a modern browser actually uses —
+ * omit it and "Píseň o cestách" arrives as "Pise o cestach"; omit the ASCII
+ * one and an old client gets no name at all. Quotes and backslashes are
+ * stripped rather than escaped, since neither belongs in a song title and
+ * escaping them correctly inside a quoted-string is a parser bug waiting to
+ * happen.
+ */
+function contentDisposition(filename: string): string {
+  const safe = filename.replace(/[\\"]/g, "");
+  const ascii =
+    safe
+      .normalize("NFKD")
+      .replace(/[^\x20-\x7E]/g, "")
+      .trim() || "take";
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(safe)}`;
+}
 
 export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps): void {
   router.get("/assets/:id/audio", requireScopes("takes:read"), async (c) => {
@@ -60,6 +108,58 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
     const url = await deps.storage.signedDownloadUrl(asset.storageKey, {
       expiresIn: DOWNLOAD_URL_MIN_VALIDITY_SECONDS,
       responseContentType: asset.contentType,
+    });
+
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: url,
+        "cache-control": "private, max-age=1800",
+      },
+    });
+  });
+
+  // `GET /assets/:id/download` — the same object as `/audio`, presigned to
+  // arrive as a FILE rather than as a stream the browser plays inline. It is a
+  // separate route rather than a `?download=1` on the one above because the two
+  // have genuinely different jobs: `/audio` is on the player's hot path and is
+  // re-requested on every Safari seek, so it stays a lookup and a presign,
+  // while this one does two extra reads to name the file something a human can
+  // find later. Sharing the route would put those reads on the seek path.
+  //
+  // Unlike `/audio` this serves EVERY ready asset kind the take has, lossless
+  // included — that is the point of a download — but still never `peaks`,
+  // which is waveform JSON with no meaning outside the app.
+  router.get("/assets/:id/download", requireScopes("takes:read"), async (c) => {
+    const id = c.req.param("id");
+    if (!id) {
+      return errorResponse(c, 400, "invalid_request", "Missing id parameter.");
+    }
+
+    const asset = await assetsRepo.getById(deps.db, id);
+    if (!asset || asset.status !== "ready" || asset.kind === "peaks") {
+      return errorResponse(c, 404, "not_found", "Asset not found.");
+    }
+
+    const take = await takesRepo.getById(deps.db, asset.takeId);
+    const song = take ? await songsRepo.getById(deps.db, take.songId) : undefined;
+    const instrument = asset.instrumentId
+      ? await instrumentsRepo.getById(deps.db, asset.instrumentId)
+      : undefined;
+
+    const url = await deps.storage.signedDownloadUrl(asset.storageKey, {
+      expiresIn: DOWNLOAD_URL_MIN_VALIDITY_SECONDS,
+      responseContentType: asset.contentType,
+      responseContentDisposition: contentDisposition(
+        downloadFilename({
+          songTitle: song?.title,
+          recordedAt: take?.recordedAt ?? asset.createdAt,
+          kind: asset.kind,
+          tier: asset.tier,
+          format: asset.format,
+          instrumentLabel: instrument?.label,
+        }),
+      ),
     });
 
     return new Response(null, {

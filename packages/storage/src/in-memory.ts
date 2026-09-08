@@ -169,8 +169,13 @@ export async function createInMemoryStorage(
       res.writeHead(404).end("not found");
       return;
     }
-    const contentType = url.searchParams.get("responseContentType") ?? entry.contentType;
-    const disposition = url.searchParams.get("responseContentDisposition");
+    // S3's own spelling for these two, not camelCase. The fake exists so the
+    // conformance suite can run the same assertions against it and real MinIO;
+    // a caller that reads the presigned URL's query string — the download route
+    // asserts on `response-content-disposition` — would pass against one and
+    // fail against the other if the fake invented its own parameter names.
+    const contentType = url.searchParams.get("response-content-type") ?? entry.contentType;
+    const disposition = url.searchParams.get("response-content-disposition");
     const headers: Record<string, string> = {
       "content-type": contentType,
       "accept-ranges": "bytes",
@@ -235,10 +240,10 @@ export async function createInMemoryStorage(
     const url = new URL(`${origin}/objects/${encodeURIComponent(key)}`);
     url.searchParams.set("op", "get");
     if (opts.responseContentType) {
-      url.searchParams.set("responseContentType", opts.responseContentType);
+      url.searchParams.set("response-content-type", opts.responseContentType);
     }
     if (opts.responseContentDisposition) {
-      url.searchParams.set("responseContentDisposition", opts.responseContentDisposition);
+      url.searchParams.set("response-content-disposition", opts.responseContentDisposition);
     }
     // Same padding as `S3Storage` — see its `signedDownloadUrl` comment
     // and the port's doc comment on `expiresIn`.

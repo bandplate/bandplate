@@ -33,10 +33,13 @@ async function loginAsMember(testApp: TestApp): Promise<string> {
   return extractSessionCookieValue(res.headers.get("set-cookie"));
 }
 
-async function seedReadyAsset(testApp: TestApp): Promise<assetsRepo.Asset> {
+async function seedReadyAsset(
+  testApp: TestApp,
+  songTitle = "Audio Route Test Song",
+): Promise<assetsRepo.Asset> {
   const now = testApp.clock.now();
   const song = await songsRepo.create(testApp.db, {
-    title: "Audio Route Test Song",
+    title: songTitle,
     slug: "audio-route-test-song",
     createdAt: now,
     updatedAt: now,
@@ -272,4 +275,104 @@ describe("GET /assets/:id/audio", () => {
       expect(await fetched.text()).toBe("fake mp3 bytes");
     },
   );
+});
+
+describe("GET /assets/:id/download", () => {
+  let testApp: TestApp | undefined;
+
+  afterEach(async () => {
+    await testApp?.closeStorage();
+    testApp = undefined;
+  });
+
+  it("presigns the object to arrive as an attachment named after the take", async () => {
+    testApp = await buildTestApp();
+    const cookie = await loginAsMember(testApp);
+    const asset = await seedReadyAsset(testApp);
+
+    const res = await testApp.app.request(`/assets/${asset.id}/download`, {
+      headers: { cookie: `bp_session=${cookie}` },
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(302);
+    const location = res.headers.get("location");
+    expect(location).toBeTruthy();
+    // The disposition rides in the presigned query string, so the redirect
+    // target itself is what has to carry it — a header on this 302 would be
+    // dropped the moment the browser follows it to the bucket.
+    const disposition = new URL(location ?? "").searchParams.get("response-content-disposition");
+    expect(disposition).toContain("attachment;");
+    expect(disposition).toContain("full mix.mp3");
+  });
+
+  it("keeps a Czech title readable — both the ASCII fallback and the UTF-8 form", async () => {
+    testApp = await buildTestApp();
+    const cookie = await loginAsMember(testApp);
+    const asset = await seedReadyAsset(testApp, "Píseň o cestách");
+
+    const res = await testApp.app.request(`/assets/${asset.id}/download`, {
+      headers: { cookie: `bp_session=${cookie}` },
+      redirect: "manual",
+    });
+
+    const disposition =
+      new URL(res.headers.get("location") ?? "").searchParams.get("response-content-disposition") ??
+      "";
+    // The bare `filename` is what an old client reads, and it must survive
+    // being stripped to ASCII rather than collapsing to nothing.
+    expect(disposition).toContain('filename="Pisen o cestach');
+    // `filename*` is what every current browser actually uses, so the
+    // diacritics have to be in there percent-encoded.
+    expect(disposition).toContain(`filename*=UTF-8''${encodeURIComponent("Píseň o cestách")}`);
+  });
+
+  it("rejects an anonymous caller", async () => {
+    testApp = await buildTestApp();
+    const asset = await seedReadyAsset(testApp);
+
+    const res = await testApp.app.request(`/assets/${asset.id}/download`, { redirect: "manual" });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("MUTATION CHECK: declared with takes:read specifically, not some other scope", async () => {
+    // Same reasoning as the identically named check on `/audio` above: every
+    // member holds every read scope, so no request-level probe can tell which
+    // one this route actually declares. Assert the declaration.
+    testApp = await buildTestApp();
+    const route = testApp.router.registry.find(
+      (r) => r.method === "GET" && r.path === "/assets/:id/download",
+    );
+    expect(route).toBeDefined();
+    expect(route?.guard).toEqual({ scopes: ["takes:read"] });
+  });
+
+  it("404s for a peaks asset — waveform JSON is not a file anyone downloads", async () => {
+    testApp = await buildTestApp();
+    const cookie = await loginAsMember(testApp);
+    const master = await seedReadyAsset(testApp);
+    const now = testApp.clock.now();
+    const [peaks] = await assetsRepo.createMany(testApp.db, [
+      {
+        takeId: master.takeId,
+        kind: "peaks",
+        tier: "lossy",
+        format: "json",
+        storageKey: `takes/${master.takeId}/peaks.json`,
+        contentType: "application/json",
+        bytes: 100,
+        status: "ready",
+        createdAt: now,
+        readyAt: now,
+      },
+    ]);
+
+    const res = await testApp.app.request(`/assets/${peaks?.id}/download`, {
+      headers: { cookie: `bp_session=${cookie}` },
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(404);
+  });
 });

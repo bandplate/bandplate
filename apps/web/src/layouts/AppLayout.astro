@@ -21,7 +21,7 @@ export interface Props {
   // "home" (Task 6's `/`) matches no nav item — the wordmark link is home's
   // only nav entry point, same as before this task, so it's a valid value
   // with none of the four tabs rendering `aria-current`.
-  current: "home" | "songs" | "events" | "search" | "me";
+  current: "home" | "songs" | "events" | "takes" | "me";
 }
 
 const { title, principal, current } = Astro.props;
@@ -29,7 +29,7 @@ const { title, principal, current } = Astro.props;
 const navItems = [
   { key: "songs", label: "Songs", href: "/songs" },
   { key: "events", label: "Events", href: "/events" },
-  { key: "search", label: "Search", href: "/search" },
+  { key: "takes", label: "Takes", href: "/takes" },
   { key: "me", label: "Me", href: "/me" },
 ] as const;
 ---

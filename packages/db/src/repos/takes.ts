@@ -344,6 +344,8 @@ export interface SearchFilters {
   states?: TakeState[];
   /** Case/diacritic-insensitive substring match against song title or alias. */
   search?: string;
+  /** Only takes of this song. */
+  songId?: string;
   /**
    * Restrict to takes this member has NOT voted on. The same `NOT IN (voted
    * take ids)` subquery `listUnvotedByMember` uses, expressed here as a filter
@@ -425,6 +427,10 @@ export async function search(
       return { results: [], truncated: false };
     }
     conditions.push(inArray(takes.songId, songIds));
+  }
+
+  if (filters.songId) {
+    conditions.push(eq(takes.songId, filters.songId));
   }
 
   if (filters.dateFrom !== undefined) {

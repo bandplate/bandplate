@@ -67,6 +67,7 @@ let publishedUnvotedTakeId: string;
 let takeWithAssetsId: string;
 let takeWithNoAssetsId: string;
 let bassInstrumentId: string;
+let searchableSongId: string;
 
 async function waitForServer(url: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -127,6 +128,7 @@ async function seedAndGetSessionCookie(): Promise<string> {
     createdAt: now,
     updatedAt: now,
   });
+  searchableSongId = searchableSong.id;
 
   const event = await eventsRepo.create(db, {
     kind: "rehearsal",
@@ -424,31 +426,58 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
     });
   });
 
-  describe("/search", () => {
+  /**
+   * Just the results region of `/takes`. The song filter is a `<select>` now, so
+   * EVERY song title is in the page as an `<option>` whether or not it matched —
+   * a whole-body `not.toContain("Some Song")` would be asserting against the
+   * control rather than the results, and would fail even when the filter works
+   * perfectly. Slicing to the results container is what keeps these assertions
+   * about what they claim to be about.
+   */
+  function resultsRegion(html: string): string {
+    const start = html.indexOf('class="bp-search-results"');
+    return start === -1 ? html : html.slice(start);
+  }
+
+  describe("/takes (the archive)", () => {
     it("redirects an anonymous visitor to /login", async () => {
-      const res = await fetch(`${ORIGIN}/search`, { redirect: "manual" });
+      const res = await fetch(`${ORIGIN}/takes`, { redirect: "manual" });
       expect(res.status).toBe(302);
       expect(res.headers.get("location")).toBe("/login");
     });
 
     it("a plain GET with no filters renders every take", async () => {
-      const res = await fetch(`${ORIGIN}/search`, { headers: { cookie: sessionCookie } });
+      const res = await fetch(`${ORIGIN}/takes`, { headers: { cookie: sessionCookie } });
       expect(res.status).toBe(200);
       const body = await res.text();
       expect(body).toContain("Neon Skyline Searchable");
       expect(body).toContain("Home Favorite Song");
     });
 
-    it("filters by free text (song title) via a plain GET query string", async () => {
-      const res = await fetch(`${ORIGIN}/search?q=skyline`, { headers: { cookie: sessionCookie } });
+    it("filters by song via a plain GET query string", async () => {
+      const res = await fetch(`${ORIGIN}/takes?song=${searchableSongId}`, {
+        headers: { cookie: sessionCookie },
+      });
       expect(res.status).toBe(200);
-      const body = await res.text();
+      const body = resultsRegion(await res.text());
       expect(body).toContain("Neon Skyline Searchable");
       expect(body).not.toContain("Home Favorite Song");
     });
 
+    it("/search redirects permanently to /takes, carrying the query string", async () => {
+      // `/me`'s unvoted count shipped pointing at the old path, and a member
+      // may have bookmarked a filtered search — a saved filter has to land on
+      // the same results rather than on the whole archive.
+      const res = await fetch(`${ORIGIN}/search?unvoted=1`, {
+        headers: { cookie: sessionCookie },
+        redirect: "manual",
+      });
+      expect(res.status).toBe(301);
+      expect(res.headers.get("location")).toBe("/takes?unvoted=1");
+    });
+
     it("filters by instrument via a plain GET query string", async () => {
-      const res = await fetch(`${ORIGIN}/search?instrument=${bassInstrumentId}`, {
+      const res = await fetch(`${ORIGIN}/takes?instrument=${bassInstrumentId}`, {
         headers: { cookie: sessionCookie },
       });
       expect(res.status).toBe(200);
@@ -457,11 +486,11 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
     });
 
     it("filters by state via a plain GET query string", async () => {
-      const res = await fetch(`${ORIGIN}/search?state=published`, {
+      const res = await fetch(`${ORIGIN}/takes?state=published`, {
         headers: { cookie: sessionCookie },
       });
       expect(res.status).toBe(200);
-      const body = await res.text();
+      const body = resultsRegion(await res.text());
       expect(body).toContain("Neon Skyline Searchable");
       expect(body).not.toContain("Home Favorite Song");
     });
@@ -477,15 +506,15 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       // independently-falsifiable things on the result: the result set is
       // actually filtered, and the controls reflect the submitted values
       // back (a plain GET form re-populates from the URL, not from memory).
-      const formPage = await fetch(`${ORIGIN}/search`, { headers: { cookie: sessionCookie } });
+      const formPage = await fetch(`${ORIGIN}/takes`, { headers: { cookie: sessionCookie } });
       const formBody = await formPage.text();
-      expect(formBody).toContain('id="search-q"');
+      expect(formBody).toContain('id="search-song"');
       expect(formBody).toContain(`id="search-instrument-${bassInstrumentId}"`);
 
       const submitted = new URLSearchParams();
-      submitted.set("q", "skyline");
+      submitted.set("song", searchableSongId);
       submitted.set("state", "published");
-      const url = `${ORIGIN}/search?${submitted.toString()}`;
+      const url = `${ORIGIN}/takes?${submitted.toString()}`;
 
       const first = await fetch(url, { headers: { cookie: sessionCookie } });
       expect(first.status).toBe(200);
@@ -495,15 +524,19 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       // back". A search-parsing regression that dropped every filter would
       // still show the favorite song here; a regression that broke the
       // free-text match specifically would drop the searchable one.
-      expect(firstBody).toContain("Neon Skyline Searchable");
-      expect(firstBody).not.toContain("Home Favorite Song");
+      expect(resultsRegion(firstBody)).toContain("Neon Skyline Searchable");
+      expect(resultsRegion(firstBody)).not.toContain("Home Favorite Song");
 
       // The controls are re-populated from the URL's own query string, not
       // from anything server-side/session-held — this is what "works with
       // JS off" and "a search is shareable/bookmarkable" actually require:
       // pasting this exact URL in a fresh tab must reproduce the same
       // filled-in form, not just the same results.
-      expect(firstBody).toContain('value="skyline"');
+      expect(firstBody).toMatch(
+        new RegExp(
+          `value="${searchableSongId}"[^>]*selected|selected[^>]*value="${searchableSongId}"`,
+        ),
+      );
       expect(firstBody).toMatch(
         /id="search-state-published"[^>]*checked|checked[^>]*id="search-state-published"/,
       );
@@ -522,7 +555,7 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
     });
 
     it("returns a real empty state, not an error, when nothing matches", async () => {
-      const res = await fetch(`${ORIGIN}/search?q=no-such-song-title-anywhere`, {
+      const res = await fetch(`${ORIGIN}/takes?song=00000000-0000-0000-0000-000000000000`, {
         headers: { cookie: sessionCookie },
       });
       expect(res.status).toBe(200);
@@ -531,7 +564,7 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
     });
 
     it("never ships the take-transition retarget script (its results list can't repeat a take)", async () => {
-      const res = await fetch(`${ORIGIN}/search`, { headers: { cookie: sessionCookie } });
+      const res = await fetch(`${ORIGIN}/takes`, { headers: { cookie: sessionCookie } });
       const body = await res.text();
       expect(body).not.toContain(TAKE_TRANSITION_RETARGET_MARKER);
     });
@@ -546,7 +579,7 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       // other page (this one included) actually uses. `/search` with no
       // filters lists both `takeWithAssetsId` (a ready master) and
       // `takeWithNoAssetsId` (no assets at all) side by side via TakeRow.
-      const res = await fetch(`${ORIGIN}/search`, { headers: { cookie: sessionCookie } });
+      const res = await fetch(`${ORIGIN}/takes`, { headers: { cookie: sessionCookie } });
       expect(res.status).toBe(200);
       const body = await res.text();
       expect(body).toMatch(new RegExp(`data-audio-source[^>]*data-take-id="${takeWithAssetsId}"`));

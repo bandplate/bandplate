@@ -1,0 +1,15 @@
+---
+// `/search` moved to `/takes`. The tab lists takes and always did — searching
+// is how you narrow them, not what they are — so the route now matches the
+// object, and sits beside `/takes/[id]` the way `/songs` sits beside
+// `/songs/[slug]`.
+//
+// This redirect exists because links to the old path are already out in the
+// world: `/me`'s unvoted count shipped pointing at `/search?unvoted=1` earlier
+// today, and a member may have bookmarked a filtered search. 301, not 302 —
+// the move is permanent, and a permanent redirect lets a browser stop asking.
+// The query string is carried through verbatim, so a saved filter still lands
+// on the same results rather than on an empty archive.
+const target = `/takes${Astro.url.search}`;
+return Astro.redirect(target, 301);
+---

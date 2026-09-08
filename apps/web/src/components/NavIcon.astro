@@ -6,7 +6,7 @@
 // label" the brief rules out). Lives here rather than packages/ui because
 // it is specific to this one shell, not a primitive other pages compose.
 export interface Props {
-  name: "songs" | "events" | "search" | "me";
+  name: "songs" | "events" | "takes" | "me";
 }
 
 const { name } = Astro.props;
@@ -34,11 +34,17 @@ const { name } = Astro.props;
   )
 }
 {
-  name === "search" && (
+  /* A plate, not a magnifier. The tab lists TAKES — searching is how you
+     narrow them, not what they are — and the app already draws a recording as
+     a grooved disc with a centre hole on home, so the nav borrows its own
+     vocabulary rather than the generic one. Two rings and a hole read as a
+     record at 20px; a third ring turns to mud. */
+  name === "takes" && (
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
       <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="10.5" cy="10.5" r="6" />
-        <path d="M19 19l-4.3-4.3" />
+        <circle cx="12" cy="12" r="8.5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="12" cy="12" r="0.6" fill="currentColor" />
       </g>
     </svg>
   )

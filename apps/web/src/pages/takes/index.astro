@@ -1,6 +1,6 @@
 ---
-// Cross-cutting search: instrument (AND), date range, rating, state, and
-// free text across song titles and aliases. A plain GET form — every
+// The takes archive: every take in the band's history, filtered by song,
+// instrument (AND), date range, rating and state. A plain GET form — every
 // filter round-trips through the URL, so a search is shareable/bookmarkable
 // and works with JS off (same approach `/songs`'s instrument filter uses;
 // see that page's header comment for why no client script is worth adding
@@ -15,7 +15,7 @@
 // single `.bp-search-filters-body` child, so the same one CSS override
 // that already forces that one child visible past `lg` covers the whole
 // filter set instead of needing a rule per fieldset.
-import { instrumentsRepo } from "@bandplate/db";
+import { instrumentsRepo, songsRepo } from "@bandplate/db";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -35,9 +35,13 @@ const appDeps = await getAppDeps();
 const query = parseSearchQuery(Astro.url.searchParams);
 const filtersApplied = hasAnyFilter(query) || query.sort !== "recent";
 
-const [{ results, truncated }, instruments] = await Promise.all([
+const [{ results, truncated }, instruments, songs] = await Promise.all([
   searchTakes(appDeps.db, query, principal.memberId),
   instrumentsRepo.list(appDeps.db),
+  // The picker's options. A band's repertoire is tens of songs, so the whole
+  // list is one cheap query and a plain `<select>` — no autocomplete, no
+  // script, and it works with JS off like every other control here.
+  songsRepo.list(appDeps.db),
 ]);
 
 const STATE_OPTIONS = [
@@ -65,7 +69,7 @@ const resultsLabel = truncated
     : `${results.length} ${results.length === 1 ? "take" : "takes"}`;
 ---
 
-<AppLayout title="Search" principal={principal} current="search">
+<AppLayout title="Takes" principal={principal} current="takes">
   <div class="bp-stack">
     <h1 class="bp-page-title">Search</h1>
 
@@ -76,16 +80,21 @@ const resultsLabel = truncated
           {filtersApplied && " (applied)"}
         </summary>
         <div class="bp-search-filters-body bp-stack">
+          {/* A picker, not a text field. Typing a title asked the member to
+              spell a song the way the archive stores it — diacritics and all —
+              to reach takes they can see listed on the next page over. Every
+              take belongs to exactly one song, so picking one is exact where
+              typing was a guess. */}
           <div class="bp-field">
-            <label class="bp-field-label" for="search-q">Song title or alias</label>
-            <input
-              class="bp-input"
-              type="search"
-              id="search-q"
-              name="q"
-              value={query.search ?? ""}
-              placeholder="e.g. Neon Skyline"
-            />
+            <label class="bp-field-label" for="search-song">Song</label>
+            <select class="bp-select" id="search-song" name="song">
+              <option value="">Any song</option>
+              {songs.map((song) => (
+                <option value={song.id} selected={query.songId === song.id}>
+                  {song.title}
+                </option>
+              ))}
+            </select>
           </div>
 
           <fieldset class="bp-checkbox-group">
@@ -191,7 +200,7 @@ const resultsLabel = truncated
           <div class="bp-toolbar-actions">
             <button type="submit" class="bp-btn bp-btn-primary">Search</button>
             {filtersApplied && (
-              <a href="/search" class="bp-btn bp-btn-secondary">
+              <a href="/takes" class="bp-btn bp-btn-secondary">
                 Clear
               </a>
             )}

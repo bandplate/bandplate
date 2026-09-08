@@ -22,7 +22,7 @@ describe("parseSearchQuery", () => {
   it("defaults to no filters for an empty query string", () => {
     const query = parseSearchQuery(new URLSearchParams());
     expect(query).toEqual({
-      search: undefined,
+      songId: undefined,
       instrumentIds: [],
       dateFrom: undefined,
       dateTo: undefined,
@@ -33,12 +33,12 @@ describe("parseSearchQuery", () => {
     });
   });
 
-  it("parses q, repeated instrument/state params, dates, and rating", () => {
+  it("parses song, repeated instrument/state params, dates, and rating", () => {
     const params = new URLSearchParams(
-      "q=skyline&instrument=abc&instrument=def&dateFrom=2026-01-01&dateTo=2026-02-01&rating=75&state=published&state=keeper",
+      "song=song-1&instrument=abc&instrument=def&dateFrom=2026-01-01&dateTo=2026-02-01&rating=75&state=published&state=keeper",
     );
     expect(parseSearchQuery(params)).toEqual({
-      search: "skyline",
+      songId: "song-1",
       instrumentIds: ["abc", "def"],
       dateFrom: "2026-01-01",
       dateTo: "2026-02-01",
@@ -79,8 +79,23 @@ describe("parseSearchQuery", () => {
     expect(parseSearchQuery(new URLSearchParams("dateFrom=2024-02-30")).dateFrom).toBeUndefined();
   });
 
-  it("treats a blank q as no search", () => {
-    expect(parseSearchQuery(new URLSearchParams("q=  ")).search).toBeUndefined();
+  it("treats a blank song param as no song filter", () => {
+    expect(parseSearchQuery(new URLSearchParams("song=  ")).songId).toBeUndefined();
+  });
+
+  it("ignores a free-text q — the song filter is a picker now, not a title match", () => {
+    // The old field matched titles and aliases with LIKE. A stale bookmark
+    // must not keep applying a filter the page no longer shows a control for.
+    expect(parseSearchQuery(new URLSearchParams("q=skyline"))).toEqual({
+      songId: undefined,
+      instrumentIds: [],
+      dateFrom: undefined,
+      dateTo: undefined,
+      rating: undefined,
+      sort: "recent",
+      states: [],
+      unvotedOnly: false,
+    });
   });
 });
 
@@ -90,7 +105,7 @@ describe("hasAnyFilter", () => {
   });
 
   it("is true when any single filter is set", () => {
-    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("q=x")))).toBe(true);
+    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("song=s-1")))).toBe(true);
     expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("instrument=a")))).toBe(true);
     expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("dateFrom=2026-01-01")))).toBe(true);
     expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("rating=50")))).toBe(true);

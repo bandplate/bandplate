@@ -54,15 +54,37 @@ const initials = member.displayName
           not have to reconstruct it from a filter panel. */}
       {
         unvotedCount > 0 ? (
-          <p class="bp-me-unvoted bp-m0">
-            <span class="bp-me-unvoted-count">{unvotedCount}</span>
-            <span>
-              {unvotedCount === 1 ? "take is" : "takes are"} still waiting for your ear.{" "}
-              <a href="/search?unvoted=1">Hear {unvotedCount === 1 ? "it" : "them"}</a>.
-            </span>
-          </p>
+          <div class="bp-me-unvoted">
+            <p class="bp-me-unvoted-line bp-m0">
+              <span class="bp-me-unvoted-count">{unvotedCount}</span>
+              <span>
+                {unvotedCount === 1 ? "take is" : "takes are"} still waiting for your ear.
+              </span>
+            </p>
+            {/* A button, like every other "go do the thing" in the app — the
+                same quiet pill home's "All events" and this page's admin link
+                use. It was an inline link inside a sentence, which is the one
+                shape a member does not read as an action. */}
+            <a href="/search?unvoted=1" class="bp-btn bp-btn-quiet bp-btn-sm">
+              {unvotedCount === 1 ? "Hear it" : "Hear them"}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h13" />
+                <path d="M13 6l6 6-6 6" />
+              </svg>
+            </a>
+          </div>
         ) : (
-          <p class="bp-me-unvoted bp-m0">
+          <p class="bp-me-unvoted-line bp-me-unvoted bp-m0">
             <span>You've had your say on every published take.</span>
           </p>
         )

@@ -3851,9 +3851,16 @@ a.bp-btn {
    member came looking for it, so it takes no fill, no icon and no border. */
 .bp-me-unvoted {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.bp-me-unvoted-line {
+  display: flex;
   align-items: baseline;
   gap: 0.625rem;
-  margin-bottom: 1.25rem;
   font-size: var(--text-ui, 0.9375rem);
   color: var(--bp-color-muted);
 }

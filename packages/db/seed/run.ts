@@ -500,7 +500,7 @@ async function main() {
       recordedAt: daysAgo(60),
       state: "keeper",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals", "trumpet", "trombone"],
-      label: "live",
+      label: "horns in on the last chorus",
     },
     {
       clientRef: "seed-take-7",
@@ -552,7 +552,7 @@ async function main() {
       recordedAt: daysAgo(60),
       state: "keeper",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals", "trumpet", "trombone"],
-      label: "live",
+      label: "second encore",
     },
     {
       clientRef: "seed-take-13",
@@ -587,7 +587,7 @@ async function main() {
       recordedAt: daysAgo(200),
       state: "keeper",
       instrumentSlugs: ["drums", "bass", "guitar", "vocals"],
-      label: "live",
+      label: "extended outro",
     },
     {
       clientRef: "seed-take-17",

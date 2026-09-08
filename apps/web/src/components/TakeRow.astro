@@ -108,8 +108,7 @@
 // that script: with JS off, this attribute just sits there unused and
 // round 1's first-occurrence-wins naming is exactly what still happens.
 import type { instrumentsRepo, takesRepo } from "@bandplate/db";
-import { formatDuration, formatShortDate } from "../server/format.js";
-import { TAKE_STATE_LABEL } from "../server/take-state.js";
+import { eventKindLabel, eventLabel, formatDuration, formatShortDate } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
 import InstrumentIcon from "./InstrumentIcon.astro";
 import PlayToggleButton from "./PlayToggleButton.astro";
@@ -169,6 +168,24 @@ const showDate = context.kind === "full";
 // information) — mirrors whichever of date/label this row doesn't already
 // use as its primary link text.
 const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (take.label ?? "");
+// The event's NAME, and only its name — "Live at The Attic — The Attic" tells
+// you which event this was, where "View this rehearsal" told you only that one
+// existed. Empty when the event has neither title nor venue, which is the
+// common case for a seeded rehearsal: the kind badge beside the title already
+// says WHAT it was, so a name line that could only repeat that word is simply
+// not rendered rather than filled with a fallback.
+const eventName = event
+  ? eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
+  : "";
+const eventKind = event ? eventKindLabel(event.kind) : "";
+// A take's own note, unless it only repeats the kind badge sitting beside the
+// title. The seeded concert takes were labelled "live" back when the row had no
+// badge to say that, and ingest can produce the same thing from a Reaper region
+// name — either way the row rendered the word twice, once as a badge and once
+// as a note. Compared case-insensitively against the label actually rendered,
+// so it stays true if `eventKindLabel` ever maps a kind differently.
+const noteText =
+  take.label && take.label.trim().toLowerCase() === eventKind.toLowerCase() ? null : take.label;
 ---
 
 <div class="bp-take-row">
@@ -192,6 +209,19 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
     }
   </slot>
   <div class="bp-take-row-main">
+    {/* FOUR lines, in this order, on EVERY page that renders this row — the
+        structure does not branch on `context`. A line is present when its data
+        is and absent when it isn't; nothing reorders, so a take read on the
+        home page, in search results, on a song page and on an event page is
+        read the same way each time. That was the actual complaint behind
+        several rounds of this: the same facts kept landing in different places
+        (and wrapping differently) depending on how long a venue name was.
+
+          1. title + kind badge + favourite
+          2. the event's name, when it has one
+          3. the take's own note, when it has one
+          4. date (where the page doesn't already imply it) + instruments
+    */}
     <div class="bp-take-row-line">
       <a
         href={`/takes/${take.id}`}
@@ -201,6 +231,7 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
       >
         {primaryLabel}
       </a>
+      {eventKind && <span class="bp-badge bp-badge-kind">{eventKind}</span>}
       <span class="bp-take-favorite-mark">
         <FavoriteToggle
           targetType="take"
@@ -209,18 +240,28 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
           label={primaryLabel}
         />
       </span>
-      {take.state !== "published" && (
-        <span class={`bp-badge bp-badge-${take.state}`}>{TAKE_STATE_LABEL[take.state]}</span>
-      )}
     </div>
-    {(take.label || showDate || event) && (
+    {event && eventName && (
+      <div class="bp-take-meta bp-take-eventline">
+        <a href={`/events/${event.id}`} class="bp-take-event-link">
+          {eventName}
+        </a>
+      </div>
+    )}
+    {noteText && <div class="bp-take-meta bp-take-note">{noteText}</div>}
+    {(showDate || instruments.length > 0) && (
       <div class="bp-take-meta bp-take-subline">
-        {take.label && <span class="bp-take-sublabel">{take.label}</span>}
         {showDate && <span>{formatShortDate(take.recordedAt)}</span>}
-        {event && (
-          <a href={`/events/${event.id}`} class="bp-take-event-link">
-            View this {event.kind}
-          </a>
+        {instruments.length > 0 && (
+          <span
+            class="bp-take-instruments"
+            role="img"
+            aria-label={`Instruments: ${instruments.map((i) => i.label).join(", ")}`}
+          >
+            {instruments.map((instrument) => (
+              <InstrumentIcon icon={instrument.icon} label={instrument.label} />
+            ))}
+          </span>
         )}
       </div>
     )}
@@ -231,19 +272,13 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
       `/takes/[id]` only: a vote cast without playing the take is not worth much,
       and putting the control on all six pages that render this row was what made
       it shout. Callers that want something here still have the slot. */}
+  {/* The trailing column is the duration and nothing else. Instruments were
+      briefly here — they read as a column, which was the point — but on a row
+      that already carries a date, a badge and an event they crowded the right
+      edge at any width narrower than a full page. They sit on the second line
+      now, beside the event, where the row has room. */}
   <div class="bp-take-row-trailing">
     <slot name="trailing" />
-    {instruments.length > 0 && (
-      <span
-        class="bp-take-instruments"
-        role="img"
-        aria-label={`Instruments: ${instruments.map((i) => i.label).join(", ")}`}
-      >
-        {instruments.map((instrument) => (
-          <InstrumentIcon icon={instrument.icon} label={instrument.label} />
-        ))}
-      </span>
-    )}
     <span class="bp-take-row-duration">{formatDuration(take.durationMs)}</span>
   </div>
 </div>

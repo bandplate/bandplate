@@ -12,6 +12,14 @@ export interface TakeRowEventRef {
   id: string;
   heldAt: number;
   kind: string;
+  /**
+   * Enough to NAME the event, not just link to it. A song's take list used to
+   * end every row with "View this rehearsal" — a two-line call to action
+   * carrying one bit of information, where the venue says which rehearsal it
+   * actually was. Optional because a bare event has neither.
+   */
+  title?: string | null;
+  venue?: string | null;
 }
 
 export interface TakeRowSongRef {

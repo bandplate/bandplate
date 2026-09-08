@@ -59,6 +59,17 @@ export function eventLabel(event: { title: string | null; venue: string | null }
   return [event.title, event.venue].filter(Boolean).join(" — ");
 }
 
+/**
+ * The one word a row shows for an event's kind. `concert` reads as "live"
+ * because that is what the band calls it; the other two are already the word
+ * they'd use. Kind is a plain `string` in the schema (an admin-editable
+ * vocabulary was always the intent), so anything unrecognised passes through
+ * as itself rather than being mapped to a fallback that would hide it.
+ */
+export function eventKindLabel(kind: string): string {
+  return kind === "concert" ? "live" : kind;
+}
+
 /** Byte count as a human `MB`/`KB`/`B` figure — `/takes/[id]`'s asset list. */
 export function formatBytes(bytes: number): string {
   if (bytes >= 1_000_000) {

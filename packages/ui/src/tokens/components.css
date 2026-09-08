@@ -2676,9 +2676,12 @@ a.bp-btn {
   color: var(--bp-color-muted);
 }
 
+/* No rule between strips. The eyebrow label already separates them — it is the
+   loudest thing at the top of each — and a hairline above every one of four
+   short blocks drew the page as a stack of boxes rather than one column. Space
+   does the dividing. */
 .bp-take-strip {
-  padding: 1.375rem 0;
-  border-top: 1px solid var(--bp-color-border);
+  padding: 1.625rem 0 0;
 }
 
 /* The strip's own label. Deliberately the eyebrow treatment and NOT

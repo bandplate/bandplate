@@ -3982,10 +3982,22 @@ a.bp-btn {
 }
 
 /* ---------------------------------------------------------------------- */
-/* /takes — the archive. One set of filter controls that is a SHEET on a   */
-/* phone and a static PANEL past `lg`: the panel IS the `<dialog>`,        */
-/* restyled. A second copy of the fields would mean a second set of ids,   */
-/* and the `<label for>` pairs would be the first thing to rot.            */
+/* /takes — the archive.                                                   */
+/*                                                                         */
+/* ONE set of filter controls, two presentations, and the element is the    */
+/* same `<dialog>` in both: a bar across the top of the page past `lg`, a   */
+/* modal sheet below it. A second copy of the fields would mean a second    */
+/* set of ids, and the `<label for>` pairs would be the first to rot.       */
+/*                                                                         */
+/* The three states that must never blur into each other:                   */
+/*   - past `lg`: a static bar, never modal, always visible;                */
+/*   - below `lg` with script: a sheet, and NOTHING inline — a `<dialog>`   */
+/*     that is not open is `display: none`, which is exactly what is wanted; */
+/*   - below `lg` with no script: a plain block, because nothing can open   */
+/*     it. `@media (scripting: none)` is the real feature for this. It      */
+/*     replaced a `.bp-no-js` class on `<html>`, which `<ClientRouter />`   */
+/*     restored on every soft navigation — so after one filter change the   */
+/*     phone got the no-JS layout back and the panel appeared inline.       */
 /* ---------------------------------------------------------------------- */
 
 .bp-takes {
@@ -4039,26 +4051,20 @@ a.bp-btn {
   overflow: hidden;
 }
 
-/* Opaque, not the 92% overlay the rest of the app uses. At 8% transparency
-   the fixed bottom tab bar read straight through the backdrop above the sheet —
-   a strip of nav floating over a modal. A sheet's backdrop has one job, which
-   is to stop the page behind it being part of the picture. */
+/* Opaque, not the app's 92% overlay. At 8% transparency the fixed bottom tab
+   bar read straight through the backdrop above the sheet — a strip of nav
+   floating over a modal. A sheet's backdrop has one job, which is to stop the
+   page behind it being part of the picture. */
 .bp-filter-sheet::backdrop {
   background: var(--bp-color-bg);
 }
 
-/* The sheet slides up from the edge it is anchored to, and the backdrop fades
-   with it. `@starting-style` is what makes this work on a `<dialog>` at all:
-   the element goes from `display: none` to shown in one step, and without a
-   declared starting state there is nothing for the browser to animate FROM.
-   `allow-discrete` is what lets `display` itself participate, so the exit
-   animation gets to finish before the element disappears.
-   Browsers without either simply show the sheet, which is the same behaviour
-   as before it had an animation. */
+/* Slides up, and does NOT fade: animating opacity left the sheet translucent
+   for the whole 180ms, so the rows underneath showed through it. Only the
+   backdrop fades. `@starting-style` and `allow-discrete` are what make either
+   animatable at all on an element that goes from `display: none` to shown in
+   one step; a browser without them simply shows the sheet. */
 @media (prefers-reduced-motion: no-preference) {
-  /* Only `translate`. Fading the sheet in meant it was translucent for the
-     whole animation, so the take rows underneath showed straight through it —
-     a sheet on a phone slides up opaque, and it is the BACKDROP that fades. */
   .bp-filter-sheet {
     transition:
       translate var(--duration-enter, 180ms) var(--ease-bp, ease-out),
@@ -4066,11 +4072,8 @@ a.bp-btn {
       display var(--duration-enter, 180ms) allow-discrete;
   }
 
-  /* The open state, declared rather than left to the absence of a rule. The
-     sheet's resting position used to rely on nothing else setting `translate`,
-     which is true until `@starting-style` below sets it — and if the browser
-     never gets a frame to transition in (a backgrounded tab, a hidden pane),
-     the starting value is where it stays. */
+  /* Declared, not left to the absence of a rule: if a browser never gets a
+     frame to transition in, the starting value is where it would stay. */
   .bp-filter-sheet[open] {
     translate: none;
   }
@@ -4113,8 +4116,8 @@ a.bp-btn {
   padding: 0.75rem 1.375rem 0;
 }
 
-/* The grip is a button with a 44px target and a 4px bar drawn inside it —
-   a bare 4px strip is the right SHAPE and an impossible thing to hit. */
+/* A button with a 44px target and a 4px bar drawn inside it — a bare 4px strip
+   is the right shape and an impossible thing to hit. */
 .bp-filter-sheet-grip {
   display: grid;
   place-items: center;
@@ -4166,8 +4169,8 @@ a.bp-btn {
   text-underline-offset: 0.2em;
 }
 
-/* The scrolling middle. The head and foot stay put so the count is always
-   in view — it is the reason the sheet exists. */
+/* The scrolling middle; head and foot stay put so the confirm is always in
+   reach however long the instrument list gets. */
 .bp-filter-groups {
   display: flex;
   flex-direction: column;
@@ -4213,20 +4216,23 @@ a.bp-btn {
 }
 
 .bp-filter-sheet-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.875rem 1.375rem calc(1.25rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--bp-color-border);
   background: var(--bp-color-bg);
 }
 
 .bp-filter-apply {
-  width: 100%;
+  flex: 1 1 auto;
   justify-content: center;
 }
 
-/* A pill that is really a checkbox. The input stays in the DOM (it is what
-   the form submits and what a screen reader announces) but is drawn as the
-   same pill the link-filters on `/events` use, so a filter looks the same
-   whether it is a link or a field. */
+/* A pill that is really a checkbox. The input stays in the DOM (it is what the
+   form submits and what a screen reader announces) and is drawn as the same
+   pill the link-filters on `/events` use, so a filter looks the same whether it
+   is a link or a field. */
 .bp-filter-pill-check {
   display: inline-flex;
   cursor: pointer;
@@ -4239,15 +4245,6 @@ a.bp-btn {
   overflow: hidden;
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
-}
-
-a.bp-filter-pill {
-  text-decoration: none;
-}
-
-a.bp-filter-pill[aria-pressed="true"] {
-  background: var(--bp-color-accent);
-  color: var(--bp-color-on-accent);
 }
 
 .bp-filter-pill-check input:checked + .bp-filter-pill {
@@ -4270,53 +4267,33 @@ a.bp-filter-pill[aria-pressed="true"] {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- the panel (past `lg`) -------------------------------------------- */
+/* --- the bar (past `lg`) ---------------------------------------------- */
 
 @media (min-width: 64rem) {
-  .bp-takes {
-    display: grid;
-    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
-    grid-template-areas:
-      "bar bar"
-      "filters results";
-    gap: 1.25rem 2.5rem;
-    align-items: start;
-  }
-
-  .bp-takes-bar {
-    grid-area: bar;
-  }
-
-  /* The trigger is a phone control. Past `lg` the panel is always there, so a
-     button that opens it would open something already open. */
+  /* The trigger is a phone control: past here the bar is always on screen, so
+     a button that opens it would open something already open. */
   .bp-filter-trigger {
     display: none;
   }
 
-  .bp-search-results {
-    grid-area: results;
-  }
-
-  /* The same element, now a column. A `<dialog>` with no `open` attribute is
-     `display: none` — this is the override that makes it a panel, and it is
-     why there is only ever one copy of these fields. */
+  /* The same element, now a bar across the top of the page. A `<dialog>` with
+     no `open` attribute is `display: none` — this is the override that makes it
+     a panel, and it is why there is only ever one copy of these fields. */
   .bp-filter-sheet,
   .bp-filter-sheet:not([open]) {
     display: block;
-    grid-area: filters;
     position: static;
-    /* The panel is not a sheet: it must not carry the closed sheet's
-       off-screen transform, or the whole filter column renders shifted a full
-       height down the page. */
-    translate: none;
-    opacity: 1;
-    transition: none;
+    width: auto;
     max-height: none;
+    margin: 0;
     border: none;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
     overflow: visible;
+    /* Never carries the closed sheet's off-screen transform. */
+    translate: none;
+    transition: none;
   }
 
   .bp-filter-sheet-head,
@@ -4324,36 +4301,70 @@ a.bp-filter-pill[aria-pressed="true"] {
     display: none;
   }
 
+  /* Groups run across, each sized to its own content, wrapping when they run
+     out of room. The instruments group is allowed to take whatever is left,
+     since it is the only one whose width depends on the band's line-up. */
   .bp-filter-groups {
-    padding: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem 1.5rem;
+    padding: 0 0 1.125rem;
     overflow: visible;
+    border-bottom: 1px solid var(--bp-color-border);
   }
 
-  /* No Apply on desktop: a change applies itself. The button stays in the DOM
-     for the no-JS case (see below), where it is the only way to submit. */
+  .bp-filter-group {
+    flex: 0 0 auto;
+  }
+
+  .bp-filter-group:has(.bp-filter-pills) {
+    flex: 1 1 18rem;
+  }
+
   .bp-filter-sheet-foot {
+    padding: 1rem 0 0;
+    border-top: none;
+    background: transparent;
+  }
+
+  /* Sized to its words up here rather than filling the sheet's width. */
+  .bp-filter-apply {
+    flex: 0 0 auto;
+  }
+}
+
+/* --- no script -------------------------------------------------------- */
+
+/* Nothing can open the dialog, so it has to render as a plain block at every
+   width — and the trigger that would open it has to go. */
+@media (scripting: none) {
+  .bp-filter-sheet,
+  .bp-filter-sheet:not([open]) {
+    display: block;
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+    translate: none;
+    transition: none;
+  }
+
+  .bp-filter-trigger,
+  .bp-filter-sheet-grip {
     display: none;
   }
-}
 
-/* No JS: the dialog never opens, so it has to render as a plain block at every
-   width, and the button that submits it has to stay. `.bp-no-js` is set on
-   `<html>` and removed by the shell's own inline script — see AppLayout. */
-.bp-no-js .bp-filter-sheet,
-.bp-no-js .bp-filter-sheet:not([open]) {
-  display: block;
-  position: static;
-  translate: none;
-  opacity: 1;
-  transition: none;
-  max-height: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow: visible;
-}
+  .bp-filter-groups {
+    padding-inline: 0;
+  }
 
-.bp-no-js .bp-filter-trigger,
-.bp-no-js .bp-filter-sheet-grip {
-  display: none;
+  .bp-filter-sheet-foot {
+    padding-inline: 0;
+    background: transparent;
+  }
 }

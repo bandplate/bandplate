@@ -11,19 +11,9 @@ export interface Props {
 const { title, noindex = false } = Astro.props;
 ---
 
-<html lang="en" class="bp-no-js">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    {/* Removed by the first line of script that runs, so CSS can style the
-        no-JS case without guessing. `/takes`' filter panel is the one place
-        this matters today: its controls live inside a `<dialog>`, which is
-        `display: none` until something opens it — with no script to open it,
-        the panel has to render as a plain block instead. Inline and before
-        the stylesheet, so there is no frame where a JS-capable browser paints
-        the fallback. */}
-    <script is:inline>
-      document.documentElement.classList.remove("bp-no-js");
-    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} — bandplate</title>
     {noindex && <meta name="robots" content="noindex" />}

@@ -122,12 +122,12 @@
   --bp-color-placeholder: color-mix(in srgb, var(--bp-color-fg) 70%, var(--bp-fill-subtle));
 
   /* ---- the plate ----
-     Home draws pinned things as dubplates. Both values are FIXED across
-     themes on purpose: a record is a black disc with a printed paper label,
-     and inverting either in the light theme would give a bone label on a bone
-     page with nothing between them. They are named rather than inlined so a
-     brand swap can restyle the object without touching component CSS. */
-  --bp-plate-vinyl: #0d0704;
+     Home draws pinned things as dubplates. The LABEL is fixed across themes:
+     it is printed paper, and a bone label on a bone page would have nothing
+     between it and the ground. The VINYL is not — see the dark blocks below.
+     Both are named rather than inlined so a brand swap can restyle the object
+     without touching component CSS. */
+  --bp-plate-vinyl: #17100a;
   --bp-plate-label-bone: #e8dcc6;
 }
 
@@ -146,6 +146,13 @@
 
     --bp-color-overlay: rgb(21 12 7 / 0.92);
     --bp-color-on-accent: var(--bp-color-bg);
+
+    /* Lighter than the lacquer ground it sits on. A record is black, but a
+       black disc on a near-black page is a disc you cannot see — at #0d0704
+       against #150c07 the plate read as a hole rather than an object, and its
+       grooves disappeared with it. In the light theme the same disc separates
+       from bone on its own, so only dark needs the lift. */
+    --bp-plate-vinyl: #2a1a0e;
   }
 }
 
@@ -163,4 +170,7 @@
 
   --bp-color-overlay: rgb(21 12 7 / 0.92);
   --bp-color-on-accent: var(--bp-color-bg);
+
+  /* See the `prefers-color-scheme` block above. */
+  --bp-plate-vinyl: #2a1a0e;
 }

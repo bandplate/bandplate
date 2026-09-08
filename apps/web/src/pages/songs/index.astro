@@ -1,12 +1,17 @@
 ---
-// The song library. Search, sort, and an instrument filter — all a single
-// plain GET form, so every one of these works with JS off: submitting
-// reloads this same page with the query string set, and the server does
-// the actual filtering (`listSongsForLibrary` -> `songsRepo.listWithStats`).
-// There is nothing here for JS to progressively enhance without shipping a
-// script this page doesn't otherwise need — see task-5-report.md's
-// "instrument filter" section for why that trade was made deliberately.
-import { favoritesRepo, instrumentsRepo } from "@bandplate/db";
+// The song library — a repertoire index, direction S1 from the canvas.
+//
+// A song row uses the take row's grammar, which is the argument for it: every
+// row here leads to a page full of take rows, so the two should read alike.
+// Title in the display face at row size, key and tempo in the small caps the
+// kind labels use everywhere else, take count and last-played on the right.
+// What it replaced carried the same facts as two "value + label" stat pairs in
+// a vocabulary nothing else in the app used.
+//
+// Search and sort are the whole toolbar now: a field and three pills, no Apply,
+// no Clear — the same treatment `/events` got, and for the same reason. The
+// instrument filter is gone entirely (see `server/pages/songs.ts`).
+import { favoritesRepo } from "@bandplate/db";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -21,94 +26,93 @@ if (!principal) {
 const appDeps = await getAppDeps();
 const query = parseSongsListQuery(Astro.url.searchParams);
 
-const [songs, instruments, favoriteSongIds] = await Promise.all([
+const [songs, favoriteSongIds] = await Promise.all([
   listSongsForLibrary(appDeps.db, query),
-  instrumentsRepo.list(appDeps.db),
   favoritesRepo.listTargetIdsByMember(appDeps.db, principal.memberId, "song"),
 ]);
 
 const sort = query.sort ?? "title";
-const resultsLabel =
-  query.search || query.instrumentIds.length > 0
-    ? `${songs.length} ${songs.length === 1 ? "song matches" : "songs match"}`
-    : `${songs.length} ${songs.length === 1 ? "song" : "songs"}`;
+const resultsLabel = query.search
+  ? `${songs.length} ${songs.length === 1 ? "song matches" : "songs match"}`
+  : `${songs.length} ${songs.length === 1 ? "song" : "songs"}`;
+
+const SORT_OPTIONS = [
+  { value: "title", label: "A to Z" },
+  { value: "recent", label: "Recently played" },
+  { value: "takes", label: "Most takes" },
+] as const;
+
+/** A sort pill's href: this sort, keeping whatever search is in force. Plain
+ *  links, so choosing one applies it with no Apply button and no JS. */
+function sortHref(value: (typeof SORT_OPTIONS)[number]["value"]): string {
+  const params = new URLSearchParams();
+  if (query.search) {
+    params.set("q", query.search);
+  }
+  // `title` is the default, so it needs no parameter — a clean URL for the
+  // most common state.
+  if (value !== "title") {
+    params.set("sort", value);
+  }
+  const qs = params.toString();
+  return qs ? `/songs?${qs}` : "/songs";
+}
 ---
 
 <AppLayout title="Songs" principal={principal} current="songs">
   <div class="bp-stack">
     <h1 class="bp-page-title">Songs</h1>
 
-    <form method="get" class="bp-toolbar">
-      <div class="bp-field">
-        <label class="bp-field-label" for="song-search">Search titles</label>
-        <input
-          class="bp-input"
-          type="search"
-          id="song-search"
-          name="q"
-          value={query.search ?? ""}
-          placeholder="e.g. Neon Skyline"
-        />
-      </div>
-
-      <div class="bp-field">
-        <label class="bp-field-label" for="song-sort">Sort by</label>
-        <select class="bp-select" id="song-sort" name="sort">
-          <option value="title" selected={sort === "title"}>Title (A to Z)</option>
-          <option value="recent" selected={sort === "recent"}>Recently played</option>
-          <option value="takes" selected={sort === "takes"}>Most takes</option>
-        </select>
-      </div>
-
-      {
-        /* Collapsed by default on phones — a real (JS-free) <details>
-        disclosure, not a script-driven show/hide. On the stated primary
-        device this is the tallest, hardest-to-scan control in the toolbar
-        (up to a dozen 44px checkbox rows), and it was pushing the actual
-        song list entirely below the fold. It stays open automatically when
-        a filter is already applied, so an active filter is never hidden
-        from view, and it's forced open past `lg` (see components.css),
-        where there's room for it beside search/sort without burying
-        anything. */
-      }
-      <details class="bp-toolbar-details" open={query.instrumentIds.length > 0}>
-        <summary class="bp-toolbar-details-summary">
-          Filter by instrument
-          {query.instrumentIds.length > 0 && ` (${query.instrumentIds.length} selected)`}
-        </summary>
-        <fieldset class="bp-checkbox-group">
-          <legend>
-            Instruments
-            {query.instrumentIds.length > 1 && (
-              <span class="bp-field-hint">— must have a take with all of these</span>
-            )}
-          </legend>
-          {
-            instruments.map((instrument) => (
-              <span class="bp-checkbox-item">
-                <input
-                  type="checkbox"
-                  id={`instrument-${instrument.id}`}
-                  name="instrument"
-                  value={instrument.id}
-                  checked={query.instrumentIds.includes(instrument.id)}
-                />
-                <label for={`instrument-${instrument.id}`}>{instrument.label}</label>
-              </span>
-            ))
-          }
-        </fieldset>
-      </details>
-
-      <div class="bp-toolbar-actions">
-        <button type="submit" class="bp-btn bp-btn-primary">Apply filters</button>
-        {(query.search || query.instrumentIds.length > 0 || sort !== "title") && (
-          <a href="/songs" class="bp-btn bp-btn-secondary">
-            Clear
-          </a>
-        )}
-      </div>
+    {/* The search field keeps its own tiny form — a text input needs a submit
+        to be usable with the keyboard, and Enter is that submit. The sort
+        pills are links, so they need no form at all. */}
+    {/* `transition:persist` keeps this exact element across the soft navigation
+        the debounced submit triggers — without it the input is replaced on
+        every keystroke's response and the member loses focus and caret
+        position mid-word. Same mechanism the player bar uses to survive
+        navigation. */}
+    <form
+      method="get"
+      class="bp-songs-search"
+      role="search"
+      transition:persist="songs-search"
+      data-songs-search
+    >
+      <label class="bp-visually-hidden" for="song-search">Search song titles</label>
+      <span class="bp-songs-search-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-4-4" />
+        </svg>
+      </span>
+      <input
+        class="bp-songs-search-input"
+        type="search"
+        id="song-search"
+        name="q"
+        value={query.search ?? ""}
+        placeholder="Search titles"
+      />
+      {sort !== "title" && <input type="hidden" name="sort" value={sort} />}
+      {/* Submits the form for anyone with no JS, and is the keyboard's Enter
+          target for everyone else. Hidden, because with the debounce running
+          there is nothing to press. */}
+      <button type="submit" class="bp-visually-hidden">Search</button>
     </form>
+
+    <div class="bp-filter-pills">
+      {
+        SORT_OPTIONS.map((option) => (
+          <a
+            href={sortHref(option.value)}
+            class="bp-filter-pill"
+            aria-pressed={sort === option.value ? "true" : "false"}
+          >
+            {option.label}
+          </a>
+        ))
+      }
+    </div>
 
     <p class="bp-field-hint bp-m0">{resultsLabel}</p>
 
@@ -116,8 +120,8 @@ const resultsLabel =
       songs.length === 0 ? (
         <div class="bp-empty-state">
           <p>
-            {query.search || query.instrumentIds.length > 0
-              ? "No songs match that search — try clearing a filter."
+            {query.search
+              ? "No songs match that search."
               : "No songs yet — they'll show up here once takes start coming in."}
           </p>
         </div>
@@ -126,26 +130,28 @@ const resultsLabel =
           {songs.map((song) => (
             <div class="bp-song-row">
               <a href={`/songs/${song.slug}`} class="bp-song-row-link">
-                <div class="bp-song-row-main">
-                  <p class={`bp-song-title ${song.isStub ? "bp-song-title-stub" : ""}`}>
+                <span class="bp-song-row-main">
+                  <span class={`bp-song-title ${song.isStub ? "bp-song-title-stub" : ""}`}>
                     {song.title}
-                  </p>
-                  <p class="bp-song-meta">
+                  </span>
+                  {/* NOT `.bp-kind`. That label uppercases, and a musical key
+                      is case-significant: "Em" is E minor, "EM" is nothing.
+                      Same size and colour, no transform and no extra tracking. */}
+                  <span class="bp-song-row-meta">
                     {[song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined]
                       .filter(Boolean)
-                      .join(", ") || "No key or tempo set"}
-                  </p>
-                </div>
-                <div class="bp-song-row-stats">
-                  <span>
-                    <span class="bp-song-row-stat-value">{song.takeCount}</span>
-                    {song.takeCount === 1 ? "take" : "takes"}
+                      .join(" · ") || "No key or tempo"}
                   </span>
+                </span>
+                {/* Two numbers, in the note size the rest of the app uses for an
+                    aside — not two stat pairs with their own labels. What the
+                    numbers ARE is obvious from the words beside them. */}
+                <span class="bp-song-row-stats">
                   <span>
-                    <span class="bp-song-row-stat-value">{formatShortDate(song.lastPlayedAt)}</span>
-                    last played
+                    {song.takeCount} {song.takeCount === 1 ? "take" : "takes"}
                   </span>
-                </div>
+                  <span class="bp-song-row-last">{formatShortDate(song.lastPlayedAt)}</span>
+                </span>
               </a>
               <FavoriteToggle
                 targetType="song"
@@ -160,3 +166,49 @@ const resultsLabel =
     }
   </div>
 </AppLayout>
+
+<script>
+  // Debounced search. Progressive enhancement in the strict sense: the form
+  // works without this (type, press Enter), and this only removes the need to
+  // press Enter. 300ms is long enough that a fast typist submits once per
+  // word rather than once per keystroke, short enough that a slow one does not
+  // wonder whether the field is live.
+  //
+  // Registered on `document` and re-checked per event rather than bound to the
+  // element once: `<ClientRouter />` swaps the document on every navigation,
+  // and a listener bound to the first render's input would be dropped on the
+  // first search it triggered.
+  const DEBOUNCE_MS = 300;
+  let timer: number | undefined;
+
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.name !== "q") {
+      return;
+    }
+    const form = target.closest("form[data-songs-search]");
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      // `requestSubmit`, not `submit`: it fires the submit event, so
+      // `<ClientRouter />` intercepts it and does a soft navigation with the
+      // persisted form intact, rather than a full page load that would drop
+      // focus regardless of `transition:persist`.
+      form.requestSubmit();
+    }, DEBOUNCE_MS);
+  });
+
+  // A search that lands while the member is still typing must not leave the
+  // caret behind. The persisted element keeps focus on its own; this only
+  // restores it when the browser drops it (Safari, on some soft navigations).
+  document.addEventListener("astro:after-swap", () => {
+    const input = document.querySelector("form[data-songs-search] input[name='q']");
+    if (input instanceof HTMLInputElement && input.value && document.activeElement !== input) {
+      const end = input.value.length;
+      input.focus();
+      input.setSelectionRange(end, end);
+    }
+  });
+</script>

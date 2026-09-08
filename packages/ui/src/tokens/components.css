@@ -3891,3 +3891,101 @@ a.bp-btn {
 .bp-vote-row-comment {
   font-style: normal;
 }
+
+/* ---------------------------------------------------------------------- */
+/* /songs — a repertoire index. A song row is the take row's grammar,     */
+/* because every row here leads to a page full of take rows.             */
+/* ---------------------------------------------------------------------- */
+
+/* The key and tempo line. Deliberately NOT `.bp-kind`, whose whole job is to
+   uppercase: a musical key is case-significant — "Em" is E minor and "EM" is
+   nothing — so this takes the same size and colour with no transform and no
+   letterspacing. */
+.bp-song-row-meta {
+  display: block;
+  margin-top: 0.1875rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two plain numbers in the aside size, right-aligned, rather than the two
+   "value + label" stat pairs this row used to carry — the words beside them
+   already say what they are. */
+.bp-song-row-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+  flex: none;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Screen-reader-only text. The search field's label is visually redundant next
+   to a magnifier and a placeholder, but a field with no label at all is a field
+   a screen reader announces as "edit text" and nothing more. */
+.bp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.bp-songs-search {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0 1rem;
+  margin-bottom: 0.875rem;
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+}
+
+.bp-songs-search-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--bp-color-muted);
+}
+
+/* Borderless and transparent — the pill around it IS the field, the same way
+   every other input in this system is a fill rather than a box. */
+.bp-songs-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-size: var(--text-ui, 0.9375rem);
+}
+
+.bp-songs-search-input::placeholder {
+  color: var(--bp-color-placeholder);
+}
+
+.bp-songs-search-input:focus {
+  outline: none;
+}
+
+/* The UA's own clear button — a small blue cross in Chrome, off-palette and
+   the only piece of browser chrome visible anywhere in this UI. Removed; the
+   field clears the way every other one does, and with the debounce running an
+   emptied field re-searches on its own. */
+.bp-songs-search-input::-webkit-search-cancel-button,
+.bp-songs-search-input::-webkit-search-decoration {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.bp-songs-search:focus-within {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 2px;
+}

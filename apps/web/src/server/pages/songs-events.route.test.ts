@@ -294,23 +294,28 @@ describe("member browsing routes over real HTTP", () => {
     expect(res.status).toBe(404);
   });
 
-  it("filters /songs by a plain GET query string — the JS-off path for the instrument checkboxes", async () => {
-    const matching = await fetch(`${ORIGIN}/songs?instrument=${bassInstrumentId}`, {
+  it("filters /songs by a plain GET query string — the JS-off path for search", async () => {
+    const matching = await fetch(`${ORIGIN}/songs?q=Route`, { headers: { cookie: sessionCookie } });
+    expect(matching.status).toBe(200);
+    expect(await matching.text()).toContain("Route Test Song");
+
+    const noMatch = await fetch(`${ORIGIN}/songs?q=zzzznothing`, {
       headers: { cookie: sessionCookie },
     });
-    expect(matching.status).toBe(200);
-    const matchingBody = await matching.text();
-    expect(matchingBody).toContain("Route Test Song");
+    expect(noMatch.status).toBe(200);
+    expect(await noMatch.text()).toContain("No songs match that search");
+  });
 
-    // bass AND drums together match no take (AND semantics) — a plain GET
-    // with both checkboxes checked must return the real empty state.
-    const noMatch = await fetch(
+  it("ignores an instrument param on /songs — that filter moved to /search", async () => {
+    // A stale bookmark must not silently restrict the library to a filter the
+    // page no longer shows. Bass matches one seeded song and drums matches
+    // none, so a surviving filter would be visible in the result either way.
+    const res = await fetch(
       `${ORIGIN}/songs?instrument=${bassInstrumentId}&instrument=${drumsInstrumentId}`,
       { headers: { cookie: sessionCookie } },
     );
-    expect(noMatch.status).toBe(200);
-    const noMatchBody = await noMatch.text();
-    expect(noMatchBody).not.toContain("Route Test Song");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("Route Test Song");
   });
 
   it("filters /events by a plain GET query string — the JS-off path for the kind checkboxes", async () => {

@@ -5,18 +5,16 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { getSongDetail, listSongsForLibrary, parseSongsListQuery } from "./songs.js";
 
 describe("parseSongsListQuery", () => {
-  it("parses q, sort, and repeated instrument params", () => {
-    const params = new URLSearchParams("q=neon&sort=recent&instrument=abc&instrument=def");
-    expect(parseSongsListQuery(params)).toEqual({
-      search: "neon",
-      sort: "recent",
-      instrumentIds: ["abc", "def"],
-    });
+  it("parses q and sort", () => {
+    const params = new URLSearchParams("q=neon&sort=recent");
+    expect(parseSongsListQuery(params)).toEqual({ search: "neon", sort: "recent" });
   });
 
-  it("dedupes repeated instrument ids — listByInstruments returns nothing for duplicates", () => {
-    const params = new URLSearchParams("instrument=abc&instrument=abc");
-    expect(parseSongsListQuery(params).instrumentIds).toEqual(["abc"]);
+  it("ignores an instrument param — that filter belongs to /search, which filters takes", () => {
+    // A stale bookmark or a hand-edited URL must not resurrect the filter as a
+    // silent, unshown restriction on the list.
+    const params = new URLSearchParams("q=neon&instrument=abc&instrument=def");
+    expect(parseSongsListQuery(params)).toEqual({ search: "neon", sort: undefined });
   });
 
   it("ignores an invalid sort value rather than passing it through", () => {
@@ -33,7 +31,6 @@ describe("parseSongsListQuery", () => {
     expect(parseSongsListQuery(new URLSearchParams())).toEqual({
       search: undefined,
       sort: undefined,
-      instrumentIds: [],
     });
   });
 });
@@ -46,7 +43,7 @@ describe("listSongsForLibrary / getSongDetail", () => {
   });
 
   it("returns an empty song list, not a throw, on a fresh database", async () => {
-    const result = await listSongsForLibrary(db, { instrumentIds: [] });
+    const result = await listSongsForLibrary(db, {});
     expect(result).toEqual([]);
   });
 
@@ -159,37 +156,5 @@ describe("listSongsForLibrary / getSongDetail", () => {
     const silentTake = detail?.takes.find((t) => t.id === silent.id);
     expect(playableTake?.playableAssetId).toBe(masterAsset?.id);
     expect(silentTake?.playableAssetId).toBeUndefined();
-  });
-
-  it("listSongsForLibrary applies the instrument AND filter through to real results", async () => {
-    const now = Date.now();
-    const song = await songsRepo.create(db, {
-      title: "Filtered Song",
-      slug: "filtered-song",
-      createdAt: now,
-      updatedAt: now,
-    });
-    const event = await eventsRepo.create(db, {
-      kind: "rehearsal",
-      heldAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const bass = await instrumentsRepo.create(db, { slug: "bass", label: "Bass" });
-    const drums = await instrumentsRepo.create(db, { slug: "drums", label: "Drums" });
-    await takesRepo.create(db, {
-      songId: song.id,
-      eventId: event.id,
-      recordedAt: now,
-      createdAt: now,
-      updatedAt: now,
-      instrumentIds: [bass.id],
-    });
-
-    const matches = await listSongsForLibrary(db, { instrumentIds: [bass.id] });
-    expect(matches.map((s) => s.slug)).toEqual(["filtered-song"]);
-
-    const noMatches = await listSongsForLibrary(db, { instrumentIds: [bass.id, drums.id] });
-    expect(noMatches).toEqual([]);
   });
 });

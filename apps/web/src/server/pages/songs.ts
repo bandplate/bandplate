@@ -1,8 +1,13 @@
 // `/songs` and `/songs/[slug]` page logic. Read-only — no writes, no
-// playback. The library list's search/sort/instrument-filter controls are a
-// plain GET form (works with JS off — see `songs/index.astro`); this module
-// parses that query string and calls the one repo query that backs it,
-// `songsRepo.listWithStats`.
+// playback. The library list's search and sort are a plain GET form (works
+// with JS off — see `songs/index.astro`); this module parses that query string
+// and calls the one repo query that backs it, `songsRepo.listWithStats`.
+//
+// There is no instrument filter here any more. It asked "which songs have a
+// take carrying all of these instruments", which is a fact about TAKES —
+// `/search` filters takes and keeps it. On a page listing songs it was a
+// dozen checkboxes answering a question about a different object, and on a
+// phone it pushed the songs themselves below the fold.
 import { type Db, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
@@ -18,7 +23,6 @@ export type SongListItem = songsRepo.SongWithStats;
 export interface SongsListQuery {
   search?: string;
   sort?: songsRepo.SongSort;
-  instrumentIds: string[];
 }
 
 const VALID_SORTS: readonly songsRepo.SongSort[] = ["title", "recent", "takes"];
@@ -30,17 +34,13 @@ export function parseSongsListQuery(searchParams: URLSearchParams): SongsListQue
   const sort = VALID_SORTS.includes(rawSort as songsRepo.SongSort)
     ? (rawSort as songsRepo.SongSort)
     : undefined;
-  // Dedupe: takes.listByInstruments (which listWithStats delegates to for
-  // the filter) returns nothing at all if the same id appears twice.
-  const instrumentIds = [...new Set(searchParams.getAll("instrument").filter(Boolean))];
-  return { search, sort, instrumentIds };
+  return { search, sort };
 }
 
 export async function listSongsForLibrary(db: Db, query: SongsListQuery): Promise<SongListItem[]> {
   return songsRepo.listWithStats(db, {
     search: query.search,
     sort: query.sort,
-    instrumentIds: query.instrumentIds,
   });
 }
 

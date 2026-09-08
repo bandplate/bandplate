@@ -118,6 +118,9 @@ const tabItems = isAdmin
                         current === "admin" && adminSection === item.key ? "page" : undefined
                       }
                     >
+                      <span class="bp-sidebar-icon">
+                        <NavIcon name={item.key} />
+                      </span>
                       {item.label}
                     </a>
                   </li>

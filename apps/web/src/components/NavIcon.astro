@@ -6,7 +6,18 @@
 // label" the brief rules out). Lives here rather than packages/ui because
 // it is specific to this one shell, not a primitive other pages compose.
 export interface Props {
-  name: "songs" | "events" | "takes" | "admin" | "me";
+  name:
+    | "songs"
+    | "events"
+    | "takes"
+    | "admin"
+    | "me"
+    // The admin section's own four, drawn in the same geometry as the rest
+    // of the nav rather than borrowed from a different icon set.
+    | "overview"
+    | "members"
+    | "instruments"
+    | "tokens";
 }
 
 const { name } = Astro.props;
@@ -69,6 +80,62 @@ const { name } = Astro.props;
       <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="8.5" r="3.25" />
         <path d="M5 20c0-3.6 3.13-6 7-6s7 2.4 7 6" />
+      </g>
+    </svg>
+  )
+}
+{
+  /* Tiles, because that is literally what the overview is: three counts in
+     three boxes. A house or a gauge would promise a dashboard this page has
+     no intention of being. */
+  name === "overview" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5" />
+        <rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5" />
+        <rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5" />
+        <rect x="13" y="13" width="7.5" height="7.5" rx="1.5" />
+      </g>
+    </svg>
+  )
+}
+{
+  /* The `me` figure, twice — the roster is the people this app is for, and
+     the second one behind says "more than you" without a crowd of heads
+     turning to mud at 20px. */
+  name === "members" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9.5" cy="8.5" r="3.25" />
+        <path d="M3.5 19.5c0-3.2 2.7-5.4 6-5.4s6 2.2 6 5.4" />
+        <path d="M16 5.6a3.25 3.25 0 0 1 0 5.8M17.5 14.5c1.9.6 3.2 2.4 3.2 5" />
+      </g>
+    </svg>
+  )
+}
+{
+  /* A tuning fork. The instrument list is a VOCABULARY — the words the band
+     uses for what it plays — and no single instrument can stand for the
+     whole of it without telling a horn player the list is about guitars. */
+  name === "instruments" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.5 3v7a3.5 3.5 0 0 0 7 0V3" />
+        <path d="M12 13.5v7.5" />
+      </g>
+    </svg>
+  )
+}
+{
+  /* A key, not a shield or a lock. A service token is a credential you HAND
+     to something — the Reaper bridge today — and a key is the one shape that
+     says "this is given out" rather than "this is kept shut". */
+  name === "tokens" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8.25" cy="8.25" r="4.25" />
+        <path d="M11.4 11.4L20.5 20.5" />
+        <path d="M16 16l-2.2 2.2M18.6 18.6l-2.2 2.2" />
       </g>
     </svg>
   )

@@ -1557,12 +1557,10 @@ a.bp-btn {
     padding: 0 0.75rem;
   }
 
-  /* No icon: the section label above already says what these are, and four
-     invented glyphs for Overview / Members / Instruments / Tokens would be
-     four things to get wrong. The text still lines up with the icon'd items
-     above it — 0.75rem of padding, a 20px icon, a 0.625rem gap. */
+  /* Same box as the items above, one weight lighter — the rule and the
+     section label carry the hierarchy, so the links themselves do not need
+     to shrink or indent to say they are subordinate. */
   .bp-sidebar-subitem {
-    padding-left: calc(0.75rem + 20px + 0.625rem);
     font-weight: 500;
   }
 

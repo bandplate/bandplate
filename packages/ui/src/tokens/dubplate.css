@@ -76,6 +76,16 @@
   --bp-flare: #d94a1f;
   --bp-yard: #6f9a2e;
 
+  /* The auth screens' left half — the plate field. Theme-INDEPENDENT, and
+     declared once here rather than in each theme block: a record is not a
+     light object, exactly as `--bp-plate-vinyl` already is dark on the light
+     ground. Its own foreground pair exists because `--bp-color-fg` on this
+     field would be ink on lacquer in the light theme. */
+  --bp-auth-field: #1b1008;
+  --bp-auth-field-glow: #34210f;
+  --bp-auth-field-fg: #f2e8d8;
+  --bp-auth-field-muted: #a9917a;
+
   --bp-card: #fbf5e9;
   --bp-rule: #ddd0ba;
   --bp-ink: #1c0f06;

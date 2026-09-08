@@ -7,7 +7,7 @@
 // can't get a login link.
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
-import Layout from "../layouts/Layout.astro";
+import AuthLayout from "../layouts/AuthLayout.astro";
 import { getAppDeps, getAuthDeps } from "../server/app.js";
 import { setSessionCookie } from "../server/cookies.js";
 import { isSameOrigin } from "../server/csrf.js";
@@ -43,47 +43,50 @@ if (Astro.request.method === "POST") {
 const fieldErrors = result?.kind === "invalid" ? result.errors : {};
 ---
 
-<Layout title="Set up bandplate">
-  <main id="main" class="bp-container bp-auth-main">
-    <h1 class="bp-auth-title">Set up bandplate</h1>
+<AuthLayout title="Set up bandplate">
+  {originError && (
+    <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
+  )}
 
-    {originError && (
-      <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
-    )}
-
-    {result?.kind === "ok" ? (
-      <>
-        <Banner kind="success" title="You're signed in as the first admin">
-          bandplate is ready to use.
+  {result?.kind === "ok" ? (
+    <>
+      <h1 class="bp-auth-title">You're in</h1>
+      <p class="bp-auth-lede bp-m0">
+        You're signed in as the first admin, and bandplate is ready to use.
+      </p>
+      {/* The mail self-test stays a Banner: unlike the auth outcomes, this is
+          a notice ABOUT something else on the page — the setup that already
+          succeeded — and its failure case needs room for a paragraph of
+          operator instructions that would swamp a state screen. */}
+      {result.testEmailSent ? (
+        <Banner kind="success" title="Test email sent">
+          The mailer works — a confirmation email went out to your address.
         </Banner>
-        {result.testEmailSent ? (
-          <Banner kind="success" title="Test email sent">
-            The mailer works — a confirmation email went out to your address.
-          </Banner>
-        ) : (
-          <Banner kind="error" title="Test email failed to send">
-            Members won't be able to sign in by email until this is fixed. You're still
-            signed in, so you can fix it and carry on. The provider's own error explains
-            why, and it's only in the server log, not here — on Workers run
-            <code class="bp-mono">wrangler tail</code>, on a container read the app's
-            stdout. Most often it's the wrong API key, or a From address the provider
-            hasn't verified yet.
-          </Banner>
-        )}
-        <p><a href="/admin" class="bp-btn bp-btn-primary">Go to admin</a></p>
-      </>
-    ) : (
-      <form method="post" novalidate>
-        <p class="bp-m0">
-          Create the first admin account. You'll need the bootstrap token from your server's
-          environment configuration.
-        </p>
-        {result?.kind === "bad_token" && (
-          <Banner kind="error">That bootstrap token isn't right. Check your server configuration.</Banner>
-        )}
-        {result?.kind === "already_bootstrapped" && (
-          <Banner kind="error">bandplate is already set up. Sign in instead.</Banner>
-        )}
+      ) : (
+        <Banner kind="error" title="Test email failed to send">
+          Members won't be able to sign in by email until this is fixed. You're still
+          signed in, so you can fix it and carry on. The provider's own error explains
+          why, and it's only in the server log, not here — on Workers run
+          <code class="bp-mono">wrangler tail</code>, on a container read the app's
+          stdout. Most often it's the wrong API key, or a From address the provider
+          hasn't verified yet.
+        </Banner>
+      )}
+      <a href="/admin" class="bp-btn bp-btn-primary bp-auth-action">Go to admin</a>
+    </>
+  ) : (
+    <>
+      <h1 class="bp-auth-title">Set up the archive</h1>
+      <p class="bp-auth-lede bp-m0">
+        Create the first admin. You'll need the bootstrap token from your server's environment.
+      </p>
+      {result?.kind === "bad_token" && (
+        <Banner kind="error">That bootstrap token isn't right. Check your server configuration.</Banner>
+      )}
+      {result?.kind === "already_bootstrapped" && (
+        <Banner kind="error">bandplate is already set up. Sign in instead.</Banner>
+      )}
+      <form method="post" class="bp-auth-form" novalidate>
         <Field
           label="Bootstrap token"
           name="bootstrapToken"
@@ -107,8 +110,8 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
           autocomplete="email"
           error={fieldErrors.email}
         />
-        <button type="submit" class="bp-btn bp-btn-primary">Create admin account</button>
+        <button type="submit" class="bp-btn bp-btn-primary">Create the first admin</button>
       </form>
-    )}
-  </main>
-</Layout>
+    </>
+  )}
+</AuthLayout>

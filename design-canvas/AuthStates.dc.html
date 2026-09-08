@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .S { --bg:#150c07; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a; --gold:#f6aa1c; --flare:#d94a1f; --yard:#6f9a2e;
+         --display:'Zilla Slab',Georgia,serif; --body:'Chivo',Helvetica,sans-serif;
+         --mono:'Spline Sans Mono',ui-monospace,monospace; font-family:var(--body); color:var(--fg); }
+    .S a { color:var(--gold); text-decoration:none; }
+    .S a:hover { color:#f2e8d8; }
+    .S .cap { font-weight:900; font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+    .S .frame { border:1px solid var(--border); border-radius:5px; overflow:hidden;
+      background: repeating-radial-gradient(circle at 86% 0%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px),
+        radial-gradient(120% 34% at 86% 0%, rgba(246,170,28,.10), transparent 62%), var(--bg); }
+  </style>
+</helmet>
+
+<div class="S" style="width:2716px;box-sizing:border-box;padding:40px 42px 46px;background:repeating-radial-gradient(circle at 98% 2%, rgba(246,170,28,.04) 0 1px, transparent 1px 7px),radial-gradient(115% 20% at 98% 1%, rgba(246,170,28,.09), transparent 62%), #150c07;">
+
+  <div style="margin-bottom:26px;">
+    <div style="font-weight:900;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#a9917a;margin-bottom:10px;">Auth — the other states</div>
+    <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:40px;line-height:1;">Everything that is not the happy path</div>
+    <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:11px;max-width:104ch;text-wrap:pretty;">Drawn in <b style="color:#f2e8d8;">L1</b>; they redraw in whichever direction wins, since all three share the same column. Two things worth arguing about: the sent state <b style="color:#f2e8d8;">replaces the form rather than sitting above it</b> — the page has done its job and asking again is not the next thing you want — and every dead end carries <b style="color:#f2e8d8;">exactly one way forward</b>, because a login screen that leaves you with only a sentence is a login screen you close.</div>
+  </div>
+
+  <div style="display:flex;gap:24px;align-items:flex-start;">
+
+    <div>
+      <div class="cap">Link sent — /login?sent=1</div>
+      <div class="frame" style="width:640px;height:520px;display:grid;place-items:center;padding:36px;box-sizing:border-box;">
+        <div style="width:330px;display:flex;flex-direction:column;align-items:center;">
+          <span style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:rgba(111,154,46,.22);">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#6f9a2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5l9 6 9-6"></path><rect x="3" y="5" width="18" height="14" rx="2.5"></rect></svg>
+          </span>
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:30px;line-height:1.05;margin-top:16px;text-align:center;">Check your email</div>
+          <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:10px;text-align:center;text-wrap:pretty;">If that address is registered, a link is on its way.</div>
+          <div style="font-family:'Spline Sans Mono',ui-monospace,monospace;font-size:12px;color:#a9917a;margin-top:18px;">single-use &middot; 15 minutes</div>
+          <div style="min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:999px;background:rgba(242,232,216,.12);color:#f2e8d8;font-weight:600;font-size:15px;margin-top:26px;">Use a different address</div>
+        </div>
+      </div>
+      <div style="width:640px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">The wording stays deliberately non-committal — <span style="color:#f2e8d8;">"if that address is registered"</span> — because a page that confirms an address exists is an enumeration oracle. The design must not undo what the server carefully does.</div>
+    </div>
+
+    <div>
+      <div class="cap">Expired or already used — /login/[token]</div>
+      <div class="frame" style="width:640px;height:520px;display:grid;place-items:center;padding:36px;box-sizing:border-box;">
+        <div style="width:330px;display:flex;flex-direction:column;align-items:center;">
+          <span style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:rgba(217,74,31,.2);">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#d94a1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V13M12 16.2v.2"></path></svg>
+          </span>
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:30px;line-height:1.05;margin-top:16px;text-align:center;text-wrap:balance;">That link is spent</div>
+          <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:10px;text-align:center;text-wrap:pretty;">Sign-in links work once and expire after 15 minutes. Ask for a fresh one and it'll be in your inbox in a moment.</div>
+          <div style="min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:10px 22px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:16px;margin-top:26px;">Send me a new link</div>
+        </div>
+      </div>
+      <div style="width:640px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">One screen for expired AND already-used, because the server cannot tell them apart without leaking which — and the member's next move is identical either way. The action is the <span style="color:#f2e8d8;">gold</span> one: this is a dead end, so getting out of it is the primary thing on the page.</div>
+    </div>
+
+    <div>
+      <div class="cap">Too many requests — /login?slow=…</div>
+      <div class="frame" style="width:640px;height:520px;display:grid;place-items:center;padding:36px;box-sizing:border-box;">
+        <div style="width:330px;display:flex;flex-direction:column;align-items:center;">
+          <span style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:rgba(217,74,31,.2);">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#d94a1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12.5" r="8"></circle><path d="M12 8.5V13l3 1.8M9.5 3h5"></path></svg>
+          </span>
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:30px;line-height:1.05;margin-top:16px;text-align:center;text-wrap:balance;">Give it a minute</div>
+          <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:10px;text-align:center;text-wrap:pretty;">Too many sign-in requests from here. Try again in about <span style="color:#f2e8d8;font-variant-numeric:tabular-nums;">60</span> seconds.</div>
+          <div style="width:100%;height:3px;border-radius:999px;background:rgba(242,232,216,.12);margin-top:24px;overflow:hidden;">
+            <div style="width:38%;height:100%;background:#f6aa1c;"></div>
+          </div>
+          <div style="font-family:'Spline Sans Mono',ui-monospace,monospace;font-size:12px;color:#a9917a;margin-top:10px;">the link already sent still works</div>
+        </div>
+      </div>
+      <div style="width:640px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">The one state that has <span style="color:#f2e8d8;">no button</span>, because there is genuinely nothing to press — a disabled control that becomes live on its own would just be watched. The bar drains, and the mono line answers the question this state actually provokes: <span style="color:#f2e8d8;">did my earlier link die too?</span></div>
+    </div>
+
+    <div>
+      <div class="cap">First run — /setup</div>
+      <div class="frame" style="width:640px;height:620px;display:grid;place-items:center;padding:36px;box-sizing:border-box;">
+        <div style="width:340px;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+              <mask id="stp"><rect width="64" height="64" fill="#000"></rect><circle cx="32" cy="32" r="30" fill="#fff"></circle><path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"></path><circle cx="32" cy="32" r="6.5" fill="#000"></circle></mask>
+              <rect width="64" height="64" fill="#f6aa1c" mask="url(#stp)"></rect>
+            </svg>
+            <span style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:20px;">bandplate</span>
+          </div>
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:30px;line-height:1.05;margin-top:18px;">Set up the archive</div>
+          <div style="font-size:15px;line-height:1.5;color:#a9917a;margin-top:9px;text-wrap:pretty;">Create the first admin. You'll need the bootstrap token from your server's environment.</div>
+
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:22px;">
+            <div style="font-weight:600;font-size:15px;">Bootstrap token</div>
+            <div style="min-height:44px;display:flex;align-items:center;padding:8px 12px;border-radius:3px;background:rgba(242,232,216,.12);font-family:'Spline Sans Mono',ui-monospace,monospace;font-size:15px;color:rgba(242,232,216,.5);">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;">
+            <div style="font-weight:600;font-size:15px;">Your name</div>
+            <div style="min-height:44px;display:flex;align-items:center;padding:8px 12px;border-radius:3px;background:rgba(242,232,216,.12);font-size:16px;color:rgba(242,232,216,.5);">František Voráč</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;">
+            <div style="font-weight:600;font-size:15px;">Your email address</div>
+            <div style="min-height:44px;display:flex;align-items:center;padding:8px 12px;border-radius:3px;background:rgba(242,232,216,.12);font-size:16px;color:rgba(242,232,216,.5);">you@yourband.cz</div>
+          </div>
+          <div style="min-height:44px;display:flex;align-items:center;justify-content:center;padding:10px 22px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:16px;margin-top:20px;">Create the first admin</div>
+        </div>
+      </div>
+      <div style="width:640px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">Left-aligned, not centred: three fields under a heading is a <span style="color:#f2e8d8;">form</span>, and a centred form makes every label start in a different place. The wordmark comes down to a line so the page reads as setup rather than as another sign-in.</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,24 @@
+---
+// An auth outcome: link sent, link spent, too many requests.
+//
+// Not a `<Banner>`. A banner is a notice sitting ABOVE the thing the page is
+// still about; these three ARE the page — the form has done its job, or there
+// is nothing to fill in — so they take the column rather than announce
+// themselves at the top of it. That is also why the page's `<h1>` lives here:
+// on `/login?sent=1` the heading of the page really is "Check your email".
+export interface Props {
+  /** `ok` tints the disc with the success fill, `alert` with the danger one. */
+  tone: "ok" | "alert";
+  title: string;
+}
+
+const { tone, title } = Astro.props;
+---
+
+<div class="bp-auth-state">
+  <span class={`bp-auth-state-icon bp-auth-state-icon--${tone}`} aria-hidden="true">
+    <slot name="icon" />
+  </span>
+  <h1 class="bp-auth-title">{title}</h1>
+  <slot />
+</div>

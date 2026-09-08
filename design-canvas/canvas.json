@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-15",
+      "name": "M6 \u2014 Auth"
+    },
+    {
       "id": "page-14",
       "name": "M5 \u2014 Admin"
     },
@@ -58,6 +62,42 @@
     }
   ],
   "artboards": [
+    {
+      "file": "Auth.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 2242,
+      "h": 900,
+      "page": "page-15",
+      "title": "L1 \u2014 Centre label"
+    },
+    {
+      "file": "AuthSplit.dc.html",
+      "x": 2362,
+      "y": 0,
+      "w": 2242,
+      "h": 900,
+      "page": "page-15",
+      "title": "L2 \u2014 Split press"
+    },
+    {
+      "file": "AuthSleeve.dc.html",
+      "x": 4724,
+      "y": 0,
+      "w": 2242,
+      "h": 900,
+      "page": "page-15",
+      "title": "L3 \u2014 Sleeve"
+    },
+    {
+      "file": "AuthStates.dc.html",
+      "x": 0,
+      "y": 1060,
+      "w": 2716,
+      "h": 880,
+      "page": "page-15",
+      "title": "The other states"
+    },
     {
       "file": "Admin.dc.html",
       "title": "Admin",
@@ -395,6 +435,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-14"
+    "page": "page-15"
   }
 }

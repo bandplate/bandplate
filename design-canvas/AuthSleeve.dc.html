@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .S { --bg:#150c07; --sleeve:#211408; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a; --gold:#f6aa1c;
+         --display:'Zilla Slab',Georgia,serif; --body:'Chivo',Helvetica,sans-serif;
+         --mono:'Spline Sans Mono',ui-monospace,monospace; font-family:var(--body); color:var(--fg); }
+    .S a { color:var(--gold); text-decoration:none; }
+    .S a:hover { color:#f2e8d8; }
+    .S .cap { font-weight:900; font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+    .S .frame { border:1px solid var(--border); border-radius:5px; overflow:hidden;
+      background: repeating-radial-gradient(circle at 96% 4%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px),
+        radial-gradient(110% 40% at 96% 2%, rgba(246,170,28,.10), transparent 62%), var(--bg); }
+  </style>
+</helmet>
+
+<div class="S" style="width:2242px;box-sizing:border-box;padding:40px 42px 46px;background:repeating-radial-gradient(circle at 97% 2%, rgba(246,170,28,.04) 0 1px, transparent 1px 7px),radial-gradient(115% 20% at 97% 1%, rgba(246,170,28,.09), transparent 62%), #150c07;">
+
+  <div style="margin-bottom:26px;">
+    <div style="font-weight:900;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#a9917a;margin-bottom:10px;">Auth — L3</div>
+    <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:40px;line-height:1;">Sleeve</div>
+    <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:11px;max-width:100ch;text-wrap:pretty;">Not centred and not split — the screen is the back of a record sleeve. The wordmark sits top-left like a spine, a hairline runs the full width under it as the seam, and everything else hangs off the bottom-left: one display line that says what you are signing into, and the field drawn as a rule you type on rather than a box you fill. <b style="color:#f2e8d8;">The bet:</b> the take detail hero and the event ledger already read like print, and this is the only screen with enough room to say so properly. <b style="color:#f2e8d8;">The cost:</b> an underline field is less obviously a field than a filled box, and the whole thing leans harder on the type than either alternative — it looks wrong if the display face fails to load.</div>
+  </div>
+
+  <div style="display:flex;gap:24px;align-items:flex-start;">
+
+    <div>
+      <div class="cap">Desktop 860 — /login</div>
+      <div class="frame" style="width:860px;height:540px;padding:34px 54px 46px;box-sizing:border-box;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <mask id="l3a"><rect width="64" height="64" fill="#000"></rect><circle cx="32" cy="32" r="30" fill="#fff"></circle><path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"></path><circle cx="32" cy="32" r="6.5" fill="#000"></circle></mask>
+            <rect width="64" height="64" fill="#f6aa1c" mask="url(#l3a)"></rect>
+          </svg>
+          <span style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:19px;">bandplate</span>
+          <span style="flex-grow:1;"></span>
+          <span style="font-weight:900;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9917a;">the archive</span>
+        </div>
+        <div style="height:1px;background:#3a2413;margin-top:16px;"></div>
+
+        <div style="flex-grow:1;"></div>
+
+        <div style="max-width:640px;">
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:52px;line-height:1.02;text-wrap:balance;">Every take the band<br>has ever kept.</div>
+          <div style="font-size:16px;line-height:1.55;color:#a9917a;margin-top:14px;max-width:46ch;text-wrap:pretty;">Put in your address and we'll send a link. No password — the link is the key, and it works once.</div>
+
+          <div style="display:flex;align-items:flex-end;gap:18px;margin-top:34px;max-width:560px;">
+            <div style="flex-grow:1;min-width:0;">
+              <div style="font-weight:900;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9917a;">Email address</div>
+              <div style="min-height:44px;display:flex;align-items:flex-end;padding:0 0 9px;font-size:19px;color:rgba(242,232,216,.5);border-bottom:1px solid #a9917a;">you@yourband.cz</div>
+            </div>
+            <div style="min-height:44px;flex:none;display:inline-flex;align-items:center;justify-content:center;padding:10px 22px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:16px;">Send me a link</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cap">Phone 390 — /login</div>
+      <div class="frame" style="width:390px;height:640px;padding:26px 26px 34px;box-sizing:border-box;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <mask id="l3b"><rect width="64" height="64" fill="#000"></rect><circle cx="32" cy="32" r="30" fill="#fff"></circle><path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"></path><circle cx="32" cy="32" r="6.5" fill="#000"></circle></mask>
+            <rect width="64" height="64" fill="#f6aa1c" mask="url(#l3b)"></rect>
+          </svg>
+          <span style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:18px;">bandplate</span>
+        </div>
+        <div style="height:1px;background:#3a2413;margin-top:14px;"></div>
+
+        <div style="flex-grow:1;"></div>
+
+        <div>
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:36px;line-height:1.03;text-wrap:balance;">Every take the band has ever kept.</div>
+          <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">Put in your address and we'll send a link. No password — the link is the key, and it works once.</div>
+
+          <div style="margin-top:28px;">
+            <div style="font-weight:900;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9917a;">Email address</div>
+            <div style="min-height:44px;display:flex;align-items:flex-end;padding:0 0 9px;font-size:18px;color:rgba(242,232,216,.5);border-bottom:1px solid #a9917a;">you@yourband.cz</div>
+          </div>
+          <div style="min-height:44px;display:flex;align-items:center;justify-content:center;padding:10px 22px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:16px;margin-top:20px;">Send me a link</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cap">Desktop 860 — the sign-in screen right after it</div>
+      <div class="frame" style="width:860px;height:540px;padding:34px 54px 46px;box-sizing:border-box;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <mask id="l3c"><rect width="64" height="64" fill="#000"></rect><circle cx="32" cy="32" r="30" fill="#fff"></circle><path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"></path><circle cx="32" cy="32" r="6.5" fill="#000"></circle></mask>
+            <rect width="64" height="64" fill="#f6aa1c" mask="url(#l3c)"></rect>
+          </svg>
+          <span style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:19px;">bandplate</span>
+          <span style="flex-grow:1;"></span>
+          <span style="font-weight:900;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9917a;">the archive</span>
+        </div>
+        <div style="height:1px;background:#3a2413;margin-top:16px;"></div>
+
+        <div style="flex-grow:1;"></div>
+
+        <div style="max-width:640px;">
+          <div style="font-weight:900;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9917a;">Signing in as</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:12px;">
+            <span style="width:58px;height:58px;flex:none;border-radius:50%;display:grid;place-items:center;background:#f6aa1c;color:#150c07;font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:21px;">FV</span>
+            <div style="min-width:0;">
+              <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:44px;line-height:1.02;">František Voráč</div>
+              <div style="font-size:14px;color:#a9917a;margin-top:4px;">xaralis@centrum.cz</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:20px;margin-top:32px;">
+            <div style="min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:16px;">Sign in</div>
+            <div style="font-size:14px;color:#a9917a;">Not you? <a href="#">Ask for your own link</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

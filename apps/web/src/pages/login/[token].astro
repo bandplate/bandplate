@@ -10,7 +10,8 @@
 // from ever holding onto this URL, since holding it is equivalent to
 // holding a (time-limited, single-use) credential.
 import Banner from "@bandplate/ui/components/Banner.astro";
-import Layout from "../../layouts/Layout.astro";
+import AuthState from "../../components/AuthState.astro";
+import AuthLayout from "../../layouts/AuthLayout.astro";
 import { getAppDeps, getAuthDeps } from "../../server/app.js";
 import { setSessionCookie } from "../../server/cookies.js";
 import { isSameOrigin } from "../../server/csrf.js";
@@ -45,32 +46,56 @@ if (Astro.request.method === "POST") {
 } else {
   view = await peekView(authDeps, token);
 }
+
+// Initials for the identity disc — first letters of the first two words, the
+// same rule `/me` uses, so the same person is drawn the same way on the screen
+// that lets them in and on the screen about them.
+const displayName = view.kind === "valid" ? (view.displayName ?? "") : "";
+const initials = displayName
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((word) => word.charAt(0).toUpperCase())
+  .join("");
 ---
 
-<Layout title="Sign in" noindex>
-  <main id="main" class="bp-container bp-auth-main">
-    <h1 class="bp-auth-title">bandplate</h1>
+<AuthLayout title="Sign in" noindex>
+  {originError && (
+    <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
+  )}
 
-    {originError && (
-      <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
-    )}
-
-    {view.kind === "valid" ? (
-      <>
-        <p>
-          Sign in as <strong>{view.displayName ?? "yourself"}</strong>.
-        </p>
-        <form method="post">
-          <button type="submit" class="bp-btn bp-btn-primary">Sign in</button>
-        </form>
-      </>
-    ) : (
-      <Banner kind="info" title="This link has expired or was already used">
-        Login links are single-use and expire after 15 minutes.
-      </Banner>
-    )}
-    {view.kind !== "valid" && (
-      <p><a href="/login" class="bp-btn bp-btn-secondary">Request a new link</a></p>
-    )}
-  </main>
-</Layout>
+  {view.kind === "valid" ? (
+    <>
+      {/* The screen already knows whose link this is, so it answers "who am I
+          about to become" before asking for a press — with the same initials
+          disc `/me` draws, rather than the name buried in a sentence. */}
+      <p class="bp-eyebrow bp-m0">Signing in as</p>
+      <div class="bp-auth-who">
+        {initials && <span class="bp-auth-avatar" aria-hidden="true">{initials}</span>}
+        <h1 class="bp-auth-title bp-auth-who-name">{view.displayName ?? "yourself"}</h1>
+      </div>
+      <form method="post" class="bp-auth-form">
+        <button type="submit" class="bp-btn bp-btn-primary">Sign in to bandplate</button>
+      </form>
+      <p class="bp-auth-aside bp-m0">
+        Not you? <a href="/login">Ask for your own link</a>
+      </p>
+    </>
+  ) : (
+    <AuthState tone="alert" title="That link is spent">
+      <svg slot="icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 7.5V13M12 16.2v.2" />
+      </svg>
+      {/* One screen for both cases. The server deliberately cannot tell an
+          expired link from an already-used one without leaking which, and the
+          member's next move is the same either way — so the way out is the
+          gold action rather than a link at the bottom of a notice. */}
+      <p class="bp-auth-lede bp-m0">
+        Sign-in links work once and last 15 minutes. This one has expired or has already been
+        used.
+      </p>
+      <a href="/login" class="bp-btn bp-btn-primary bp-auth-action">Send me a new link</a>
+    </AuthState>
+  )}
+</AuthLayout>

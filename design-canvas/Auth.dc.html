@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .S { --bg:#150c07; --sleeve:#211408; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a; --gold:#f6aa1c;
+         --display:'Zilla Slab',Georgia,serif; --body:'Chivo',Helvetica,sans-serif;
+         --mono:'Spline Sans Mono',ui-monospace,monospace; font-family:var(--body); color:var(--fg); }
+    .S a { color:var(--gold); text-decoration:none; }
+    .S a:hover { color:#f2e8d8; }
+    .S .cap { font-weight:900; font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+    .S .frame { border:1px solid var(--border); border-radius:5px; overflow:hidden;
+      background: repeating-radial-gradient(circle at 86% 0%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px),
+        radial-gradient(120% 34% at 86% 0%, rgba(246,170,28,.10), transparent 62%), var(--bg); }
+  </style>
+</helmet>
+
+<div class="S" style="width:2242px;box-sizing:border-box;padding:40px 42px 46px;background:repeating-radial-gradient(circle at 97% 2%, rgba(246,170,28,.04) 0 1px, transparent 1px 7px),radial-gradient(115% 20% at 97% 1%, rgba(246,170,28,.09), transparent 62%), #150c07;">
+
+  <div style="margin-bottom:26px;">
+    <div style="font-weight:900;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#a9917a;margin-bottom:10px;">Auth — L1</div>
+    <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:40px;line-height:1;">Centre label</div>
+    <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:11px;max-width:100ch;text-wrap:pretty;">The one screen with no nav, no player and no content — so it stops apologising for that and centres. The plate mark is the hero, the column is the app's own vocabulary at rest, and there is exactly one thing to do. <b style="color:#f2e8d8;">The bet:</b> signing in is a threshold, and a threshold is worth a moment of ceremony. <b style="color:#f2e8d8;">The cost:</b> centred symmetry is the safest shape there is — it will never be the thing anyone remembers about this app.</div>
+  </div>
+
+  <div style="display:flex;gap:24px;align-items:flex-start;">
+
+    <div>
+      <div class="cap">Desktop 860 — /login</div>
+      <div class="frame" style="width:860px;height:540px;display:grid;place-items:center;padding:40px;box-sizing:border-box;">
+        <div style="width:340px;display:flex;flex-direction:column;align-items:center;">
+          <svg width="72" height="72" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <mask id="l1a"><rect width="64" height="64" fill="#000"></rect><circle cx="32" cy="32" r="30" fill="#fff"></circle><path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"></path><circle cx="32" cy="32" r="6.5" fill="#000"></circle></mask>
+            <rect width="64" height="64" fill="#f6aa1c" mask="url(#l1a)"></rect>
+          </svg>
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:34px;line-height:1;margin-top:16px;">bandplate</div>
+          <div style="font-size:15px;line-height:1.5;color:#a9917a;margin-top:10px;text-align:center;text-wrap:pretty;">Enter your email and we'll send you a link to sign in.</div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:7px;margin-top:26px;">
+            <div style="font-weight:600;font-size:15px;">Email address</div>
+            <div style="min-height:44px;display:flex;align-items:center;padding:8px 12px;border-radius:3px;background:rgba(242,232,216,.12);font-size:16px;color:rgba(242,232,216,.5);">you@yourband.cz</div>
+          </div>
+          <div style="width:100%;min-height:44px;display:flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:16px;margin-top:16px;">Send me a link</div>
+          <div style="font-family:'Spline Sans Mono',ui-monospace,monospace;font-size:12px;color:#a9917a;margin-top:20px;">single-use &middot; 15 minutes</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cap">Phone 390 — /login</div>
+      <div class="frame" style="width:390px;height:640px;display:grid;place-items:center;padding:28px;box-sizing:border-box;">
+        <div style="width:100%;display:flex;flex-direction:column;align-items:center;">
+          <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <mask id="l1b"><rect width="64" height="64" fill="#000"></rect><circle cx="32" cy="32" r="30" fill="#fff"></circle><path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"></path><circle cx="32" cy="32" r="6.5" fill="#000"></circle></mask>
+            <rect width="64" height="64" fill="#f6aa1c" mask="url(#l1b)"></rect>
+          </svg>
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:30px;line-height:1;margin-top:14px;">bandplate</div>
+          <div style="font-size:15px;line-height:1.5;color:#a9917a;margin-top:10px;text-align:center;text-wrap:pretty;">Enter your email and we'll send you a link to sign in.</div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:7px;margin-top:24px;">
+            <div style="font-weight:600;font-size:15px;">Email address</div>
+            <div style="min-height:44px;display:flex;align-items:center;padding:8px 12px;border-radius:3px;background:rgba(242,232,216,.12);font-size:16px;color:rgba(242,232,216,.5);">you@yourband.cz</div>
+          </div>
+          <div style="width:100%;min-height:44px;display:flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:16px;margin-top:16px;">Send me a link</div>
+          <div style="font-family:'Spline Sans Mono',ui-monospace,monospace;font-size:12px;color:#a9917a;margin-top:20px;">single-use &middot; 15 minutes</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cap">Desktop 860 — the sign-in screen right after it</div>
+      <div class="frame" style="width:860px;height:540px;display:grid;place-items:center;padding:40px;box-sizing:border-box;">
+        <div style="width:340px;display:flex;flex-direction:column;align-items:center;">
+          <span style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:#f6aa1c;color:#150c07;font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:26px;">FV</span>
+          <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:34px;line-height:1.05;margin-top:16px;text-align:center;">František Voráč</div>
+          <div style="font-size:15px;line-height:1.5;color:#a9917a;margin-top:8px;text-align:center;">xaralis@centrum.cz</div>
+          <div style="width:100%;min-height:44px;display:flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:999px;background:#f6aa1c;color:#150c07;font-weight:600;font-size:16px;margin-top:28px;">Sign in to bandplate</div>
+          <div style="font-size:13px;line-height:1.5;color:#a9917a;margin-top:18px;text-align:center;">Not you? <a href="#">Ask for your own link</a></div>
+        </div>
+      </div>
+      <div style="width:860px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">The mark's place is taken by the person. The screen already knows who the link belongs to, so it answers <span style="color:#f2e8d8;">who am I about to become</span> before it asks for a press — the same initials disc <span style="font-family:'Spline Sans Mono',ui-monospace,monospace;color:#f2e8d8;">/me</span> already draws.</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

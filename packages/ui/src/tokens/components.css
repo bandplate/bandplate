@@ -1956,18 +1956,312 @@ a.bp-btn {
   min-width: 9rem;
 }
 
-/* Auth pages (login, the login-token page, setup) — one narrow centered
-   column, one display headline. */
-.bp-auth-main {
-  max-width: 26rem;
-  margin-top: 3.5rem;
+/* ---------------------------------------------------------------------- */
+/* Auth (M6) — the split press. `/login`, `/login/[token]` and `/setup` are */
+/* the only pages a member reaches with no session, no nav, no player and  */
+/* no content, and they used to answer that with a 26rem column top-       */
+/* aligned against an empty page. Here the emptiness becomes the point:    */
+/* past `lg` the window splits and the left half is a plate the size of    */
+/* the viewport, bleeding off its own edge; below `lg` that half is a band */
+/* across the top, because a phone has no room for a picture AND a form.   */
+/* ---------------------------------------------------------------------- */
+
+.bp-auth {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  /* Phones: the dynamic unit, so the band and the column split what is
+     actually visible rather than what is visible with the URL bar hidden. */
+  min-height: 100dvh;
+}
+
+.bp-auth-field {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  height: 11.875rem;
+  padding: 1.5rem 1.625rem;
+  display: flex;
+  flex-direction: column;
+  /* One soft glow behind the plate and nothing else. An earlier pass ran the
+     ledger's concentric hairlines across the WHOLE field as well, which at
+     this size stopped reading as texture and started reading as moiré — two
+     sets of concentric rings a few pixels apart interfere, and the disc's own
+     grooves are the set that means something. Its centre follows the plate's,
+     so the light comes from the record rather than from a corner. */
+  background: radial-gradient(
+      70% 150% at var(--bp-auth-glow-x, 76%) var(--bp-auth-glow-y, 130%),
+      var(--bp-auth-field-glow),
+      transparent 70%
+    ), var(--bp-auth-field);
+  color: var(--bp-auth-field-fg);
+}
+
+/* The plate: a ring, the grooved disc, its label and the spindle hole. All
+   four share ONE centre — set on the parent as `--cx`/`--cy` and consumed
+   through the same translate — so the drawing stays concentric at any pane
+   width and the two breakpoints only move the centre, never re-derive four
+   sets of offsets. */
+.bp-auth-plate {
+  position: absolute;
+  inset: 0;
+  --cx: calc(100% - 3.4375rem);
+  --cy: calc(100% - 0.4375rem);
+}
+
+.bp-auth-plate > span {
+  position: absolute;
+  left: var(--cx);
+  top: var(--cy);
+  translate: -50% -50%;
+  border-radius: 50%;
+}
+
+/* Hidden on the band: at 190px tall the outer ring has nowhere to land that
+   is not the wordmark. It comes back with the pane past `lg`. */
+.bp-auth-plate-ring {
+  display: none;
+  width: 32.5rem;
+  height: 32.5rem;
+  border: 1px solid color-mix(in srgb, var(--bp-color-accent-gold) 22%, transparent);
+}
+
+.bp-auth-plate-disc {
+  width: 15.625rem;
+  height: 15.625rem;
+  background: repeating-radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--bp-auth-field-fg) 7%, transparent) 0 1px,
+      transparent 1px 6px
+    ), var(--bp-plate-vinyl);
+}
+
+.bp-auth-plate-label {
+  width: 5rem;
+  height: 5rem;
+  background: var(--bp-color-accent-gold);
+}
+
+.bp-auth-plate-spindle {
+  width: 0.75rem;
+  height: 0.75rem;
+  background: var(--bp-auth-field);
+}
+
+.bp-auth-wordmark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5625rem;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.bp-auth-mark {
+  color: var(--bp-color-accent-gold);
+}
+
+/* The one sentence of pitch in the whole product — and only where there is
+   room for it. On the band the wordmark is the whole message. */
+.bp-auth-pitch {
+  display: none;
+  position: relative;
+  max-width: 30ch;
+  font-size: var(--text-note, 0.875rem);
+  line-height: 1.6;
+  color: var(--bp-auth-field-muted);
+}
+
+.bp-auth-pane {
+  flex-grow: 1;
+  display: flex;
+  align-items: flex-start;
+  padding: 1.875rem 1.625rem 3rem;
+  background: repeating-radial-gradient(
+      circle at 86% 0%,
+      color-mix(in srgb, var(--bp-color-accent) 5%, transparent) 0 1px,
+      transparent 1px 7px
+    ),
+    radial-gradient(
+      120% 34% at 86% 0%,
+      color-mix(in srgb, var(--bp-color-accent) 10%, transparent),
+      transparent 62%
+    ), var(--bp-color-bg);
+}
+
+.bp-auth-col {
+  width: 100%;
+  max-width: 22rem;
 }
 
 .bp-auth-title {
   font-family: var(--bp-font-display);
   font-weight: 700;
-  font-size: 2.25rem;
-  margin: 0 0 1.5rem;
+  font-size: 1.75rem;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.bp-auth-lede {
+  font-size: var(--text-ui, 0.9375rem);
+  line-height: 1.5;
+  color: var(--bp-color-muted);
+  margin-top: 0.5625rem;
+  text-wrap: pretty;
+}
+
+.bp-auth-form {
+  margin-top: 1.5rem;
+}
+
+/* The mono footnote. One of the two places mono is allowed — this is a
+   machine fact about the credential (how many uses, how long), read the way
+   an expiry is read, not prose. */
+.bp-auth-note {
+  font-family: var(--bp-font-mono);
+  font-size: 0.75rem;
+  color: var(--bp-color-muted);
+  margin-top: 1.25rem;
+}
+
+.bp-auth-action {
+  margin-top: 1.625rem;
+}
+
+/* Prose that follows an action — "Not you?". NOT `.bp-auth-note`: that one is
+   mono because it states a machine fact about the credential, and mono on a
+   sentence is exactly the decoration the type rule rules out. */
+.bp-auth-aside {
+  font-size: var(--text-note, 0.8125rem);
+  line-height: 1.5;
+  color: var(--bp-color-muted);
+  margin-top: 1.125rem;
+}
+
+/* Who the link belongs to. */
+.bp-auth-who {
+  display: flex;
+  align-items: center;
+  gap: 0.8125rem;
+  margin-top: 0.75rem;
+}
+
+.bp-auth-avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.bp-auth-who-name {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+/* An outcome that IS the page — see AuthState.astro for why these are not
+   banners. */
+.bp-auth-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.bp-auth-state .bp-auth-title {
+  margin-top: 1rem;
+}
+
+.bp-auth-state-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+
+.bp-auth-state-icon--ok {
+  background: var(--bp-fill-ok);
+  color: var(--bp-color-accent-alt);
+}
+
+.bp-auth-state-icon--alert {
+  background: var(--bp-fill-alert);
+  color: var(--bp-color-danger);
+}
+
+/* Equal-width digits for the retry count, so a number that ticks down does
+   not shift the sentence around it. */
+.bp-tabular {
+  font-variant-numeric: tabular-nums;
+  color: var(--bp-color-fg);
+}
+
+@media (min-width: 1024px) {
+  .bp-auth {
+    flex-direction: row;
+  }
+
+  .bp-auth-field {
+    width: 44%;
+    height: auto;
+    padding: 2rem 2.125rem;
+    justify-content: space-between;
+  }
+
+  /* The centre moves left and to the middle of the pane; every part of the
+     plate follows it. */
+  .bp-auth-plate {
+    --cx: 6.625rem;
+    --cy: 50%;
+  }
+
+  /* The glow follows the plate to the middle-left of the pane. */
+  .bp-auth-field {
+    --bp-auth-glow-x: 6.625rem;
+    --bp-auth-glow-y: 50%;
+  }
+
+  .bp-auth-plate-ring {
+    display: block;
+  }
+
+  .bp-auth-plate-disc {
+    width: 21rem;
+    height: 21rem;
+    box-shadow: 0 8px 26px rgb(0 0 0 / 0.5);
+  }
+
+  .bp-auth-plate-label {
+    width: 6rem;
+    height: 6rem;
+  }
+
+  .bp-auth-pitch {
+    display: block;
+  }
+
+  .bp-auth-pane {
+    align-items: center;
+    padding: 2.5rem 3.25rem;
+  }
+
+  .bp-auth-col {
+    max-width: 20.625rem;
+  }
+
+  .bp-auth-title {
+    font-size: 1.875rem;
+  }
 }
 
 /* ---------------------------------------------------------------------- */

@@ -61,17 +61,36 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
         </span>
       </h1>
       {song.isStub && <p class="bp-field-hint bp-m0">Stub — not a full song entry yet.</p>}
-      {metaParts.length > 0 && <p class="bp-mono bp-m0">{metaParts.join(", ")}</p>}
+      {/* NOT `.bp-mono`. A key and a tempo are values this app formatted, not a
+      string anyone transcribes — the mono face is reserved for pasted chord
+      charts and machine strings (docs/design-foundation.md). Tabular figures
+      are what a row of numbers actually needed. */}
+      {metaParts.length > 0 && <p class="bp-song-hero-meta bp-m0">{metaParts.join(", ")}</p>}
     </div>
 
+    {/* Two columns past `lg`: the chart at its own measure on the left, takes
+    and the notes about them on the right. Below that they stack, and the ORDER
+    changes — takes come before the chart on a phone, because a song is opened
+    to hear it far more often than to read it. `order` on the grid children
+    rather than two markup blocks: one DOM order, one source of truth, and the
+    reading order for a screen reader follows the visual one at both sizes. */}
     <div class="bp-song-detail-grid">
-      <div class="bp-stack">
+      <div class="bp-song-detail-chart">
         {chart.kind === "sections" && (
           <section>
             <h2 class="bp-section-title">Chords &amp; lyrics</h2>
             <div class="bp-song-chart">
               {chart.sections.map((section) => (
-                <div class="bp-song-chart-section">
+                <div
+                  class:list={[
+                    "bp-song-chart-section",
+                    // The chorus reads louder than the verses around it. Matched
+                    // on the label the section parser already produced, in both
+                    // languages the vocabulary covers — see server/song-text.ts.
+                    /^(chorus|refr[ée]n)\b/i.test(section.label ?? "") &&
+                      "bp-song-chart-section--chorus",
+                  ]}
+                >
                   {section.label && <p class="bp-song-chart-label">{section.label}</p>}
                   {section.chordLines.length > 0 && (
                     <pre class="bp-chords">{section.chordLines.join("\n")}</pre>
@@ -108,49 +127,10 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
           </>
         )}
 
-        {instrumentNotes.length > 0 && (
-          <section class="bp-card">
-            <h2 class="bp-section-title">
-              Notes by instrument
-            </h2>
-            <div class="bp-stack bp-stack-tight">
-              {instrumentNotes.map((note) => (
-                <div>
-                  <p class="bp-field-label bp-m0">{note.instrumentLabel}</p>
-                  <p class="bp-m0">{note.body}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {song.notes && (
-          <section class="bp-card">
-            <h2 class="bp-section-title">
-              General notes
-            </h2>
-            <p class="bp-m0">{song.notes}</p>
-          </section>
-        )}
-
-        {aliases.length > 0 && (
-          <section>
-            <h2 class="bp-section-title">
-              Also known as
-            </h2>
-            <ul class="bp-stack bp-stack-tight list-none">
-              {aliases.map((alias) => (
-                <li class={alias.source === "ingest" ? "bp-mono" : ""}>{alias.aliasNorm}</li>
-              ))}
-            </ul>
-          </section>
-        )}
       </div>
 
-      <div>
-        <h2 class="bp-section-title">
-          Takes
-        </h2>
+      <div class="bp-song-detail-aside">
+        <h2 class="bp-section-title bp-m0">Takes</h2>
         {
           takes.length === 0 ? (
             <div class="bp-empty-state">
@@ -170,6 +150,38 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
             </div>
           )
         }
+
+        {instrumentNotes.length > 0 && (
+          <section class="bp-song-aside-section">
+            <h2 class="bp-section-title bp-m0">Notes by instrument</h2>
+            <div class="bp-stack bp-stack-tight">
+              {instrumentNotes.map((note) => (
+                <div>
+                  <p class="bp-field-label bp-m0">{note.instrumentLabel}</p>
+                  <p class="bp-m0">{note.body}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {song.notes && (
+          <section class="bp-song-aside-section">
+            <h2 class="bp-section-title bp-m0">General notes</h2>
+            <p class="bp-m0">{song.notes}</p>
+          </section>
+        )}
+
+        {aliases.length > 0 && (
+          <section class="bp-song-aside-section">
+            <h2 class="bp-section-title bp-m0">Also known as</h2>
+            <ul class="bp-stack bp-stack-tight list-none">
+              {aliases.map((alias) => (
+                <li class={alias.source === "ingest" ? "bp-mono" : ""}>{alias.aliasNorm}</li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </div>
   </div>

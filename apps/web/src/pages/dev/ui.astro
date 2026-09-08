@@ -1,0 +1,31 @@
+---
+// Component gallery. Every primitive, both themes, one page — so a token that
+// only fails in one theme is visible without switching the OS appearance.
+//
+// Not part of a production build. `import.meta.env.DEV` covers `astro dev`;
+// `PUBLIC_BANDPLATE_DEV_UI=true` at build time is the deliberate escape hatch
+// for checking a BUILT server, which is where several UI defects have only
+// ever shown up. Both are build-time constants, so the normal production
+// bundle contains a route that answers 404 and nothing else. `/dev` is
+// allowlisted in `server/guard.ts` so this renders without a session.
+import Layout from "../../layouts/Layout.astro";
+import UiShowcase from "../../components/dev/UiShowcase.astro";
+
+const enabled = import.meta.env.DEV || import.meta.env.PUBLIC_BANDPLATE_DEV_UI === "true";
+if (!enabled) {
+  return new Response(null, { status: 404 });
+}
+---
+
+<Layout title="UI gallery" noindex>
+  <main id="main" class="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
+    <div data-theme="light" class="bg-ground text-ink border-b border-line lg:border-b-0 lg:border-r">
+      <p class="bp-m0 text-eyebrow uppercase text-muted px-6 pt-6">Light</p>
+      <UiShowcase />
+    </div>
+    <div data-theme="dark" class="bg-ground text-ink">
+      <p class="bp-m0 text-eyebrow uppercase text-muted px-6 pt-6">Dark</p>
+      <UiShowcase />
+    </div>
+  </main>
+</Layout>

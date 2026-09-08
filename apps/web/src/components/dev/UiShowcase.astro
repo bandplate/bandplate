@@ -1,0 +1,289 @@
+---
+// The component gallery's body. Rendered TWICE by `/dev/ui`, once inside a
+// `[data-theme="light"]` container and once inside `[data-theme="dark"]`, so
+// every primitive is visible in both themes without a reload — which is the
+// only practical way to catch a token that only fails in one of them.
+//
+// Deliberately uses literal markup and literal copy rather than importing the
+// domain components: those need typed props and a database, and this page has
+// to render with neither. When a component's markup changes, the copy here
+// changes with it — that duplication is the cost of a gallery that always
+// renders.
+import Banner from "@bandplate/ui/components/Banner.astro";
+
+const swatches = [
+  ["--bp-color-bg", "ground"],
+  ["--bp-color-surface", "surface"],
+  ["--bp-color-border", "line"],
+  ["--bp-color-fg", "ink"],
+  ["--bp-color-muted", "muted"],
+  ["--bp-color-accent", "accent"],
+  ["--bp-color-accent-alt", "ok"],
+  ["--bp-color-danger", "danger"],
+] as const;
+
+const scale = [
+  ["hero", "text-hero font-display", "Píseň o cestách"],
+  ["title", "text-title font-display", "Zkušebna Pardubice"],
+  ["section", "text-section font-display", "Badges"],
+  ["row", "text-row font-display", "Nightbus"],
+  ["lyric", "text-lyric", "Cesta se točí, nikam nevede"],
+  ["prose", "text-prose", "Sedm takeů z jedné zkoušky."],
+  ["ui", "text-ui", "Uložit změny"],
+  ["meta", "text-meta", "take 1   3:38   C   110 BPM"],
+  ["note", "text-note", "new arrangement attempt"],
+  ["eyebrow", "text-eyebrow uppercase", "Keeper votes"],
+  ["chord", "text-chord font-mono", "Dm  Gm  C  Dm"],
+  ["machine", "text-machine font-mono", "bpk_01j8x7q2m4kd9v"],
+] as const;
+---
+
+<div class="bg-ground text-ink font-body p-6 flex flex-col gap-10">
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Colour</h2>
+    <div class="grid grid-cols-4 gap-2">
+      {
+        swatches.map(([token, name]) => (
+          <div class="flex flex-col gap-1">
+            <div
+              class="h-14 rounded-sm border border-line"
+              style={`background: var(${token})`}
+            />
+            <span class="text-machine font-mono text-muted">{name}</span>
+          </div>
+        ))
+      }
+    </div>
+    <p class="text-meta text-muted bp-m0">
+      Gold is a fill and rule colour on the light ground — 2.1:1 — so it is not shown as a text
+      token here. <code class="bp-mono">--bp-color-on-accent</code> follows the ground; the filled
+      buttons below are where that shows.
+    </p>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Type</h2>
+    <div class="flex flex-col gap-3">
+      {
+        scale.map(([name, cls, sample]) => (
+          <div class="flex items-baseline gap-4">
+            <span class="text-machine font-mono text-muted w-24 shrink-0">{name}</span>
+            <span class={cls}>{sample}</span>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Buttons</h2>
+    <div class="flex flex-wrap items-center gap-2">
+      <button type="button" class="bp-btn bp-btn-primary">Send me a link</button>
+      <button type="button" class="bp-btn bp-btn-secondary">Cancel</button>
+      <button type="button" class="bp-btn bp-btn-danger">Delete take</button>
+      <button type="button" class="bp-btn">Plain</button>
+      <button type="button" class="bp-btn bp-btn-sm">Small</button>
+      <button type="button" class="bp-btn bp-btn-primary" disabled>Disabled</button>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Fields</h2>
+    <div class="bp-form-grid">
+      <div class="bp-field">
+        <label class="bp-field-label" for="dev-a">Email address</label>
+        <input class="bp-input" id="dev-a" name="dev-a" type="email" value="filip@example.com" />
+        <p class="bp-field-hint">The address your login link goes to.</p>
+      </div>
+      <div class="bp-field">
+        <label class="bp-field-label" for="dev-b">Musical key</label>
+        <select class="bp-select" id="dev-b" name="dev-b">
+          <option>Dm</option>
+          <option>C</option>
+        </select>
+      </div>
+      <div class="bp-field">
+        <label class="bp-field-label" for="dev-c">Venue</label>
+        <input class="bp-input" id="dev-c" name="dev-c" aria-invalid="true" aria-describedby="dev-c-err" />
+        <p class="bp-field-error" id="dev-c-err">Venue is required.</p>
+      </div>
+      <div class="bp-field">
+        <label class="bp-field-label" for="dev-d">Notes</label>
+        <textarea class="bp-textarea" id="dev-d" name="dev-d" rows="2">Druhý pokus, lepší tempo.</textarea>
+      </div>
+    </div>
+    <fieldset class="bp-checkbox-group">
+      <legend class="bp-field-label">Instruments</legend>
+      {
+        ["Drums", "Bass", "Guitar", "Keys"].map((i) => (
+          <label class="bp-checkbox-item">
+            <input type="checkbox" name="dev-instruments" value={i} checked={i === "Bass"} />
+            {i}
+          </label>
+        ))
+      }
+    </fieldset>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Badges</h2>
+    <p class="text-meta text-muted bp-m0">
+      Four separate vocabularies sharing one component, grouped here so the shared colours read as
+      what they are. Siblings within a row always differ; two badges from different rows may match,
+      because they never label the same axis.
+    </p>
+    {
+      [
+        ["Event kind", [["rehearsal", ""], ["concert", "bp-badge-concert"], ["session", "bp-badge-session"]]],
+        ["Take state", [["new", ""], ["published", "bp-badge-published"], ["keeper", "bp-badge-keeper"], ["rejected", "bp-badge-rejected"]]],
+        ["Member role", [["member", ""], ["admin", "bp-badge-admin"]]],
+        ["Member status", [["invited", ""], ["active", "bp-badge-active"], ["disabled", "bp-badge-disabled"]]],
+      ].map(([group, items]) => (
+        <div class="flex items-baseline gap-4">
+          <span class="text-machine font-mono text-muted w-28 shrink-0">{group}</span>
+          <span class="flex flex-wrap items-center gap-2">
+            {(items as [string, string][]).map(([label, cls]) => (
+              <span class={`bp-badge ${cls}`}>{label}</span>
+            ))}
+          </span>
+        </div>
+      ))
+    }
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Banners</h2>
+    <Banner kind="info" title="Heads up">Mail is configured but unverified.</Banner>
+    <Banner kind="success" title="Saved">Instrument order updated.</Banner>
+    <Banner kind="error" title="Test email failed to send">
+      The provider's own error is in the server log, not here.
+    </Banner>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Container, empty state, table</h2>
+    <p class="text-meta text-muted bp-m0">
+      One container at two densities, chosen by count rather than taste.
+      <strong>.bp-card</strong> is a panel around content that stands alone — a form section, a
+      summary, a link tile — and carries a surface because nothing around it establishes the
+      grouping. <strong>.bp-card-flat</strong> is the same container inside a list: the list is the
+      grouping, so the surface comes off and a hairline separates items. More than two of a thing is
+      a list. The domain rows below are .bp-card-flat, listed in its own selector so the two
+      densities cannot drift apart.
+    </p>
+    <div class="bp-card">
+      <h3 class="bp-m0">Zkušebna Pardubice</h3>
+      <p class="text-meta text-muted bp-m0">14. 3. 2026 — 7 takes, 3 keepers</p>
+    </div>
+    <div class="bp-empty-state">
+      <p class="bp-m0">No takes here yet. Push a rehearsal from the bridge and it shows up.</p>
+    </div>
+    <div class="bp-table-wrap">
+      <table class="bp-table">
+        <thead>
+          <tr><th>Song</th><th>Take</th><th>Duration</th><th>Rating</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Song">Píseň o cestách</td>
+            <td data-label="Take">3</td>
+            <td data-label="Duration" class="bp-mono">4:12</td>
+            <td data-label="Rating" class="bp-mono">5/7</td>
+          </tr>
+          <tr>
+            <td data-label="Song">Nightbus</td>
+            <td data-label="Take">1</td>
+            <td data-label="Duration" class="bp-mono">3:38</td>
+            <td data-label="Rating" class="bp-mono">2/7</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Domain rows</h2>
+    <p class="text-meta text-muted bp-m0">
+      The same container at list density, with the domain layout on top. Kind and state are carried
+      by a badge rather than by a border.
+    </p>
+    <div class="bp-event-list">
+      <div class="bp-event-row bp-event-row--rehearsal">
+        <div class="bp-event-row-main">
+          <span class="bp-event-row-date">14. 3. 2026</span>
+          <span class="bp-event-row-venue">Zkušebna Pardubice</span>
+        </div>
+        <div class="bp-event-row-stats"><span class="bp-event-row-count">7 takes</span></div>
+      </div>
+      <div class="bp-event-row bp-event-row--concert">
+        <div class="bp-event-row-main">
+          <span class="bp-event-row-date">2. 2. 2026</span>
+          <span class="bp-event-row-venue">Divadlo 29</span>
+        </div>
+        <div class="bp-event-row-stats"><span class="bp-badge bp-badge-concert">concert</span></div>
+      </div>
+    </div>
+    <ul class="bp-song-list">
+      <li class="bp-song-row">
+        <div class="bp-song-row-main">
+          <p class="bp-song-title bp-m0">Píseň o cestách</p>
+          <p class="bp-song-meta bp-m0">72 BPM, Dm</p>
+        </div>
+        <div class="bp-song-row-stats"><span class="bp-song-row-stat-value">4</span></div>
+      </li>
+      <li class="bp-song-row">
+        <div class="bp-song-row-main">
+          <p class="bp-song-title bp-song-title-stub bp-m0">Untitled Jam #1</p>
+          <p class="bp-song-meta bp-m0">needs details</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Toasts</h2>
+    <div class="bp-toast bp-toast-ok">Vote saved.</div>
+    <div class="bp-toast bp-toast-error">Couldn't reach the bucket.</div>
+    <div class="bp-toast">Nothing to undo.</div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Skeletons</h2>
+    <div aria-busy="true" aria-label="Loading takes">
+      {
+        [
+          [62, 38],
+          [48, 30],
+          [71, 34],
+        ].map(([a, b]) => (
+          <div class="bp-skeleton-row">
+            <div class="bp-skeleton bp-skeleton-disc" />
+            <div class="bp-skeleton-row-main">
+              <div class="bp-skeleton bp-skeleton-line" style={`width:${a}%`} />
+              <div class="bp-skeleton bp-skeleton-line" style={`width:${b}%; height:0.625rem`} />
+            </div>
+            <div class="bp-skeleton bp-skeleton-line" style="width:44px" />
+          </div>
+        ))
+      }
+    </div>
+    <p class="text-meta text-muted bp-m0">
+      Matches the take row it stands in for — same 34px disc, same padding, same hairline, and the
+      line widths vary the way real titles do.
+    </p>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Chords and lyrics</h2>
+    <div class="bp-song-chart">
+      <div class="bp-song-chart-section">
+        <p class="bp-song-chart-label bp-m0">Sloka</p>
+        <pre class="bp-chords">Dm          Gm
+Cesta se točí, nikam
+    C       Dm
+nevede a končí tam</pre>
+      </div>
+    </div>
+    <div class="bp-lyrics">Cesta se točí, nikam nevede a končí tam, kde začala.</div>
+  </section>
+</div>

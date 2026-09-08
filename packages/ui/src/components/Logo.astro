@@ -1,0 +1,61 @@
+---
+// The Bandplate mark, inlined.
+//
+// Inlined rather than `<img src="/logo.svg">` on purpose: the mark is drawn in
+// `currentColor`, and an SVG referenced through `<img>`, `<image>` or a CSS
+// background renders as an isolated document where `currentColor` resolves to
+// black — invisible on the lacquer ground. Inlining is also what lets one
+// drawing serve both themes. See docs/design-foundation.md "Logo".
+//
+// Same geometry at every size: a filled plate, one cut, one spindle hole. The
+// light areas are true cut-outs via a mask, so the ground shows through.
+export interface Props {
+  /** Rendered size in px. The mark is drawn on a 64 grid and scales cleanly. */
+  size?: number;
+  /** Extra classes for the <svg>. */
+  class?: string;
+  /**
+   * Distinguishes this instance's mask id from any other Logo on the same
+   * page. REQUIRED wherever a page renders more than one — see below.
+   */
+  id?: string;
+}
+
+const { size = 26, class: className, id = "default" } = Astro.props;
+
+// The mask id must be DETERMINISTIC and UNIQUE, and it took two wrong answers
+// to get both.
+//
+// First attempt generated it with `Math.random()`: unique, but the rendered
+// HTML then differed on every request — caught by the /search route test
+// asserting that one URL fetched twice returns identical markup.
+//
+// Second attempt used a single constant, on the reasoning that every
+// instance's mask is byte-identical so which one wins cannot matter. It can:
+// the app shell renders a Logo in BOTH the header and the sidebar, and past
+// 1024px the header is `display: none`. `url(#...)` resolves to the first
+// match in document order — the hidden one — and a mask inside a
+// non-rendered subtree does not apply, so the rect painted unmasked and the
+// mark became a solid gold square on every desktop page.
+//
+// So: deterministic, and unique by caller. Any page rendering more than one
+// Logo passes a distinct `id`; the default is fine for a page with one.
+const maskId = `bp-logo-cut-${id}`;
+---
+
+<svg
+  width={size}
+  height={size}
+  viewBox="0 0 64 64"
+  class={className}
+  aria-hidden="true"
+  focusable="false"
+>
+  <mask id={maskId}>
+    <rect width="64" height="64" fill="#000"></rect>
+    <circle cx="32" cy="32" r="30" fill="#fff"></circle>
+    <path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"></path>
+    <circle cx="32" cy="32" r="6.5" fill="#000"></circle>
+  </mask>
+  <rect width="64" height="64" fill="currentColor" mask={`url(#${maskId})`}></rect>
+</svg>

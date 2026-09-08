@@ -9,6 +9,7 @@ import { ClientRouter } from "astro:transitions";
 // any page needing its own client-side JS; it respects
 // `prefers-reduced-motion` itself (Astro's built-in behavior).
 import type { MemberPrincipal } from "@bandplate/core";
+import Logo from "@bandplate/ui/components/Logo.astro";
 import NavIcon from "../components/NavIcon.astro";
 import Player from "../components/Player.tsx";
 import VoteFavorite from "../components/VoteFavorite.tsx";
@@ -43,14 +44,20 @@ const navItems = [
   ></div>
   <div class="bp-shell">
     <header class="bp-shell-header">
-      <a href="/" class="bp-shell-wordmark">bandplate</a>
+      <a href="/" class="bp-shell-wordmark">
+        <Logo size={24} id="header" class="bp-shell-mark" />
+        bandplate
+      </a>
       <form method="post" action="/logout">
         <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Sign out</button>
       </form>
     </header>
     <div class="bp-shell-body">
       <nav class="bp-sidebar" aria-label="Main">
-        <a href="/" class="bp-shell-wordmark">bandplate</a>
+        <a href="/" class="bp-shell-wordmark">
+          <Logo size={26} id="sidebar" class="bp-shell-mark" />
+          bandplate
+        </a>
         <ul class="bp-sidebar-nav">
           {
             navItems.map((item) => (

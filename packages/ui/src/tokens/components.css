@@ -1,16 +1,27 @@
 /*
- * ROOST component primitives — shared CSS "class recipes" for the first UI
+ * Bandplate component primitives — shared CSS "class recipes".
+ *
+ * NOTE (milestone 2, in progress): the palette underneath this file changed
+ * to Dubplate. The token references below are all still correct, but the
+ * CONTRAST FIGURES quoted in the comments were computed against the previous
+ * ROOST palette and have not yet been recomputed. Trust dubplate.css's
+ * header for current numbers; these comments are corrected component by
+ * component as each is reworked.
+ *
+ * Original header follows.
+ *
+ * Component primitives — shared CSS "class recipes" for the first UI
  * (Task 4: auth pages, admin screens). Consumed by both `.astro` components
  * in `packages/ui/src/components/` and by pages/islands in `apps/web`.
  *
- * Only semantic tokens from `roost.css`/`fonts.css` are referenced here —
+ * Only semantic tokens from `dubplate.css`/`fonts.css` are referenced here —
  * never a raw brand hex, with one deliberate exception documented below.
  *
  * ---------------------------------------------------------------------
- * Why this file adds two more custom properties on top of roost.css's set
+ * Why this file adds two more custom properties on top of dubplate.css's set
  * ---------------------------------------------------------------------
  * `--bp-color-accent` (rust) and `--bp-color-accent-alt` (olive) are the
- * SAME hex value in both themes (see roost.css) — they don't get lighter in
+ * SAME hex value in both themes (see dubplate.css) — they don't get lighter in
  * dark mode the way `--bp-color-fg`/`--bp-color-bg` do. Both are dark,
  * low-luminance colors. That's fine as text on the *light* ground (rust on
  * sand: 9.21:1) but collapses as a boundary/fill against the *dark* ground
@@ -64,30 +75,29 @@
  * The SAME fixed-hex problem also applies to `.bp-btn-primary`'s FILL TEXT,
  * not just boundaries — and it shipped uncaught here in the first pass.
  * The button's rust background never flips, so its text color can't flip
- * either: `roost.css` defines `--bp-color-on-accent` (fixed sand, never
+ * either: `dubplate.css` defines `--bp-color-on-accent` (fixed sand, never
  * redefined in a dark-mode block) for exactly this, so
  * `rust-bg vs sand-text` is the same 9.21:1 computation in both themes.
  * Using `--bp-color-bg` there instead (which DOES flip, to espresso in
  * dark mode) put espresso text on the same fixed rust fill — 1.69:1.
  */
 
+/*
+ * Component-boundary accents.
+ *
+ * These used to be DERIVED tokens: the previous palette's accents were the
+ * same dark hex in both themes, so each needed a lightened variant to stay
+ * visible as a boundary on the dark ground. Dubplate's accents already flip
+ * lightness with the theme and clear AA in both directions (see
+ * dubplate.css), so there is nothing left to derive — these are now plain
+ * aliases, kept only so the ~30 rules below need no rewrite.
+ *
+ * Same usage rule as before: borders, dots and tinted fills. Never running
+ * text.
+ */
 :root {
-  --bp-component-accent-strong: var(--bp-color-accent);
+  --bp-component-accent-strong: var(--bp-color-danger);
   --bp-component-accent-success: var(--bp-color-accent-alt);
-  --bp-component-accent-gold: #b07313; /* darkened gold — see file header */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bp-component-accent-strong: #ab6f60;
-    --bp-component-accent-success: #808f66;
-    --bp-component-accent-gold: var(--bp-color-accent-gold);
-  }
-}
-
-:root[data-theme="dark"] {
-  --bp-component-accent-strong: #ab6f60;
-  --bp-component-accent-success: #808f66;
   --bp-component-accent-gold: var(--bp-color-accent-gold);
 }
 
@@ -108,18 +118,28 @@
 .bp-skip-link {
   position: absolute;
   left: 0.5rem;
-  top: -3rem;
+  /* `translateY(-120%)` rather than a fixed negative `top`. The old
+     `top: -3rem` was 48px against a link that renders ~46px tall once its
+     padding and 2px border are counted, so a couple of pixels of it sat
+     permanently below the top edge of every page — a sliver of rounded
+     outline above the header that looked like a rendering fault. A percentage
+     of the element's own height cannot drift when the padding changes. */
+  top: 0;
+  transform: translateY(-120%);
   z-index: 100;
   background: var(--bp-color-surface);
   color: var(--bp-color-fg);
   padding: 0.75rem 1rem;
   border-radius: 0.25rem;
   border: 2px solid var(--bp-color-fg);
-  transition: top 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
+/* Must move the same property the resting state uses, or the link stays
+   translated off-screen while claiming to be focused — which is worse than
+   the sliver, because the target is then invisible AND focused. */
 .bp-skip-link:focus {
-  top: 0.5rem;
+  transform: translateY(0.5rem);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -134,11 +154,12 @@
   min-height: 44px;
   min-width: 44px;
   padding: 0.625rem 1.25rem;
-  border-radius: 0.375rem;
-  /* fg border on every variant: guarantees the button's boundary reads
-     against the page ground (~15:1) regardless of what its fill does —
-     see the file header note on why fill alone can't be trusted here. */
-  border: 2px solid var(--bp-color-fg);
+  border-radius: var(--radius-pill, 999px);
+  /* No border on any variant. Each button's boundary is its FILL, which is
+     what the Label skin settled on — see docs/design-foundation.md "Fills".
+     The two buttons that act take solid fills; the one that backs out takes a
+     tint, so they separate by weight rather than by hue. */
+  border: none;
   font-family: var(--bp-font-body);
   font-weight: 600;
   font-size: 1rem;
@@ -166,14 +187,12 @@
   opacity: 0.6;
 }
 
+/* Solid accent. `--bp-color-on-accent` follows the ground, which is correct
+   for Dubplate because the accents flip lightness with the theme — the
+   opposite of the old ROOST palette, and explained at length in dubplate.css.
+   Measures 9.8:1 dark, 5.9:1 light. */
 .bp-btn-primary {
   background: var(--bp-color-accent);
-  /* Fixed, NOT `--bp-color-bg` — see the file header note. `--bp-color-bg`
-     flips to espresso in dark mode while this fill stays the same fixed
-     rust in both themes, which put unreadable espresso-on-rust (1.69:1)
-     text on every primary button in dark mode. `--bp-color-on-accent` is
-     deliberately fixed too, so the 9.21:1 sand-on-rust ratio holds in
-     both themes by construction. */
   color: var(--bp-color-on-accent);
 }
 .bp-btn-primary:hover:not([disabled]) {
@@ -186,23 +205,39 @@
    unstyled button) until a mouse happened to hover one. Touch has no
    hover, so on a phone the distinction never appeared at all. Both now
    have a real resting look, not just a hover accent. */
+/* The quiet one — a tint, not a solid, so it reads as lighter than either
+   acting button without needing a different hue. 11.1:1 dark, 11.3:1 light. */
 .bp-btn-secondary {
-  background: var(--bp-color-surface);
-  border-color: var(--bp-color-fg);
+  background: var(--bp-fill-raised);
   color: var(--bp-color-fg);
 }
 .bp-btn-secondary:hover:not([disabled]) {
-  border-color: var(--bp-component-accent-success);
+  background: color-mix(in srgb, var(--bp-color-fg) 22%, transparent);
 }
 
+/* Solid, not a tint — and this is a correctness fix, not a style choice.
+   A danger TINT heavy enough to see lands at almost exactly the luminance of
+   `.bp-btn-secondary`'s tint: measured 1.05:1 apart in the dark theme. Cancel
+   and Delete would then differ by hue alone, which is no difference at all to
+   a red-blind viewer standing in a confirm dialog. Solid puts 3.2:1 between
+   them, so they separate by weight.
+   Text is `--bp-color-on-accent` (the ground): 4.6:1 dark, 6.1:1 light. */
 .bp-btn-danger {
-  background: color-mix(in srgb, var(--bp-component-accent-strong) 10%, var(--bp-color-surface));
-  border-color: var(--bp-component-accent-strong);
-  color: var(--bp-color-fg);
+  background: var(--bp-color-danger);
+  color: var(--bp-color-on-accent);
 }
 .bp-btn-danger:hover:not([disabled]) {
-  background: color-mix(in srgb, var(--bp-component-accent-strong) 18%, var(--bp-color-surface));
-  border-color: var(--bp-component-accent-strong);
+  background: color-mix(in srgb, var(--bp-color-danger) 85%, black);
+}
+
+/* Solid danger against solid accent measures 1.03:1 in the LIGHT theme —
+   burnt gold and rust are nearly the same lightness — so colour cannot be the
+   only thing marking a destructive action. Every `.bp-btn-danger` carries a
+   leading icon; this reserves its space and keeps it from shrinking. */
+.bp-btn-danger > svg {
+  flex: none;
+  width: 1em;
+  height: 1em;
 }
 
 .bp-btn-sm {
@@ -246,6 +281,9 @@ a.bp-btn {
   color: var(--bp-color-muted);
 }
 
+/* Filled and edgeless. The fill IS the affordance — a control reads as
+   editable because it is a lighter shape on the ground, not because it has a
+   line around it. 12.2:1 dark, 12.1:1 light for the value text. */
 .bp-input,
 .bp-select,
 .bp-textarea {
@@ -253,32 +291,55 @@ a.bp-btn {
   font-size: 1rem;
   min-height: 44px;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-  border: 2px solid var(--bp-color-fg);
-  background: var(--bp-color-surface);
+  border-radius: var(--radius-sm, 3px);
+  border: none;
+  background: var(--bp-fill-subtle);
   color: var(--bp-color-fg);
+}
+
+/* Not `--bp-color-muted`: on a 12% fill that measures 4.26:1 in the light
+   theme and fails. This is foreground at 70% over the fill instead — a
+   different mechanism, 6.5:1 or better in both themes. */
+.bp-input::placeholder,
+.bp-textarea::placeholder {
+  color: var(--bp-color-placeholder);
+  opacity: 1;
 }
 
 .bp-textarea {
   min-height: 88px;
 }
 
+/* An INSET ring, not a border: an outset border would add 2px to the box and
+   shift every sibling by a pixel the moment a field takes focus. */
 .bp-input:focus-visible,
 .bp-select:focus-visible,
 .bp-textarea:focus-visible {
-  border-color: var(--bp-component-accent-success);
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--bp-color-accent);
 }
 
 .bp-input[aria-invalid="true"],
 .bp-select[aria-invalid="true"],
 .bp-textarea[aria-invalid="true"] {
-  border-color: var(--bp-component-accent-strong);
+  background: var(--bp-fill-alert);
+}
+.bp-input[aria-invalid="true"]:focus-visible,
+.bp-select[aria-invalid="true"]:focus-visible,
+.bp-textarea[aria-invalid="true"]:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--bp-color-danger);
 }
 
+/* On the plain ground, not on the field's fill — so `--bp-color-danger` is
+   safe here (4.6:1 dark, 6.5:1 light) where it would not be on the tint. */
 .bp-field-error {
+  /* Emphasis inside body copy, not a heading — so it stays on the body face
+     and drops to 600. 700 at 14px is the same density problem in miniature.
+     On the plain ground, so `--bp-color-danger` is safe here (4.6:1 dark,
+     6.5:1 light) where it would not be on a field's fill. */
   font-size: 0.875rem;
-  color: var(--bp-color-fg);
-  font-weight: 700;
+  color: var(--bp-color-danger);
+  font-weight: 600;
 }
 
 .bp-checkbox-group {
@@ -304,16 +365,57 @@ a.bp-btn {
   min-height: 44px;
 }
 
+/* A drawn control rather than the platform's. `accent-color` only recolours
+   the tick and leaves the browser's own box, which is a hard white square on
+   the lacquer ground and the most obviously unstyled thing on the page. This
+   is a circle to echo the plate, filled with the accent when checked, and it
+   keeps a real <input> underneath so keyboard, label association and form
+   submission are untouched.
+   WCAG 2.5.8 minimum target is 24px; the row's own 44px min-height carries
+   the rest. */
 .bp-checkbox-item input[type="checkbox"] {
-  /* WCAG 2.5.8 target size (minimum) is 24px for a checkbox — this was
-     20px. */
+  appearance: none;
+  -webkit-appearance: none;
   width: 24px;
   height: 24px;
-  accent-color: var(--bp-component-accent-success);
+  flex: none;
+  margin: 0;
+  border-radius: 50%;
+  border: 2px solid var(--bp-color-border);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.bp-checkbox-item input[type="checkbox"]::after {
+  content: "";
+  width: 11px;
+  height: 6px;
+  border-left: 2.5px solid var(--bp-color-on-accent);
+  border-bottom: 2.5px solid var(--bp-color-on-accent);
+  transform: translateY(-1px) rotate(-45deg);
+  opacity: 0;
+}
+
+.bp-checkbox-item input[type="checkbox"]:checked {
+  background: var(--bp-color-accent);
+  border-color: var(--bp-color-accent);
+}
+
+.bp-checkbox-item input[type="checkbox"]:checked::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-checkbox-item input[type="checkbox"] {
+    transition: none;
+  }
 }
 
 .bp-checkbox-item label {
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
   font-size: 0.875rem;
 }
 
@@ -322,8 +424,8 @@ a.bp-btn {
 /* ---------------------------------------------------------------------- */
 
 .bp-banner {
-  border-radius: 0.375rem;
-  border: 2px solid var(--bp-color-border);
+  border-radius: var(--radius-sm, 3px);
+  border: none;
   padding: 0.875rem 1.125rem;
   margin-bottom: 1.25rem;
   font-size: 0.9375rem;
@@ -335,29 +437,41 @@ a.bp-btn {
 
 .bp-banner-icon {
   flex-shrink: 0;
-  font-family: var(--bp-font-mono);
-  font-weight: 700;
+  font-family: var(--bp-font-body);
+  font-weight: 600;
 }
 
+/* Banner titles had no rule at all, so they fell through to the browser's
+   default <strong> — the body face at 700, which is the small-bold-heading
+   problem again, arrived at by omission rather than by choice. Every heading
+   in this system is the display face; this is one. */
+.bp-banner strong {
+  display: block;
+  font-family: var(--bp-font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+
+
+/* Fill only, no boundary. The old rules leaned on a 2px border for kind,
+   which the Label skin removed — a banner is a block of tinted ground, and the
+   tint alone carries the kind. Body text stays `--bp-color-fg` throughout,
+   which is what makes these safe: on a 24% fill, `--bp-color-muted` measures
+   4.39:1 in the light theme and fails, while fg clears 10:1 everywhere. The
+   `--bp-color-border` note that used to live here no longer applies, because
+   there is no boundary left to hold to 3:1. */
 .bp-banner-success {
-  border-color: var(--bp-component-accent-success);
-  background: color-mix(in srgb, var(--bp-color-accent-alt) 12%, var(--bp-color-surface));
+  background: var(--bp-fill-ok);
 }
 
 .bp-banner-error {
-  border-color: var(--bp-component-accent-strong);
-  background: color-mix(in srgb, var(--bp-color-accent) 12%, var(--bp-color-surface));
+  background: var(--bp-fill-alert);
 }
 
 .bp-banner-info {
-  /* NOT `--bp-color-border` — that token is 1.31:1 / 1.39:1 against the
-     page ground, fine for a purely decorative divider (a table rule, a
-     card outline) but this is an interactive component's only boundary,
-     which WCAG 1.4.11 requires at 3:1. `--bp-color-muted` clears that
-     (4.64:1 / 6.93:1 against `--bp-color-bg`, see roost.css) with room to
-     spare. */
-  border-color: var(--bp-color-muted);
-  background: var(--bp-color-surface);
+  background: var(--bp-fill-subtle);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -367,37 +481,70 @@ a.bp-btn {
 /* signal — color is reinforcement, not the sole means (WCAG 1.4.1).      */
 /* ---------------------------------------------------------------------- */
 
+/* Filled, not outlined — and the dot is gone. It was 8px of colour meant to
+   carry the badge's kind, which at that size is invisible against a page of
+   warm browns; every kind rendered as the same pill. The FILL carries the kind
+   now, which is legible across a long list at a glance.
+   Text stays `--bp-color-fg` on every variant: on a 24% fill, muted measures
+   4.39:1 in the light theme and fails, while fg clears 9.8:1 on the lightest
+   of these tints. That is the rule from dubplate.css, applied. */
+/* SOLID, not tinted. A badge is 12px of text in a 60px pill — at that size a
+   24% tint has no presence at all and every kind reads as the same washed-out
+   lozenge, which is exactly what tints looked like here. Solid fills carry the
+   same weight language as the buttons: solid says "this is a fact about the
+   row", tint says "this is chrome".
+   Text is `--bp-color-on-accent` (the ground), measured on every fill below:
+   accent 9.8/5.9, ok 5.8/6.3, danger 4.6/6.1. The neutral default keeps the
+   raised tint with fg text (8.2/9.2), since there is no coloured fill to sit on.
+
+   ---------------------------------------------------------------------
+   On there being only four colours for six badge names
+   ---------------------------------------------------------------------
+   These are FOUR SEPARATE VOCABULARIES sharing one component, not one scale:
+     event kind      rehearsal | concert | session
+     take state      new | published | keeper | rejected
+     member role     member | admin
+     member status   invited | active | disabled
+   Siblings within a vocabulary must differ, and they do. Two badges from
+   DIFFERENT vocabularies may share a colour, because they never label the same
+   axis — `keeper` (a take) and `admin` (a person) are never a choice between
+   each other. Adding a fifth hue to make all six names unique would mean
+   inventing a colour outside the brand palette to solve a problem no reader
+   has, so the repetition is deliberate. `/dev/ui` groups them by vocabulary to
+   make that legible. */
 .bp-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
   font-size: 0.75rem;
   text-transform: lowercase;
-  padding: 0.125rem 0.625rem;
+  padding: 0.1875rem 0.625rem;
   border-radius: 999px;
-  /* NOT `--bp-color-border` (1.31:1 / 1.39:1) — same 3:1 boundary
-     requirement as `.bp-banner-info`, same fix. */
-  border: 1.5px solid var(--bp-color-muted);
+  border: none;
+  background: var(--bp-fill-raised);
   color: var(--bp-color-fg);
   white-space: nowrap;
 }
 
-.bp-badge::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: var(--bp-color-muted);
+.bp-badge-keeper,
+.bp-badge-admin {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
 }
 
-.bp-badge-admin::before {
-  background: var(--bp-component-accent-strong);
+.bp-badge-concert,
+.bp-badge-rejected,
+.bp-badge-disabled {
+  background: var(--bp-color-danger);
+  color: var(--bp-color-on-accent);
 }
 
-.bp-badge-active::before {
-  background: var(--bp-component-accent-success);
+.bp-badge-session,
+.bp-badge-active,
+.bp-badge-published {
+  background: var(--bp-color-accent-alt);
+  color: var(--bp-color-on-accent);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -430,7 +577,7 @@ a.bp-btn {
 }
 
 .bp-table th {
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -485,7 +632,7 @@ a.bp-btn {
 
   .bp-table td::before {
     content: attr(data-label);
-    font-family: var(--bp-font-mono);
+    font-family: var(--bp-font-body);
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -582,11 +729,62 @@ a.bp-btn {
   min-width: 0;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Containers — ONE primitive, two densities.                              */
+/* ---------------------------------------------------------------------- */
+/* The gallery used to show "Card" and "Domain rows" as if they were separate
+   components with overlapping jobs. They are one thing at two densities, and
+   which you use is decided by COUNT, not by taste:
+ *
+ *   .bp-card       a panel around a block of content that stands alone — a
+ *                  form section, a summary, a link tile. It carries a surface
+ *                  because nothing around it establishes the grouping.
+ *
+ *   .bp-card-flat  the same container inside a LIST of like things. The list
+ *                  itself is the grouping, so the surface and the radius come
+ *                  off and a hairline separates one item from the next.
+ *
+ * More than two of a thing is a list. Boxes in a list read as boxes, which is
+ * the thing the Label skin was chosen to avoid — an archive of ten events
+ * became ten containers competing with each other instead of one index you
+ * scan down.
+ *
+ * `.bp-event-row` / `.bp-song-row` / `.bp-take-row` ARE `.bp-card-flat`; they
+ * are listed in its selector rather than given their own box model, so the two
+ * densities cannot drift apart. Their own rules only add layout. */
 .bp-card {
   border: 1px solid var(--bp-color-border);
   border-radius: 0.5rem;
   padding: 1.25rem;
   background: var(--bp-color-surface);
+}
+
+.bp-card-flat,
+.bp-event-row,
+.bp-song-row,
+.bp-take-row {
+  border: none;
+  border-bottom: 1px solid var(--bp-color-border);
+  border-radius: 0;
+  padding: 0.875rem 0.25rem;
+  background: transparent;
+}
+
+/* Deliberately lighter than `--bp-fill-subtle`. At 12% the hover fill landed
+   close enough to `--bp-color-border` that the plate's ring disappeared into
+   it — the row lit up and its left anchor went with it. A hover is a hint that
+   a row is live, not a state worth reading. */
+.bp-card-flat:hover,
+.bp-event-row:hover,
+.bp-song-row:hover,
+.bp-take-row:hover {
+  background: color-mix(in srgb, var(--bp-color-fg) 5%, transparent);
+}
+
+/* …and the plate brightens rather than being swallowed, so the anchor stays
+   legible exactly when the row is being pointed at. */
+.bp-take-row:hover .bp-take-plate {
+  border-color: var(--bp-color-muted);
 }
 
 .bp-copy-btn {
@@ -625,6 +823,43 @@ a.bp-btn {
      with it (measured 109px rendered vs. a stale 76px declared here is
      exactly the bug this self-correction exists to prevent). */
   --bp-player-height: 7rem;
+
+  position: relative;
+  isolation: isolate;
+}
+
+/* Atmosphere — groove rings anchored off the top-right corner at 7px pitch
+   under a warm accent bloom. Pure CSS, no image, and it survives a brand-token
+   swap because both layers are mixed from `--bp-color-accent`.
+   On a FIXED pseudo-element rather than `background-attachment: fixed` on the
+   shell itself: the rings must not scroll (they read as material, not as
+   pattern), and `background-attachment: fixed` is the one property iOS Safari
+   has never handled reliably. `isolation: isolate` + `z-index: -1` keeps it
+   behind page content without escaping the shell's stacking context. */
+.bp-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    repeating-radial-gradient(
+      circle at 86% 0%,
+      color-mix(in srgb, var(--bp-color-accent) 5%, transparent) 0 1px,
+      transparent 1px 7px
+    ),
+    radial-gradient(
+      120% 34% at 86% 0%,
+      color-mix(in srgb, var(--bp-color-accent) 12%, transparent),
+      transparent 62%
+    );
+  /* Masked back to the corner it is anchored to. Without this the repeating
+     radial is unbounded and tiles the whole viewport — subtle enough on a
+     phone, but at desktop width the 7px pitch turns into a visible moiré
+     across the entire page. The atmosphere is meant to read as material near
+     the corner, not as a pattern everywhere. */
+  -webkit-mask-image: radial-gradient(115% 62% at 86% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(115% 62% at 86% 0%, #000 0%, transparent 72%);
 }
 
 .bp-shell-header {
@@ -642,12 +877,22 @@ a.bp-btn {
      visual size, just vertically centered in a taller box. */
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
   min-height: 44px;
   font-family: var(--bp-font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.375rem;
   text-decoration: none;
   color: var(--bp-color-fg);
+}
+
+/* The mark takes the accent rather than the wordmark's ink, so the pair reads
+   as one lockup with the plate carrying the colour — the horizontal lockup
+   from docs/design-foundation.md. `currentColor` is what the inlined SVG
+   paints with, which is why Logo.astro must never become an <img>. */
+.bp-shell-mark {
+  flex: none;
+  color: var(--bp-color-accent);
 }
 
 .bp-shell-body {
@@ -712,6 +957,88 @@ a.bp-btn {
 }
 
 /* ---------------------------------------------------------------------- */
+/* Console shell — the gold hairline and the staggered load.              */
+/* ---------------------------------------------------------------------- */
+
+/* The hairline that welds the player onto the tab bar into one unit at the
+   bottom of the screen. It lives on the PLAYER, not on the tab bar, so it is
+   present exactly when something is loaded — the line means "there is audio",
+   which is why it earns being the one piece of accent chrome that is always
+   on screen. With nothing loaded the player is `[hidden]` and the tab bar
+   keeps its ordinary border. Past `lg` there is no tab bar and the player is
+   full-width at the bottom, where the same line reads as the top edge of the
+   transport rather than as a join. */
+.bp-player:not([hidden])::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--bp-color-accent-gold),
+    color-mix(in srgb, var(--bp-color-accent-gold) 15%, transparent)
+  );
+}
+
+/* One orchestrated load per page, then stillness: list rows rise 8px and fade
+   in on a 40ms stagger. Applied to the existing list containers rather than to
+   a new wrapper class, so no page markup changes.
+
+   Capped at eight steps. An event with thirty takes must not make the last row
+   wait 1.2s — beyond the eighth row everything arrives together, which is also
+   roughly where the fold is on a phone. `backwards` fill matters: without it
+   each row paints at full opacity for its delay and then jumps to the start of
+   the animation.
+
+   `<ClientRouter />` replays this on every navigation, which is the intent —
+   the reveal belongs to the page, not to the session. */
+@media (prefers-reduced-motion: no-preference) {
+  .bp-take-list > *,
+  .bp-event-list > *,
+  .bp-song-list > * {
+    animation: bp-row-rise var(--duration-enter, 180ms) var(--ease-bp, ease-out) backwards;
+  }
+
+  .bp-take-list > *:nth-child(1),
+  .bp-event-list > *:nth-child(1),
+  .bp-song-list > *:nth-child(1) { animation-delay: 0ms; }
+  .bp-take-list > *:nth-child(2),
+  .bp-event-list > *:nth-child(2),
+  .bp-song-list > *:nth-child(2) { animation-delay: 40ms; }
+  .bp-take-list > *:nth-child(3),
+  .bp-event-list > *:nth-child(3),
+  .bp-song-list > *:nth-child(3) { animation-delay: 80ms; }
+  .bp-take-list > *:nth-child(4),
+  .bp-event-list > *:nth-child(4),
+  .bp-song-list > *:nth-child(4) { animation-delay: 120ms; }
+  .bp-take-list > *:nth-child(5),
+  .bp-event-list > *:nth-child(5),
+  .bp-song-list > *:nth-child(5) { animation-delay: 160ms; }
+  .bp-take-list > *:nth-child(6),
+  .bp-event-list > *:nth-child(6),
+  .bp-song-list > *:nth-child(6) { animation-delay: 200ms; }
+  .bp-take-list > *:nth-child(7),
+  .bp-event-list > *:nth-child(7),
+  .bp-song-list > *:nth-child(7) { animation-delay: 240ms; }
+  .bp-take-list > *:nth-child(n + 8),
+  .bp-event-list > *:nth-child(n + 8),
+  .bp-song-list > *:nth-child(n + 8) { animation-delay: 280ms; }
+}
+
+@keyframes bp-row-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
 /* Persistent player — one instance, rendered by `AppLayout.astro`,        */
 /* `transition:persist`ed across navigation (see `Player.tsx`'s header     */
 /* comment). Sits ABOVE the tab bar on phones (its own fixed element,      */
@@ -738,7 +1065,7 @@ a.bp-btn {
 /*   both the surface above AND the plain page background it also renders  */
 /*   against in TakeRow/take-detail (--bp-color-bg) — NOT the raw fixed    */
 /*   --bp-color-accent-alt, which measures 1.93:1/1.79:1 in dark mode      */
-/*   (see roost.css's header comment; this is that exact regression,       */
+/*   (see dubplate.css's header comment; this is that exact regression,       */
 /*   avoided by using the theme-aware component token instead):            */
 /*     on bg:      light 8.06:1   dark 5.14:1                              */
 /*     on surface: light 8.71:1   dark 4.76:1                              */
@@ -795,6 +1122,20 @@ a.bp-btn {
   text-overflow: ellipsis;
 }
 
+/* Inline meta separator — a drawn 1px rule, never a middot. See
+   docs/design-foundation.md "Meta lines": a glyph inherits the face's own
+   metrics and colour, a rule holds its height and takes the theme's border
+   token. 60% of the subtitle's cap-height, centred on the text baseline. */
+.bp-player-sep {
+  display: inline-block;
+  width: 1px;
+  height: 0.66em;
+  vertical-align: -0.06em;
+  margin: 0 0.6em;
+  background: var(--bp-color-muted);
+  opacity: 0.55;
+}
+
 .bp-player-audio {
   width: 100%;
   height: 2.25rem;
@@ -805,23 +1146,53 @@ a.bp-btn {
 /* own islands; `Player.tsx` delegates clicks and toggles these classes.   */
 /* ---------------------------------------------------------------------- */
 
+/* A filled accent disc — the mark's own shape, and the one place the accent
+   belongs inside a list. It replaced a bare glyph on the ground, which read as
+   an icon rather than as the row's primary control and gave a playable take no
+   more presence than an unplayable one.
+   The 44px touch target is the BOX; the visible plate is 34px, so a row of
+   these does not look like a row of buttons. */
 .bp-play-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 44px;
+  height: 44px;
   min-width: 44px;
   min-height: 44px;
   border: none;
   background: transparent;
-  color: var(--bp-color-fg);
+  color: var(--bp-color-on-accent);
   cursor: pointer;
   padding: 0;
 }
 
+.bp-take-row .bp-play-toggle::before {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+}
+
+.bp-take-row .bp-play-toggle {
+  position: relative;
+}
+
+.bp-take-row .bp-play-toggle svg {
+  position: relative;
+}
+
+/* The pressed glyph stays the ground colour, NOT an accent.
+   This used to turn olive to signal "playing", which worked while the control
+   was a bare glyph on the page ground. It now sits on a filled accent disc, so
+   an olive pause on gold is both off-palette and barely legible — the plate
+   already carries the accent, and the glyph's only job is to read against it
+   (9.8:1 dark, 5.9:1 light). "Playing" is signalled by the icon changing from a
+   triangle to a pause, by `aria-pressed`, and by the player bar appearing. */
 .bp-play-toggle[aria-pressed="true"] {
-  color: var(--bp-component-accent-success);
+  color: var(--bp-color-on-accent);
 }
 
 /* The take-detail hero's own, larger play control — same button, same
@@ -891,7 +1262,7 @@ a.bp-btn {
 .bp-solo-chip.is-active {
   border-color: var(--bp-component-accent-success);
   color: var(--bp-component-accent-success);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .bp-solo-chip.is-active::before {
@@ -1020,7 +1391,7 @@ a.bp-btn {
   height: 3px;
   z-index: 200;
   /* NOT `--bp-color-accent` — that's the SAME fixed rust hex in both
-     themes (see roost.css), which measures 9.21:1 against the light
+     themes (see dubplate.css), which measures 9.21:1 against the light
      ground but only 1.69:1 against the dark one (the exact regression
      documented in components.css's file header). This bar needs to be
      visible as a graphical object in both themes, so it uses the
@@ -1216,17 +1587,23 @@ a.bp-btn {
   margin: 0;
 }
 
+/* A page's own title is display-face like every other heading in the scale;
+   at this size 700 is comfortable, which is exactly why the smaller section
+   heading above needed its own lighter step rather than inheriting this. */
 .bp-page-title {
-  font-family: var(--bp-font-body);
-  font-size: 1.5rem;
+  font-family: var(--bp-font-display);
+  font-size: var(--text-title, 1.6875rem);
   font-weight: 700;
+  line-height: 1.05;
   margin: 0;
 }
 
+/* `--text-section` — see theme.css for why this is not Chivo 700 at 18px. */
 .bp-section-title {
-  font-family: var(--bp-font-body);
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-family: var(--bp-font-display);
+  font-size: var(--text-section, 1.25rem);
+  font-weight: 600;
+  line-height: 1.25;
   margin: 0 0 0.75rem;
 }
 
@@ -1244,7 +1621,7 @@ a.bp-btn {
 
 .bp-admin-title {
   font-family: var(--bp-font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.75rem;
   margin: 0;
 }
@@ -1286,7 +1663,7 @@ a.bp-btn {
 
 .bp-stat-value {
   font-family: var(--bp-font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 2.5rem;
   margin: 0.25rem 0;
 }
@@ -1346,7 +1723,7 @@ a.bp-btn {
 
 .bp-auth-title {
   font-family: var(--bp-font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 2.25rem;
   margin: 0 0 1.5rem;
 }
@@ -1398,19 +1775,33 @@ a.bp-btn {
 }
 
 .bp-song-title {
-  font-weight: 700;
-  font-size: 1.0625rem;
-  margin: 0 0 0.1875rem;
+  /* `--bp-text-row`: display face at 600, not the body face at 700. A song
+     title is a heading, and a heading at 17px in a bold text face is the same
+     dense little block the section heading was — see theme.css's
+     `--text-section` note. */
+  font-family: var(--bp-font-display);
+  font-size: var(--text-row, 1.1875rem);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0;
 }
 
+/* A stub song — auto-created by ingest, still missing its details. Marked by
+   colour and by the badge beside it, not by a slant: Chivo's italic sits
+   awkwardly against Zilla Slab's upright slabs, and this title IS Zilla Slab,
+   which has no italic cut at all — the browser was synthesising an oblique. */
 .bp-song-title-stub {
   color: var(--bp-color-muted);
-  font-style: italic;
   font-weight: 600;
 }
 
 .bp-song-meta {
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
+  /* App-formatted numbers, not a character grid: mono is reserved for
+     pasted chord charts and machine strings (see
+     docs/design-foundation.md). Equal-width digits come from tabular
+     figures instead, which is all a duration or a count ever needed. */
+  font-variant-numeric: tabular-nums;
   font-size: 0.8125rem;
   color: var(--bp-color-muted);
 }
@@ -1419,7 +1810,12 @@ a.bp-btn {
   display: none;
   flex-shrink: 0;
   gap: 1.5rem;
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
+  /* App-formatted numbers, not a character grid: mono is reserved for
+     pasted chord charts and machine strings (see
+     docs/design-foundation.md). Equal-width digits come from tabular
+     figures instead, which is all a duration or a count ever needed. */
+  font-variant-numeric: tabular-nums;
   font-size: 0.8125rem;
   color: var(--bp-color-muted);
   text-align: right;
@@ -1444,13 +1840,20 @@ a.bp-btn {
 /* components.css's file header for `--bp-component-accent-strong`        */
 /* (rust family) and `--bp-component-accent-success` (olive family), both */
 /* already verified at >=3:1 in both themes. `--bp-color-muted` (the      */
-/* rehearsal color, the common case) is 4.65:1 / 6.93:1 — see roost.css.  */
+/* rehearsal color, the common case) is 4.65:1 / 6.93:1 — see dubplate.css.  */
 /* ---------------------------------------------------------------------- */
 
+/* No gap: the rows carry their own hairline separators now, and a gap between
+   them would break the continuous rule that makes the list read as one index.
+   The last row's border is removed so the list does not end on a stray line. */
 .bp-event-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+}
+
+.bp-event-list > :last-child .bp-event-row,
+.bp-event-list > .bp-event-row:last-child {
+  border-bottom: none;
 }
 
 /* Past `lg`, the archive is a real two-column layout, not a phone-width
@@ -1462,34 +1865,38 @@ a.bp-btn {
   .bp-event-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem 1.5rem;
+    /* No ROW gap: the rows separate themselves with a hairline now, and a gap
+       on top of that left each border floating as a short rule under one
+       column rather than reading as a continuous rule across the list. */
+    gap: 0 2.5rem;
+  }
+
+  /* Two columns means TWO last rows, not one. `:last-child` alone left a
+     stray hairline under whichever column ran one row longer. */
+  .bp-event-list > :nth-last-child(-n + 2) .bp-event-row,
+  .bp-event-list > .bp-event-row:nth-last-child(-n + 2) {
+    border-bottom: none;
   }
 }
 
 /* Task 8: same restructuring as `.bp-song-row` above (see its comment) —
    `.bp-event-row` is now a plain container, `.bp-event-row-link` carries
    the old link styling, `FavoriteToggle` sits as a sibling. */
+/* A hairline-separated row, not a card.
+   It used to be a rounded container with a 4px coloured left border — which is
+   a pattern to avoid on its own, and here it also double-encoded: the row
+   already renders a kind badge, so a concert said "concert" twice while the
+   border was the only signal that a rehearsal was a rehearsal. The badge is
+   solid now and carries the kind by itself.
+   Losing the card also lets the list read as one index rather than as ten
+   boxes, which is the point of the Label skin. */
+/* Layout only — the box model comes from `.bp-card-flat`, which lists this
+   selector. See the Containers block. */
 .bp-event-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   min-height: 44px;
-  padding: 1rem 1.125rem;
-  border: 1px solid var(--bp-color-border);
-  border-left: 4px solid var(--bp-color-muted);
-  border-radius: 0.375rem;
-}
-
-.bp-event-row:hover {
-  background: var(--bp-color-surface);
-}
-
-.bp-event-row--concert {
-  border-left-color: var(--bp-component-accent-strong);
-}
-
-.bp-event-row--session {
-  border-left-color: var(--bp-component-accent-success);
 }
 
 .bp-event-row-link {
@@ -1508,7 +1915,12 @@ a.bp-btn {
 }
 
 .bp-event-row-date {
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
+  /* App-formatted numbers, not a character grid: mono is reserved for
+     pasted chord charts and machine strings (see
+     docs/design-foundation.md). Equal-width digits come from tabular
+     figures instead, which is all a duration or a count ever needed. */
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
   font-size: 0.9375rem;
 }
@@ -1522,7 +1934,12 @@ a.bp-btn {
 .bp-event-row-stats {
   display: none;
   flex-shrink: 0;
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
+  /* App-formatted numbers, not a character grid: mono is reserved for
+     pasted chord charts and machine strings (see
+     docs/design-foundation.md). Equal-width digits come from tabular
+     figures instead, which is all a duration or a count ever needed. */
+  font-variant-numeric: tabular-nums;
   font-size: 0.8125rem;
   color: var(--bp-color-muted);
   text-align: right;
@@ -1546,7 +1963,12 @@ a.bp-btn {
 .bp-event-row-count {
   display: inline-block;
   margin-left: 0.5rem;
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
+  /* App-formatted numbers, not a character grid: mono is reserved for
+     pasted chord charts and machine strings (see
+     docs/design-foundation.md). Equal-width digits come from tabular
+     figures instead, which is all a duration or a count ever needed. */
+  font-variant-numeric: tabular-nums;
   font-size: 0.8125rem;
   color: var(--bp-color-muted);
 }
@@ -1570,199 +1992,219 @@ a.bp-btn {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Take row — shared by the song detail and event detail take lists. Not  */
-/* playable yet (Task 6 builds `/takes/[id]`): a plain row, never a fake   */
-/* disabled play button (a disabled-looking affordance reads worse than    */
-/* none, per the brief).                                                   */
+/* Take row — the Label skin applied to the list primitive.                */
 /* ---------------------------------------------------------------------- */
-
-.bp-take-list {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Event detail's take list, and (Task 6) every other take list that has no
-   narrow aside competing for width — home's three sections, `/search`'s
-   results. Never the song page's list, which lives in a narrow ~23rem
-   aside next to the chords/lyrics grid, where two columns would be
-   cramped. Anywhere this class is used, the page has no aside to fill that
-   width with, so the take list — the page's own actual point, in every one
-   of these cases — becomes a real two-column grid past `lg` instead of
-   stretching one narrow list across a wide viewport. */
-@media (min-width: 1024px) {
-  .bp-take-list--wide {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 1.5rem;
-  }
-}
-
+/* Three columns: a plate, the take, and its numbers. The plate gives every
+   row the same left anchor whether or not it is playable; the trailing column
+   is right-aligned and fixed-width so durations and tallies line up DOWN the
+   list, which is the "columns in lists" decision from
+   docs/design-foundation.md "Meta lines" — a duration is compared with the
+   duration above it, never read as part of a sentence.
+   Box model (hairline, padding, hover) comes from `.bp-card-flat`. */
 .bp-take-row {
-  display: flex;
-  /* `flex-wrap: wrap` (Task 8 fix round 1): `.bp-take-row-main{flex:1}` has
-     a `flex-basis` of `0%`, so when the row's CONTENT overflows (a narrow
-     2-column grid cell, e.g. `.bp-take-list--wide` on `/`, plus a wide
-     `VoteToggle` in the trailing column), the flexbox shrink algorithm —
-     which distributes negative space in proportion to `basis × shrink` —
-     assigns `.bp-take-row-main` a ZERO share of that shrink (its basis is
-     already 0) and dumps the entire overflow onto `.bp-take-row-trailing`
-     instead, which then refuses to shrink below its own unconstrained
-     content width. Net effect: `.bp-take-row-main` collapsed to a
-     measured 0px and "Neon Skyline" wrapped one character per line. Same
-     underlying class of narrow-2-col-grid overflow bug `.bp-take-row-line`
-     already had (see its own comment) and the same fix: let the row wrap
-     onto a second line — `.bp-take-row-trailing` (right-aligned via its
-     own `align-items: flex-end`) drops below the label/meta instead of
-     squeezing it to nothing. */
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.875rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  /* `start`, not `center`: a row is two or three lines tall depending on
+     whether the take has a label, and a centred plate floated at the row's
+     midpoint instead of sitting against the title it belongs to. */
+  align-items: start;
+  gap: 0 0.75rem;
   min-height: 44px;
-  padding: 0.875rem 0.25rem;
-  border-bottom: 1px solid var(--bp-color-border);
+  /* Anchor for the stretched link below. */
+  position: relative;
+}
+
+/* Not a control: no role, no tabstop, `aria-hidden` in the markup. It stands
+   in for the play button on a take whose asset is not ready, so the list edge
+   stays straight. Deliberately NOT a play triangle — the brief forbids a play
+   affordance that cannot play. */
+.bp-take-plate {
+  width: 2.125rem;
+  height: 2.125rem;
+  flex: none;
+  /* Optically centred on the title's cap-height rather than its line box. */
+  margin-top: -0.0625rem;
+  border-radius: 50%;
+  border: 2px solid var(--bp-color-border);
+  display: grid;
+  place-items: center;
+}
+
+.bp-take-plate::after {
+  content: "";
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--bp-color-muted);
 }
 
 .bp-take-row-main {
-  /* Explicit basis, not just `flex: 1` (whose implicit `flex-basis: 0%` is
-     what let this collapse to 0 before `.bp-take-row` grew `flex-wrap` —
-     see that rule's comment) — same fix `.bp-session-row-main`/
-     `.bp-vote-row-main` already use for the identical reason. */
-  flex: 1 1 10rem;
   min-width: 0;
-}
-
-.bp-take-label {
-  /* inline-flex + min-height, not just a taller line-height — this is a
-     44px TOUCH TARGET (brief §6), not a visual size change: the text stays
-     its normal size, vertically centered in a taller invisible box, rather
-     than being rendered larger. Measured at 375px: 19px before, 44px after. */
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  color: var(--bp-color-fg);
-  text-decoration: underline;
-  /* `--bp-color-muted`, not `--bp-color-border` (1.31:1 / 1.39:1) — this
-     underline is the link's own non-color affordance (WCAG 1.4.1), so it
-     gets the same >=3:1-in-both-themes token every other boundary in this
-     file uses (4.65:1 / 6.93:1 — see roost.css). */
-  text-decoration-color: var(--bp-color-muted);
-  text-underline-offset: 0.15em;
-}
-
-.bp-take-label:hover {
-  text-decoration-color: currentColor;
-}
-
-/* Positions `FavoriteToggle` (Task 8) next to a title/label it's marking —
-   the gold fill itself is `.bp-favorite-toggle`'s own concern (see the
-   "vote toggle, favorite toggle, toast" block below); this class is purely
-   layout, the same spot the Task 6 static marker it replaced used to sit
-   in. Shared by `TakeRow.astro`, `/songs/[slug]`, `/events/[id]`, and
-   `/takes/[id]`'s heroes. */
-.bp-take-favorite-mark {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 0.375rem;
-  flex-shrink: 0;
-}
-
-.bp-take-sublabel {
-  display: block;
-  font-family: var(--bp-font-body);
-  font-style: italic;
-}
-
-.bp-take-meta {
-  font-family: var(--bp-font-mono);
-  font-size: 0.8125rem;
-  color: var(--bp-color-muted);
 }
 
 .bp-take-row-line {
   display: flex;
-  /* Task 6: unwrapped, this line's content (badge + "full" mode's extra
-     date span + the event-link) overflowed a take row's own box and
-     visually overlapped the trailing duration column whenever the row is
-     narrower than the sum of those three items — invisible on the
-     original single-column song/event lists (plenty of width there), but
-     real and reproducible in the two-column grids Task 6 adds
-     (`/search`, home) where a card can be under 250px wide. Verified live:
-     at that width, `align-items: center` alone left the badge/date/link
-     overlapping `.bp-take-row-duration`; `flex-wrap: wrap` (plus the
-     `row-gap` below) lets the line break onto its own lines instead. */
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 0.625rem;
-  margin-top: 0.25rem;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.bp-take-event-link {
-  /* Same 44px touch-target technique as `.bp-take-label` — a taller
-     invisible box, not larger text. `align-items: center` on the parent
-     `.bp-take-row-line` keeps the badge next to it vertically centered
-     against this now-taller link rather than pinned to its own top edge.
-     Measured at 375px: 19.5px before, 44px after. */
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-family: var(--bp-font-body);
-  color: var(--bp-color-muted);
-  text-decoration: underline;
-}
-
-.bp-take-instruments {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3125rem;
-  margin-top: 0.375rem;
-}
-
-.bp-take-instrument-tag {
-  font-family: var(--bp-font-mono);
-  font-size: 0.6875rem;
-  padding: 0.0625rem 0.4375rem;
-  border: 1px solid var(--bp-color-border);
-  border-radius: 999px;
-  color: var(--bp-color-muted);
+.bp-take-label {
+  font-family: var(--bp-font-display);
+  font-size: var(--text-row, 1.1875rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--bp-color-fg);
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Wraps the duration plus the `trailing` slot's `VoteToggle` (Task 8) — see
-   TakeRow.astro's header comment. `flex-wrap` and `align-items: flex-start`
-   let the vote buttons wrap onto their own line under the duration at
-   narrow widths without the row overflowing (`VoteToggle`'s own tally text
-   already wraps onto its own line via `flex-basis: 100%`, so this just
-   needs to not fight that). */
-.bp-take-row-trailing {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  /* `min-width: 0` overrides the flex default of `auto`, which pins a flex
-     item to its content's max-content width and refuses to shrink below
-     it — the classic flexbox trap, and the exact bug this was shipping
-     with (Fix round, this task): `.bp-vote-toggle` inside had nothing
-     bounding its width, so it rendered at its own unconstrained
-     "everything on one line" width and pushed `.bp-take-row-main` to 0,
-     wrapping "Neon Skyline" onto two 1-character-wide lines. `flex-shrink`
-     stays implicit (1, the default) so this column actually gives up width
-     to `.bp-take-row-main` when the row is narrow. */
-  min-width: 0;
-  gap: 0.375rem;
+.bp-take-label:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.bp-take-row-duration {
-  display: none;
-  flex-shrink: 0;
-  font-family: var(--bp-font-mono);
-  font-size: 0.8125rem;
+/* The title is the ONLY thing that navigates. A stretched overlay covering the
+   whole row was tried and removed: it makes every part of a row a link,
+   including the space around controls that do something else, and it turns
+   text selection into navigation. The 44px target comes from padding the link
+   itself and pulling the same amount back off the block, so the target grows
+   without the row doing. */
+.bp-take-label {
+  padding: 0.6875rem 0;
+  margin: -0.6875rem 0;
+}
+
+.bp-take-favorite-mark {
+  display: inline-flex;
+  flex: none;
+}
+
+/* One muted line under the title carrying everything that is not a number:
+   the take's own label, its instruments, a date when the page does not imply
+   one. Instruments are a comma-separated run of text, not a row of outlined
+   pills — seven pills per row was more chrome than the titles they sat under,
+   and an instrument list is read, not clicked. */
+/* Whatever is left of the take that is not a number: its own label, a date
+   where the page does not imply one, a link to the event. The instruments are
+   NOT here any more. */
+.bp-take-subline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.75rem;
+  margin-top: 0.125rem;
   color: var(--bp-color-muted);
 }
 
-@media (min-width: 1024px) {
+/* `--text-note`, and NOT italic. Chivo's italic is a true cut but it sits
+   awkwardly against Zilla Slab's upright slabs directly above it — the row
+   gained a slant nothing else in the system has. Size and colour separate the
+   note from the title; the slant was doing no work the other two were not.
+   The `opacity: 0.82` this used to carry is gone: see `--text-note`. */
+.bp-take-sublabel {
+  font-size: var(--text-note, 0.71875rem);
+  line-height: 1.45;
+  color: var(--bp-color-muted);
+}
+
+/* A row of glyphs, not a sentence. See `InstrumentIcon.astro` for why the set
+   cannot be exhaustive and what happens to a slug it has not seen. */
+.bp-take-instruments {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  color: var(--bp-color-muted);
+}
+
+/* 20px by default, and that number is set by the weakest glyph rather than by
+   the average: the thin-bodied instruments (flute, clarinet, the brass) lose
+   their form below it, while drums and keys survive to 14. One size for the
+   set. */
+.bp-instrument {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--bp-instrument-size, 20px);
+  height: var(--bp-instrument-size, 20px);
+  flex: none;
+}
+
+.bp-instrument svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* The fallback for an instrument this build has no glyph for — an admin can
+   add one at any time, so this is a normal state, not an error. */
+.bp-instrument-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.bp-take-event-link {
+  color: var(--bp-color-accent);
+}
+
+/* The numbers column. `tabular-nums` plus a fixed min-width is what makes a
+   column of durations align rather than shuffle — see the foundation's note on
+   why this is Chivo and not the mono face. */
+/* The numbers column, and now the instruments too — they moved here when the
+   vote control left. On the take's own line they were more words competing with
+   the title; here they are a column, scannable down the list the way the
+   durations beside them already are. */
+.bp-take-row-trailing {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.875rem;
+  flex: none;
+  padding-top: 0.4375rem;
+}
+
+.bp-take-row-duration {
+  font-family: var(--bp-font-body);
+  font-size: var(--text-meta, 0.78125rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--bp-color-muted);
+  min-width: 3.25ch;
+  text-align: right;
+}
+
+/* Below `sm` the trailing column drops under the take rather than squeezing
+   the title to nothing — the title is what you are scanning for. */
+/* Below `sm` the trailing column drops under the take rather than squeezing
+   the title to nothing — the title is what you are scanning for. Duration goes
+   hard left and the vote control hard right, so the two read as one line
+   instead of three wrapped fragments. */
+@media (max-width: 559px) {
+  .bp-take-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .bp-take-row-trailing {
+    grid-column: 2;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 0.625rem;
+    padding-top: 0;
+  }
+
   .bp-take-row-duration {
-    display: block;
+    text-align: left;
   }
 }
 
@@ -1774,7 +2216,7 @@ a.bp-btn {
 
 .bp-hero-title {
   font-family: var(--bp-font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 2.25rem;
   line-height: 1.05;
   margin: 0;
@@ -1782,7 +2224,7 @@ a.bp-btn {
 
 .bp-hero-date {
   font-family: var(--bp-font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.75rem;
   line-height: 1.1;
   margin: 0;
@@ -1863,17 +2305,13 @@ a.bp-btn {
 }
 
 .bp-song-chart-label {
-  font-family: var(--bp-font-body);
-  font-weight: 700;
-  font-size: 0.9375rem;
-  margin: 0;
-  padding-left: 0.75rem;
-  /* `--bp-component-accent-strong` — the same token/pairing already
-     verified against the page ground elsewhere in this file (9.21:1 light,
-     4.41:1 dark; well over the 3:1 WCAG 1.4.11 non-text-boundary floor), not
-     a new ratio. Fill/border use only, never as this label's own text
-     color, per the brief's accent-token rule. */
-  border-left: 3px solid var(--bp-component-accent-strong);
+  /* A section marker inside a chart ("Sloka", "Refrén") — display face at 600
+     for the same reason as every other small heading. */
+  font-family: var(--bp-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--bp-color-fg);
+  margin: 0 0 0.375rem;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1926,7 +2364,7 @@ a.bp-btn {
 /* Take detail (Task 6) — no player yet (increment 4); see the page's own  */
 /* header comment for where that goes. `--bp-color-muted` for the link     */
 /* underline here is the same >=3:1-in-both-themes token every other link  */
-/* underline in this file uses (4.65:1 / 6.93:1 — see roost.css).          */
+/* underline in this file uses (4.65:1 / 6.93:1 — see dubplate.css).          */
 /* ---------------------------------------------------------------------- */
 
 .bp-hero-title-link {
@@ -1948,7 +2386,7 @@ a.bp-btn {
 }
 
 .bp-take-detail-meta dt {
-  font-family: var(--bp-font-mono);
+  font-family: var(--bp-font-body);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2114,7 +2552,7 @@ a.bp-btn {
 /*   Resting vote button: border `--bp-color-fg`, text `--bp-color-fg`,    */
 /*   background `--bp-color-surface` — same combination `.bp-btn-secondary`*/
 /*   already uses; `--bp-color-fg` is ~15:1 against both `--bp-color-bg`   */
-/*   and `--bp-color-surface` in both themes (see roost.css's header).     */
+/*   and `--bp-color-surface` in both themes (see dubplate.css's header).     */
 /*                                                                          */
 /*   Pressed vote button: text STAYS `--bp-color-fg` (~15:1) — border and  */
 /*   a tinted background switch to the accent family instead of the text   */
@@ -2142,7 +2580,7 @@ a.bp-btn {
 /*   an ICON FILL (not text) — already verified in this file's header      */
 /*   (3.45:1/3.73:1 light, 9.10:1/8.42:1 dark, clearing the 3:1 non-text   */
 /*   floor). Unfilled (outline) uses `--bp-color-muted` (4.65:1/6.93:1 —   */
-/*   see roost.css), comfortably clearing 3:1 too. Filled vs. outline is   */
+/*   see dubplate.css), comfortably clearing 3:1 too. Filled vs. outline is   */
 /*   itself the non-colour affordance — a different SHAPE, not just a      */
 /*   different colour on the same shape.                                  */
 /*                                                                          */
@@ -2165,25 +2603,65 @@ a.bp-btn {
   display: contents;
 }
 
+/* Compact enough to sit in a row's trailing column, still 44px of target.
+   These were 2px-outlined blocks that dominated every take — the weight now
+   comes from the fill, and the pressed state is a solid, matching the button
+   language: solid means acted, tint means available. */
+/* 44px is a TOUCH-target floor, not a mouse one. WCAG 2.5.8 asks 24px at AA;
+   the brief's 44px comes from holding a phone one-handed in a rehearsal room,
+   which is a coarse pointer. On a fine pointer the same control at 44px is
+   simply oversized — two of these on every row dominated the take they were
+   about. So: compact by default, and the full 44px restored below wherever the
+   pointer is actually coarse. */
 .bp-vote-btn {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.375rem;
-  border: 2px solid var(--bp-color-fg);
-  background: var(--bp-color-surface);
+  justify-content: center;
+  min-height: 30px;
+  padding: 0.25rem 0.6875rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--bp-fill-raised);
   color: var(--bp-color-fg);
   font-family: var(--bp-font-body);
   font-weight: 600;
   font-size: 0.8125rem;
+  line-height: 1.2;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (pointer: coarse), (pointer: none) {
+  .bp-vote-btn {
+    min-height: 44px;
+    padding: 0.375rem 0.8125rem;
+  }
+}
+
+.bp-vote-btn-keeper[aria-pressed="true"] {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  font-weight: 600;
+}
+
+.bp-vote-btn-not-keeper[aria-pressed="true"] {
+  background: var(--bp-color-muted);
+  color: var(--bp-color-on-accent);
+  font-weight: 600;
+}
+
+
+@media (pointer: coarse), (pointer: none) {
+  .bp-vote-btn {
+    min-height: 44px;
+    padding: 0.375rem 0.8125rem;
+  }
 }
 
 .bp-vote-btn-keeper[aria-pressed="true"] {
   border-color: var(--bp-component-accent-success);
   background: color-mix(in srgb, var(--bp-component-accent-success) 14%, var(--bp-color-surface));
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .bp-vote-btn-keeper[aria-pressed="true"]::before {
@@ -2193,19 +2671,32 @@ a.bp-btn {
 .bp-vote-btn-not-keeper[aria-pressed="true"] {
   border-color: var(--bp-component-accent-strong);
   background: color-mix(in srgb, var(--bp-component-accent-strong) 12%, var(--bp-color-surface));
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .bp-vote-btn-not-keeper[aria-pressed="true"]::before {
   content: "✕ ";
 }
 
-.bp-vote-tally {
-  font-family: var(--bp-font-mono);
-  font-size: 0.75rem;
-  color: var(--bp-color-muted);
-  flex-basis: 100%;
+/* The tally wraps under the two buttons rather than beside them — at 390px
+   "No votes yet." plus both labels does not fit on one line. Full width and
+   right-aligned so it hangs off the same edge as the buttons instead of
+   floating mid-group. */
+/* An unvoted take renders this empty (see `formatVoteTally`), and an empty
+   tally must take no space at all — otherwise every row carries a blank line
+   where a sentence used to be. */
+.bp-vote-tally:empty {
+  display: none;
 }
+
+.bp-vote-tally {
+  width: 100%;
+  text-align: right;
+  font-size: var(--text-meta, 0.78125rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--bp-color-muted);
+}
+
 
 .bp-vote-toggle-lg .bp-vote-btn {
   min-height: 48px;
@@ -2281,18 +2772,30 @@ a.bp-btn {
   pointer-events: none;
 }
 
+/* A pill of tinted ground — no border, no shadow. The Label skin drops both:
+   a border made the toast read as a dialog rather than as a passing note, and
+   the shadow was the only shadow in the whole system (see
+   docs/design-foundation.md "Geometry": a plate has a sleeve, not a drop
+   shadow). Body text is `--bp-color-fg`, per the fill rule. */
 .bp-toast {
   margin: 0;
-  padding: 0.75rem 1rem;
-  border: 2px solid var(--bp-color-fg);
-  border-radius: 0.375rem;
-  background: var(--bp-color-surface);
+  padding: 0.75rem 1.125rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--bp-fill-raised);
   color: var(--bp-color-fg);
   font-size: 0.875rem;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   pointer-events: auto;
   animation: bp-toast-in 0.15s ease;
+}
+
+.bp-toast-ok {
+  background: var(--bp-fill-ok);
+}
+
+.bp-toast-error {
+  background: var(--bp-fill-alert);
 }
 
 @keyframes bp-toast-in {
@@ -2310,4 +2813,220 @@ a.bp-btn {
   .bp-toast {
     animation: none;
   }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Skeletons                                                               */
+/* ---------------------------------------------------------------------- */
+/* The brief made these acceptance criteria and the app shipped without any.
+   They exist for the two places that genuinely wait: a `server:defer` island's
+   fallback slot, and an island fetching after mount. Everything else is
+   server-rendered and has no loading state at all — do not sprinkle these on
+   content that arrives with the document.
+
+   A skeleton must share the real component's radius and spacing and match its
+   line count and width distribution. A wrong-shaped one is worse than a
+   spinner, because it promises a layout that then changes under the reader. */
+
+.bp-skeleton {
+  background: var(--bp-fill-subtle);
+  border-radius: var(--radius-sm, 3px);
+  /* Not `visibility: hidden` text: a skeleton has no accessible name, and the
+     region that owns it carries `aria-busy` instead. */
+  color: transparent;
+  user-select: none;
+}
+
+.bp-skeleton-line {
+  height: 0.75rem;
+}
+
+.bp-skeleton-line + .bp-skeleton-line {
+  margin-top: 0.4375rem;
+}
+
+.bp-skeleton-disc {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* A skeleton row mirrors `.bp-take-row` / `.bp-event-row` geometry: the same
+   34px leading disc, the same 12px vertical padding, the same hairline. */
+.bp-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+.bp-skeleton-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The shimmer is a single background sweep rather than an opacity pulse:
+   a pulse reads as something blinking at you, a sweep reads as loading.
+   It is also the one animation in the system that repeats, which is why it is
+   confined to a state that is by definition temporary. */
+@media (prefers-reduced-motion: no-preference) {
+  .bp-skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--bp-fill-subtle) 0%,
+      var(--bp-fill-raised) 50%,
+      var(--bp-fill-subtle) 100%
+    );
+    background-size: 200% 100%;
+    animation: bp-skeleton-sweep 1.4s var(--ease-bp, ease-in-out) infinite;
+  }
+}
+
+@keyframes bp-skeleton-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Event hero                                                              */
+/* ---------------------------------------------------------------------- */
+/* The date is the headline — it is how anyone refers to a rehearsal — with
+   kind and venue as a quiet line above it and the event's own title and notes
+   below. The notes used to sit in a card of their own further down the page,
+   which made two containers out of one thought: a short "vocals still finding
+   the new key" belongs beside the date, not in a panel with its own heading. */
+.bp-event-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.bp-event-hero-line {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.bp-event-hero-venue {
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-event-hero-title {
+  font-family: var(--bp-font-display);
+  font-size: var(--text-section, 1.25rem);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--bp-color-fg);
+}
+
+.bp-event-hero-notes {
+  font-size: var(--text-prose, 1.0625rem);
+  line-height: 1.55;
+  color: var(--bp-color-muted);
+  max-width: 62ch;
+}
+
+.bp-event-hero-hint {
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+  margin: 0.25rem 0 0.75rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Instrument icon picker (admin)                                          */
+/* ---------------------------------------------------------------------- */
+/* A radio group inside the row's own form, so picking a glyph and pressing
+   Save is one submission and the whole thing works with JS off. */
+
+.bp-icon-picker {
+  width: 100%;
+}
+
+.bp-icon-picker > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--bp-color-accent);
+}
+
+.bp-icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border: none;
+  padding: 0.625rem 0 0.25rem;
+  margin: 0;
+  max-width: 26rem;
+}
+
+.bp-icon-choice {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+/* The radio itself is visually replaced by the tile, but stays focusable and
+   in the tab order — `display: none` would take it out of both. */
+.bp-icon-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bp-icon-choice-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+}
+
+.bp-icon-choice-none {
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.625rem;
+  color: var(--bp-color-muted);
+}
+
+.bp-icon-choice input:checked + .bp-icon-choice-face {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+}
+
+/* The focus ring has to be drawn by the tile, since the input it belongs to is
+   the invisible one. */
+.bp-icon-choice input:focus-visible + .bp-icon-choice-face {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* Attribution. CC BY 3.0 requires visible credit wherever the work is used,
+   and this app is self-deployed — the obligation follows every deployment, so
+   it lives in the product rather than only in the repo. See
+   `packages/ui/src/icons/instruments.ts`. */
+.bp-credit {
+  margin: 2rem 0 0;
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-credit a {
+  color: var(--bp-color-accent);
 }

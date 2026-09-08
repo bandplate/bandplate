@@ -28,8 +28,11 @@ const FORBIDDEN_HTML = `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Forbidden — bandplate</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4efe2; color: #2f0c02; margin: 0; padding: 2.5rem 1.5rem; }
-  @media (prefers-color-scheme: dark) { body { background: #2f0c02; color: #f4efe2; } a { color: #f4efe2; } }
+  /* Hardcoded rather than tokenised on purpose: this page is a string in
+     the middleware and never loads a stylesheet. Values are Dubplate bone/ink
+     and lacquer/bone — keep them in step with tokens/dubplate.css by hand. */
+  body { font-family: "Chivo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f2e8d8; color: #1c0f06; margin: 0; padding: 2.5rem 1.5rem; }
+  @media (prefers-color-scheme: dark) { body { background: #150c07; color: #f2e8d8; } a { color: #f2e8d8; } }
   main { max-width: 32rem; margin: 0 auto; }
   a { color: inherit; }
 </style>

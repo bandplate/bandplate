@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bandplate">
+  <!--
+    Same geometry as logo.svg. The only difference is that this file picks its
+    own ink — burnt gold on a light tab, gold on a dark one — because a browser
+    tab has no page to inherit colour from. Gold measures 2.1:1 on a bone ground.
+  -->
+  <style>
+    :root { color: #7a4e05; }
+    @media (prefers-color-scheme: dark) { :root { color: #f6aa1c; } }
+  </style>
+  <mask id="bp-cut">
+    <rect width="64" height="64" fill="#000"/>
+    <circle cx="32" cy="32" r="30" fill="#fff"/>
+    <path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="32" cy="32" r="6.5" fill="#000"/>
+  </mask>
+  <rect width="64" height="64" fill="currentColor" mask="url(#bp-cut)"/>
+</svg>

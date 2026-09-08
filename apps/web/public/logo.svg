@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bandplate">
+  <!--
+    Bandplate mark — "Cut". The cutting head striking in toward the centre of a
+    plate. Drawn on a 64 grid; the light areas are true cut-outs rather than
+    painted fills, so the mark carries one colour (currentColor) and the ground
+    shows through on any background, in either theme.
+
+    One geometry at every size — no groove ring, so nothing turns to mud at 16px
+    and the favicon is the same drawing as the header mark.
+
+    Inline this file. Referenced through <img>, SVG <image> or a CSS background
+    it renders as an isolated document and currentColor resolves to black.
+  -->
+  <mask id="bp-cut">
+    <rect width="64" height="64" fill="#000"/>
+    <circle cx="32" cy="32" r="30" fill="#fff"/>
+    <path d="M57 9 L37 29" stroke="#000" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="32" cy="32" r="6.5" fill="#000"/>
+  </mask>
+  <rect width="64" height="64" fill="currentColor" mask="url(#bp-cut)"/>
+</svg>

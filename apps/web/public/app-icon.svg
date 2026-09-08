@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Bandplate">
+  <!-- Opaque app-icon lockup: the mark on lacquer, inset so platform rounding
+       and masking never clip the cut. Source for the PNG icons beside it, and
+       the file to use anywhere a real <img> element is unavoidable. -->
+  <rect width="180" height="180" fill="#150c07"/>
+  <g transform="translate(32,32) scale(1.8125)">
+    <circle cx="32" cy="32" r="30" fill="#f6aa1c"/>
+    <path d="M57 9 L37 29" stroke="#150c07" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="32" cy="32" r="6.5" fill="#150c07"/>
+  </g>
+</svg>

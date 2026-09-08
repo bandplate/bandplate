@@ -83,6 +83,11 @@ const PUBLIC_PATH_PREFIXES = [
   "/setup", // first-admin bootstrap — self-guards via isBootstrapAvailable
   "/logout",
   "/api", // its own bearer/service-token auth, not the cookie session
+  "/dev", // the component gallery at /dev/ui. Listed here so it renders
+  // without a session while iterating on components; the page itself is
+  // the real guard and returns 404 unless `import.meta.env.DEV` or an
+  // explicit `PUBLIC_BANDPLATE_DEV_UI=true` build flag is set, so in a
+  // normal production build this prefix matches nothing that exists.
   "/_astro", // built client assets (JS/CSS chunks) — never reached in
   // production (the Node adapter's static handler serves these before the
   // app/middleware ever sees the request), but `astro dev` does route

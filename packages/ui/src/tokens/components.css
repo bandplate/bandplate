@@ -1401,19 +1401,16 @@ a.bp-btn {
     box-sizing: border-box;
     /* Bottom padding reserves space for the player bar, which is
        `position: fixed` and sits ON TOP of this column's own bottom edge
-       (see `.bp-player`'s `z-index: 42` — this sidebar has no z-index of
-       its own, i.e. 0, so the player always paints over it). Without this,
-       `.bp-sidebar-footer`'s `margin-top: auto` pins "Sign out" to this
-       column's bottom at 100vh, directly under the player, making it
-       unreachable — `elementFromPoint` at the button's centre returns
-       `.bp-player` instead (task-7-report.md, fix round 2). Reuses the
-       same `--bp-player-height` custom property `.bp-shell-main` already
-       reserves against, rather than a second hardcoded number that could
-       drift from the real measured height — see that variable's comment
-       on `.bp-shell`. Always reserved, even with no track loaded, same
-       rationale as `.bp-shell-main`: a fixed number can't itself cause a
-       width-based scrollWidth bug, and nothing should shift when nothing
-       is playing. */
+       (see `.bp-player`'s `z-index: 42` — this sidebar has no z-index of its
+       own, i.e. 0, so the player always paints over it). The sign-out button
+       this originally rescued has moved to `/me`, but the reservation stays:
+       anything this column ever pins to its own bottom would land under the
+       player otherwise. Reuses the same `--bp-player-height` custom property
+       `.bp-shell-main` already reserves against, rather than a second
+       hardcoded number that could drift from the real measured height. Always
+       reserved, even with no track loaded: a fixed number can't itself cause a
+       width-based scrollWidth bug, and nothing should shift when nothing is
+       playing. */
     padding: 1.75rem 1.25rem calc(1.75rem + var(--bp-player-height));
     border-right: 1px solid var(--bp-color-border);
   }
@@ -1425,10 +1422,6 @@ a.bp-btn {
     list-style: none;
     margin: 0;
     padding: 0;
-  }
-
-  .bp-sidebar-footer {
-    margin-top: auto;
   }
 
   .bp-sidebar-item {
@@ -3860,6 +3853,13 @@ a.bp-btn {
   margin-top: 1.25rem;
 }
 
+/* Last, and separated by more space than anything else in this column —
+   destructive, rarely wanted, and not something to land on by accident while
+   reaching for the admin link above it. */
+.bp-me-signout {
+  margin-top: 2rem;
+}
+
 /* The unvoted count: a fact with a number in front of it, not a banner. The
    member came looking for it, so it takes no fill, no icon and no border. */
 .bp-me-unvoted {
@@ -4031,8 +4031,13 @@ a.bp-btn {
 .bp-takes-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem;
+}
+
+/* The title takes the slack, so the trigger and its Clear stay together at the
+   far end rather than drifting apart as the title's length changes. */
+.bp-takes-bar-title {
+  margin-right: auto;
 }
 
 .bp-filter-trigger {
@@ -4278,7 +4283,10 @@ a.bp-btn {
      starting at the top of the page. The page title spans the two. */
   .bp-takes {
     display: grid;
-    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+    /* 20rem, not 15. The column has to hold the widest thing in it, and that
+       is the recorded range: two date fields with a placeholder, an icon each,
+       and the word "to" between them. At 15rem they truncated to "dd.n". */
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
     grid-template-areas:
       "bar bar"
       "filters results";
@@ -4294,9 +4302,11 @@ a.bp-btn {
     grid-area: results;
   }
 
-  /* The trigger is a phone control: past here the panel is always on screen,
-     so a button that opens it would open something already open. */
-  .bp-filter-trigger {
+  /* Both are phone controls: past here the panel is always on screen, so a
+     button that opens it would open something already open, and the Clear it
+     sits next to is already beside the panel's confirm. */
+  .bp-filter-trigger,
+  .bp-takes-bar-clear {
     display: none;
   }
 

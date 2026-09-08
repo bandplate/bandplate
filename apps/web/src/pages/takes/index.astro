@@ -70,7 +70,7 @@ const countLabel = truncated
 <AppLayout title="Takes" principal={principal} current="takes">
   <div class="bp-takes">
     <div class="bp-takes-bar">
-      <h1 class="bp-page-title bp-m0">Takes</h1>
+      <h1 class="bp-page-title bp-m0 bp-takes-bar-title">Takes</h1>
       <button type="button" class="bp-filter-trigger" data-filter-open>
         <svg
           viewBox="0 0 24 24"
@@ -87,6 +87,15 @@ const countLabel = truncated
         Filters
         {activeFilterCount > 0 && <span class="bp-badge bp-badge-keeper">{activeFilterCount}</span>}
       </button>
+      {/* Clearing without opening the sheet first. It only appears when there
+          is something to clear, and only on a phone — the panel carries its own
+          Clear beside its confirm, so a second one up here would be the
+          duplicate we just removed from the sheet's header. */}
+      {filtersApplied && (
+        <a href="/takes" class="bp-btn bp-btn-secondary bp-btn-sm bp-takes-bar-clear">
+          Clear
+        </a>
+      )}
     </div>
 
     <dialog class="bp-filter-sheet" data-filter-sheet aria-label="Filters">

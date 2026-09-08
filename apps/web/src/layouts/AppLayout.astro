@@ -48,9 +48,6 @@ const navItems = [
         <Logo size={24} id="header" class="bp-shell-mark" />
         bandplate
       </a>
-      <form method="post" action="/logout">
-        <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Sign out</button>
-      </form>
     </header>
     <div class="bp-shell-body">
       <nav class="bp-sidebar" aria-label="Main">
@@ -76,11 +73,6 @@ const navItems = [
             ))
           }
         </ul>
-        <form method="post" action="/logout" class="bp-sidebar-footer">
-          <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">
-            Sign out ({principal.role})
-          </button>
-        </form>
       </nav>
       <main id="main" class="bp-shell-main">
         <slot />

@@ -166,6 +166,12 @@ const initials = member.displayName
         )
       }
 
+      {/* Signing out lives here, not in the shell. It was a button in the
+          sidebar and another in the phone header — permanent chrome on every
+          page for something a member does a handful of times a year, sitting
+          where a mis-tap costs them their session. `/me` is the page about
+          them, and this is the one destructive thing on it, so it takes the
+          danger treatment and sits last. */}
       {
         member.role === "admin" && (
           <a href="/admin" class="bp-btn bp-btn-quiet bp-btn-sm bp-me-admin-link">
@@ -187,6 +193,10 @@ const initials = member.displayName
           </a>
         )
       }
+
+      <form method="post" action="/logout" class="bp-me-signout">
+        <button type="submit" class="bp-btn bp-btn-danger bp-btn-sm">Sign out</button>
+      </form>
     </aside>
   </div>
 </AppLayout>

@@ -2,8 +2,9 @@
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import { INSTRUMENT_GLYPHS, INSTRUMENT_GLYPH_CREDIT } from "@bandplate/ui/icons/instruments.js";
+import AdminHeader from "../../../components/AdminHeader.astro";
 import InstrumentIcon from "../../../components/InstrumentIcon.astro";
-import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AppLayout from "../../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
 import {
@@ -54,44 +55,42 @@ const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justArchived = Astro.url.searchParams.get("archived") === "1";
 ---
 
-<AdminLayout title="Instruments" principal={principal} current="instruments">
-  {justCreated && <Banner kind="success">Instrument added.</Banner>}
-  {justUpdated && <Banner kind="success">Instrument updated.</Banner>}
-  {justArchived && <Banner kind="success">Instrument archived. Its past takes still render fine.</Banner>}
-  {formError && <Banner kind="error">{formError}</Banner>}
+<AppLayout title="Admin — Instruments" principal={principal} current="admin" adminSection="instruments">
+  <div class="bp-stack">
+    <AdminHeader title="Instruments" current="instruments" />
 
-  <section class="bp-card">
-    <h2 class="bp-section-title">Add an instrument</h2>
-    <form method="post" novalidate>
+    {justCreated && <Banner kind="success">Instrument added.</Banner>}
+    {justUpdated && <Banner kind="success">Instrument updated.</Banner>}
+    {justArchived && <Banner kind="success">Instrument archived. Its past takes still render fine.</Banner>}
+    {formError && <Banner kind="error">{formError}</Banner>}
+
+    <form method="post" class="bp-admin-add" novalidate>
       <input type="hidden" name="intent" value="create" />
-      <div class="bp-form-grid">
-        <Field
-          label="Slug"
-          name="slug"
-          required
-          hint="Lowercase, no spaces — e.g. rhythm-guitar"
-          error={createErrorField === "slug" ? createError : undefined}
-        />
-        <Field
-          label="Label"
-          name="label"
-          required
-          hint="What members see — e.g. Rhythm guitar"
-          error={createErrorField === "label" ? createError : undefined}
-        />
-      </div>
+      <Field
+        label="Slug"
+        name="slug"
+        required
+        hint="Lowercase, no spaces — e.g. rhythm-guitar"
+        error={createErrorField === "slug" ? createError : undefined}
+      />
+      <Field
+        label="Label"
+        name="label"
+        required
+        hint="What members see — e.g. Rhythm guitar"
+        error={createErrorField === "label" ? createError : undefined}
+      />
       <button type="submit" class="bp-btn bp-btn-primary">Add instrument</button>
     </form>
-  </section>
 
-  <section>
-    <h2>Instruments</h2>
-    <p class="bp-field-hint">
+    <p class="bp-field-hint bp-m0">
       Archiving an instrument hides it from new takes but keeps every past take that used it
       rendering correctly.
     </p>
     {instruments.length === 0 ? (
-      <p>No instruments yet — add the first one above.</p>
+      <div class="bp-empty-state">
+        <p>No instruments yet — add the first one above.</p>
+      </div>
     ) : (
       <div class="bp-table-wrap">
         <table class="bp-table">
@@ -111,82 +110,97 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                 <td data-label="Icon">
                   <InstrumentIcon icon={instrument.icon} label={instrument.label} size={24} />
                 </td>
+                {/* The label reads as a label; editing it lives behind the
+                    row's one disclosure, with the sort order, the icon picker
+                    and the destructive action. Inline, the four of them wrapped
+                    every row to three lines — a table of hairline rows you can
+                    scan a column of cannot afford that. */}
                 <td data-label="Label">
-                  <form method="post" class="bp-inline-form bp-instrument-form">
-                    <input type="hidden" name="intent" value="update" />
-                    <input type="hidden" name="instrumentId" value={instrument.id} />
-                    <label class="sr-only" for={`label-${instrument.id}`}>
-                      Label for {instrument.slug}
-                    </label>
-                    <input
-                      class="bp-input bp-input-inline-label"
-                      id={`label-${instrument.id}`}
-                      name="label"
-                      value={instrument.label}
-                    />
-                    <label class="sr-only" for={`order-${instrument.id}`}>
-                      Sort order for {instrument.slug}
-                    </label>
-                    <input
-                      class="bp-input bp-input-inline-number"
-                      id={`order-${instrument.id}`}
-                      name="sortOrder"
-                      type="number"
-                      value={instrument.sortOrder}
-                    />
-                    {/* A no-JS disclosure: the picker is a plain radio group
-                    inside the row's own form, so choosing a glyph and pressing
-                    Save is one submission. Collapsed by default because
-                    nineteen 44px tiles per row would bury the table. */}
-                    <details class="bp-icon-picker">
-                      <summary>Icon</summary>
-                      <fieldset class="bp-icon-grid">
-                        <legend class="sr-only">Icon for {instrument.label}</legend>
-                        <label class="bp-icon-choice" title="No icon — show initials">
-                          <input type="radio" name="icon" value="" checked={!instrument.icon} />
-                          <span class="bp-icon-choice-face bp-icon-choice-none">None</span>
-                        </label>
-                        {Object.entries(INSTRUMENT_GLYPHS).map(([key, glyph]) => (
-                          <label class="bp-icon-choice" title={glyph.label}>
-                            <input
-                              type="radio"
-                              name="icon"
-                              value={key}
-                              checked={instrument.icon === key}
-                            />
-                            <span class="bp-icon-choice-face">
-                              <InstrumentIcon icon={key} label={glyph.label} size={22} />
-                            </span>
-                          </label>
-                        ))}
-                      </fieldset>
-                    </details>
-                    <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save</button>
-                  </form>
+                  <span class="bp-table-name">{instrument.label}</span>
                 </td>
-                <td data-label="Slug" class="bp-mono">{instrument.slug}</td>
-                <td data-label="Order" class="bp-mono">{instrument.sortOrder}</td>
-                <td data-label="Status">
-                  <span class="bp-badge">{instrument.archivedAt ? "archived" : "active"}</span>
-                </td>
+                <td data-label="Slug" class="bp-table-quiet">{instrument.slug}</td>
+                <td data-label="Order" class="bp-table-quiet">{instrument.sortOrder}</td>
+                {/* Archived is the exception worth seeing; "active" as a badge
+                    on every other row was a column of decoration. */}
+                {/* One line, no surrounding whitespace: an unarchived
+                    instrument must leave this cell with NO child nodes so the
+                    phone layout's `td:empty` rule can drop it, rather than
+                    rendering a STATUS label with a blank beside it. */}
+                <td data-label="Status">{instrument.archivedAt && <span class="bp-kind">archived</span>}</td>
                 <td data-label="Actions">
-                  {instrument.archivedAt ? (
-                    <form method="post" action={`/admin/instruments/${instrument.id}/archive?unarchive=1`}>
-                      <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Unarchive</button>
-                    </form>
-                  ) : (
-                    <a
-                      href={`/admin/instruments/${instrument.id}/archive`}
-                      class="bp-btn bp-btn-danger bp-btn-sm"
-                      data-confirm
-                      data-confirm-title={`Archive ${instrument.label}?`}
-                      data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}
-                      data-confirm-action={`/admin/instruments/${instrument.id}/archive`}
-                      data-confirm-cta="Archive"
-                    >
-                      Archive
-                    </a>
-                  )}
+                  <details class="bp-cell-editor">
+                    <summary class="bp-btn bp-btn-secondary bp-btn-sm">Edit</summary>
+                    <div class="bp-cell-editor-body">
+                      <form method="post" class="bp-inline-form">
+                        <input type="hidden" name="intent" value="update" />
+                        <input type="hidden" name="instrumentId" value={instrument.id} />
+                        <label class="sr-only" for={`label-${instrument.id}`}>
+                          Label for {instrument.slug}
+                        </label>
+                        <input
+                          class="bp-input bp-input-inline-label"
+                          id={`label-${instrument.id}`}
+                          name="label"
+                          value={instrument.label}
+                        />
+                        <label class="sr-only" for={`order-${instrument.id}`}>
+                          Sort order for {instrument.slug}
+                        </label>
+                        <input
+                          class="bp-input bp-input-inline-number"
+                          id={`order-${instrument.id}`}
+                          name="sortOrder"
+                          type="number"
+                          value={instrument.sortOrder}
+                        />
+                        {/* A no-JS disclosure inside the row's own form, so
+                        choosing a glyph and pressing Save is one submission.
+                        Collapsed because nineteen 44px tiles would bury
+                        everything else in here. */}
+                        <details class="bp-icon-picker">
+                          <summary>Icon</summary>
+                          <fieldset class="bp-icon-grid">
+                            <legend class="sr-only">Icon for {instrument.label}</legend>
+                            <label class="bp-icon-choice" title="No icon — show initials">
+                              <input type="radio" name="icon" value="" checked={!instrument.icon} />
+                              <span class="bp-icon-choice-face bp-icon-choice-none">None</span>
+                            </label>
+                            {Object.entries(INSTRUMENT_GLYPHS).map(([key, glyph]) => (
+                              <label class="bp-icon-choice" title={glyph.label}>
+                                <input
+                                  type="radio"
+                                  name="icon"
+                                  value={key}
+                                  checked={instrument.icon === key}
+                                />
+                                <span class="bp-icon-choice-face">
+                                  <InstrumentIcon icon={key} label={glyph.label} size={22} />
+                                </span>
+                              </label>
+                            ))}
+                          </fieldset>
+                        </details>
+                        <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Save</button>
+                      </form>
+                      {instrument.archivedAt ? (
+                        <form method="post" action={`/admin/instruments/${instrument.id}/archive?unarchive=1`}>
+                          <button type="submit" class="bp-btn bp-btn-secondary bp-btn-sm">Unarchive</button>
+                        </form>
+                      ) : (
+                        <a
+                          href={`/admin/instruments/${instrument.id}/archive`}
+                          class="bp-btn bp-btn-danger bp-btn-sm"
+                          data-confirm
+                          data-confirm-title={`Archive ${instrument.label}?`}
+                          data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}
+                          data-confirm-action={`/admin/instruments/${instrument.id}/archive`}
+                          data-confirm-cta="Archive"
+                        >
+                          Archive
+                        </a>
+                      )}
+                    </div>
+                  </details>
                 </td>
               </tr>
             ))}
@@ -194,14 +208,14 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
         </table>
       </div>
     )}
-  </section>
-  <p class="bp-credit">
+    <p class="bp-credit">
     Instrument icons from{" "}
     <a href={INSTRUMENT_GLYPH_CREDIT.url} rel="noopener noreferrer" target="_blank">
       {INSTRUMENT_GLYPH_CREDIT.set}
     </a>, licensed{" "}
     <a href={INSTRUMENT_GLYPH_CREDIT.licenceUrl} rel="noopener noreferrer" target="_blank">
       {INSTRUMENT_GLYPH_CREDIT.licence}
-    </a>.
-  </p>
-</AdminLayout>
+      </a>.
+    </p>
+  </div>
+</AppLayout>

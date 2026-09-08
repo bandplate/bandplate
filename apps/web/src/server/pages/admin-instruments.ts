@@ -1,10 +1,10 @@
+import type { Db } from "@bandplate/db";
+import { instrumentsRepo } from "@bandplate/db";
 // `/admin/instruments` page logic — mirrors
 // `packages/api/src/routes/admin-instruments.ts`. Instruments are archived,
 // never deleted, so historical takes keep rendering an instrument the band
 // has dropped (see the schema comment in `packages/db`).
 import { INSTRUMENT_GLYPHS } from "@bandplate/ui/icons/instruments.js";
-import type { Db } from "@bandplate/db";
-import { instrumentsRepo } from "@bandplate/db";
 import { z } from "zod";
 
 type Instrument = instrumentsRepo.Instrument;

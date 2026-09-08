@@ -1,5 +1,6 @@
 ---
-import AdminLayout from "../../layouts/AdminLayout.astro";
+import AdminHeader from "../../components/AdminHeader.astro";
+import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { listInstruments } from "../../server/pages/admin-instruments.js";
 import { listMembers } from "../../server/pages/admin-members.js";
@@ -21,22 +22,33 @@ const activeInstruments = instruments.filter((i) => i.archivedAt === null);
 const activeTokens = tokens.filter((t) => t.revokedAt === null);
 ---
 
-<AdminLayout title="Overview" principal={principal} current="overview">
-  <div class="bp-stat-grid">
-    <a href="/admin/members" class="bp-card bp-card-link">
-      <p class="bp-field-hint bp-m0">Members</p>
-      <p class="bp-stat-value">{members.length}</p>
-      <p class="bp-m0">Manage the band roster, roles and status.</p>
-    </a>
-    <a href="/admin/instruments" class="bp-card bp-card-link">
-      <p class="bp-field-hint bp-m0">Instruments</p>
-      <p class="bp-stat-value">{activeInstruments.length}</p>
-      <p class="bp-m0">{instruments.length - activeInstruments.length} archived.</p>
-    </a>
-    <a href="/admin/tokens" class="bp-card bp-card-link">
-      <p class="bp-field-hint bp-m0">Service tokens</p>
-      <p class="bp-stat-value">{activeTokens.length}</p>
-      <p class="bp-m0">{tokens.length - activeTokens.length} revoked.</p>
-    </a>
+<AppLayout title="Admin" principal={principal} current="admin" adminSection="overview">
+  <div class="bp-stack">
+    <AdminHeader title="Admin" current="overview" />
+
+    {/* Not `.bp-card`s. A count with a label under it is the thinnest content
+        there is, and wrapping each in a bordered, filled panel with its own
+        heading was the treatment that made this section read as a different
+        product from the rest of the app. Same hairline-and-hover vocabulary
+        the plates and rows use, at tile proportions. */}
+    <div class="bp-admin-tiles">
+      <a href="/admin/members" class="bp-admin-tile">
+        <span class="bp-eyebrow">Members</span>
+        <span class="bp-admin-tile-value">{members.length}</span>
+        <span class="bp-admin-tile-note">The band roster, roles and status.</span>
+      </a>
+      <a href="/admin/instruments" class="bp-admin-tile">
+        <span class="bp-eyebrow">Instruments</span>
+        <span class="bp-admin-tile-value">{activeInstruments.length}</span>
+        <span class="bp-admin-tile-note">
+          {instruments.length - activeInstruments.length} archived.
+        </span>
+      </a>
+      <a href="/admin/tokens" class="bp-admin-tile">
+        <span class="bp-eyebrow">Service tokens</span>
+        <span class="bp-admin-tile-value">{activeTokens.length}</span>
+        <span class="bp-admin-tile-note">{tokens.length - activeTokens.length} revoked.</span>
+      </a>
+    </div>
   </div>
-</AdminLayout>
+</AppLayout>

@@ -2,8 +2,9 @@
 import { SCOPES } from "@bandplate/core";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import AdminHeader from "../../../components/AdminHeader.astro";
 import CopyButton from "../../../components/CopyButton.tsx";
-import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AppLayout from "../../../layouts/AppLayout.astro";
 import { getAppDeps, getAuthDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
 import { formatTimestamp } from "../../../server/format.js";
@@ -60,24 +61,31 @@ const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justRevoked = Astro.url.searchParams.get("revoked") === "1";
 ---
 
-<AdminLayout title="Tokens" principal={principal} current="tokens">
-  {justUpdated && <Banner kind="success">Scopes updated.</Banner>}
-  {justRevoked && <Banner kind="success">Token revoked. Anything using it will stop working immediately.</Banner>}
-  {formError && <Banner kind="error">{formError}</Banner>}
+<AppLayout title="Admin — Tokens" principal={principal} current="admin" adminSection="tokens">
+  <div class="bp-stack">
+    <AdminHeader title="Tokens" current="tokens" />
 
-  {created && (
-    <Banner kind="success" title="Token created">
-      <p class="mb-2">
-        <strong>Copy this secret now — it will not be shown again.</strong>
-      </p>
-      <p class="bp-mono mb-2">{created.rawToken}</p>
-      <CopyButton client:load value={created.rawToken} label="Copy secret" />
-    </Banner>
-  )}
+    {justUpdated && <Banner kind="success">Scopes updated.</Banner>}
+    {justRevoked && <Banner kind="success">Token revoked. Anything using it will stop working immediately.</Banner>}
+    {formError && <Banner kind="error">{formError}</Banner>}
 
-  <section class="bp-card">
-    <h2 class="bp-section-title">Create a token</h2>
-    <form method="post" novalidate>
+    {created && (
+      <Banner kind="success" title="Token created">
+        <p class="mb-2">
+          <strong>Copy this secret now — it will not be shown again.</strong>
+        </p>
+        {/* The one place mono earns its keep on these pages: a random secret
+            is read a character at a time, and that is exactly what a
+            fixed-width face is for. Email addresses and labels are words. */}
+        <p class="bp-mono mb-2">{created.rawToken}</p>
+        <CopyButton client:load value={created.rawToken} label="Copy secret" />
+      </Banner>
+    )}
+
+    {/* The label sits inline like the other add forms; the scope checkboxes
+        wrap under it because there are eight of them and they are the actual
+        decision being made here. */}
+    <form method="post" class="bp-admin-add bp-admin-add--stacked" novalidate>
       <input type="hidden" name="intent" value="create" />
       <Field
         label="Label"
@@ -91,7 +99,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
         aria-invalid={createErrorField === "scopes" ? "true" : undefined}
         aria-describedby={createErrorField === "scopes" ? "scopes-error" : undefined}
       >
-        <legend>Scopes</legend>
+        <legend class="bp-eyebrow">Scopes</legend>
         {SCOPES.map((scope) => (
           <span class="bp-checkbox-item">
             <input type="checkbox" id={`scope-new-${scope}`} name="scopes" value={scope} />
@@ -104,12 +112,11 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
       </fieldset>
       <button type="submit" class="bp-btn bp-btn-primary">Create token</button>
     </form>
-  </section>
 
-  <section>
-    <h2>Service tokens</h2>
     {tokens.length === 0 ? (
-      <p>No service tokens yet — create one above.</p>
+      <div class="bp-empty-state">
+        <p>No service tokens yet — create one above.</p>
+      </div>
     ) : (
       <div class="bp-table-wrap">
         <table class="bp-table">
@@ -126,12 +133,12 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
             {tokens.map((token) => (
               <tr>
                 <td data-label="Label">
-                  {token.label}
-                  {token.revokedAt && <span class="bp-badge ml-2">revoked</span>}
+                  <span class="bp-table-name">{token.label}</span>
+                  {token.revokedAt && <span class="bp-kind">revoked</span>}
                 </td>
-                <td data-label="Scopes" class="bp-mono">{token.scopes.join(", ")}</td>
-                <td data-label="Created" class="bp-mono">{formatTimestamp(token.createdAt)}</td>
-                <td data-label="Last used" class="bp-mono">{formatTimestamp(token.lastUsedAt)}</td>
+                <td data-label="Scopes" class="bp-table-quiet">{token.scopes.join(", ")}</td>
+                <td data-label="Created" class="bp-table-quiet bp-table-when">{formatTimestamp(token.createdAt)}</td>
+                <td data-label="Last used" class="bp-table-quiet bp-table-when">{formatTimestamp(token.lastUsedAt)}</td>
                 <td data-label="Actions">
                   <div class="bp-table-actions">
                     {!token.revokedAt && (
@@ -183,5 +190,5 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
         </table>
       </div>
     )}
-  </section>
-</AdminLayout>
+  </div>
+</AppLayout>

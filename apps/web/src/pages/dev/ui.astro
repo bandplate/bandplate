@@ -1,4 +1,5 @@
 ---
+import UiShowcase from "../../components/dev/UiShowcase.astro";
 // Component gallery. Every primitive, both themes, one page — so a token that
 // only fails in one theme is visible without switching the OS appearance.
 //
@@ -9,7 +10,6 @@
 // bundle contains a route that answers 404 and nothing else. `/dev` is
 // allowlisted in `server/guard.ts` so this renders without a session.
 import Layout from "../../layouts/Layout.astro";
-import UiShowcase from "../../components/dev/UiShowcase.astro";
 
 const enabled = import.meta.env.DEV || import.meta.env.PUBLIC_BANDPLATE_DEV_UI === "true";
 if (!enabled) {

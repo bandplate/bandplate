@@ -10,6 +10,7 @@ import { ClientRouter } from "astro:transitions";
 // `prefers-reduced-motion` itself (Astro's built-in behavior).
 import type { MemberPrincipal } from "@bandplate/core";
 import Logo from "@bandplate/ui/components/Logo.astro";
+import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import NavIcon from "../components/NavIcon.astro";
 import Player from "../components/Player.tsx";
 import VoteFavorite from "../components/VoteFavorite.tsx";
@@ -20,26 +21,48 @@ export interface Props {
   principal: MemberPrincipal;
   // "home" (Task 6's `/`) matches no nav item — the wordmark link is home's
   // only nav entry point, same as before this task, so it's a valid value
-  // with none of the four tabs rendering `aria-current`.
+  // with none of the tabs rendering `aria-current`.
   current: "home" | "songs" | "events" | "takes" | "admin" | "me";
+  // Which admin section is open, when `current` is "admin". The sidebar lists
+  // the four of them directly (see below), so it needs to know which one is
+  // the page rather than just that the page is somewhere under /admin.
+  adminSection?: "overview" | "members" | "instruments" | "tokens";
 }
 
-const { title, principal, current } = Astro.props;
+const { title, principal, current, adminSection } = Astro.props;
 
-// Admin is a nav item, not a link buried on `/me`: an admin reaches for it
-// from wherever they happen to be, and `role` is already on the principal, so
-// nothing extra is fetched to decide. It sits before Me because Me is where a
-// member's own things end, and the tab bar reads left to right from the band's
-// stuff to yours.
+const isAdmin = principal.role === "admin";
+
+// The band's things, then yours. Admin is deliberately NOT in this list.
 const navItems = [
   { key: "songs", label: "Songs", href: "/songs" },
   { key: "events", label: "Events", href: "/events" },
   { key: "takes", label: "Takes", href: "/takes" },
-  ...(principal.role === "admin"
-    ? ([{ key: "admin", label: "Admin", href: "/admin" }] as const)
-    : []),
   { key: "me", label: "Me", href: "/me" },
 ] as const;
+
+// Admin is its own SECTION of the sidebar, under a rule and its own label,
+// rather than a fifth peer of Songs and Events: it is a different mode of
+// using the app — running the band's account rather than listening to it —
+// and the four sections below are its own navigation, not the app's. Listing
+// them here is also what lets the section pills stay a phone-only control.
+const adminItems = [
+  { key: "overview", label: "Overview", href: "/admin" },
+  { key: "members", label: "Members", href: "/admin/members" },
+  { key: "instruments", label: "Instruments", href: "/admin/instruments" },
+  { key: "tokens", label: "Tokens", href: "/admin/tokens" },
+] as const;
+
+// The phone has no sidebar to hold a section, so there Admin stays one tab —
+// the door, with `AdminHeader`'s pills behind it. Before Me, so the bar still
+// reads left to right from the band's stuff to yours.
+const tabItems = isAdmin
+  ? ([
+      ...navItems.slice(0, 3),
+      { key: "admin", label: "Admin", href: "/admin" },
+      navItems[3],
+    ] as const)
+  : navItems;
 ---
 
 <Layout title={title}>
@@ -81,6 +104,28 @@ const navItems = [
             ))
           }
         </ul>
+        {
+          isAdmin && (
+            <div class="bp-sidebar-group">
+              <p class="bp-eyebrow bp-sidebar-group-label bp-m0">Admin</p>
+              <ul class="bp-sidebar-nav">
+                {adminItems.map((item) => (
+                  <li>
+                    <a
+                      href={item.href}
+                      class="bp-sidebar-item bp-sidebar-subitem"
+                      aria-current={
+                        current === "admin" && adminSection === item.key ? "page" : undefined
+                      }
+                    >
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
       </nav>
       <main id="main" class="bp-shell-main">
         <slot />
@@ -88,7 +133,7 @@ const navItems = [
     </div>
     <nav class="bp-tabbar" aria-label="Main">
       {
-        navItems.map((item) => (
+        tabItems.map((item) => (
           <a href={item.href} class="bp-tabbar-item" aria-current={item.key === current ? "page" : undefined}>
             <span class="bp-tabbar-icon">
               <NavIcon name={item.key} />
@@ -100,6 +145,12 @@ const navItems = [
     </nav>
     <Player client:load transition:persist="bp-player" />
     <VoteFavorite client:load transition:persist="bp-vote-favorite" />
+    {/* One per document, in the shell — it listens on `document` for any
+        `[data-confirm]` click, so a second copy would open two dialogs. It
+        lived in `AdminLayout` only, which meant the keeper/reject confirms on
+        a take's own page never got the modal and always took the full
+        confirm-page navigation instead. */}
+    <ConfirmDialog client:load transition:persist="bp-confirm" />
   </div>
 </Layout>
 

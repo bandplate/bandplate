@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-8",
+      "name": "M4 — Song detail"
+    },
+    {
       "id": "page-7",
       "name": "M2 — Primitives"
     },
@@ -30,6 +34,15 @@
     }
   ],
   "artboards": [
+    {
+      "file": "SongDetail.dc.html",
+      "title": "Song detail",
+      "page": "page-8",
+      "x": 0,
+      "y": 0,
+      "w": 1720,
+      "h": 1120
+    },
     {
       "file": "TakeRowRevised.dc.html",
       "title": "Take row — V2 chosen",
@@ -222,6 +235,14 @@
   ],
   "annotations": [
     {
+      "id": "song",
+      "page": "page-8",
+      "x": 0,
+      "y": -260,
+      "w": 1720,
+      "text": "Song detail\n\nTwo columns on desktop: chart left at a 40ch measure, takes right with room to be a real list. On a phone the same two blocks stack, takes first — you open a song to hear it, not to read it.\n\nNo left indent anywhere; the chorus label is muted like every other section and the emphasis sits on the words."
+    },
+    {
       "id": "takerow",
       "page": "page-7",
       "x": 1400,
@@ -296,6 +317,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-7"
+    "page": "page-8"
   }
 }

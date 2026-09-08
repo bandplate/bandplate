@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-14",
+      "name": "M5 \u2014 Admin"
+    },
+    {
       "id": "page-13",
       "name": "M4 \u2014 Takes"
     },
@@ -54,6 +58,15 @@
     }
   ],
   "artboards": [
+    {
+      "file": "Admin.dc.html",
+      "title": "Admin",
+      "page": "page-14",
+      "x": 0,
+      "y": 0,
+      "w": 2200,
+      "h": 980
+    },
     {
       "file": "Takes.dc.html",
       "title": "Takes",
@@ -382,6 +395,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-13"
+    "page": "page-14"
   }
 }

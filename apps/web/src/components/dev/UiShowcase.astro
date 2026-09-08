@@ -10,6 +10,64 @@
 // changes with it — that duplication is the cost of a gallery that always
 // renders.
 import Banner from "@bandplate/ui/components/Banner.astro";
+import type { instrumentsRepo, takesRepo } from "@bandplate/db";
+import TakeRow from "../TakeRow.astro";
+
+// Fixtures for the REAL `TakeRow`. Rendering the actual component rather than a
+// hand-copied mirror of it is the point: a mirror drifts, and every defect this
+// gallery failed to catch today — the row's 22px tap target, the note's failing
+// contrast — was in a component the gallery did not render.
+//
+// Plain objects rather than a database read: `/dev/ui` must render with no
+// session and no data, and these are the shapes `takesRepo.Take` and
+// `instrumentsRepo.Instrument` already describe, so the compiler keeps them
+// honest when a column is added.
+const NOW = Date.UTC(2026, 2, 14);
+
+function instrument(slug: string, label: string, icon: string | null): instrumentsRepo.Instrument {
+  return { id: `i-${slug}`, slug, label, sortOrder: 0, icon, archivedAt: null };
+}
+
+const BAND = [
+  instrument("drums", "Drums", "drum-kit"),
+  instrument("bass", "Bass", "guitar-bass-head"),
+  instrument("guitar", "Guitar", "guitar"),
+  instrument("vocals", "Vocals", "microphone"),
+];
+
+function take(over: Partial<takesRepo.Take> & { id: string }): takesRepo.Take {
+  return {
+    songId: "s-1",
+    eventId: "e-1",
+    label: null,
+    recordedAt: NOW,
+    durationMs: 232_000,
+    state: "published",
+    keeperVotes: 0,
+    totalVotes: 0,
+    ratingScore: 0,
+    clientRef: null,
+    notes: null,
+    publishedAt: null,
+    purgedAt: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    ...over,
+  } as takesRepo.Take;
+}
+
+// One row per state worth looking at, not a sampler: playable vs not, with and
+// without a note, and each badge that changes what the row says.
+const TAKE_ROWS = [
+  { t: take({ id: "t-1", state: "keeper", durationMs: 216_000 }), play: "a-1", fav: true,
+    note: "playable, favourited, keeper" },
+  { t: take({ id: "t-2", label: "second half only", state: "new", durationMs: 224_000 }), play: "a-2",
+    fav: false, note: "playable, with its own note" },
+  { t: take({ id: "t-3", state: "rejected", durationMs: 188_000 }), play: undefined, fav: false,
+    note: "no ready asset — the plate, not a play button" },
+  { t: take({ id: "t-4", state: "published", durationMs: null }), play: "a-4", fav: false,
+    note: "no duration — renders an em dash, not a blank" },
+] as const;
 
 const swatches = [
   ["--bp-color-bg", "ground"],
@@ -198,6 +256,48 @@ const scale = [
           </tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Take row</h2>
+    <p class="text-meta text-muted bp-m0">
+      The real component, not a copy — six pages render it, and it is where most of this system's
+      defects have been. Voting is deliberately absent: it lives on the take's own page.
+    </p>
+    <div class="bp-take-list">
+      {
+        TAKE_ROWS.map((row) => (
+          <TakeRow
+            take={row.t}
+            instruments={BAND}
+            context={{ kind: "event", song: { id: "s-1", title: "Píseň o cestách" } }}
+            playableAssetId={row.play}
+            favorited={row.fav}
+            transitionName={null}
+          />
+        ))
+      }
+    </div>
+    <p class="text-meta text-muted bp-m0">
+      Top to bottom: {TAKE_ROWS.map((r) => r.note).join(" — ")}.
+    </p>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Player bar</h2>
+    <p class="text-meta text-muted bp-m0">
+      Static chrome. The real player is a Preact island driven by a store and needs a loaded track, so
+      this mirrors its markup to check the shell — the gold hairline that welds it to the tab bar, and
+      the drawn separator in the subtitle. Behaviour is verified in the app, not here.
+    </p>
+    <div class="bp-player" style="position: static">
+      <div class="bp-player-meta">
+        <span class="bp-player-title">Píseň o cestách</span>
+        <span class="bp-player-subtitle">
+          take 3<span class="bp-player-sep" aria-hidden="true" />Bass
+        </span>
+      </div>
     </div>
   </section>
 

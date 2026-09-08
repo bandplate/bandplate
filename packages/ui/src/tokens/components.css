@@ -2074,8 +2074,18 @@ a.bp-btn {
    itself and pulling the same amount back off the block, so the target grows
    without the row doing. */
 .bp-take-label {
-  padding: 0.6875rem 0;
-  margin: -0.6875rem 0;
+  /* Derived from the target, and deliberately overshooting it.
+     A flat 11px looked right and measured 43.84px — a 19px x 1.15 line box
+     plus 22px of padding — so every row missed the 44px floor by 0.16px, in
+     both themes, invisibly, until `/dev/ui` started rendering this component.
+     Solving for exactly 44px then landed at 43.98: the used padding and the
+     line box each round to sub-pixels, so equality is not reachable this way.
+     Aiming at 46px costs nothing — the negative margin below cancels whatever
+     this is, so the row's layout height is unchanged either way — and leaves
+     the floor met no matter which way the rounding goes. */
+  --bp-take-label-pad: calc((46px - 1.15em) / 2);
+  padding-block: var(--bp-take-label-pad);
+  margin-block: calc(var(--bp-take-label-pad) * -1);
 }
 
 .bp-take-favorite-mark {

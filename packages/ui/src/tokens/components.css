@@ -2576,36 +2576,86 @@ a.bp-btn {
   text-decoration-color: currentColor;
 }
 
-.bp-take-detail-meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: 1.25rem 1.5rem;
-  margin: 0;
+/* Take detail, direction T3 — labelled strips off one edge, divided by rules.
+   The definition list this replaces (`.bp-take-detail-meta`, now gone) put the
+   vote in its fifth row, after Instruments, which said that casting one is the
+   same kind of act as reading a duration. */
+.bp-take-detail {
+  display: flex;
+  flex-direction: column;
 }
 
-.bp-take-detail-meta dt {
-  font-family: var(--bp-font-body);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.bp-take-detail-hero {
+  padding-bottom: 1.25rem;
+}
+
+.bp-take-detail-subline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.625rem;
+  margin-top: 0.4375rem;
+  font-size: var(--text-meta, 0.78125rem);
   color: var(--bp-color-muted);
-  margin: 0 0 0.3125rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.bp-take-detail-meta dd {
-  margin: 0;
-  font-size: 0.9375rem;
+/* The drawn rule the whole system uses between two runs on one line, rather
+   than a middle dot. */
+.bp-take-detail-sep {
+  display: inline-block;
+  width: 1px;
+  height: 0.75rem;
+  flex: none;
+  background: var(--bp-color-border);
 }
 
-.bp-take-detail-meta dd a {
-  color: var(--bp-color-fg);
-  text-decoration: underline;
-  text-decoration-color: var(--bp-color-muted);
-  text-underline-offset: 0.15em;
+.bp-take-detail-note {
+  margin-top: 0.5rem;
+  font-size: var(--text-prose, 1.0625rem);
+  color: var(--bp-color-muted);
 }
 
-.bp-take-detail-meta dd a:hover {
-  text-decoration-color: currentColor;
+.bp-take-strip {
+  padding: 1.375rem 0;
+  border-top: 1px solid var(--bp-color-border);
+}
+
+/* The strip's own label. Deliberately the eyebrow treatment and NOT
+   `.bp-section-title`: a section title is a heading you read, and there are up
+   to five of these on one short page — at slab 20 they would out-shout the
+   take's own name. It stays an `<h2>` in the markup, so the page's outline is
+   still navigable by heading. */
+.bp-strip-label {
+  font-family: var(--bp-font-body);
+  font-weight: 900;
+  font-size: var(--text-eyebrow, 0.6875rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+  margin: 0 0 0.75rem;
+}
+
+.bp-take-detail-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.625rem;
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Past `lg` the last two strips sit side by side. They are the only two on the
+   page that are pure reference — everything above them is something you DO, and
+   a decision that has scrolled off screen is a decision you don't make. */
+@media (min-width: 64rem) {
+  .bp-take-detail-tail {
+    display: grid;
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    gap: 0 3rem;
+    align-items: start;
+  }
 }
 
 .bp-asset-list {
@@ -2654,6 +2704,37 @@ a.bp-btn {
 
 .bp-asset-row-meta-item + .bp-asset-row-meta-item {
   border-inline-start: 1px solid var(--bp-color-border);
+}
+
+/* The download. An icon and a 44px target rather than a labelled button: there
+   is one per row and up to eight rows, and eight buttons reading "Download"
+   down the right edge is a column of shouting. The row already names the file;
+   this only has to say "take it". The accessible name is on the link. */
+.bp-asset-row-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  margin-inline-start: auto;
+  border-radius: 50%;
+  color: var(--bp-color-muted);
+}
+
+.bp-asset-row-download:hover {
+  color: var(--bp-color-fg);
+  background: var(--bp-fill-subtle);
+}
+
+/* Holds the column open for an asset that is still uploading, so a list with
+   one pending row does not have its other rows' icons jump inward. */
+.bp-asset-row-download-empty {
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  margin-inline-start: auto;
 }
 
 /* ---------------------------------------------------------------------- */

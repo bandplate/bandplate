@@ -28,11 +28,18 @@ import { hasAllScopes } from "@bandplate/core";
 // transition, just not a pixel-identical one. See task-6-report.md.
 import type { assetsRepo } from "@bandplate/db";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
+import InstrumentIcon from "../../components/InstrumentIcon.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { formatBytes, formatDuration, formatLongDate } from "../../server/format.js";
+import {
+  eventKindLabel,
+  eventLabel,
+  formatBytes,
+  formatDuration,
+  formatLongDate,
+} from "../../server/format.js";
 import { getTakeDetail } from "../../server/pages/takes.js";
 import { TAKE_STATE_LABEL } from "../../server/take-state.js";
 
@@ -77,8 +84,12 @@ const playableMaster =
   readyMasters.find((a) => a.tier === "lossy") ?? readyMasters.find((a) => a.tier === "lossless");
 const playableStems = stems.filter((a) => a.status === "ready");
 
-const kindLabel =
-  event?.kind === "rehearsal" ? "rehearsal" : event?.kind === "concert" ? "concert" : "session";
+const kindLabel = event ? eventKindLabel(event.kind) : "";
+// The event's NAME where it has one, exactly as the take rows say it — a
+// member arriving here from a row should read the same words they clicked.
+const eventName = event
+  ? eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
+  : "";
 const heroTitle = song ? song.title : `Take from ${formatLongDate(take.recordedAt)}`;
 const heroSubtitle = event ? `${kindLabel} — ${formatLongDate(event.heldAt)}` : (take.label ?? "");
 
@@ -91,155 +102,123 @@ function assetLabel(asset: assetsRepo.Asset): string {
 ---
 
 <AppLayout title={song ? song.title : "Take"} principal={principal} current="home">
-  <div class="bp-stack">
-    <div>
-      {
-        song ? (
-          <h1 class="bp-hero-title">
-            <a
-              href={`/songs/${song.slug}`}
-              class="bp-hero-title-link"
-              transition:name={`take-${take.id}`}
-            >
+  {/* Direction T3 from the design canvas: labelled STRIPS hanging off one
+      edge, divided by rules, no cards. It is the same grammar the song page
+      uses, which is the whole argument for it — a member moving between the
+      two reads one layout, not two. Each strip is titled by what it is FOR
+      ("Listen", "Your vote"), because this page's job is a sequence — hear
+      the take, then judge it — and the old five-row definition list, with
+      the vote as its fifth entry after Instruments, said nothing about that.
+      Facts collapse into one quiet run at the bottom; they are context for
+      the decision, not the point of the page. */}
+  <div class="bp-take-detail">
+    <div class="bp-take-detail-hero">
+      <h1 class="bp-hero-title bp-m0">
+        {
+          song ? (
+            <a href={`/songs/${song.slug}`} class="bp-hero-title-link" transition:name={`take-${take.id}`}>
               {song.title}
             </a>
-            <span class="bp-take-favorite-mark">
-              <FavoriteToggle
-                targetType="take"
-                targetId={take.id}
-                favorited={favorited}
-                label={song.title}
-                size="lg"
-              />
-            </span>
-          </h1>
-        ) : (
-          <h1 class="bp-hero-title" transition:name={`take-${take.id}`}>
-            Take
-            <span class="bp-take-favorite-mark">
-              <FavoriteToggle
-                targetType="take"
-                targetId={take.id}
-                favorited={favorited}
-                label="this take"
-                size="lg"
-              />
-            </span>
-          </h1>
-        )
-      }
-      {take.label && <p class="bp-m0">{take.label}</p>}
+          ) : (
+            <span transition:name={`take-${take.id}`}>Take</span>
+          )
+        }
+        {kindLabel && <span class="bp-badge bp-badge-kind">{kindLabel}</span>}
+        <span class="bp-take-favorite-mark">
+          <FavoriteToggle
+            targetType="take"
+            targetId={take.id}
+            favorited={favorited}
+            label={song ? song.title : "this take"}
+            size="lg"
+          />
+        </span>
+      </h1>
+      <p class="bp-take-detail-subline bp-m0">
+        {
+          event ? (
+            <a href={`/events/${event.id}`} class="bp-take-event-link">
+              {eventName || `this ${kindLabel}`}
+            </a>
+          ) : null
+        }
+        {event && <span class="bp-take-detail-sep" aria-hidden="true" />}
+        <span>{formatLongDate(event ? event.heldAt : take.recordedAt)}</span>
+      </p>
+      {take.label && <p class="bp-take-detail-note bp-m0">{take.label}</p>}
     </div>
 
     {
       playableMaster && (
-        <div class="bp-take-play-section">
-          <PlayToggleButton
-            takeId={take.id}
-            assetId={playableMaster.id}
-            title={heroTitle}
-            subtitle={heroSubtitle}
-            size="lg"
-          />
-          {playableStems.length > 0 && (
-            <div class="bp-solo-drawer" role="group" aria-label="Solo an instrument">
-              <button
-                type="button"
-                class="bp-solo-chip"
-                data-audio-source
-                data-take-id={take.id}
-                data-asset-id={playableMaster.id}
-                data-title={heroTitle}
-                data-subtitle={heroSubtitle}
-                data-source-label="Master"
-                data-role="source-select"
-                aria-pressed="false"
-              >
-                Full mix
-              </button>
-              {playableStems.map((stem) => {
-                const instrumentLabel = instrumentLabelById.get(stem.instrumentId ?? "") ?? "Unknown instrument";
-                return (
-                  <button
-                    type="button"
-                    class="bp-solo-chip"
-                    data-audio-source
-                    data-take-id={take.id}
-                    data-asset-id={stem.id}
-                    data-title={heroTitle}
-                    data-subtitle={heroSubtitle}
-                    data-source-label={`Solo: ${instrumentLabel}`}
-                    data-role="source-select"
-                    aria-pressed="false"
-                  >
-                    Solo: {instrumentLabel}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <section class="bp-take-strip">
+          <h2 class="bp-strip-label">Listen</h2>
+          <div class="bp-take-play-section">
+            <PlayToggleButton
+              takeId={take.id}
+              assetId={playableMaster.id}
+              title={heroTitle}
+              subtitle={heroSubtitle}
+              size="lg"
+            />
+            {playableStems.length > 0 && (
+              <div class="bp-solo-drawer" role="group" aria-label="Solo an instrument">
+                <button
+                  type="button"
+                  class="bp-solo-chip"
+                  data-audio-source
+                  data-take-id={take.id}
+                  data-asset-id={playableMaster.id}
+                  data-title={heroTitle}
+                  data-subtitle={heroSubtitle}
+                  data-source-label="Master"
+                  data-role="source-select"
+                  aria-pressed="false"
+                >
+                  Full mix
+                </button>
+                {playableStems.map((stem) => {
+                  const instrumentLabel =
+                    instrumentLabelById.get(stem.instrumentId ?? "") ?? "Unknown instrument";
+                  return (
+                    <button
+                      type="button"
+                      class="bp-solo-chip"
+                      data-audio-source
+                      data-take-id={take.id}
+                      data-asset-id={stem.id}
+                      data-title={heroTitle}
+                      data-subtitle={heroSubtitle}
+                      data-source-label={`Solo: ${instrumentLabel}`}
+                      data-role="source-select"
+                      aria-pressed="false"
+                    >
+                      Solo: {instrumentLabel}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
       )
     }
 
-    <dl class="bp-take-detail-meta">
-      <div>
-        <dt>Recorded</dt>
-        <dd>
-          {event ? (
-            <a href={`/events/${event.id}`}>
-              {formatLongDate(event.heldAt)} — this {kindLabel}
-            </a>
-          ) : (
-            formatLongDate(take.recordedAt)
-          )}
-        </dd>
-      </div>
-      <div>
-        <dt>Duration</dt>
-        <dd class="bp-mono">{formatDuration(take.durationMs)}</dd>
-      </div>
-      <div>
-        <dt>State</dt>
-        <dd>
-          <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-            {TAKE_STATE_LABEL[take.state]}
-          </span>
-        </dd>
-      </div>
-      <div>
-        <dt>Instruments</dt>
-        <dd>
-          {instruments.length === 0 ? (
-            "—"
-          ) : (
-            <div class="bp-take-instruments">
-              {instruments.map((instrument) => (
-                <span class="bp-take-instrument-tag">{instrument.label}</span>
-              ))}
-            </div>
-          )}
-        </dd>
-      </div>
-      <div>
-        <dt>Your vote</dt>
-        <dd>
-          <VoteToggle
-            takeId={take.id}
-            keeperVotes={take.keeperVotes}
-            totalVotes={take.totalVotes}
-            ratingScore={take.ratingScore}
-            myVote={myVote}
-            size="lg"
-          />
-        </dd>
-      </div>
-    </dl>
+    <section class="bp-take-strip">
+      <h2 class="bp-strip-label">Your vote</h2>
+      <VoteToggle
+        takeId={take.id}
+        keeperVotes={take.keeperVotes}
+        totalVotes={take.totalVotes}
+        ratingScore={take.ratingScore}
+        myVote={myVote}
+        size="lg"
+      />
+    </section>
 
     {
       isAdmin && (take.state === "published" || take.state === "new") && (
-        <section class="bp-card">
-          <h2 class="bp-section-title">Admin</h2>
+        <section class="bp-take-strip">
+          <h2 class="bp-strip-label">Admin</h2>
           <p class="bp-field-hint bp-m0">
             Votes only inform this — promoting or rejecting is a deliberate call, not automatic.
           </p>
@@ -271,38 +250,89 @@ function assetLabel(asset: assetsRepo.Asset): string {
       )
     }
 
-    <section>
-      <h2 class="bp-section-title">Assets</h2>
-      {
-        displayableAssets.length === 0 ? (
-          <div class="bp-empty-state">
-            <p>No assets uploaded for this take yet.</p>
-          </div>
-        ) : (
-          <div class="bp-stack bp-stack-tight">
-            <p class="bp-field-hint bp-m0">
-              {hasLossless
-                ? "A lossless master is available."
-                : "No lossless master available yet."}
-            </p>
-            <ul class="bp-asset-list">
-              {displayableAssets.map((asset) => (
-                <li class="bp-asset-row">
-                  <span class="bp-asset-row-label">{assetLabel(asset)}</span>
-                  <span class="bp-asset-row-meta bp-mono">
-                    <span class="bp-asset-row-meta-item">{asset.format}</span>
-                    <span class="bp-asset-row-meta-item">{asset.tier}</span>
-                    <span class="bp-asset-row-meta-item">{formatBytes(asset.bytes)}</span>
-                    {asset.status !== "ready" && (
-                      <span class="bp-asset-row-meta-item">{asset.status}</span>
+    <div class="bp-take-detail-tail">
+      <section class="bp-take-strip">
+        <h2 class="bp-strip-label">This take</h2>
+        <div class="bp-take-detail-facts">
+          <span>{formatDuration(take.durationMs)}</span>
+          <span class="bp-take-detail-sep" aria-hidden="true" />
+          <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
+            {TAKE_STATE_LABEL[take.state]}
+          </span>
+          {
+            instruments.length > 0 && (
+              <>
+                <span class="bp-take-detail-sep" aria-hidden="true" />
+                <span
+                  class="bp-take-instruments"
+                  role="img"
+                  aria-label={`Instruments: ${instruments.map((i) => i.label).join(", ")}`}
+                >
+                  {instruments.map((instrument) => (
+                    <InstrumentIcon icon={instrument.icon} label={instrument.label} />
+                  ))}
+                </span>
+              </>
+            )
+          }
+        </div>
+      </section>
+
+      <section class="bp-take-strip">
+        <h2 class="bp-strip-label">Files</h2>
+        {
+          displayableAssets.length === 0 ? (
+            <div class="bp-empty-state">
+              <p>No assets uploaded for this take yet.</p>
+            </div>
+          ) : (
+            <div class="bp-stack bp-stack-tight">
+              <p class="bp-field-hint bp-m0">
+                {hasLossless ? "A lossless master is available." : "No lossless master available yet."}
+              </p>
+              <ul class="bp-asset-list">
+                {displayableAssets.map((asset) => (
+                  <li class="bp-asset-row">
+                    <span class="bp-asset-row-label">{assetLabel(asset)}</span>
+                    <span class="bp-asset-row-meta bp-mono">
+                      <span class="bp-asset-row-meta-item">{asset.format}</span>
+                      <span class="bp-asset-row-meta-item">{asset.tier}</span>
+                      <span class="bp-asset-row-meta-item">{formatBytes(asset.bytes)}</span>
+                      {asset.status !== "ready" && (
+                        <span class="bp-asset-row-meta-item">{asset.status}</span>
+                      )}
+                    </span>
+                    {/* A plain link, not a fetch: the endpoint 302s to a presigned
+                        URL carrying `Content-Disposition: attachment`, so the browser's
+                        own download manager takes it from there — resumable, visible in
+                        Downloads, and working identically on iOS Safari, where a
+                        JS-driven blob download does not. Absent for an asset that is
+                        not ready, for the same reason the play control is: no
+                        affordance for a file that isn't there yet. */}
+                    {asset.status === "ready" ? (
+                      <a
+                        class="bp-asset-row-download"
+                        href={`/api/assets/${asset.id}/download`}
+                        download
+                        data-astro-reload
+                        aria-label={`Download ${assetLabel(asset)} (${asset.format}, ${formatBytes(asset.bytes)})`}
+                      >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M12 3v12" />
+                          <path d="M7 11l5 5 5-5" />
+                          <path d="M4 20h16" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span class="bp-asset-row-download-empty" aria-hidden="true" />
                     )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )
-      }
-    </section>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+      </section>
+    </div>
   </div>
 </AppLayout>

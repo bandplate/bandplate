@@ -1,0 +1,157 @@
+/*
+ * Dubplate — the default brand token file.
+ *
+ * Spec and rationale: docs/design-foundation.md. Another deployer replaces
+ * THIS FILE and the logo asset; nothing else in the codebase references a
+ * raw hex.
+ *
+ * Two layers:
+ *   1. The palette — raw, named, never theme-dependent.
+ *   2. The semantic layer — `--bp-color-*`, which flips between themes.
+ *      Component CSS and Tailwind utilities only ever see this layer.
+ *
+ * ---------------------------------------------------------------------
+ * Contrast (WCAG relative luminance), every text-intent token, both themes
+ * ---------------------------------------------------------------------
+ *   fg    on bg   dark  bone/lacquer      14.9:1     light  ink/bone   16.4:1
+ *   muted on bg   dark  dust/lacquer       6.5:1     light  clay/bone   5.4:1
+ *   accent on bg  dark  gold/lacquer       9.8:1     light  burnt/bone  5.9:1
+ *   ok    on bg   dark  yard/lacquer       5.8:1     light  olive/bone  6.4:1
+ *   danger on bg  dark  flare/lacquer      4.6:1     light  rust/bone   6.5:1
+ *
+ * `danger` at 4.6:1 in dark clears AA for normal text, but only just — keep
+ * it to badges, boundaries and 18px+ headings rather than running copy.
+ *
+ * ---------------------------------------------------------------------
+ * Why `--bp-color-on-accent` follows the ground — and why that USED to be a bug
+ * ---------------------------------------------------------------------
+ * This token is the text colour painted ON an accent fill (`.bp-btn-primary`
+ * and friends). Under the previous ROOST palette the accents were the SAME
+ * dark hex in both themes, so text on them had to be a FIXED light colour;
+ * letting it follow `--bp-color-bg` put espresso on rust in dark mode —
+ * 1.69:1, a real shipped bug (see task-4-report.md C2), and the old token
+ * file carried a long comment forbidding exactly what this file now does.
+ *
+ * Dubplate inverts the premise. Its accents flip lightness with the theme —
+ * a LIGHT gold on the dark ground, a DARK burnt gold on the light one — so
+ * the correct foreground on a fill is always the theme's own ground, and
+ * defining it as `var(--bp-color-bg)` is self-maintaining rather than wrong:
+ *
+ *   dark   lacquer on gold   9.8:1    lacquer on flare 4.6:1   lacquer on yard  5.8:1
+ *   light  bone on burnt     5.9:1    bone on rust     5.9:1    bone on olive    6.2:1
+ *
+ * It has to be REDECLARED in every theme block, not just the first. `var()`
+ * inside a custom property is substituted where the property is DECLARED, not
+ * where it is used, so a container that redeclares `--bp-color-bg` alone
+ * inherits `--bp-color-on-accent` already resolved against the OUTER theme —
+ * bone text on gold, 1.62:1. That is exactly what `/dev/ui` caught on its
+ * first run, and it is invisible at document level because there both
+ * declarations land on `:root`.
+ *
+ * If you swap this file for another brand, that guarantee is yours to keep:
+ * either flip the accents' lightness with the theme as Dubplate does, or
+ * pin `--bp-color-on-accent` to a fixed value and check both directions.
+ *
+ * ---------------------------------------------------------------------
+ * Why the theme selectors are not anchored to `:root`
+ * ---------------------------------------------------------------------
+ * `[data-theme="dark"]` rather than `:root[data-theme="dark"]`, so a theme
+ * can be scoped to a CONTAINER as well as to the document. `/dev/ui` renders
+ * the whole component set twice on one page, one panel per theme, which is
+ * only possible if the token block can attach to a `<div>`. It also leaves
+ * room for a per-section preview later. The document-level behaviour is
+ * unchanged: `:root` still carries light by default and the media query
+ * still flips it, and a nested container simply redeclares the set.
+ */
+
+:root,
+[data-theme="light"] {
+  /* ---- palette (never theme-dependent) ---- */
+  --bp-lacquer: #150c07;
+  --bp-sleeve: #211408;
+  --bp-groove: #3a2413;
+  --bp-bone: #f2e8d8;
+  --bp-dust: #a9917a;
+  --bp-gold: #f6aa1c;
+  --bp-flare: #d94a1f;
+  --bp-yard: #6f9a2e;
+
+  --bp-card: #fbf5e9;
+  --bp-rule: #ddd0ba;
+  --bp-ink: #1c0f06;
+  --bp-clay: #6d5947;
+  --bp-burnt: #7a4e05;
+  --bp-rust: #9c2f10;
+  --bp-olive: #3d5c17;
+
+  /* ---- semantic: light ---- */
+  --bp-color-bg: var(--bp-bone);
+  --bp-color-surface: var(--bp-card);
+  --bp-color-border: var(--bp-rule);
+  --bp-color-fg: var(--bp-ink);
+  --bp-color-muted: var(--bp-clay);
+
+  --bp-color-accent: var(--bp-burnt);
+  --bp-color-accent-alt: var(--bp-olive);
+  --bp-color-danger: var(--bp-rust);
+
+  /* Gold never carries text on the light ground — 2.1:1. It is a fill and
+     rule colour here (playhead, progress, keeper badge background) and the
+     accent role belongs to burnt gold above. */
+  --bp-color-accent-gold: var(--bp-gold);
+
+  --bp-color-overlay: rgb(242 232 216 / 0.92);
+  --bp-color-on-accent: var(--bp-color-bg);
+
+  /* ---- fills ----
+     Translucent tints used instead of outlines on buttons, fields and alerts.
+     Each is a percentage of an existing token over whatever ground it sits on,
+     so it flips with the theme and survives a brand swap; no new colour is
+     introduced. Weight was raised from a first pass at 6/8/14% — see
+     docs/design-foundation.md "Fills" for the two things that broke when it was.
+
+     THE RULE THE WEIGHT CREATED: muted text never sits on a fill. At 12% it
+     measures 4.26:1 in the light theme and fails. Anything on a fill takes
+     `--bp-color-fg`; `--bp-color-muted` is for text on the plain ground.
+     Placeholders are the exception and use `--bp-color-placeholder` below. */
+  --bp-fill-subtle: color-mix(in srgb, var(--bp-color-fg) 12%, transparent);
+  --bp-fill-raised: color-mix(in srgb, var(--bp-color-fg) 15%, transparent);
+  --bp-fill-ok: color-mix(in srgb, var(--bp-color-accent-alt) 24%, transparent);
+  --bp-fill-alert: color-mix(in srgb, var(--bp-color-danger) 24%, transparent);
+  --bp-fill-accent: color-mix(in srgb, var(--bp-color-accent) 24%, transparent);
+  --bp-color-placeholder: color-mix(in srgb, var(--bp-color-fg) 70%, var(--bp-fill-subtle));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bp-color-bg: var(--bp-lacquer);
+    --bp-color-surface: var(--bp-sleeve);
+    --bp-color-border: var(--bp-groove);
+    --bp-color-fg: var(--bp-bone);
+    --bp-color-muted: var(--bp-dust);
+
+    --bp-color-accent: var(--bp-gold);
+    --bp-color-accent-alt: var(--bp-yard);
+    --bp-color-danger: var(--bp-flare);
+    --bp-color-accent-gold: var(--bp-gold);
+
+    --bp-color-overlay: rgb(21 12 7 / 0.92);
+    --bp-color-on-accent: var(--bp-color-bg);
+  }
+}
+
+[data-theme="dark"] {
+  --bp-color-bg: var(--bp-lacquer);
+  --bp-color-surface: var(--bp-sleeve);
+  --bp-color-border: var(--bp-groove);
+  --bp-color-fg: var(--bp-bone);
+  --bp-color-muted: var(--bp-dust);
+
+  --bp-color-accent: var(--bp-gold);
+  --bp-color-accent-alt: var(--bp-yard);
+  --bp-color-danger: var(--bp-flare);
+  --bp-color-accent-gold: var(--bp-gold);
+
+  --bp-color-overlay: rgb(21 12 7 / 0.92);
+  --bp-color-on-accent: var(--bp-color-bg);
+}

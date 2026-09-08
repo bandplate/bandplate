@@ -1,25 +1,131 @@
 /*
  * Tailwind v4 CSS-first theme.
- * Maps the semantic ROOST custom properties into Tailwind's @theme so
- * utilities (bg-bp-bg, text-bp-fg, font-bp-display, ...) resolve to tokens
- * instead of hardcoded brand values.
+ *
+ * Three layers, in order:
+ *   dubplate.css  the brand file — palette, and the semantic `--bp-color-*`
+ *                 layer that flips between light and dark.
+ *   fonts.css     the three type stacks.
+ *   @theme inline here — maps the semantic layer into Tailwind so utilities
+ *                 (bg-surface, text-muted, font-display, text-lyric, ease-bp)
+ *                 resolve to tokens instead of hardcoded values.
+ *
+ * `@theme` cannot be nested inside a selector or a media query — Tailwind
+ * enforces that deliberately. So the light/dark flip does NOT live here; it
+ * lives in dubplate.css, and the entries below point at variables that flip
+ * underneath them. `inline` is what makes that indirection work: it emits the
+ * var reference rather than resolving it at build time.
  */
 @import "tailwindcss";
-@import "./roost.css";
+@import "./dubplate.css";
 @import "./fonts.css";
 
-@theme inline {
-  --color-bp-bg: var(--bp-color-bg);
-  --color-bp-fg: var(--bp-color-fg);
-  --color-bp-accent: var(--bp-color-accent);
-  --color-bp-accent-alt: var(--bp-color-accent-alt);
-  --color-bp-accent-gold: var(--bp-color-accent-gold);
-  --color-bp-muted: var(--bp-color-muted);
-  --color-bp-border: var(--bp-color-border);
-  --color-bp-surface: var(--bp-color-surface);
-  --color-bp-overlay: var(--bp-color-overlay);
+/* Escape hatch for the rare rule that must differ by theme rather than by
+   token — matches the same two conditions dubplate.css uses, so `dark:`
+   never disagrees with the semantic layer. Prefer a token. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
 
-  --font-bp-display: var(--bp-font-display);
-  --font-bp-body: var(--bp-font-body);
-  --font-bp-mono: var(--bp-font-mono);
+@theme inline {
+  /* ---- colour: the semantic layer, not the palette ---- */
+  --color-ground: var(--bp-color-bg);
+  --color-ink: var(--bp-color-fg);
+  --color-surface: var(--bp-color-surface);
+  --color-line: var(--bp-color-border);
+  --color-muted: var(--bp-color-muted);
+  --color-accent: var(--bp-color-accent);
+  --color-ok: var(--bp-color-accent-alt);
+  --color-danger: var(--bp-color-danger);
+  --color-gold: var(--bp-color-accent-gold);
+  --color-on-accent: var(--bp-color-on-accent);
+  --color-overlay: var(--bp-color-overlay);
+  --color-fill-subtle: var(--bp-fill-subtle);
+  --color-fill-raised: var(--bp-fill-raised);
+  --color-fill-ok: var(--bp-fill-ok);
+  --color-fill-alert: var(--bp-fill-alert);
+  --color-fill-accent: var(--bp-fill-accent);
+  --color-placeholder: var(--bp-color-placeholder);
+
+  /* ---- type ---- */
+  --font-display: var(--bp-font-display);
+  --font-body: var(--bp-font-body);
+  --font-mono: var(--bp-font-mono);
+
+  /* Named for role, not for size, so a component says what it is. The scale
+     is fixed in docs/design-foundation.md; `lyric` is a floor, not a
+     suggestion — lyrics and chords are read at arm's length in bad light. */
+  /* The three display sizes carry their own weight, because Zilla Slab has a
+     weight axis and Alfa Slab One did not. 700 for a hero or section head, 600
+     for a row title — a row set at 700 closes up exactly the way the face it
+     replaced did. */
+  --text-hero: 2.75rem;
+  --text-hero--line-height: 1;
+  --text-hero--font-weight: 700;
+  --text-title: 1.6875rem;
+  --text-title--line-height: 1.05;
+  --text-title--font-weight: 700;
+  --text-row: 1.1875rem;
+  --text-row--line-height: 1.15;
+  --text-row--font-weight: 600;
+  /* The step the scale was missing. A section heading inside a page — the
+     "Badges" above a group, not the page's own title — had no token, so it was
+     set ad hoc in Chivo 700 at 18px and read as a dense little block: heavy
+     face, small size, tight counters, the same failure Alfa Slab had at row
+     size. Weight that works at 44px does not work at 18px.
+     Display face at 600 instead, one step above a row title so the two are
+     distinguishable, and light enough to stay open. */
+  --text-section: 1.25rem;
+  --text-section--line-height: 1.25;
+  --text-section--font-weight: 600;
+  --text-lyric: 1.1875rem;
+  --text-lyric--line-height: 1.7;
+  --text-prose: 1.0625rem;
+  --text-prose--line-height: 1.55;
+  --text-ui: 0.9375rem;
+  --text-ui--line-height: 1.4;
+  --text-meta: 0.78125rem;
+  --text-meta--line-height: 1.5;
+  /* Below `meta`, and a different job from it: `meta` is the app's own
+     formatted data (a duration, a count), `note` is a human's aside about the
+     item — a take's label, a stub song's "needs details". Subordinate to the
+     metadata, so smaller, and it must NOT be dimmed on top of
+     `--bp-color-muted` to get there: that token's contrast is measured at full
+     strength, and 82% opacity over it dropped the light theme to 3.74:1, under
+     AA. Size carries the subordination; the colour token stays intact. */
+  --text-note: 0.71875rem;
+  --text-note--line-height: 1.45;
+  --text-eyebrow: 0.6875rem;
+  --text-eyebrow--line-height: 1.3;
+  --text-eyebrow--letter-spacing: 0.22em;
+  --text-eyebrow--font-weight: 900;
+  --text-chord: 0.875rem;
+  --text-chord--line-height: 1.7;
+  --text-machine: 0.78125rem;
+  --text-machine--line-height: 1.6;
+
+  /* ---- geometry ---- */
+  --radius-sm: 3px;
+  --radius-pill: 999px;
+
+  /* ---- motion ---- */
+  /* One orchestrated load per page, then stillness. All of it collapses to
+     zero under prefers-reduced-motion — see components.css. */
+  --ease-bp: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --duration-state: 120ms;
+  --duration-enter: 180ms;
+}
+
+/* Not theme variables — no utility is generated from these, and none should
+   be. The stagger is consumed by an animation-delay calculation and the
+   touch minimum by component CSS. */
+:root {
+  --bp-stagger: 40ms;
+  --bp-touch-min: 44px;
 }

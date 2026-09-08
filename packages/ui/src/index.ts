@@ -6,5 +6,5 @@
 //
 // This module is a placeholder for future JS/TS token helpers (e.g. typed
 // theme name constants) and keeps the package a valid TS project.
-export const ROOST_THEME_NAMES = ["light", "dark"] as const;
-export type RoostThemeName = (typeof ROOST_THEME_NAMES)[number];
+export const THEME_NAMES = ["light", "dark"] as const;
+export type ThemeName = (typeof THEME_NAMES)[number];

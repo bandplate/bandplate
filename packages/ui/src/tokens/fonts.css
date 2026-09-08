@@ -1,10 +1,18 @@
 /*
- * ROOST font stacks.
- * Coda Caption ships only in ExtraBold (800) — use for display/headlines only.
+ * Dubplate type stacks. Three faces, one job each — see
+ * docs/design-foundation.md for the rule that keeps them apart.
+ *
+ * Zilla Slab carries 500/600/700. That weight axis is the whole point: it
+ * replaced Alfa Slab One, which ships in 400 only at poster weight, and whose
+ * counters closed up and crowded Czech diacritics at row size — 18-19px, which
+ * is most of what anyone actually looks at. Hierarchy now comes from weight as
+ * well as size: 700 for a hero or a section head, 600 for a row title.
+ *
+ * Still a display face: never set a sentence in it, never below 17px.
  */
 
 :root {
-  --bp-font-display: "Coda Caption", "Arial Black", Impact, sans-serif;
-  --bp-font-body: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --bp-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bp-font-display: "Zilla Slab", "Bookman Old Style", Georgia, serif;
+  --bp-font-body: "Chivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --bp-font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }

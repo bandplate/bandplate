@@ -297,11 +297,32 @@ a.bp-btn {
   color: var(--bp-color-fg);
 }
 
-/* Room for the caret. A `<select>`'s drop-down arrow is drawn inside the
-   element's padding box, so a symmetric 0.75rem let a long option's text run
-   under it — and left the arrow itself flush against the field's edge. */
+/* Our own caret, not the UA's. `padding-right` alone does not move the native
+   arrow: Chrome positions it a fixed distance from the border edge and ignores
+   the padding entirely, so the field could never be given breathing room on
+   that side. `appearance: none` drops it and this draws the chevron as a
+   background image instead — positioned where we want, at the size the rest of
+   the system uses, and following the theme through `--bp-select-caret` (a
+   background image cannot resolve `currentColor`, which is the whole reason
+   that token exists). */
 .bp-select {
-  padding-right: 2.25rem;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  background-image: var(--bp-select-caret);
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 14px 14px;
+}
+
+/* Firefox draws its own arrow on top of the background image unless the
+   element is explicitly told it has no text-indent trick applied; this is the
+   documented way to suppress it. */
+@-moz-document url-prefix() {
+  .bp-select {
+    text-indent: 0.01px;
+    text-overflow: "";
+  }
 }
 
 /* Not `--bp-color-muted`: on a 12% fill that measures 4.26:1 in the light
@@ -4031,10 +4052,12 @@ a.bp-btn {
    Browsers without either simply show the sheet, which is the same behaviour
    as before it had an animation. */
 @media (prefers-reduced-motion: no-preference) {
+  /* Only `translate`. Fading the sheet in meant it was translucent for the
+     whole animation, so the take rows underneath showed straight through it —
+     a sheet on a phone slides up opaque, and it is the BACKDROP that fades. */
   .bp-filter-sheet {
     transition:
       translate var(--duration-enter, 180ms) var(--ease-bp, ease-out),
-      opacity var(--duration-enter, 180ms) var(--ease-bp, ease-out),
       overlay var(--duration-enter, 180ms) allow-discrete,
       display var(--duration-enter, 180ms) allow-discrete;
   }
@@ -4046,18 +4069,15 @@ a.bp-btn {
      the starting value is where it stays. */
   .bp-filter-sheet[open] {
     translate: none;
-    opacity: 1;
   }
 
   .bp-filter-sheet:not([open]) {
     translate: 0 100%;
-    opacity: 0;
   }
 
   @starting-style {
     .bp-filter-sheet[open] {
       translate: 0 100%;
-      opacity: 0;
     }
   }
 
@@ -4089,13 +4109,31 @@ a.bp-btn {
   padding: 0.75rem 1.375rem 0;
 }
 
+/* The grip is a button with a 44px target and a 4px bar drawn inside it —
+   a bare 4px strip is the right SHAPE and an impossible thing to hit. */
 .bp-filter-sheet-grip {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 32px;
+  margin: -0.375rem auto 0.625rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bp-filter-sheet-grip::before {
+  content: "";
   display: block;
   width: 2.375rem;
   height: 4px;
-  margin: 0 auto 1rem;
   border-radius: 2px;
   background: var(--bp-color-border);
+}
+
+.bp-filter-sheet-grip:hover::before {
+  background: var(--bp-color-muted);
 }
 
 .bp-filter-sheet-head-row {
@@ -4197,6 +4235,15 @@ a.bp-btn {
   overflow: hidden;
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
+}
+
+a.bp-filter-pill {
+  text-decoration: none;
+}
+
+a.bp-filter-pill[aria-pressed="true"] {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
 }
 
 .bp-filter-pill-check input:checked + .bp-filter-pill {

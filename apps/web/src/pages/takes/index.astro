@@ -44,6 +44,17 @@ const [{ results, truncated }, instruments, songs] = await Promise.all([
   songsRepo.list(appDeps.db),
 ]);
 
+/** The current URL with every `instrument` param dropped — where the "All
+ *  instruments" pill points. A link rather than a checkbox because "all" is the
+ *  ABSENCE of a selection here, not another value of it: unchecking six boxes
+ *  one at a time to get back to everything is the thing this exists to save. */
+const allInstrumentsHref = (() => {
+  const params = new URLSearchParams(Astro.url.search);
+  params.delete("instrument");
+  const qs = params.toString();
+  return qs ? `/takes?${qs}` : "/takes";
+})();
+
 // How many filters are actually on — the number on the trigger, so a member
 // who left one set two days ago sees that before wondering where their takes
 // went. Sort is not a filter and is not counted.
@@ -86,21 +97,15 @@ const countLabel = truncated
       </button>
     </div>
 
-    {/* `transition:persist` is load-bearing, not a nicety. Applying a filter is a
-      soft navigation, and without this the dialog element is destroyed and
-      rebuilt mid-transition — the modal drops out of the top layer for a frame
-      and the results underneath bleed through it. Persisting the node keeps
-      the sheet in the top layer across the swap, which is also what keeps its
-      count live while the member is still choosing. */}
-    <dialog
-      class="bp-filter-sheet"
-      data-filter-sheet
-      aria-label="Filters"
-      transition:persist="takes-filters"
-    >
+    <dialog class="bp-filter-sheet" data-filter-sheet aria-label="Filters">
       <form method="get" class="bp-filter-form" data-filter-form>
         <div class="bp-filter-sheet-head">
-          <span class="bp-filter-sheet-grip" aria-hidden="true"></span>
+          {/* A real button, not decoration. On a phone the grip is the thing a
+              thumb reaches for to dismiss a sheet, so it has to be tappable and
+              it has to say what it does to anything that isn't looking. */}
+          <button type="button" class="bp-filter-sheet-grip" data-filter-close>
+            <span class="bp-visually-hidden">Close filters</span>
+          </button>
           <div class="bp-filter-sheet-head-row">
             <h2 class="bp-filter-sheet-title bp-m0">Filters</h2>
             <a href="/takes" class="bp-filter-clear">Clear all</a>
@@ -133,6 +138,13 @@ const countLabel = truncated
               )}
             </legend>
             <div class="bp-filter-pills">
+              <a
+                href={allInstrumentsHref}
+                class="bp-filter-pill"
+                aria-pressed={query.instrumentIds.length === 0 ? "true" : "false"}
+              >
+                All
+              </a>
               {instruments.map((instrument) => (
                 <label class="bp-filter-pill-check">
                   <input
@@ -264,29 +276,24 @@ const countLabel = truncated
     return el instanceof HTMLDialogElement ? el : null;
   }
 
-  function open() {
-    const el = sheet();
-    if (!el || el.open) {
-      return;
-    }
-    el.showModal();
+  function remember(open: boolean) {
     try {
-      sessionStorage.setItem(OPEN_KEY, "1");
+      if (open) {
+        sessionStorage.setItem(OPEN_KEY, "1");
+      } else {
+        sessionStorage.removeItem(OPEN_KEY);
+      }
     } catch {
-      // Private mode, or site data blocked. The sheet still opens; it just
-      // won't reopen itself after the next filter change.
+      // Private mode, or site data blocked. The sheet still works; it just
+      // won't reopen itself after a filter change.
     }
   }
 
-  function close() {
+  function open() {
     const el = sheet();
-    if (el?.open) {
-      el.close();
-    }
-    try {
-      sessionStorage.removeItem(OPEN_KEY);
-    } catch {
-      // See `open`.
+    if (el && !el.open) {
+      el.showModal();
+      remember(true);
     }
   }
 
@@ -302,42 +309,52 @@ const countLabel = truncated
       open();
       return;
     }
-    // The apply button's server-side job is submitting. Once this script is
-    // running the filters are already applied, so it only has to close.
+    // Confirming is the one deliberate "I'm done" — it closes for good, and
+    // the flag goes with it so the next page does not bring the sheet back.
     if (target.closest("[data-filter-apply]")) {
       event.preventDefault();
-      close();
+      remember(false);
+      sheet()?.close();
+      return;
+    }
+    if (target.closest("[data-filter-close]")) {
+      remember(false);
+      sheet()?.close();
+      return;
+    }
+    // Tap outside to dismiss, the way every sheet on a phone behaves. A
+    // `<dialog>` does not do this on its own: a click on the backdrop is
+    // dispatched with the DIALOG as its target, so this is the check — the
+    // click landed on the element itself rather than on anything inside it.
+    const el = sheet();
+    if (el?.open && target === el) {
+      remember(false);
+      el.close();
+    }
+    // A pill inside the sheet is a LINK (the "All instruments" shortcut), so
+    // it navigates rather than submitting. Same rule as a change: close now,
+    // reopen on the other side.
+    if (target.closest("[data-filter-sheet] a[href]") && sheet()?.open) {
+      remember(true);
+      sheet()?.close();
     }
   });
 
-  // Escape and the backdrop close the dialog natively; catch that so the
-  // reopen flag does not outlive the sheet.
+  // Escape and a backdrop click close the dialog natively. Neither means "keep
+  // it open next time", so clear the flag — otherwise dismissing the sheet and
+  // then touching any filter would bring it straight back.
   document.addEventListener("close", (event) => {
     if (event.target instanceof HTMLDialogElement && event.target.matches("[data-filter-sheet]")) {
-      try {
-        sessionStorage.removeItem(OPEN_KEY);
-      } catch {
-        // See `open`.
+      // A close we performed ourselves already set the flag it wants; only an
+      // unattributed one (Escape, backdrop) should clear it.
+      if (!closingForNavigation) {
+        remember(false);
       }
+      closingForNavigation = false;
     }
   });
 
-  // Applying a filter is a navigation, so the sheet's element is replaced.
-  // Reopening it from a flag is what keeps the count on its button live while
-  // the member is still choosing — the reason this is a sheet at all.
-  document.addEventListener("astro:after-swap", () => {
-    let wanted = false;
-    try {
-      wanted = sessionStorage.getItem(OPEN_KEY) === "1";
-    } catch {
-      // See `open`.
-    }
-    // Only below the breakpoint where it IS a sheet: past `lg` the same
-    // element is a static panel and must never go modal.
-    if (wanted && !window.matchMedia("(min-width: 64rem)").matches) {
-      sheet()?.showModal();
-    }
-  });
+  let closingForNavigation = false;
 
   document.addEventListener("change", (event) => {
     const target = event.target;
@@ -345,8 +362,37 @@ const countLabel = truncated
       return;
     }
     const form = target.closest("form[data-filter-form]");
-    if (form instanceof HTMLFormElement) {
-      form.requestSubmit();
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+    // Close BEFORE navigating. A modal dialog lives in the top layer, and the
+    // view transition swaps the document out from under it: the element is
+    // rebuilt as a plain `<dialog open>`, which is no longer modal and renders
+    // as an ordinary block shoved into the page. Closing first means nothing is
+    // in the top layer during the swap — which also removes the frame where the
+    // results used to bleed through the sheet — and the flag below brings it
+    // back on the other side.
+    const el = sheet();
+    if (el?.open) {
+      closingForNavigation = true;
+      remember(true);
+      el.close();
+    }
+    form.requestSubmit();
+  });
+
+  // The other side of that close. Only below the breakpoint where this IS a
+  // sheet: past `lg` the same element is a static panel and must never go
+  // modal.
+  document.addEventListener("astro:after-swap", () => {
+    let wanted = false;
+    try {
+      wanted = sessionStorage.getItem(OPEN_KEY) === "1";
+    } catch {
+      // See `remember`.
+    }
+    if (wanted && !window.matchMedia("(min-width: 64rem)").matches) {
+      sheet()?.showModal();
     }
   });
 </script>

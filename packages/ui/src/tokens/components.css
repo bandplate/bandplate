@@ -315,6 +315,28 @@ a.bp-btn {
   background-size: 14px 14px;
 }
 
+/* The date picker's calendar glyph, in the same ink as the select caret. The
+   native one is drawn by the UA and follows `color-scheme`, which makes it
+   white on the dark ground — brighter than every other piece of chrome on the
+   field. This hides it (keeping it CLICKABLE, which is what still opens the
+   picker) and paints our own in its place. */
+.bp-input[type="date"],
+.bp-input[type="datetime-local"],
+.bp-input[type="time"] {
+  padding-right: 2.5rem;
+  background-image: var(--bp-date-icon);
+  background-repeat: no-repeat;
+  background-position: right 0.8125rem center;
+  background-size: 16px 16px;
+}
+
+.bp-input[type="date"]::-webkit-calendar-picker-indicator,
+.bp-input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.bp-input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
 /* Firefox draws its own arrow on top of the background image unless the
    element is explicitly told it has no text-indent trick applied; this is the
    documented way to suppress it. */
@@ -4088,21 +4110,15 @@ a.bp-btn {
     }
   }
 
+  /* The backdrop does NOT fade. It is opaque, so fading it in means the page
+     behind is visible through it for the whole 180ms — which is exactly what
+     the bottom tab bar was doing while the sheet slid up. It appears at full
+     strength on the first frame and the sheet slides over it. `allow-discrete`
+     is still needed so it survives long enough for the slide-out. */
   .bp-filter-sheet::backdrop {
     transition:
-      opacity var(--duration-enter, 180ms) var(--ease-bp, ease-out),
       overlay var(--duration-enter, 180ms) allow-discrete,
       display var(--duration-enter, 180ms) allow-discrete;
-  }
-
-  .bp-filter-sheet:not([open])::backdrop {
-    opacity: 0;
-  }
-
-  @starting-style {
-    .bp-filter-sheet[open]::backdrop {
-      opacity: 0;
-    }
   }
 }
 
@@ -4155,18 +4171,6 @@ a.bp-btn {
   font-family: var(--bp-font-display);
   font-weight: 700;
   font-size: var(--text-section, 1.25rem);
-}
-
-.bp-filter-clear {
-  font-size: var(--text-meta, 0.78125rem);
-  color: var(--bp-color-muted);
-  text-decoration: none;
-}
-
-.bp-filter-clear:hover {
-  color: var(--bp-color-fg);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
 }
 
 /* The scrolling middle; head and foot stay put so the confirm is always in
@@ -4267,21 +4271,42 @@ a.bp-btn {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- the bar (past `lg`) ---------------------------------------------- */
+/* --- the panel (past `lg`) -------------------------------------------- */
 
 @media (min-width: 64rem) {
-  /* The trigger is a phone control: past here the bar is always on screen, so
-     a button that opens it would open something already open. */
+  /* Filters in a column of their own on the left, results on the right, both
+     starting at the top of the page. The page title spans the two. */
+  .bp-takes {
+    display: grid;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+    grid-template-areas:
+      "bar bar"
+      "filters results";
+    gap: 1.25rem 2.5rem;
+    align-items: start;
+  }
+
+  .bp-takes-bar {
+    grid-area: bar;
+  }
+
+  .bp-search-results {
+    grid-area: results;
+  }
+
+  /* The trigger is a phone control: past here the panel is always on screen,
+     so a button that opens it would open something already open. */
   .bp-filter-trigger {
     display: none;
   }
 
-  /* The same element, now a bar across the top of the page. A `<dialog>` with
-     no `open` attribute is `display: none` — this is the override that makes it
-     a panel, and it is why there is only ever one copy of these fields. */
+  /* The same element, now a column. A `<dialog>` with no `open` attribute is
+     `display: none` — this is the override that makes it a panel, and it is
+     why there is only ever one copy of these fields. */
   .bp-filter-sheet,
   .bp-filter-sheet:not([open]) {
     display: block;
+    grid-area: filters;
     position: static;
     width: auto;
     max-height: none;
@@ -4301,36 +4326,18 @@ a.bp-btn {
     display: none;
   }
 
-  /* Groups run across, each sized to its own content, wrapping when they run
-     out of room. The instruments group is allowed to take whatever is left,
-     since it is the only one whose width depends on the band's line-up. */
   .bp-filter-groups {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 1rem 1.5rem;
-    padding: 0 0 1.125rem;
+    padding: 0;
     overflow: visible;
-    border-bottom: 1px solid var(--bp-color-border);
   }
 
-  .bp-filter-group {
-    flex: 0 0 auto;
-  }
-
-  .bp-filter-group:has(.bp-filter-pills) {
-    flex: 1 1 18rem;
-  }
-
+  /* No rule above the buttons. The sheet has one because its footer is pinned
+     over a scrolling list and needs the separation; in a column that simply
+     ends, it draws a line under the last field for no reason. */
   .bp-filter-sheet-foot {
-    padding: 1rem 0 0;
+    padding: 1.125rem 0 0;
     border-top: none;
     background: transparent;
-  }
-
-  /* Sized to its words up here rather than filling the sheet's width. */
-  .bp-filter-apply {
-    flex: 0 0 auto;
   }
 }
 

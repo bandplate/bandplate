@@ -98,9 +98,12 @@ const countLabel = truncated
           <button type="button" class="bp-filter-sheet-grip" data-filter-close>
             <span class="bp-visually-hidden">Close filters</span>
           </button>
+          {/* No "Clear all" here. Clearing lives next to the confirm at the
+              bottom, where the member's thumb already is and where the two
+              things you can do with a set of filters — apply them or drop them
+              — sit together. Two clears meant two places to look. */}
           <div class="bp-filter-sheet-head-row">
             <h2 class="bp-filter-sheet-title bp-m0">Filters</h2>
-            <a href="/takes" class="bp-filter-clear">Clear all</a>
           </div>
         </div>
 

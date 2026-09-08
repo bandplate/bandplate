@@ -99,6 +99,24 @@ export interface AuthDeps {
   /** See the `Sleep` doc comment. Defaults to a real `setTimeout`-based wait. */
   sleep?: Sleep;
   /**
+   * Called on EVERY `requestLogin`, with what actually happened — `"sent"`
+   * when a token was minted and handed to the mailer, `"unknown"` when the
+   * address belongs to no member (or to a disabled one) and nothing was sent.
+   *
+   * `/login` answers identically in both cases, and must: the members table
+   * would otherwise be an account-enumeration oracle. The cost is that nobody
+   * operating the app can tell the two apart — a developer typing the wrong
+   * address locally, and an admin fielding "I never got the email", both see a
+   * success banner and an empty log.
+   *
+   * This is a side channel to the OPERATOR's console, never to the client, so
+   * it is wired in every configuration rather than only in dev. It receives
+   * the address but never the token or the link: those appear only in the
+   * console mailer's own output, which `loadConfig` refuses to enable under
+   * NODE_ENV=production.
+   */
+  onLoginRequest?: (email: string, outcome: "sent" | "unknown") => void;
+  /**
    * Escape hatch for taking the mail send out of the request path entirely
    * (the Workers profile — see `requestLogin`'s doc comment). When
    * provided, `requestLogin` hands it a thunk instead of awaiting
@@ -168,6 +186,7 @@ export async function requestLogin(
     const member = await membersRepo.getByEmail(deps.db, email);
 
     if (!member || member.status === "disabled") {
+      deps.onLoginRequest?.(email, "unknown");
       return;
     }
 
@@ -183,6 +202,8 @@ export async function requestLogin(
       requestedIp: meta.requestedIp ?? null,
       createdAt: now,
     });
+
+    deps.onLoginRequest?.(member.email, "sent");
 
     const send = () =>
       deps.mailer.sendLoginLink(member.email, meta.buildLoginUrl(rawToken), {

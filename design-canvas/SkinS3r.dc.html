@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .R{--display:'Zilla Slab',Georgia,serif;--body:'Chivo',Helvetica,sans-serif;
+    --mono:'Spline Sans Mono',ui-monospace,monospace;
+    --fill-subtle:color-mix(in srgb, var(--fg) 12%, transparent);
+    --fill-raised:color-mix(in srgb, var(--fg) 15%, transparent);
+    --fill-ok:color-mix(in srgb, var(--ok) 24%, transparent);
+    --fill-alert:color-mix(in srgb, var(--danger) 24%, transparent);
+    --placeholder:color-mix(in srgb, var(--fg) 70%, var(--fill-subtle));
+    font-family:var(--body);color:var(--fg)}
+ .R.dark{--bg:#150c07;--fg:#f2e8d8;--muted:#a9917a;--border:#3a2413;
+         --gold:#f6aa1c;--danger:#d94a1f;--ok:#6f9a2e}
+ .R.light{--bg:#f2e8d8;--fg:#1c0f06;--muted:#6d5947;--border:#ddd0ba;
+          --gold:#7a4e05;--danger:#9c2f10;--ok:#3d5c17}
+ .R .cap{font-weight:900;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
+   color:var(--muted);margin-bottom:11px}
+ .R .slab{font-family:var(--display);font-weight:600;line-height:1.2}
+ .R .btn{font-family:var(--body);font-weight:600;font-size:15px;padding:11px 20px;min-height:44px;
+   box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:none}
+ .R .fld{font-family:var(--body);font-size:15px;color:var(--fg);width:100%;box-sizing:border-box;
+   min-height:44px;padding:11px 14px;border-radius:3px;border:none;background:var(--fill-subtle)}
+ .R .lab{font-weight:600;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;
+   color:var(--muted);display:block;margin-bottom:6px}
+ .R .sec{margin-bottom:24px}
+ .R .num{font-variant-numeric:tabular-nums;font-size:11px;font-family:var(--mono);color:var(--muted)}
+    .W { --bg:#150c07; --fg:#f2e8d8; --muted:#a9917a; --border:#3a2413; --gold:#f6aa1c;
+         font-family:'Chivo',Helvetica,sans-serif; color:var(--fg); }
+    .W .eyebrow { font-weight:900; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
+    .W .cap2 { font-weight:900; font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
+  </style>
+</helmet>
+<div class="W" style="width:1060px; box-sizing:border-box; padding:40px 42px 46px; background:
+    repeating-radial-gradient(circle at 92% 3%, rgba(246,170,28,.045) 0 1px, transparent 1px 7px),
+    radial-gradient(115% 26% at 92% 1%, rgba(246,170,28,.10), transparent 62%), #150c07;">
+  <div class="eyebrow" style="margin-bottom:8px;">Skin S3 — revised twice</div>
+  <div style="font-family:'Zilla Slab',Georgia,serif; font-weight:700; font-size:40px; line-height:1.0;">Label, filled — heavier</div>
+  <div style="font-size:15px; line-height:1.55; color:var(--muted); margin-top:11px; max-width:88ch;">
+    Fills roughly doubled: fields 6% to 12%, secondary buttons 8% to 15%, alerts 14% to 24%. Two things
+    had to change to keep it honest at that weight, both below.
+  </div>
+
+  <div style="display:flex; gap:20px; margin-top:28px; align-items:flex-start;">
+    <div class="R dark" style="width:470px;box-sizing:border-box;padding:26px 26px 30px;
+      background:
+        repeating-radial-gradient(circle at 92% 3%, color-mix(in srgb, var(--gold) 5%, transparent) 0 1px, transparent 1px 7px),
+        radial-gradient(120% 26% at 92% 1%, color-mix(in srgb, var(--gold) 11%, transparent), transparent 62%),
+        var(--bg);">
+  <div class="cap" style="margin-bottom:18px;">dark</div>
+
+  <div class="sec"><div class="cap">Buttons — two solids and a tint</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;">
+      <span class="btn" style="background:var(--gold);color:var(--bg);">Send me a link</span>
+      <span class="btn" style="background:var(--fill-raised);color:var(--fg);">Cancel</span>
+      <span class="btn" style="background:var(--danger);color:var(--bg);"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;"><path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Delete take</span>
+      <span class="btn" style="background:var(--fill-raised);color:var(--fg);opacity:.45;">Disabled</span>
+    </div>
+    <div class="num" style="margin-top:10px;">on-gold 9.8 / 5.9 &nbsp; on-danger 4.6 / 6.1 &nbsp; secondary 11.1 / 11.3</div>
+  </div>
+
+  <div class="sec"><div class="cap">Fields — 12% fill, edgeless</div>
+    <div style="display:flex;flex-direction:column;gap:13px;">
+      <div><span class="lab">Email address</span><div class="fld">filip@example.com</div></div>
+      <div><span class="lab">Venue</span>
+        <div class="fld" style="color:var(--placeholder);">Where was it recorded?</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">Placeholder — foreground at 70%, not the muted token.</div></div>
+      <div><span class="lab">Notes</span>
+        <div class="fld" style="box-shadow:inset 0 0 0 2px var(--gold);min-height:66px;">Druhý pokus, lepší tempo.</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">Focused — an inset ring, so nothing shifts by a pixel.</div></div>
+      <div><span class="lab">Title</span>
+        <div class="fld" style="background:var(--fill-alert);">Píseň o cestách</div>
+        <div style="font-size:12.5px;color:var(--danger);margin-top:6px;font-weight:600;">A song with that title already exists.</div></div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="cap">Alerts — 24% fill, no border</div>
+    <div style="background:var(--fill-ok);border-radius:999px;padding:13px 18px;display:flex;
+      align-items:center;gap:11px;margin-bottom:9px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;"></span>
+      <span style="font-size:14px;">Vote saved.</span>
+      <span style="margin-left:auto;font-size:13px;text-decoration:underline;">Undo</span></div>
+    <div style="background:var(--fill-alert);border-radius:999px;padding:13px 18px;display:flex;
+      align-items:center;gap:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none;"></span>
+      <span style="font-size:14px;">Couldn&#39;t reach the bucket.</span>
+      <span style="margin-left:auto;font-size:13px;text-decoration:underline;">Retry</span></div>
+  </div>
+
+  <div class="sec" style="margin-bottom:0;"><div class="cap">Rows — unchanged</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div style="width:34px;height:34px;border-radius:50%;flex:none;background:transparent;border:2px solid var(--border);display:grid;place-items:center;"><div style="width:7px;height:7px;border-radius:50%;background:var(--muted);"></div></div>
+      <div style="flex-grow:1;"><div class="slab" style="font-size:18px;">30. srpna 2026</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Zkušebna Pardubice</div></div>
+      <div style="font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;">3 takes</div></div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;">
+      <div style="width:34px;height:34px;border-radius:50%;flex:none;background:var(--danger);border:2px solid var(--danger);display:grid;place-items:center;"><div style="width:7px;height:7px;border-radius:50%;background:var(--bg);"></div></div>
+      <div style="flex-grow:1;"><div class="slab" style="font-size:18px;">8. července 2026</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Divadlo 29</div></div>
+      <div style="font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;">3 takes</div></div>
+  </div>
+</div>
+    <div class="R light" style="width:470px;box-sizing:border-box;padding:26px 26px 30px;
+      background:
+        repeating-radial-gradient(circle at 92% 3%, color-mix(in srgb, var(--gold) 5%, transparent) 0 1px, transparent 1px 7px),
+        radial-gradient(120% 26% at 92% 1%, color-mix(in srgb, var(--gold) 11%, transparent), transparent 62%),
+        var(--bg);">
+  <div class="cap" style="margin-bottom:18px;">light</div>
+
+  <div class="sec"><div class="cap">Buttons — two solids and a tint</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;">
+      <span class="btn" style="background:var(--gold);color:var(--bg);">Send me a link</span>
+      <span class="btn" style="background:var(--fill-raised);color:var(--fg);">Cancel</span>
+      <span class="btn" style="background:var(--danger);color:var(--bg);"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;"><path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Delete take</span>
+      <span class="btn" style="background:var(--fill-raised);color:var(--fg);opacity:.45;">Disabled</span>
+    </div>
+    <div class="num" style="margin-top:10px;">on-gold 9.8 / 5.9 &nbsp; on-danger 4.6 / 6.1 &nbsp; secondary 11.1 / 11.3</div>
+  </div>
+
+  <div class="sec"><div class="cap">Fields — 12% fill, edgeless</div>
+    <div style="display:flex;flex-direction:column;gap:13px;">
+      <div><span class="lab">Email address</span><div class="fld">filip@example.com</div></div>
+      <div><span class="lab">Venue</span>
+        <div class="fld" style="color:var(--placeholder);">Where was it recorded?</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">Placeholder — foreground at 70%, not the muted token.</div></div>
+      <div><span class="lab">Notes</span>
+        <div class="fld" style="box-shadow:inset 0 0 0 2px var(--gold);min-height:66px;">Druhý pokus, lepší tempo.</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">Focused — an inset ring, so nothing shifts by a pixel.</div></div>
+      <div><span class="lab">Title</span>
+        <div class="fld" style="background:var(--fill-alert);">Píseň o cestách</div>
+        <div style="font-size:12.5px;color:var(--danger);margin-top:6px;font-weight:600;">A song with that title already exists.</div></div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="cap">Alerts — 24% fill, no border</div>
+    <div style="background:var(--fill-ok);border-radius:999px;padding:13px 18px;display:flex;
+      align-items:center;gap:11px;margin-bottom:9px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;"></span>
+      <span style="font-size:14px;">Vote saved.</span>
+      <span style="margin-left:auto;font-size:13px;text-decoration:underline;">Undo</span></div>
+    <div style="background:var(--fill-alert);border-radius:999px;padding:13px 18px;display:flex;
+      align-items:center;gap:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none;"></span>
+      <span style="font-size:14px;">Couldn&#39;t reach the bucket.</span>
+      <span style="margin-left:auto;font-size:13px;text-decoration:underline;">Retry</span></div>
+  </div>
+
+  <div class="sec" style="margin-bottom:0;"><div class="cap">Rows — unchanged</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div style="width:34px;height:34px;border-radius:50%;flex:none;background:transparent;border:2px solid var(--border);display:grid;place-items:center;"><div style="width:7px;height:7px;border-radius:50%;background:var(--muted);"></div></div>
+      <div style="flex-grow:1;"><div class="slab" style="font-size:18px;">30. srpna 2026</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Zkušebna Pardubice</div></div>
+      <div style="font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;">3 takes</div></div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;">
+      <div style="width:34px;height:34px;border-radius:50%;flex:none;background:var(--danger);border:2px solid var(--danger);display:grid;place-items:center;"><div style="width:7px;height:7px;border-radius:50%;background:var(--bg);"></div></div>
+      <div style="flex-grow:1;"><div class="slab" style="font-size:18px;">8. července 2026</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Divadlo 29</div></div>
+      <div style="font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;">3 takes</div></div>
+  </div>
+</div>
+  </div>
+
+  <div style="display:flex; gap:20px; margin-top:28px;">
+    <div style="flex:1; border-left:3px solid #d94a1f; padding:3px 0 3px 14px;">
+      <div class="cap2" style="color:#ef7a52;">Destructive is now a solid fill</div>
+      <div style="font-size:13.5px; line-height:1.6; color:var(--muted);">
+        A danger <em>tint</em> heavy enough to see landed at almost exactly the luminance of the
+        secondary tint — 1.05:1 apart in dark. Cancel and Delete would differ by hue alone, which is
+        no difference at all to a red-blind viewer sitting in a confirm dialog. So the two buttons that
+        <em>act</em> take solid fills and the one that backs out stays a tint, which also separates them
+        by weight rather than colour: <span style="color:var(--fg);">3.2:1</span> apart in dark.
+      </div>
+    </div>
+    <div style="flex:1; border-left:3px solid var(--gold); padding:3px 0 3px 14px;">
+      <div class="cap2" style="color:var(--gold);">…and carries an icon</div>
+      <div style="font-size:13.5px; line-height:1.6; color:var(--muted);">
+        Solid danger against solid gold measures <span style="color:var(--fg);">1.03:1</span> in the
+        light theme — burnt gold and rust are nearly the same lightness. Colour cannot be the only thing
+        marking a destructive action, so it takes a leading icon. Belt and braces on top of the brief's
+        existing rule that a destructive confirm names the object and its consequences.
+      </div>
+    </div>
+    <div style="flex:1; border-left:3px solid #6f9a2e; padding:3px 0 3px 14px;">
+      <div class="cap2" style="color:#8fc248;">The rule the weight created</div>
+      <div style="font-size:13.5px; line-height:1.6; color:var(--muted);">
+        <span style="color:var(--fg);">Muted text never sits on a fill.</span> At 12% it measures 4.26:1
+        in light and fails. Anything on a fill takes <span style="color:var(--fg);">--bp-color-fg</span>;
+        muted is for text on the plain ground. Placeholders are the exception and use foreground at
+        70%, which is a different mechanism and measures 6.5:1 or better.
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

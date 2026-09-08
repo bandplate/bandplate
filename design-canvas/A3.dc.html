@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; }
+    .X { --bg:#150c07; --surface:#211408; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a;
+         --gold:#f6aa1c; --hot:#d94a1f; --olive:#6f9a2e;
+         --display:"Alfa Slab One","Bookman Old Style",Georgia,serif;
+         --body:"Chivo","Helvetica Neue",Helvetica,sans-serif;
+         --mono:"Spline Sans Mono",ui-monospace,Menlo,monospace; }
+    .X a { color: var(--gold); text-decoration: none; }
+    .X a:hover { color: #ffc44d; }
+    .X .eyebrow { font-family:var(--body); font-weight:900; font-size:11px; letter-spacing:.22em;
+                  text-transform:uppercase; color:var(--muted); }
+    .X .num { font-variant-numeric: tabular-nums; font-feature-settings:"tnum" 1; }
+    .X .case { border:1px solid var(--border); border-radius:3px; padding:18px 20px;
+               background:rgba(33,20,8,.55); }
+    .X .caseh { display:flex; align-items:baseline; gap:10px; margin-bottom:14px; }
+    .X .n { font-family:var(--display); font-size:15px; color:var(--gold); }
+    .X .verdict { font-size:13.5px; line-height:1.55; margin-top:12px; padding-top:12px;
+                  border-top:1px dashed var(--border); color:var(--muted); }
+    .X .chip { font-family:var(--body); font-weight:600; font-size:10.5px; letter-spacing:.12em;
+               text-transform:uppercase; padding:5px 9px; border:1px solid var(--border);
+               border-radius:999px; color:var(--muted); }
+  </style>
+</helmet>
+<div class="X" style="width:900px; box-sizing:border-box; font-family:var(--body); color:var(--fg);
+  background:
+    repeating-radial-gradient(circle at 82% 12%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px),
+    radial-gradient(110% 60% at 82% 8%, rgba(246,170,28,.12), transparent 62%),
+    var(--bg);
+  padding:42px 44px 50px;">
+
+  <div style="margin-bottom:12px;">
+    <div class="eyebrow" style="margin-bottom:9px;">Variant A3<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>mono kept, but demoted</div>
+    <div style="font-family:var(--display); font-size:44px; line-height:1.0;">Mono is a content font, not a UI font</div>
+  </div>
+  <div style="font-size:16px; line-height:1.55; color:var(--muted); max-width:64ch; margin-bottom:14px;">
+    The middle path, and the one that draws a rule you can actually apply: mono never appears in
+    chrome — no eyebrows, no timecode, no meta lines, no counts. It appears only where a fixed
+    character grid is doing real work, which is exactly two places.
+  </div>
+  <div style="display:flex; gap:8px; margin-bottom:30px; flex-wrap:wrap;">
+    <span class="chip" style="border-color:var(--gold); color:var(--gold);">3 families</span>
+    <span class="chip">6 weights</span>
+    <span class="chip">~62 KB woff2</span>
+    <span class="chip" style="border-color:var(--olive); color:#8fc248;">mono ~80% reduced</span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-bottom:16px;">
+
+    <div class="case" style="border-color:var(--olive);">
+      <div class="caseh"><span class="n" style="color:#8fc248;">01</span><span class="eyebrow" style="color:#8fc248;">Mono stays<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>pasted chord charts</span></div>
+      <div style="font-family:var(--mono); font-size:14px; line-height:1.7; color:var(--gold); white-space:pre; overflow-x:auto;">Dm          Gm
+Cesta se točí, nikam
+    C       Dm
+nevede a končí tam</div>
+      <div class="verdict" style="border-color:rgba(111,154,46,.4);">
+        This is the argument. A member pastes a chart from a songbook and it is
+        <span style="color:var(--fg);">already aligned by spaces</span> — the app stores it as text
+        and has no idea which chord belongs to which syllable. Render that in a proportional face
+        and the alignment collapses. A1 and A2 both need the editor to become structured first.
+      </div>
+    </div>
+
+    <div class="case" style="border-color:var(--olive);">
+      <div class="caseh"><span class="n" style="color:#8fc248;">02</span><span class="eyebrow" style="color:#8fc248;">Mono stays<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>machine strings</span></div>
+      <div style="display:flex; flex-direction:column; gap:9px; font-family:var(--mono); font-size:12.5px;">
+        <div style="word-break:break-all;">bpk_01j8x7q2m4kd9v_8f3a1c7e2b904d61</div>
+        <div style="color:var(--muted); word-break:break-all;">takes/01j8x7q2m4kd9v/stems/bass/lossy.opus</div>
+        <div style="color:var(--muted); word-break:break-all;">sha256<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>e3b0c44298fc1c149afbf4c8996fb924</div>
+      </div>
+      <div class="verdict" style="border-color:rgba(111,154,46,.4);">
+        Service tokens, storage keys and hashes — strings a person transcribes once and can never
+        re-read if <span style="color:var(--fg);">1</span>/<span style="color:var(--fg);">l</span>
+        and <span style="color:var(--fg);">0</span>/<span style="color:var(--fg);">O</span> collapse.
+        Admin surfaces only.
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="caseh"><span class="n">03</span><span class="eyebrow">Mono goes<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>timecode</span></div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:38px; height:38px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--gold);">
+          <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="6" y="4" width="4" height="16" fill="#150c07"/><rect x="14" y="4" width="4" height="16" fill="#150c07"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0;">
+          <div style="font-size:14px; font-weight:600;">Píseň o cestách<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>take 3</div>
+          <div class="num" style="font-size:12.5px; color:var(--muted); margin-top:3px;">
+            <span style="display:inline-block; min-width:4.2ch; color:var(--gold);">1:47</span>
+            / 4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>master
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px; height:3px; border-radius:2px; background:var(--border); position:relative;">
+        <div style="position:absolute; inset:0 auto 0 0; width:42%; background:var(--gold); border-radius:2px;"></div>
+        <div style="position:absolute; left:42%; top:-3px; width:9px; height:9px; border-radius:50%; background:var(--gold);"></div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:12px; line-height:1.5;">
+        Chivo with tabular figures, exactly as A1. A clock is not a character grid — it just needs
+        digits of equal width, which any decent face gives you for free.
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="caseh"><span class="n">04</span><span class="eyebrow">Mono goes<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>list metadata</span></div>
+      <div style="display:flex; gap:13px; align-items:center;">
+        <div style="width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; border:1px solid var(--border);">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0;">
+          <div style="font-family:var(--display); font-size:19px; line-height:1.15;">Nightbus</div>
+          <div style="font-size:12.5px; color:var(--muted); margin-top:4px;" class="num">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>110 BPM</div>
+        </div>
+        <div style="text-align:right; flex:none;">
+          <div class="num" style="font-family:var(--body); font-weight:900; font-size:17px; color:var(--gold);">5/7</div>
+          <div class="eyebrow" style="font-size:9px;">keeper</div>
+        </div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:14px; line-height:1.5;">
+        The mono texture leaves the lists entirely, which is where you were seeing most of it — this
+        is the change that makes A3 feel like A1 rather than like the original A.
+      </div>
+    </div>
+  </div>
+
+  <div class="case" style="border-color:var(--gold);">
+    <div class="caseh"><span class="n">05</span><span class="eyebrow" style="color:var(--gold);">The rule, stated once</span></div>
+    <div style="font-size:15px; line-height:1.6;">
+      Mono is reserved for text whose <span style="color:var(--gold);">horizontal position carries
+      meaning</span>, and for strings a human has to transcribe character by character. Everything
+      else — every label, every number the app itself formatted — is Chivo. That rule is short
+      enough to hold in your head while building components, which is the point of stating it
+      rather than deciding case by case in milestone 2.
+    </div>
+  </div>
+
+  <div style="margin-top:26px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
+    <div style="border-left:3px solid var(--olive); padding:2px 0 2px 14px;">
+      <div class="eyebrow" style="margin-bottom:6px; color:#8fc248;">Wins</div>
+      <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+        Gets you the warmth of A1 in every screen you actually look at, without breaking pasted
+        chord charts or making admin tokens unreadable. Nothing has to change in the data model.
+      </div>
+    </div>
+    <div style="border-left:3px solid var(--hot); padding:2px 0 2px 14px;">
+      <div class="eyebrow" style="margin-bottom:6px; color:#ef7a52;">Costs</div>
+      <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+        A third webfont for two narrow cases, and a rule a future contributor has to know — a
+        design system with an exception in it is a design system people get wrong.
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

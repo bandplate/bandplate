@@ -1,0 +1,241 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Familjen+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    .C { --bg:#f3ede0; --surface:#fbf7ec; --border:#ddd4c0; --fg:#231207; --muted:#6f5c4c;
+         --rust:#a32a10; --olive:#3d5c17; --gold:#e0940a;
+         --display:"Instrument Serif",Georgia,"Times New Roman",serif;
+         --body:"Familjen Grotesk",-apple-system,"Segoe UI",sans-serif;
+         --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; }
+    .C a { color: var(--rust); text-decoration: underline; text-underline-offset:3px; }
+    .C a:hover { color: #7d1f0b; }
+    .C .eyebrow { font-family:var(--body); font-weight:600; font-size:10.5px; letter-spacing:.2em;
+                  text-transform:uppercase; color:var(--muted); }
+    .C .sw { height:76px; display:flex; align-items:flex-end; padding:8px; box-sizing:border-box;
+             border-radius:1px; }
+    .C .swlab { font-family:var(--mono); font-size:10px; }
+    .C .chip { font-family:var(--body); font-weight:500; font-size:11.5px; padding:5px 11px;
+               border:1px solid var(--border); border-radius:999px; color:var(--muted);
+               background:var(--surface); }
+  </style>
+</helmet>
+<div class="C" style="width:900px; box-sizing:border-box; font-family:var(--body); color:var(--fg);
+  background:
+    repeating-radial-gradient(circle at 0 0, rgba(35,18,7,.035) 0 1px, transparent 1px 4px),
+    radial-gradient(100% 60% at 88% 0%, rgba(224,148,10,.16), transparent 58%),
+    radial-gradient(70% 45% at 0% 100%, rgba(61,92,23,.10), transparent 70%),
+    var(--bg);
+  padding:46px 46px 56px;">
+
+  <!-- header -->
+  <div style="display:flex; gap:24px; align-items:flex-end; margin-bottom:14px;">
+    <div style="flex-grow:1;">
+      <div class="eyebrow" style="margin-bottom:12px;">Direction C</div>
+      <div style="font-family:var(--display); font-size:72px; line-height:.92; letter-spacing:-.015em;">
+        Roots <span style="font-style:italic; color:var(--rust);">Press</span>
+      </div>
+    </div>
+    <div style="flex:none; text-align:right;">
+      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); line-height:1.7;">
+        light-first<br>sun-bleached<br>editorial
+      </div>
+    </div>
+  </div>
+  <div style="height:2px; background:var(--fg); margin-bottom:14px;"></div>
+  <div style="font-size:16px; line-height:1.55; color:var(--muted); max-width:62ch; margin-bottom:38px;">
+    Paper, not a screen. Sand ground with a halftone tooth, espresso ink, a single rust accent
+    doing all the work. Reggae arrives through colour and print texture rather than through the
+    lettering — which leaves the type free to be quiet enough to read lyrics on.
+  </div>
+
+  <!-- rationale -->
+  <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; margin-bottom:40px;">
+    <div style="border-left:2px solid var(--rust); padding:2px 0 2px 14px;">
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--rust);">Why this one</div>
+      <div style="font-size:14.5px; line-height:1.55;">
+        Half of what this app shows is long text — lyrics, chords, notes — read at arm&#39;s length
+        in a bright room. Dark ink on warm paper is the only ground that is genuinely comfortable
+        for that, and it carries ROOST&#39;s existing sand palette forward instead of discarding it.
+      </div>
+    </div>
+    <div style="border-left:2px solid var(--border); padding:2px 0 2px 14px;">
+      <div class="eyebrow" style="margin-bottom:7px;">The tradeoff</div>
+      <div style="font-size:14.5px; line-height:1.55; color:var(--muted);">
+        It is the least literally reggae of the three, and a bright screen in a dim rehearsal room
+        is unkind — so the dark counterpart has to be genuinely good here, not an afterthought.
+        Gold drops to 2.1:1 on sand: graphic use only, never text.
+      </div>
+    </div>
+  </div>
+
+  <!-- palette -->
+  <div class="eyebrow" style="margin-bottom:14px;">Palette<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>light-first</div>
+  <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:10px;">
+    <div class="sw" style="background:#f3ede0; border:1px solid var(--border);">
+      <div><div class="swlab" style="color:var(--fg);">#F3EDE0</div><div class="swlab" style="color:var(--muted);">sand<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>ground</div></div></div>
+    <div class="sw" style="background:#fbf7ec; border:1px solid var(--border);">
+      <div><div class="swlab" style="color:var(--fg);">#FBF7EC</div><div class="swlab" style="color:var(--muted);">card<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>surface</div></div></div>
+    <div class="sw" style="background:#231207;">
+      <div><div class="swlab" style="color:#f3ede0;">#231207</div><div class="swlab" style="color:#a08c78;">ink<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>text 15.9:1</div></div></div>
+    <div class="sw" style="background:#6f5c4c;">
+      <div><div class="swlab" style="color:#f3ede0;">#6F5C4C</div><div class="swlab" style="color:#cfc0af;">clay<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>muted 5.3:1</div></div></div>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:10px;">
+    <div class="sw" style="background:#a32a10; height:92px;">
+      <div><div class="swlab" style="color:#f3ede0; font-weight:500;">#A32A10</div><div class="swlab" style="color:#e8b6a8;">rust<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>the one accent — playing, primary, links</div></div></div>
+    <div class="sw" style="background:#3d5c17; height:92px;">
+      <div><div class="swlab" style="color:#f3ede0; font-weight:500;">#3D5C17</div><div class="swlab" style="color:#bfd3a4;">olive<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>published, ready</div></div></div>
+    <div class="sw" style="background:#e0940a; height:92px;">
+      <div><div class="swlab" style="color:#231207; font-weight:500;">#E0940A</div><div class="swlab" style="color:#5c3d04;">gold<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>fills and rules only — 2.1:1, never text</div></div></div>
+  </div>
+  <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:40px; line-height:1.7;">
+    ink 15.9:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>clay 5.3:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>rust 6.1:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>olive 6.4:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>sand-on-rust 6.1:1
+  </div>
+
+  <!-- type -->
+  <div class="eyebrow" style="margin-bottom:14px;">Typography</div>
+  <div style="display:grid; grid-template-columns:190px minmax(0,1fr); gap:26px; align-items:start; margin-bottom:24px;">
+    <div>
+      <div style="font-family:var(--display); font-size:28px; line-height:1.1;">Instrument Serif</div>
+      <div style="font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.7;">
+        Song &amp; event titles<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>400, roman + italic<br>Tight, high-contrast, set large or not at all
+      </div>
+    </div>
+    <div>
+      <div style="font-family:var(--display); font-size:52px; line-height:1.0; letter-spacing:-.01em;">Píseň o cestách</div>
+      <div style="font-family:var(--display); font-style:italic; font-size:26px; color:var(--rust); margin-top:10px;">Zkouška, 14. března</div>
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns:190px minmax(0,1fr); gap:26px; align-items:start; margin-bottom:24px;">
+    <div>
+      <div style="font-family:var(--body); font-weight:700; font-size:22px;">Familjen Grotesk</div>
+      <div style="font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.7;">
+        Everything else<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>400 / 500 / 600 / 700<br>Kept from the current build
+      </div>
+    </div>
+    <div>
+      <div style="font-size:17px; line-height:1.6; max-width:58ch; text-wrap:pretty;">
+        Sedm takeů z jedné zkoušky. Master mix hraje hned, stopy jednotlivých nástrojů se dají
+        pustit sólo — dvacet vteřin a víš, jestli stojí za to ji držet.
+      </div>
+      <div style="font-size:13px; line-height:1.5; color:var(--muted); margin-top:10px;">
+        The serif never carries running copy; it is a title face and a pull-quote face, nothing else.
+      </div>
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns:190px minmax(0,1fr); gap:26px; align-items:start; margin-bottom:40px;">
+    <div>
+      <div style="font-family:var(--mono); font-weight:500; font-size:19px;">JetBrains Mono</div>
+      <div style="font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.7;">
+        Chords, keys, timecode<br>Kept from the current build
+      </div>
+    </div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:2px; padding:17px 19px;">
+      <div style="font-family:var(--mono); font-size:18px; font-weight:500; color:var(--rust); letter-spacing:.02em;">Dm&nbsp;&nbsp;&nbsp;&nbsp;Gm&nbsp;&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;&nbsp;Dm</div>
+      <div style="font-family:var(--body); font-size:19px; line-height:1.7; margin-top:4px;">Cesta se točí, nikam nevede</div>
+      <div style="font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:12px;">72 BPM<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>Dm<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4:12</div>
+    </div>
+  </div>
+
+  <!-- proof -->
+  <div class="eyebrow" style="margin-bottom:14px;">In context<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>390px phone</div>
+  <div style="display:flex; gap:26px; align-items:flex-start;">
+    <div style="width:390px; flex:none; background:var(--bg); border:1px solid var(--border);
+      border-radius:4px; overflow:hidden;">
+      <div style="padding:18px 18px 15px; border-bottom:1px solid var(--border);">
+        <div class="eyebrow" style="margin-bottom:7px;">Zkouška<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>14. 3.</div>
+        <div style="font-family:var(--display); font-size:30px; line-height:1.05;">Zkušebna Pardubice</div>
+      </div>
+
+      <div style="display:flex; gap:13px; padding:15px 18px; align-items:center;
+        background:var(--surface); border-bottom:1px solid var(--border);
+        box-shadow:inset 3px 0 0 var(--rust);">
+        <div style="width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--rust);">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#f3ede0"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0;">
+          <div style="font-family:var(--display); font-size:22px; line-height:1.1;">Píseň o cestách</div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px;">take 3<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>Dm</div>
+        </div>
+        <div style="text-align:right; flex:none;">
+          <div style="font-family:var(--display); font-size:20px; color:var(--rust);">5/7</div>
+          <div class="eyebrow" style="font-size:9px; letter-spacing:.14em;">keeper</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:13px; padding:15px 18px; align-items:center; border-bottom:1px solid var(--border);">
+        <div style="width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; border:1px solid var(--border);">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#6f5c4c"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0;">
+          <div style="font-family:var(--display); font-size:22px; line-height:1.1;">Nightbus</div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C</div>
+        </div>
+        <div style="flex:none; padding:4px 10px; border-radius:999px; background:rgba(61,92,23,.12); border:1px solid var(--olive);">
+          <span class="eyebrow" style="color:#2e470f; font-size:9px; letter-spacing:.12em;">published</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:7px; padding:14px 18px; flex-wrap:wrap;">
+        <span class="chip" style="background:var(--rust); color:#f3ede0; border-color:var(--rust);">Bass</span>
+        <span class="chip">Drums</span>
+        <span class="chip">Guitar</span>
+        <span class="chip">Keys</span>
+        <span class="chip">Vocals</span>
+      </div>
+
+      <div style="border-top:1px solid var(--border); background:var(--surface); padding:14px 18px 16px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:38px; height:38px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--rust);">
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="6" y="4" width="4" height="16" fill="#f3ede0"/><rect x="14" y="4" width="4" height="16" fill="#f3ede0"/></svg>
+          </div>
+          <div style="flex-grow:1; min-width:0;">
+            <div style="font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Píseň o cestách<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>take 3</div>
+            <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:2px;">1:47 / 4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>master</div>
+          </div>
+          <span class="chip" style="border-color:var(--rust); color:var(--rust);">Stems</span>
+        </div>
+        <div style="margin-top:12px; height:3px; border-radius:2px; background:var(--border); position:relative;">
+          <div style="position:absolute; inset:0 auto 0 0; width:42%; background:var(--rust); border-radius:2px;"></div>
+          <div style="position:absolute; left:42%; top:-3px; width:9px; height:9px; border-radius:50%; background:var(--rust);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex-grow:1; display:flex; flex-direction:column; gap:14px; padding-top:4px;">
+      <div>
+        <div class="eyebrow" style="margin-bottom:7px;">Motion</div>
+        <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+          Restrained: a 50ms stagger fading rows up, and titles crossfading through the view
+          transition so a song title morphs from list to detail. No bounce, no glow.
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:7px;">Atmosphere</div>
+        <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+          A 4px halftone dot grid gives the sand a tooth, a gold wash warms the top edge and olive
+          settles into the bottom-left. Rules are hairlines; shadows barely exist.
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:7px;">Desktop</div>
+        <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+          This is the direction that scales up best: song detail becomes a real two-column spread,
+          lyrics and chords in one column at 19px, takes in the other.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

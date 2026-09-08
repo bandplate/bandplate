@@ -31,6 +31,7 @@
 // pressed/playing state from `syncButtons()` below, right after hydration
 // and again after every navigation.
 import { useStore } from "@nanostores/preact";
+import { Fragment } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 import { decidePlayerClickAction } from "../client/player-actions.js";
 import {
@@ -286,10 +287,14 @@ export default function Player() {
               )
             : []
           ).map((part, i) => (
-            <>
+            // Keyed on the part itself: the list is at most two entries, both
+            // distinct strings (a take label and a source label), so the value
+            // is a stable identity. An index key would be wrong the moment the
+            // subtitle changes but the source label does not.
+            <Fragment key={part}>
               {i > 0 && <span class="bp-player-sep" aria-hidden="true" />}
               {part}
-            </>
+            </Fragment>
           ))}
         </span>
       </div>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .P{--bg:#150c07;--surface:#211408;--border:#3a2413;--fg:#f2e8d8;--muted:#a9917a;
+    --gold:#f6aa1c;--flare:#d94a1f;--yard:#6f9a2e;
+    --display:'Zilla Slab',Georgia,serif;--body:'Chivo',Helvetica,sans-serif;
+    --mono:'Spline Sans Mono',ui-monospace,monospace;
+    font-family:var(--body);color:var(--fg)}
+ .P a{color:var(--gold);text-decoration:none} .P a:hover{color:#ffc44d}
+ .P .eyebrow{font-family:var(--body);font-weight:900;font-size:11px;letter-spacing:.22em;
+   text-transform:uppercase;color:var(--muted)}
+ .P .cap{font-family:var(--body);font-weight:900;font-size:9.5px;letter-spacing:.2em;
+   text-transform:uppercase;color:var(--muted);margin-bottom:11px}
+ .P .slab{font-family:var(--display);font-weight:600;line-height:1.2}
+ .P .meta{font-family:var(--body);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+ .P .sec{margin-bottom:26px}
+ .P .row-wrap{display:flex;flex-direction:column}
+ .P .note{font-size:12.5px;line-height:1.55;color:var(--muted);margin-top:10px}
+ .P .num{font-variant-numeric:tabular-nums}
+ .P .skel{background:linear-gradient(90deg,var(--border),color-mix(in srgb,var(--border) 40%,transparent),var(--border));
+   border-radius:2px;height:11px}
+  </style>
+</helmet>
+<div class="P" style="width:1000px; box-sizing:border-box; padding:40px 42px 46px; background:
+    repeating-radial-gradient(circle at 90% 3%, rgba(246,170,28,.045) 0 1px, transparent 1px 7px),
+    radial-gradient(115% 30% at 90% 1%, rgba(246,170,28,.11), transparent 62%),
+    var(--bg);">
+  <div class="eyebrow" style="margin-bottom:8px;">Skin S1</div>
+  <div class="slab" style="font-size:40px; font-weight:700; line-height:1.0;">Bare plate</div>
+  <div style="font-size:15px; line-height:1.55; color:var(--muted); margin-top:11px;">No containers at all. Rows sit straight on the ground with a hairline between them, kind and state are said in words rather than drawn as chrome, and inputs are underlines rather than boxes.</div>
+  <div style="display:flex; gap:18px; margin:20px 0 30px;">
+    <div style="flex:1; border-left:3px solid var(--gold); padding:2px 0 2px 13px;">
+      <div class="cap" style="color:var(--gold);">Why</div>
+      <div style="font-size:13px; line-height:1.55; color:var(--muted);">The most content per screen and the quietest — closest to a printed index, which is what a song library actually is. Also the least code: most of what a skin normally spends borders and fills on simply is not there.</div>
+    </div>
+    <div style="flex:1; border-left:3px solid var(--border); padding:2px 0 2px 13px;">
+      <div class="cap">Cost</div>
+      <div style="font-size:13px; line-height:1.55; color:var(--muted);">Leans hard on typography and colour alone, so it needs the copy to be right. Grouping is weaker: on a busy admin form, related fields have nothing holding them together.</div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="cap">Buttons</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><span style="font-family:var(--body);font-weight:600;font-size:15px;padding:10px 18px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;background:var(--gold);color:#150c07;border:1px solid var(--gold);border-radius:2px;">Send me a link</span><span style="font-family:var(--body);font-weight:600;font-size:15px;padding:10px 18px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;background:transparent;color:var(--fg);border:1px solid transparent;border-radius:2px;text-decoration:underline;text-underline-offset:4px;">Cancel</span><span style="font-family:var(--body);font-weight:600;font-size:15px;padding:10px 18px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;background:transparent;color:var(--flare);border:1px solid transparent;border-radius:2px;text-decoration:underline;text-underline-offset:4px;">Delete take</span><span style="font-family:var(--body);font-weight:600;font-size:15px;padding:10px 18px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;background:var(--gold);color:#150c07;border:1px solid var(--gold);border-radius:2px;opacity:.42;">Disabled</span></div></div>
+  <div class="sec"><div class="cap">Checkboxes — the filter row</div><div style="display:flex;gap:22px;flex-wrap:wrap;"><span style="display:inline-flex;align-items:center;gap:9px;min-height:44px;font-size:15px;"><span style="width:20px;height:20px;border:1px solid var(--gold);border-radius:2px;background:var(--gold);display:grid;place-items:center;flex:none;"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 6.5" fill="none" stroke="#150c07" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Rehearsals</span><span style="display:inline-flex;align-items:center;gap:9px;min-height:44px;font-size:15px;"><span style="width:20px;height:20px;border:1px solid var(--muted);border-radius:2px;background:transparent;flex:none;"></span>Concerts</span><span style="display:inline-flex;align-items:center;gap:9px;min-height:44px;font-size:15px;"><span style="width:20px;height:20px;border:1px solid var(--muted);border-radius:2px;background:transparent;flex:none;"></span>Sessions</span></div></div>
+  <div class="sec"><div class="cap">Fields — resting, focused, invalid</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div><span style="font-family:var(--body);font-weight:600;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Email address</span><div style="font-family:var(--body);font-size:15px;color:var(--fg);width:100%;box-sizing:border-box;min-height:44px;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:10px 2px;">filip@example.com</div></div><div><span style="font-family:var(--body);font-weight:600;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Venue</span><div style="font-family:var(--body);font-size:15px;color:var(--fg);width:100%;box-sizing:border-box;min-height:44px;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:10px 2px;border-bottom:2px solid var(--gold);">Zkušebna Pardubice</div><div style="font-size:12.5px;color:var(--muted);margin-top:6px;">Focused state.</div></div><div style="grid-column:1/-1;"><span style="font-family:var(--body);font-weight:600;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Notes</span><div style="font-family:var(--body);font-size:15px;color:var(--fg);width:100%;box-sizing:border-box;min-height:44px;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:10px 2px;border-color:var(--flare);min-height:70px;">Druhý pokus, lepší tempo.</div><div style="font-size:12.5px;color:var(--flare);margin-top:6px;font-weight:600;">Notes are too long by 40 characters.</div></div></div></div>
+  <div class="sec"><div class="cap">Event rows — how kind is expressed</div>
+    <div class="row-wrap"><div style="display:flex;align-items:baseline;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);"><div style="flex-grow:1;min-width:0;"><div class="slab" style="font-size:19px;">30. srpna 2026</div><div class="meta" style="margin-top:3px;"><span style="color:#a9917a;font-weight:600;">zkouška</span><span style="display:inline-block;width:1px;height:.66em;vertical-align:-.06em;margin:0 .6em;background:currentColor;opacity:.5;"></span>Zkušebna Pardubice</div></div><div class="meta" style="width:62px;text-align:right;flex:none;">3 takes</div></div><div style="display:flex;align-items:baseline;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);"><div style="flex-grow:1;min-width:0;"><div class="slab" style="font-size:19px;">8. července 2026</div><div class="meta" style="margin-top:3px;"><span style="color:#d94a1f;font-weight:600;">koncert</span><span style="display:inline-block;width:1px;height:.66em;vertical-align:-.06em;margin:0 .6em;background:currentColor;opacity:.5;"></span>Divadlo 29</div></div><div class="meta" style="width:62px;text-align:right;flex:none;">3 takes</div></div><div style="display:flex;align-items:baseline;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);"><div style="flex-grow:1;min-width:0;"><div class="slab" style="font-size:19px;">9. května 2026</div><div class="meta" style="margin-top:3px;"><span style="color:#a9917a;font-weight:600;">zkouška</span><span style="display:inline-block;width:1px;height:.66em;vertical-align:-.06em;margin:0 .6em;background:currentColor;opacity:.5;"></span>Zkušebna Pardubice</div></div><div class="meta" style="width:62px;text-align:right;flex:none;">1 take</div></div></div></div>
+  <div class="sec"><div class="cap">Empty state and toast</div><div style="padding:26px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);text-align:left;"><p class="slab" style="font-size:19px;margin:0 0 6px;">Nothing here yet</p><p style="font-size:14px;color:var(--muted);margin:0;">Push a rehearsal from the bridge and it shows up.</p></div><div style="background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:12px 16px;margin-top:14px;display:flex;align-items:center;gap:11px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--yard);flex:none;"></span><span style="font-size:14px;">Vote saved.</span><span style="margin-left:auto;font-size:13px;color:var(--muted);text-decoration:underline;">Undo</span></div></div>
+  <div class="sec" style="margin-bottom:0;"><div class="cap">Skeleton — matching the row it replaces</div>
+    <div class="row-wrap"><div style="display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--border);"><div style="flex-grow:1;"><div class="skel" style="width:52%;height:14px;border-radius:2px;"></div><div class="skel" style="width:34%;height:10px;margin-top:7px;border-radius:2px;"></div></div><div class="skel" style="width:44px;height:11px;border-radius:2px;"></div></div><div style="display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--border);"><div style="flex-grow:1;"><div class="skel" style="width:41%;height:14px;border-radius:2px;"></div><div class="skel" style="width:28%;height:10px;margin-top:7px;border-radius:2px;"></div></div><div class="skel" style="width:44px;height:11px;border-radius:2px;"></div></div><div style="display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--border);"><div style="flex-grow:1;"><div class="skel" style="width:60%;height:14px;border-radius:2px;"></div><div class="skel" style="width:31%;height:10px;margin-top:7px;border-radius:2px;"></div></div><div class="skel" style="width:44px;height:11px;border-radius:2px;"></div></div></div>
+    <div class="note">Skeletons share the row's real radius and spacing and match its line count and
+      width distribution. A wrong-shaped skeleton is worse than a spinner.</div></div>
+</div>
+</x-dc>
+</body>
+</html>

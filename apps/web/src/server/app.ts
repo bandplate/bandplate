@@ -96,6 +96,18 @@ async function buildRuntime(): Promise<Runtime> {
     mailer,
     clock,
     bootstrapToken: config.bootstrapToken,
+    // Wired in every configuration, not just dev — see
+    // `AuthDeps.onLoginRequest`. `/login` cannot tell the caller which of
+    // these happened without becoming an enumeration oracle, so the operator's
+    // log is the only place the difference can appear. Never includes the
+    // token or the link.
+    onLoginRequest: (email, outcome) => {
+      console.log(
+        outcome === "sent"
+          ? `[login] link sent to ${email}`
+          : `[login] no link sent — ${email} is not an active member (the page says the same either way)`,
+      );
+    },
   };
   const app = createApp(deps);
   return { config, deps, authDeps, app };

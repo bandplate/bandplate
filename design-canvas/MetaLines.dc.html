@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;900&family=Spline+Sans+Mono:wght@400&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .D { --bg:#150c07; --surface:#211408; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a;
+         --gold:#f6aa1c;
+         --body:"Chivo","Helvetica Neue",Helvetica,sans-serif;
+         --mono:"Spline Sans Mono",ui-monospace,Menlo,monospace; }
+    .D a { color: var(--gold); text-decoration: none; }
+    .D a:hover { color:#ffc44d; }
+    .D .eyebrow { font-family:var(--body); font-weight:900; font-size:11px; letter-spacing:.22em;
+                  text-transform:uppercase; color:var(--muted); }
+    .D .caption { font-family:var(--body); font-weight:900; font-size:9.5px; letter-spacing:.2em;
+                  text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
+    .D .meta { font-family:var(--mono); font-size:11.5px; color:var(--muted); }
+    .D .lab { font-family:var(--body); font-weight:900; font-size:8.5px; letter-spacing:.18em;
+              text-transform:uppercase; color:var(--muted); opacity:.75; }
+  </style>
+</helmet>
+<div class="D" style="width:1780px; box-sizing:border-box; font-family:var(--body); color:var(--fg);
+  background:
+    repeating-radial-gradient(circle at 93% 4%, rgba(246,170,28,.045) 0 1px, transparent 1px 7px),
+    radial-gradient(110% 30% at 93% 2%, rgba(246,170,28,.10), transparent 62%),
+    var(--bg); padding:42px 44px 48px;">
+
+  <div style="display:flex; gap:36px; align-items:flex-start; margin-bottom:30px;">
+    <div style="flex-grow:1;">
+      <div class="eyebrow" style="margin-bottom:9px;">Meta lines</div>
+      <div style="font-family:'Zilla Slab',Georgia,serif; font-weight:700; font-size:44px; line-height:1.0;">Killing the middot</div>
+    </div>
+    <div style="width:760px; flex:none; font-size:15px; line-height:1.6; color:var(--muted);">
+      <code style="font-family:var(--mono); color:var(--fg);">take&nbsp;3&nbsp;·&nbsp;4:12&nbsp;·&nbsp;Dm</code>
+      is a default, not a decision — and it shows. The deeper problem is that it treats three
+      separate data fields as one sentence.
+      <span style="color:var(--fg);">All four options below are the same three values; what changes
+      is whether the separator is a character at all.</span>
+      Shown in Zilla Slab, pending the display-face decision on the board beside this one.
+    </div>
+  </div>
+
+  <div style="display:flex; gap:20px; align-items:flex-start;">
+  <div style="width:400px; flex:none; display:flex; flex-direction:column; gap:14px;">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--gold);">M1</div>
+      <div style="font-family:'Zilla Slab',Georgia,serif; font-weight:700; font-size:23px; line-height:1.1;">Hairline rules</div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:6px;"><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Píseň o cestách</div><div class="meta" style="margin-top:4px;">take 3<span style="display:inline-block;width:1px;height:11px;background:var(--border);vertical-align:-1px;margin:0 10px;"></span>4:12<span style="display:inline-block;width:1px;height:11px;background:var(--border);vertical-align:-1px;margin:0 10px;"></span>Dm</div></div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);flex:none;">5/7</div></div><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Nightbus</div><div class="meta" style="margin-top:4px;">take 1<span style="display:inline-block;width:1px;height:11px;background:var(--border);vertical-align:-1px;margin:0 10px;"></span>3:38<span style="display:inline-block;width:1px;height:11px;background:var(--border);vertical-align:-1px;margin:0 10px;"></span>C</div></div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);flex:none;">2/7</div></div></div>
+    <div style="font-size:13px; line-height:1.55;">A real 1px rule at 60% cap-height in the border token — not a glyph. It sits at a fixed height regardless of the font, takes the theme's border colour, and can be hidden at narrow widths without touching the text.</div>
+    <div style="border-left:3px solid var(--border); padding:2px 0 2px 12px; font-size:13px;
+      line-height:1.55; color:var(--muted);">One more element per field. Worth it: this is the only option where the separator is a drawn object you control rather than a character you inherit.</div>
+  </div>
+  <div style="width:400px; flex:none; display:flex; flex-direction:column; gap:14px;">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--gold);">M2</div>
+      <div style="font-family:'Zilla Slab',Georgia,serif; font-weight:700; font-size:23px; line-height:1.1;">Space alone</div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:6px;"><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Píseň o cestách</div><div class="meta" style="margin-top:4px;display:flex;gap:1.4em;"><span>take 3</span><span>4:12</span><span>Dm</span></div></div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);flex:none;">5/7</div></div><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Nightbus</div><div class="meta" style="margin-top:4px;display:flex;gap:1.4em;"><span>take 1</span><span>3:38</span><span>C</span></div></div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);flex:none;">2/7</div></div></div>
+    <div style="font-size:13px; line-height:1.55;">No separator at all. Fields sit in a flex row with a 1.4em gap and lean on the mono's own even rhythm to group. The quietest possible answer.</div>
+    <div style="border-left:3px solid var(--border); padding:2px 0 2px 12px; font-size:13px;
+      line-height:1.55; color:var(--muted);">Ambiguous when a value contains a space, and the grouping weakens as the line gets longer. Fine for three fields, poor for five.</div>
+  </div>
+  <div style="width:400px; flex:none; display:flex; flex-direction:column; gap:14px;">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--gold);">M3</div>
+      <div style="font-family:'Zilla Slab',Georgia,serif; font-weight:700; font-size:23px; line-height:1.1;">Labelled fields</div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:6px;"><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Píseň o cestách</div><div style="margin-top:6px;display:flex;gap:22px;"><span><span class="lab">Take</span><span class="meta" style="display:block;margin-top:2px;">3</span></span><span><span class="lab">Length</span><span class="meta" style="display:block;margin-top:2px;">4:12</span></span><span><span class="lab">Key</span><span class="meta" style="display:block;margin-top:2px;">Dm</span></span></div></div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);flex:none;">5/7</div></div><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Nightbus</div><div style="margin-top:6px;display:flex;gap:22px;"><span><span class="lab">Take</span><span class="meta" style="display:block;margin-top:2px;">3</span></span><span><span class="lab">Length</span><span class="meta" style="display:block;margin-top:2px;">3:38</span></span><span><span class="lab">Key</span><span class="meta" style="display:block;margin-top:2px;">C</span></span></div></div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);flex:none;">2/7</div></div></div>
+    <div style="font-size:13px; line-height:1.55;">Each value gets a caps micro-label. No separator is needed because the labels do the grouping, and the row stops being a sentence you parse and becomes data you scan.</div>
+    <div style="border-left:3px solid var(--border); padding:2px 0 2px 12px; font-size:13px;
+      line-height:1.55; color:var(--muted);">Twice the vertical space — the tallest option by ~14px per row, which on a phone costs roughly one row per screen. Best on take detail, too heavy for a list.</div>
+  </div>
+  <div style="width:400px; flex:none; display:flex; flex-direction:column; gap:14px;">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--gold);">M4</div>
+      <div style="font-family:'Zilla Slab',Georgia,serif; font-weight:700; font-size:23px; line-height:1.1;">Columns</div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:6px;"><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Píseň o cestách</div><div class="meta" style="margin-top:4px;">take 3</div></div><div class="meta" style="width:44px;text-align:right;flex:none;">4:12</div><div class="meta" style="width:34px;text-align:right;flex:none;">Dm</div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);width:34px;text-align:right;flex:none;">5/7</div></div><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Nightbus</div><div class="meta" style="margin-top:4px;">take 3</div></div><div class="meta" style="width:44px;text-align:right;flex:none;">3:38</div><div class="meta" style="width:34px;text-align:right;flex:none;">C</div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);width:34px;text-align:right;flex:none;">2/7</div></div><div style="display:flex;gap:11px;padding:12px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:19px;line-height:1.2;">Untitled Jam #1</div><div class="meta" style="margin-top:4px;">take 3</div></div><div class="meta" style="width:44px;text-align:right;flex:none;">2:11</div><div class="meta" style="width:34px;text-align:right;flex:none;">—</div><div style="font-family:'Zilla Slab',Georgia,serif;font-weight:600;font-size:15px;color:var(--gold);width:34px;text-align:right;flex:none;">1/7</div></div></div>
+    <div style="font-size:13px; line-height:1.55;">Stop treating it as one line. The title keeps the left, and length and key become right-aligned columns with fixed widths — so the separator problem disappears, and the values line up down the list where they are actually compared.</div>
+    <div style="border-left:3px solid var(--border); padding:2px 0 2px 12px; font-size:13px;
+      line-height:1.55; color:var(--muted);">Only works where rows are uniform. A take that is missing a key leaves a hole, which has to read as deliberate rather than broken.</div>
+  </div>
+  </div>
+
+  <div style="margin-top:30px; border-left:3px solid #6f9a2e; padding:3px 0 3px 14px; max-width:100ch;">
+    <div class="caption" style="color:#8fc248;">Where I&#39;d land</div>
+    <div style="font-size:14px; line-height:1.6; color:var(--muted);">
+      <span style="color:var(--fg);">M4 in lists, M3 on detail pages.</span> A list is where values
+      get compared, so columns earn their keep and the separator question stops existing; a detail
+      page has room for labels and only one row to label. <span style="color:var(--fg);">M1</span> is
+      the right fallback wherever a line genuinely has to stay inline — a breadcrumb, a player
+      subtitle — because it is the only option that keeps the separator under the theme&#39;s control
+      instead of the font&#39;s.
+      <span style="color:var(--fg);">M2</span> is the one to avoid: it looks restrained but degrades
+      the moment a fourth field appears.
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Bitter:wght@500;600;700&family=Chivo:wght@400;600;900&family=Spline+Sans+Mono:wght@400&family=Vollkorn:wght@600;700;800&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .T { --bg:#150c07; --surface:#211408; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a;
+         --gold:#f6aa1c;
+         --body:"Chivo","Helvetica Neue",Helvetica,sans-serif;
+         --mono:"Spline Sans Mono",ui-monospace,Menlo,monospace; }
+    .T a { color: var(--gold); text-decoration: none; }
+    .T a:hover { color:#ffc44d; }
+    .T .eyebrow { font-family:var(--body); font-weight:900; font-size:11px; letter-spacing:.22em;
+                  text-transform:uppercase; color:var(--muted); }
+    .T .caption { font-family:var(--body); font-weight:900; font-size:9.5px; letter-spacing:.2em;
+                  text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
+    .T .meta { font-family:var(--mono); font-size:11px; color:var(--muted); }
+  </style>
+</helmet>
+<div class="T" style="width:1780px; box-sizing:border-box; font-family:var(--body); color:var(--fg);
+  background:
+    repeating-radial-gradient(circle at 93% 3%, rgba(246,170,28,.045) 0 1px, transparent 1px 7px),
+    radial-gradient(110% 26% at 93% 1%, rgba(246,170,28,.10), transparent 62%),
+    var(--bg); padding:42px 44px 48px;">
+
+  <div style="display:flex; gap:36px; align-items:flex-start; margin-bottom:32px;">
+    <div style="flex-grow:1;">
+      <div class="eyebrow" style="margin-bottom:9px;">Milestone 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>reopened</div>
+      <div style="font-family:'Bitter',Georgia,serif; font-weight:700; font-size:44px; line-height:1.0;">The display face, again</div>
+    </div>
+    <div style="width:760px; flex:none; font-size:15px; line-height:1.6; color:var(--muted);">
+      Alfa Slab One is a single ultra-bold weight with tight apertures. At hero size that is the
+      point; at row size — 18–19px, which is most of what you actually look at — the counters close
+      up and Czech diacritics crowd the cap-height. <span style="color:var(--fg);">Every option below
+      is shown at the three sizes that matter, with the same Czech titles, so the comparison is the
+      failing case rather than a specimen.</span> Body copy stays Chivo and mono stays Spline Sans
+      Mono throughout; only the display face changes.
+    </div>
+  </div>
+
+  <div style="display:flex; gap:20px; align-items:flex-start;">
+  <div style="width:400px; flex:none; display:flex; flex-direction:column; gap:16px;">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--gold);">T1</div>
+      <div style="font-family:'Bitter', Georgia, serif; font-weight:700; font-size:25px; line-height:1.1;">Bitter</div>
+      <div class="meta" style="margin-top:6px;">Variable 100–900<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>used at 700 / 600</div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:14px;">
+      <div class="caption">Hero<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>40px</div>
+      <div style="font-family:'Bitter', Georgia, serif; font-weight:700; font-size:40px; line-height:1.0;">Píseň o cestách</div>
+    </div>
+    <div>
+      <div class="caption">Title<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>26px</div>
+      <div style="font-family:'Bitter', Georgia, serif; font-weight:700; font-size:26px; line-height:1.1;">Zkušebna Pardubice</div>
+    </div>
+    <div>
+      <div class="caption">Rows<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>19px — the case that failed</div>
+      <div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Bitter', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Píseň o cestách</div><div class="meta" style="margin-top:3px;">take 3<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>Dm</div></div><div style="text-align:right;flex:none;"><div style="font-family:'Bitter', Georgia, serif;font-weight:600;font-size:15px;color:var(--gold);">5/7</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Bitter', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Zkušebna Pardubice</div><div class="meta" style="margin-top:3px;">7 takes<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3 keepers</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Bitter', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Nightbus</div><div class="meta" style="margin-top:3px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Bitter', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Untitled Jam #1</div><div class="meta" style="margin-top:3px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>2:11</div></div><div style="text-align:right;flex:none;"><div style="font-family:'Bitter', Georgia, serif;font-weight:600;font-size:15px;color:var(--gold);">1/7</div></div></div></div>
+    </div>
+    <div style="font-size:13px; line-height:1.55; color:var(--fg);">A slab drawn for screens. Same family of shape as Alfa Slab, far more air inside the letters, and a real weight axis so a row title can be lighter than a page title.</div>
+    <div style="border-left:3px solid var(--border); padding:2px 0 2px 12px; font-size:13px;
+      line-height:1.55; color:var(--muted);">The most conservative choice — it solves the problem without adding much character. Some of the 7" label punch goes with it.</div>
+  </div>
+  <div style="width:400px; flex:none; display:flex; flex-direction:column; gap:16px;">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--gold);">T2</div>
+      <div style="font-family:'Zilla Slab', Georgia, serif; font-weight:700; font-size:25px; line-height:1.1;">Zilla Slab</div>
+      <div class="meta" style="margin-top:6px;">300–700<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>used at 700 / 600</div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:14px;">
+      <div class="caption">Hero<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>40px</div>
+      <div style="font-family:'Zilla Slab', Georgia, serif; font-weight:700; font-size:40px; line-height:1.0;">Píseň o cestách</div>
+    </div>
+    <div>
+      <div class="caption">Title<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>26px</div>
+      <div style="font-family:'Zilla Slab', Georgia, serif; font-weight:700; font-size:26px; line-height:1.1;">Zkušebna Pardubice</div>
+    </div>
+    <div>
+      <div class="caption">Rows<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>19px — the case that failed</div>
+      <div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Píseň o cestách</div><div class="meta" style="margin-top:3px;">take 3<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>Dm</div></div><div style="text-align:right;flex:none;"><div style="font-family:'Zilla Slab', Georgia, serif;font-weight:600;font-size:15px;color:var(--gold);">5/7</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Zkušebna Pardubice</div><div class="meta" style="margin-top:3px;">7 takes<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3 keepers</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Nightbus</div><div class="meta" style="margin-top:3px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Zilla Slab', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Untitled Jam #1</div><div class="meta" style="margin-top:3px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>2:11</div></div><div style="text-align:right;flex:none;"><div style="font-family:'Zilla Slab', Georgia, serif;font-weight:600;font-size:15px;color:var(--gold);">1/7</div></div></div></div>
+    </div>
+    <div style="font-size:13px; line-height:1.55; color:var(--fg);">Blunter, squarer slabs with visible personality — closer to stencilled crate lettering than to a book face. Open counters even at 600.</div>
+    <div style="border-left:3px solid var(--border); padding:2px 0 2px 12px; font-size:13px;
+      line-height:1.55; color:var(--muted);">Its quirk is in the details (the flat-topped a, the wedge on the t), which mostly disappears below 20px. Pays off at hero size, less at row size.</div>
+  </div>
+  <div style="width:400px; flex:none; display:flex; flex-direction:column; gap:16px;">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--gold);">T3</div>
+      <div style="font-family:'Vollkorn', Georgia, serif; font-weight:800; font-size:25px; line-height:1.1;">Vollkorn</div>
+      <div class="meta" style="margin-top:6px;">Variable 400–900<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>used at 800 / 600</div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:14px;">
+      <div class="caption">Hero<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>40px</div>
+      <div style="font-family:'Vollkorn', Georgia, serif; font-weight:800; font-size:40px; line-height:1.0;">Píseň o cestách</div>
+    </div>
+    <div>
+      <div class="caption">Title<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>26px</div>
+      <div style="font-family:'Vollkorn', Georgia, serif; font-weight:800; font-size:26px; line-height:1.1;">Zkušebna Pardubice</div>
+    </div>
+    <div>
+      <div class="caption">Rows<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>19px — the case that failed</div>
+      <div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Vollkorn', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Píseň o cestách</div><div class="meta" style="margin-top:3px;">take 3<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>Dm</div></div><div style="text-align:right;flex:none;"><div style="font-family:'Vollkorn', Georgia, serif;font-weight:600;font-size:15px;color:var(--gold);">5/7</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Vollkorn', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Zkušebna Pardubice</div><div class="meta" style="margin-top:3px;">7 takes<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3 keepers</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Vollkorn', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Nightbus</div><div class="meta" style="margin-top:3px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Vollkorn', Georgia, serif;font-weight:600;font-size:19px;line-height:1.2;">Untitled Jam #1</div><div class="meta" style="margin-top:3px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>2:11</div></div><div style="text-align:right;flex:none;"><div style="font-family:'Vollkorn', Georgia, serif;font-weight:600;font-size:15px;color:var(--gold);">1/7</div></div></div></div>
+    </div>
+    <div style="font-size:13px; line-height:1.55; color:var(--fg);">Not a slab at all — a sturdy book serif with real stroke contrast. That contrast is exactly what stops diacritics from filling in: the thin strokes give the háčky somewhere to sit.</div>
+    <div style="border-left:3px solid var(--border); padding:2px 0 2px 12px; font-size:13px;
+      line-height:1.55; color:var(--muted);">The least literally reggae of the four. The label feeling would have to come entirely from colour, the rings and the layout rather than from the lettering.</div>
+  </div>
+  <div style="width:400px; flex:none; display:flex; flex-direction:column; gap:16px;">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--gold);">T4</div>
+      <div style="font-family:'Alfa Slab One', Georgia, serif; font-weight:400; font-size:25px; line-height:1.1;">Alfa Slab, confined</div>
+      <div class="meta" style="margin-top:6px;">400 only<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>hero and title only</div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:14px;">
+      <div class="caption">Hero<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>40px</div>
+      <div style="font-family:'Alfa Slab One', Georgia, serif; font-weight:400; font-size:40px; line-height:1.0;">Píseň o cestách</div>
+    </div>
+    <div>
+      <div class="caption">Title<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>26px</div>
+      <div style="font-family:'Alfa Slab One', Georgia, serif; font-weight:400; font-size:26px; line-height:1.1;">Zkušebna Pardubice</div>
+    </div>
+    <div>
+      <div class="caption">Rows<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>18px — the case that failed</div>
+      <div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Chivo', Helvetica, sans-serif;font-weight:900;font-size:18px;line-height:1.2;">Píseň o cestách</div><div class="meta" style="margin-top:3px;">take 3<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>Dm</div></div><div style="text-align:right;flex:none;"><div style="font-family:'Chivo', Helvetica, sans-serif;font-weight:900;font-size:15px;color:var(--gold);">5/7</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Chivo', Helvetica, sans-serif;font-weight:900;font-size:18px;line-height:1.2;">Zkušebna Pardubice</div><div class="meta" style="margin-top:3px;">7 takes<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3 keepers</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Chivo', Helvetica, sans-serif;font-weight:900;font-size:18px;line-height:1.2;">Nightbus</div><div class="meta" style="margin-top:3px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C</div></div></div><div style="display:flex;gap:11px;padding:11px 0;align-items:center;border-bottom:1px solid var(--border);"><div style="width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg></div><div style="flex-grow:1;min-width:0;"><div style="font-family:'Chivo', Helvetica, sans-serif;font-weight:900;font-size:18px;line-height:1.2;">Untitled Jam #1</div><div class="meta" style="margin-top:3px;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>2:11</div></div><div style="text-align:right;flex:none;"><div style="font-family:'Chivo', Helvetica, sans-serif;font-weight:900;font-size:15px;color:var(--gold);">1/7</div></div></div></div>
+    </div>
+    <div style="font-size:13px; line-height:1.55; color:var(--fg);">Keep the face you picked, but stop using it at row size. Alfa Slab stays for the hero and the section title; take and song titles drop to Chivo 900, which is what the meta line beneath them is already set in.</div>
+    <div style="border-left:3px solid var(--border); padding:2px 0 2px 12px; font-size:13px;
+      line-height:1.55; color:var(--muted);">Cheapest change by far, and it targets exactly where the collapse happens. But a list of takes is most of what you look at, so the slab stops being the thing you see.</div>
+  </div>
+  </div>
+
+  <div style="margin-top:32px; display:flex; gap:26px;">
+    <div style="flex-grow:1; border-left:3px solid var(--gold); padding:3px 0 3px 14px;">
+      <div class="caption" style="color:var(--gold);">What to look at</div>
+      <div style="font-size:14px; line-height:1.6; color:var(--muted);">
+        Read the <span style="color:var(--fg);">Rows</span> block in each column, not the hero. Check
+        the ě and š in <span style="color:var(--fg);">Píseň</span> and
+        <span style="color:var(--fg);">Zkušebna</span>, and whether the counters of
+        <span style="color:var(--fg);">a</span>, <span style="color:var(--fg);">e</span> and
+        <span style="color:var(--fg);">o</span> stay open. That is where Alfa Slab fails.
+      </div>
+    </div>
+    <div style="flex-grow:1; border-left:3px solid #6f9a2e; padding:3px 0 3px 14px;">
+      <div class="caption" style="color:#8fc248;">Where I&#39;d land</div>
+      <div style="font-size:14px; line-height:1.6; color:var(--muted);">
+        <span style="color:var(--fg);">T2 Zilla Slab</span> — it keeps the crate-lettering character
+        that made you pick Dubplate, and the weight axis means a row title at 600 has the air Alfa
+        Slab never had at any size. <span style="color:var(--fg);">T3 Vollkorn</span> if legibility
+        matters more than the label feeling; its stroke contrast handles diacritics best of the four.
+        T4 is the honest cheap answer, but it quietly demotes the display face out of the screen you
+        spend most time in.
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

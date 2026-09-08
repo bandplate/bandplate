@@ -4,6 +4,31 @@ import node from "@astrojs/node";
 import preact from "@astrojs/preact";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
+// Load `.env` into `process.env`, not just `import.meta.env`.
+//
+// `server/config.ts` validates `process.env` — it has to, because the same
+// code runs under `node dist/start.mjs` where there is no Vite. But Vite only
+// exposes `.env` through `import.meta.env`, and only keys carrying its public
+// prefix, so under `astro dev` a perfectly good `.env` reached nothing and
+// startup failed with "Invalid configuration: BANDPLATE_DATABASE_URL Required".
+// `.env.example` claimed since it was written that Astro loads this file
+// automatically; this is what makes that claim true.
+//
+// `process.loadEnvFile` (Node >= 20.12) rather than a hand-rolled parser or a
+// `vite` import: it is the same parser `node --env-file` uses, it is already
+// in the runtime, and — verified, not assumed — it does NOT overwrite
+// variables already present in the environment. So an explicit
+// `BANDPLATE_DATABASE_URL=... pnpm dev` still wins over the file.
+//
+// Missing `.env` is the normal case in a deployment, where configuration comes
+// from the real environment, so absence is not an error.
+if (typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile(new URL(".env", import.meta.url).pathname);
+  } catch {
+    // No .env here — configuration comes from the environment.
+  }
+}
 
 // Adapter selected per build via `BANDPLATE_ADAPTER` — `node` (default,
 // what the user runs today: `astro build && node dist/start.mjs`) or

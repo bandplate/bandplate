@@ -38,8 +38,37 @@ if (Astro.request.method === "POST") {
       formData,
       Astro.request.headers,
     );
+
+    // POST/Redirect/GET. Without it the confirmation is rendered as the POST's
+    // own response, so a reload re-submits the form — the browser's "resend?"
+    // prompt — and every reload mints another login token and another email.
+    //
+    // The redirect target is the SAME for a registered and an unregistered
+    // address, because `handleLoginPost` already returns "sent" for both: the
+    // uniform response that keeps the members table from being an enumeration
+    // oracle survives this change intact.
+    if (result.kind === "sent") {
+      return Astro.redirect("/login?sent=1", 303);
+    }
+    if (result.kind === "rate_limited") {
+      return Astro.redirect(`/login?slow=${result.retryAfterSeconds}`, 303);
+    }
+    if (result.kind === "invalid") {
+      return Astro.redirect("/login?invalid=1", 303);
+    }
   }
 }
+
+// Read back from the query string, not from `result` — after the redirect
+// above there is no POST result to read. Everything here is
+// attacker-controllable (anyone can type `?slow=`), so nothing is echoed:
+// `sent` and `invalid` are presence-only flags, and `slow` is parsed as an
+// integer and clamped before it reaches the page.
+const params = Astro.url.searchParams;
+const showSent = params.has("sent");
+const showInvalid = params.has("invalid");
+const rawSlow = Number.parseInt(params.get("slow") ?? "", 10);
+const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 3600) : undefined;
 ---
 
 <Layout title="Sign in">
@@ -50,19 +79,19 @@ if (Astro.request.method === "POST") {
       <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
     )}
 
-    {result?.kind === "sent" && (
+    {showSent && (
       <Banner kind="success" title="Check your email">
         If that address is registered, a link is on its way. It's good for 15 minutes.
       </Banner>
     )}
 
-    {result?.kind === "rate_limited" && (
+    {slowSeconds !== undefined && (
       <Banner kind="error">
-        Too many login requests from here. Try again in about {result.retryAfterSeconds} seconds.
+        Too many login requests from here. Try again in about {slowSeconds} seconds.
       </Banner>
     )}
 
-    {(!result || result.kind === "invalid") && (
+    {!showSent && (
       <form method="post" novalidate>
         {/* mt-0 only — NOT bp-m0 (margin: 0 on both sides). The Task 4
         inline-style-to-class cleanup replaced `style="margin-top: 0"` with
@@ -77,7 +106,7 @@ if (Astro.request.method === "POST") {
           required
           autocomplete="email"
           inputmode="email"
-          error={result?.kind === "invalid" ? result.error : undefined}
+          error={showInvalid ? "Enter your email address." : undefined}
         />
         <button type="submit" class="bp-btn bp-btn-primary">Send me a link</button>
       </form>

@@ -1,0 +1,239 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; }
+    .F { --bg:#150c07; --surface:#211408; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a;
+         --gold:#f6aa1c; --hot:#d94a1f; --olive:#6f9a2e;
+         --display:"Alfa Slab One","Bookman Old Style",Georgia,serif;
+         --body:"Chivo","Helvetica Neue",Helvetica,sans-serif;
+         --mono:"Spline Sans Mono",ui-monospace,Menlo,monospace; }
+    .F a { color: var(--gold); text-decoration: none; }
+    .F a:hover { color: #ffc44d; }
+    .F .eyebrow { font-family:var(--body); font-weight:900; font-size:11px; letter-spacing:.22em;
+                  text-transform:uppercase; color:var(--muted); }
+    .F .sec { font-family:var(--display); font-size:23px; line-height:1.1; margin-bottom:4px; }
+    .F .secn { font-size:13.5px; line-height:1.5; color:var(--muted); margin-bottom:16px; max-width:70ch; }
+    .F .rule { height:1px; background:var(--border); margin:36px 0 22px; }
+    .F .tok { font-family:var(--mono); font-size:11.5px; }
+    .F .sw { height:70px; border-radius:3px; display:flex; align-items:flex-end; padding:8px;
+             box-sizing:border-box; }
+    .F table { border-collapse:collapse; width:100%; }
+    .F th { text-align:left; font-family:var(--body); font-weight:900; font-size:10px;
+            letter-spacing:.18em; text-transform:uppercase; color:var(--muted);
+            padding:0 10px 9px 0; border-bottom:1px solid var(--border); }
+    .F td { padding:11px 10px 11px 0; border-bottom:1px solid rgba(58,36,19,.55);
+            vertical-align:baseline; font-size:13.5px; }
+    .F .chip { font-family:var(--body); font-weight:600; font-size:10.5px; letter-spacing:.12em;
+               text-transform:uppercase; padding:5px 9px; border:1px solid var(--border);
+               border-radius:999px; color:var(--muted); }
+  </style>
+</helmet>
+<div class="F" style="width:940px; box-sizing:border-box; font-family:var(--body); color:var(--fg);
+  background:
+    repeating-radial-gradient(circle at 84% 6%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px),
+    radial-gradient(110% 46% at 84% 2%, rgba(246,170,28,.12), transparent 62%),
+    radial-gradient(80% 40% at 4% 100%, rgba(217,74,31,.09), transparent 70%),
+    var(--bg);
+  padding:44px 46px 56px;">
+
+  <!-- header -->
+  <div style="display:flex; gap:20px; align-items:flex-start; margin-bottom:16px;">
+    <div style="width:56px; height:56px; border-radius:50%; flex:none; display:grid; place-items:center;
+      background:
+        repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,.55) 0 1px, transparent 1px 4px),
+        conic-gradient(from 210deg, #f6aa1c, #d94a1f 40%, #f6aa1c 70%, #ffd679);">
+      <div style="width:18px; height:18px; border-radius:50%; background:var(--bg);"></div>
+    </div>
+    <div style="flex-grow:1;">
+      <div class="eyebrow" style="margin-bottom:8px; color:var(--gold);">Milestone 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>settled</div>
+      <div style="font-family:var(--display); font-size:50px; line-height:.96;">Dubplate foundation</div>
+    </div>
+  </div>
+  <div style="font-size:16px; line-height:1.55; color:var(--muted); max-width:70ch;">
+    Direction A&#39;s palette with A3&#39;s typography rule. Everything from milestone 2 onward is built
+    against this sheet — token names match the ones already in
+    <span class="tok" style="color:var(--fg);">packages/ui/src/tokens</span>, so landing it is a
+    value swap rather than a rename.
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- typography -->
+  <div class="sec">Three faces, one rule</div>
+  <div class="secn">Each face has exactly one job and no overlap. The rule below is what keeps mono
+    from creeping back into chrome.</div>
+
+  <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:20px;">
+    <div style="border:1px solid var(--border); border-radius:3px; padding:16px 18px;">
+      <div style="font-family:var(--display); font-size:27px; line-height:1.05;">Alfa Slab One</div>
+      <div class="tok" style="color:var(--gold); margin-top:8px;">--bp-font-display</div>
+      <div style="font-size:12.5px; color:var(--muted); margin-top:9px; line-height:1.55;">
+        400 only. Song titles, event titles, page headings, big counts. Never a sentence, never
+        under 17px.
+      </div>
+    </div>
+    <div style="border:1px solid var(--border); border-radius:3px; padding:16px 18px;">
+      <div style="font-family:var(--body); font-weight:900; font-size:25px;">Chivo</div>
+      <div class="tok" style="color:var(--gold); margin-top:8px;">--bp-font-body</div>
+      <div style="font-size:12.5px; color:var(--muted); margin-top:9px; line-height:1.55;">
+        300 / 400 / 600 / 900. Everything else — prose, labels, timecode, counts, buttons, form
+        fields. Tabular figures on for anything numeric.
+      </div>
+    </div>
+    <div style="border:1px solid var(--border); border-radius:3px; padding:16px 18px;">
+      <div style="font-family:var(--mono); font-weight:600; font-size:21px;">Spline Sans Mono</div>
+      <div class="tok" style="color:var(--gold); margin-top:8px;">--bp-font-mono</div>
+      <div style="font-size:12.5px; color:var(--muted); margin-top:9px; line-height:1.55;">
+        400 / 600. Content only, two places. See the rule — if you are reaching for it anywhere
+        else, the answer is Chivo.
+      </div>
+    </div>
+  </div>
+
+  <div style="border:1px solid var(--gold); border-radius:3px; padding:18px 20px; background:rgba(246,170,28,.06); margin-bottom:22px;">
+    <div class="eyebrow" style="color:var(--gold); margin-bottom:10px;">The mono rule</div>
+    <div style="font-size:15.5px; line-height:1.6;">
+      Mono is for text whose <span style="color:var(--gold);">horizontal position carries meaning</span>,
+      and for strings a human transcribes character by character. That is
+      <span style="color:var(--gold);">pasted chord charts</span> — free text already aligned with
+      spaces, which collapses in a proportional face — and
+      <span style="color:var(--gold);">machine strings</span> in the admin UI: service tokens,
+      storage keys, hashes, where <span style="color:var(--fg);">1</span>/<span style="color:var(--fg);">l</span>
+      and <span style="color:var(--fg);">0</span>/<span style="color:var(--fg);">O</span> must stay apart.
+    </div>
+    <div style="font-size:14px; line-height:1.6; color:var(--muted); margin-top:12px;">
+      Not mono: eyebrows, meta lines, durations, BPM, keys, vote counts, timecode, badges, buttons,
+      table cells. A clock is not a character grid — it needs equal-width digits, which
+      <span class="tok" style="color:var(--fg);">font-variant-numeric: tabular-nums</span> gives you
+      in Chivo. Pair it with a fixed <span class="tok" style="color:var(--fg);">min-width</span> on
+      any value that ticks, so the layout holds regardless of font loading.
+    </div>
+  </div>
+
+  <!-- type scale -->
+  <div class="eyebrow" style="margin-bottom:12px;">Type scale</div>
+  <table>
+    <tr><th style="width:132px;">Token</th><th style="width:120px;">Face / size</th><th>Used for</th><th style="width:210px;">Specimen</th></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-hero</td><td class="tok">slab 44/1.0</td><td style="color:var(--muted);">Page title, song detail header</td><td style="font-family:var(--display); font-size:30px; line-height:1;">Píseň</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-title</td><td class="tok">slab 27/1.05</td><td style="color:var(--muted);">Event header, section heads</td><td style="font-family:var(--display); font-size:23px;">Zkušebna</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-row</td><td class="tok">slab 19/1.15</td><td style="color:var(--muted);">Song and take names in lists</td><td style="font-family:var(--display); font-size:19px;">Nightbus</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-lyric</td><td class="tok">Chivo 19/1.7</td><td style="color:var(--muted);">Lyrics — read at arm&#39;s length, never smaller</td><td style="font-size:17px;">Cesta se točí</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-prose</td><td class="tok">Chivo 17/1.55</td><td style="color:var(--muted);">Notes, descriptions, empty states</td><td style="font-size:15px;">Sedm takeů</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-ui</td><td class="tok">Chivo 15/1.4</td><td style="color:var(--muted);">Default — buttons, fields, table cells</td><td style="font-size:15px;">Uložit</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-meta</td><td class="tok">Chivo 12.5/1.5</td><td style="color:var(--muted);">Durations, counts, timestamps<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>tabular</td><td style="font-size:12.5px; font-variant-numeric:tabular-nums;">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-eyebrow</td><td class="tok">Chivo 900 11/.22em</td><td style="color:var(--muted);">Caps labels above a block</td><td class="eyebrow">Keeper votes</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-chord</td><td class="tok">mono 600 14/1.7</td><td style="color:var(--muted);">Pasted chord charts only</td><td style="font-family:var(--mono); font-weight:600; font-size:14px; color:var(--gold);">Dm  Gm  C</td></tr>
+    <tr><td class="tok" style="color:var(--gold);">--bp-text-machine</td><td class="tok">mono 12.5/1.6</td><td style="color:var(--muted);">Tokens, keys, hashes — admin only</td><td style="font-family:var(--mono); font-size:12px; color:var(--muted);">bpk_01j8x7…</td></tr>
+  </table>
+
+  <div class="rule"></div>
+
+  <!-- colour -->
+  <div class="sec">Palette</div>
+  <div class="secn">Dark is the authored theme; light is a real counterpart, not a stretch. One
+    accent does the work in each — and it cannot be the same one, because gold on a bone ground
+    measures 2.1:1.</div>
+
+  <div class="eyebrow" style="margin-bottom:11px;">Dark<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>authored</div>
+  <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-bottom:9px;">
+    <div class="sw" style="background:#150c07; border:1px solid var(--border);">
+      <div><div class="tok" style="color:var(--fg);">#150C07</div><div class="tok" style="color:var(--muted); font-size:10px;">--bp-color-bg</div></div></div>
+    <div class="sw" style="background:#211408; border:1px solid var(--border);">
+      <div><div class="tok" style="color:var(--fg);">#211408</div><div class="tok" style="color:var(--muted); font-size:10px;">--bp-color-surface</div></div></div>
+    <div class="sw" style="background:#3a2413; border:1px solid var(--border);">
+      <div><div class="tok" style="color:var(--fg);">#3A2413</div><div class="tok" style="color:var(--muted); font-size:10px;">--bp-color-border</div></div></div>
+    <div class="sw" style="background:#f2e8d8;">
+      <div><div class="tok" style="color:#150c07;">#F2E8D8</div><div class="tok" style="color:#6b5744; font-size:10px;">--bp-color-fg<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>14.9:1</div></div></div>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-bottom:9px;">
+    <div class="sw" style="background:#a9917a;">
+      <div><div class="tok" style="color:#150c07;">#A9917A</div><div class="tok" style="color:#2b1c10; font-size:10px;">--bp-color-muted<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>6.5:1</div></div></div>
+    <div class="sw" style="background:#f6aa1c;">
+      <div><div class="tok" style="color:#150c07;">#F6AA1C</div><div class="tok" style="color:#4a3106; font-size:10px;">--bp-color-accent<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>9.8:1</div></div></div>
+    <div class="sw" style="background:#d94a1f;">
+      <div><div class="tok" style="color:#150c07;">#D94A1F</div><div class="tok" style="color:#3d1206; font-size:10px;">--bp-color-danger<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4.6:1</div></div></div>
+    <div class="sw" style="background:#6f9a2e;">
+      <div><div class="tok" style="color:#150c07;">#6F9A2E</div><div class="tok" style="color:#1f2c0a; font-size:10px;">--bp-color-ok<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>5.8:1</div></div></div>
+  </div>
+
+  <div class="eyebrow" style="margin:20px 0 11px;">Light<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>counterpart</div>
+  <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-bottom:9px;">
+    <div class="sw" style="background:#f2e8d8; border:1px solid #ddd0ba;">
+      <div><div class="tok" style="color:#1c0f06;">#F2E8D8</div><div class="tok" style="color:#6d5947; font-size:10px;">--bp-color-bg</div></div></div>
+    <div class="sw" style="background:#fbf5e9; border:1px solid #ddd0ba;">
+      <div><div class="tok" style="color:#1c0f06;">#FBF5E9</div><div class="tok" style="color:#6d5947; font-size:10px;">--bp-color-surface</div></div></div>
+    <div class="sw" style="background:#ddd0ba;">
+      <div><div class="tok" style="color:#1c0f06;">#DDD0BA</div><div class="tok" style="color:#5a4a3a; font-size:10px;">--bp-color-border</div></div></div>
+    <div class="sw" style="background:#1c0f06;">
+      <div><div class="tok" style="color:#f2e8d8;">#1C0F06</div><div class="tok" style="color:#9c8a76; font-size:10px;">--bp-color-fg<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>16.4:1</div></div></div>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-bottom:12px;">
+    <div class="sw" style="background:#6d5947;">
+      <div><div class="tok" style="color:#f2e8d8;">#6D5947</div><div class="tok" style="color:#cfc0af; font-size:10px;">--bp-color-muted<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>5.4:1</div></div></div>
+    <div class="sw" style="background:#7a4e05;">
+      <div><div class="tok" style="color:#f2e8d8;">#7A4E05</div><div class="tok" style="color:#d6b98a; font-size:10px;">--bp-color-accent<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>5.9:1</div></div></div>
+    <div class="sw" style="background:#9c2f10;">
+      <div><div class="tok" style="color:#f2e8d8;">#9C2F10</div><div class="tok" style="color:#e5b3a4; font-size:10px;">--bp-color-danger<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>6.5:1</div></div></div>
+    <div class="sw" style="background:#3d5c17;">
+      <div><div class="tok" style="color:#f2e8d8;">#3D5C17</div><div class="tok" style="color:#bfd3a4; font-size:10px;">--bp-color-ok<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>6.4:1</div></div></div>
+    </div>
+  <div style="font-size:13.5px; line-height:1.6; color:var(--muted); max-width:76ch;">
+    <span style="color:var(--gold);">Gold is dark-theme only as an accent.</span> In light it drops
+    to 2.1:1 and becomes a fill and rule colour — the playhead, a progress bar, a keeper badge
+    background — never text and never a border you need to see. The light accent role goes to burnt
+    gold <span class="tok" style="color:var(--fg);">#7A4E05</span>, which is the same hue at a
+    lightness that clears AA.
+    <span style="color:var(--fg);">--bp-color-on-accent</span> is fixed bone
+    <span class="tok">#F2E8D8</span> in both themes and must never be defined inside a theme block —
+    that exact bug shipped once already.
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- geometry & motion -->
+  <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px;">
+    <div>
+      <div class="sec">Geometry</div>
+      <div class="secn">Sparse and hard-edged — a plate has a sleeve, not a drop shadow.</div>
+      <table>
+        <tr><td class="tok" style="color:var(--gold); width:118px;">--bp-space</td><td style="color:var(--muted);">4<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>8<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>16<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>20<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>26<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>34<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>44<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>64</td></tr>
+        <tr><td class="tok" style="color:var(--gold);">--bp-radius-sm</td><td style="color:var(--muted);">3px — cards, surfaces, inputs</td></tr>
+        <tr><td class="tok" style="color:var(--gold);">--bp-radius-pill</td><td style="color:var(--muted);">999px — chips, badges, filters</td></tr>
+        <tr><td class="tok" style="color:var(--gold);">--bp-radius-disc</td><td style="color:var(--muted);">50% — play buttons, avatars</td></tr>
+        <tr><td class="tok" style="color:var(--gold);">--bp-hairline</td><td style="color:var(--muted);">1px solid border<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>no shadows anywhere</td></tr>
+        <tr><td class="tok" style="color:var(--gold);">--bp-touch-min</td><td style="color:var(--muted);">44px — every interactive target</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="sec">Motion</div>
+      <div class="secn">One orchestrated load per page, then stillness. Everything below collapses
+        to zero under <span class="tok">prefers-reduced-motion</span>.</div>
+      <table>
+        <tr><td class="tok" style="color:var(--gold); width:118px;">--bp-stagger</td><td style="color:var(--muted);">40ms between list rows, capped at 8 rows</td></tr>
+        <tr><td class="tok" style="color:var(--gold);">--bp-enter</td><td style="color:var(--muted);">180ms<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>translateY(8px) → 0, opacity 0 → 1</td></tr>
+        <tr><td class="tok" style="color:var(--gold);">--bp-state</td><td style="color:var(--muted);">120ms<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>hover, focus, pressed</td></tr>
+        <tr><td class="tok" style="color:var(--gold);">--bp-ease</td><td style="color:var(--muted);">cubic-bezier(.2,.7,.3,1) — no bounce</td></tr>
+        <tr><td colspan="2" style="color:var(--muted);">The gold playhead wipes in from the left on
+          first paint. It is the only element that animates more than once.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:30px; display:flex; gap:8px; flex-wrap:wrap;">
+    <span class="chip" style="border-color:var(--gold); color:var(--gold);">3 families<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>8 weights</span>
+    <span class="chip">~62 KB woff2</span>
+    <span class="chip">both themes AA at every text token</span>
+    <span class="chip">next<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>milestone 2 primitives</span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

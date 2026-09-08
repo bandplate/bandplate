@@ -1,0 +1,241 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Familjen+Grotesk:wght@400;500;700&family=Martian+Mono:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; }
+    .B { --bg:#080d06; --surface:#0f180b; --border:#25361c; --fg:#e9f6dd; --muted:#93ab84;
+         --acid:#a8f04a; --gold:#ffc233; --hot:#ff4a24;
+         --display:"Big Shoulders Display","Oswald","Haettenschweiler",Impact,sans-serif;
+         --body:"Familjen Grotesk",-apple-system,"Segoe UI",sans-serif;
+         --mono:"Martian Mono",ui-monospace,Menlo,monospace; }
+    .B a { color: var(--acid); text-decoration: none; }
+    .B a:hover { color: #c6ff77; }
+    .B .eyebrow { font-family:var(--mono); font-weight:600; font-size:9.5px; letter-spacing:.16em;
+                  text-transform:uppercase; color:var(--muted); }
+    .B .stack { font-family:var(--display); font-weight:800; text-transform:uppercase;
+                letter-spacing:.01em; line-height:.82; }
+    .B .sw { height:74px; display:flex; align-items:flex-end; padding:7px; box-sizing:border-box; }
+    .B .swlab { font-family:var(--mono); font-size:9.5px; letter-spacing:0; }
+    .B .tag { font-family:var(--mono); font-weight:600; font-size:9.5px; letter-spacing:.1em;
+              text-transform:uppercase; padding:5px 8px; border:1px solid var(--border); color:var(--muted); }
+  </style>
+</helmet>
+<div class="B" style="width:900px; box-sizing:border-box; font-family:var(--body); color:var(--fg);
+  background:
+    repeating-linear-gradient(115deg, rgba(168,240,74,.045) 0 2px, transparent 2px 9px),
+    linear-gradient(168deg, rgba(168,240,74,.12), transparent 42%),
+    radial-gradient(80% 50% at 100% 100%, rgba(255,74,36,.14), transparent 70%),
+    var(--bg);
+  padding:44px 44px 56px;">
+
+  <!-- header -->
+  <div style="display:flex; gap:20px; align-items:flex-start; margin-bottom:32px;">
+    <div style="flex-grow:1;">
+      <div class="eyebrow" style="margin-bottom:10px;">Direction B</div>
+      <div class="stack" style="font-size:76px; color:var(--acid);">Session</div>
+      <div class="stack" style="font-size:76px; color:var(--fg); margin-left:2px;">Flyer</div>
+      <div style="margin-top:16px; font-size:16px; line-height:1.5; color:var(--muted); max-width:54ch;">
+        Stacked condensed caps, acid green cut into near-black, hard square edges. The visual
+        language of a sound-system poster stapled to a lamppost — loud, dense, unmistakably a
+        band&#39;s tool and not a SaaS dashboard.
+      </div>
+    </div>
+    <div style="flex:none; width:150px; border:2px solid var(--acid); padding:12px; text-align:center;">
+      <div class="eyebrow" style="color:var(--acid); margin-bottom:8px;">Ticket stub</div>
+      <div class="stack" style="font-size:40px; color:var(--acid);">7</div>
+      <div class="eyebrow" style="margin-top:6px;">takes</div>
+      <div style="height:1px; background:var(--border); margin:12px -12px;
+        background-image:repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 8px);"></div>
+      <div class="stack" style="font-size:40px; color:var(--gold);">3</div>
+      <div class="eyebrow" style="margin-top:6px;">keepers</div>
+    </div>
+  </div>
+
+  <!-- rationale -->
+  <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-bottom:38px;">
+    <div style="border-top:2px solid var(--acid); padding-top:12px;">
+      <div class="eyebrow" style="margin-bottom:7px; color:var(--acid);">Why this one</div>
+      <div style="font-size:14.5px; line-height:1.55;">
+        Condensed caps fit far more on a phone than any wide face, so a whole rehearsal is one
+        screen with no scrolling. Acid green is the loudest possible accent that still clears
+        14:1 on black — every state is legible in a dark room at a glance.
+      </div>
+    </div>
+    <div style="border-top:2px solid var(--border); padding-top:12px;">
+      <div class="eyebrow" style="margin-bottom:7px;">The tradeoff</div>
+      <div style="font-size:14.5px; line-height:1.55; color:var(--muted);">
+        It is a strong flavour that will not fade into the background, and the neon reads more
+        dancehall than roots. Condensed caps are also poor for Czech song titles with heavy
+        diacritics — háčky crowd the cap-height.
+      </div>
+    </div>
+  </div>
+
+  <!-- palette -->
+  <div class="eyebrow" style="margin-bottom:12px;">Palette<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>dark, high-voltage</div>
+  <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:8px;">
+    <div class="sw" style="background:#080d06; border:1px solid var(--border);">
+      <div><div class="swlab" style="color:var(--fg);">#080D06</div><div class="swlab" style="color:var(--muted);">tarmac</div></div></div>
+    <div class="sw" style="background:#0f180b; border:1px solid var(--border);">
+      <div><div class="swlab" style="color:var(--fg);">#0F180B</div><div class="swlab" style="color:var(--muted);">panel</div></div></div>
+    <div class="sw" style="background:#e9f6dd;">
+      <div><div class="swlab" style="color:#080d06;">#E9F6DD</div><div class="swlab" style="color:#4a5a3e;">newsprint<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>text</div></div></div>
+    <div class="sw" style="background:#93ab84;">
+      <div><div class="swlab" style="color:#080d06;">#93AB84</div><div class="swlab" style="color:#1e2a17;">moss<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>muted 7.7:1</div></div></div>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:10px;">
+    <div class="sw" style="background:#a8f04a; height:90px;">
+      <div><div class="swlab" style="color:#080d06; font-weight:600;">#A8F04A</div><div class="swlab" style="color:#31480f;">acid<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>playing, primary, selected</div></div></div>
+    <div class="sw" style="background:#ffc233; height:90px;">
+      <div><div class="swlab" style="color:#080d06; font-weight:600;">#FFC233</div><div class="swlab" style="color:#4a380a;">amber<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>keeper votes</div></div></div>
+    <div class="sw" style="background:#ff4a24; height:90px;">
+      <div><div class="swlab" style="color:#080d06; font-weight:600;">#FF4A24</div><div class="swlab" style="color:#4a1408;">siren<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>reject, destructive</div></div></div>
+  </div>
+  <div style="font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-bottom:38px; line-height:1.7;">
+    newsprint 14.9:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>moss 7.7:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>acid 14.1:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>amber 12.0:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>siren 5.8:1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>tarmac-on-acid 14.1:1
+  </div>
+
+  <!-- type -->
+  <div class="eyebrow" style="margin-bottom:12px;">Typography</div>
+  <div style="display:grid; grid-template-columns:190px minmax(0,1fr); gap:24px; align-items:start; margin-bottom:20px;">
+    <div>
+      <div class="stack" style="font-size:26px;">Big Shoulders</div>
+      <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:8px; line-height:1.7;">
+        Display<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>500 / 700 / 800<br>Caps only. Stack it, never set a sentence in it.
+      </div>
+    </div>
+    <div>
+      <div class="stack" style="font-size:54px; color:var(--fg);">Píseň<br>o cestách</div>
+      <div class="stack" style="font-size:22px; color:var(--acid); margin-top:12px; font-weight:500;">Zkouška — 14. Března</div>
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns:190px minmax(0,1fr); gap:24px; align-items:start; margin-bottom:20px;">
+    <div>
+      <div style="font-family:var(--body); font-weight:700; font-size:22px;">Familjen Grotesk</div>
+      <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:8px; line-height:1.7;">
+        Body &amp; UI<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>400 / 500 / 700<br>Kept from the current build — full Czech coverage
+      </div>
+    </div>
+    <div>
+      <div style="font-size:17px; line-height:1.55; max-width:58ch; text-wrap:pretty;">
+        Sedm takeů z jedné zkoušky. Master mix hraje hned, stopy jednotlivých nástrojů se dají
+        pustit sólo — dvacet vteřin a víš, jestli stojí za to ji držet.
+      </div>
+      <div style="font-size:13px; line-height:1.5; color:var(--muted); margin-top:10px;">
+        All running copy lives here. The display face never carries more than four words.
+      </div>
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns:190px minmax(0,1fr); gap:24px; align-items:start; margin-bottom:38px;">
+    <div>
+      <div style="font-family:var(--mono); font-weight:600; font-size:17px;">Martian Mono</div>
+      <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:8px; line-height:1.7;">
+        Chords, timecode, labels<br>Wide and mechanical — reads as machine output
+      </div>
+    </div>
+    <div style="background:var(--surface); border-left:3px solid var(--acid); padding:15px 17px;">
+      <div style="font-family:var(--mono); font-size:16px; font-weight:600; color:var(--acid);">Dm&nbsp;&nbsp;Gm&nbsp;&nbsp;C&nbsp;&nbsp;Dm</div>
+      <div style="font-family:var(--body); font-size:18px; line-height:1.7; margin-top:6px;">Cesta se točí, nikam nevede</div>
+      <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:12px;">72 BPM<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>Dm<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4:12</div>
+    </div>
+  </div>
+
+  <!-- proof -->
+  <div class="eyebrow" style="margin-bottom:12px;">In context<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>390px phone</div>
+  <div style="display:flex; gap:24px; align-items:flex-start;">
+    <div style="width:390px; flex:none; background:var(--bg); border:1px solid var(--border);">
+      <div style="padding:16px 16px 14px; border-bottom:2px solid var(--acid);">
+        <div class="eyebrow" style="margin-bottom:6px;">14.03<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>Zkouška</div>
+        <div class="stack" style="font-size:34px;">Zkušebna<br>Pardubice</div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch; border-bottom:1px solid var(--border);">
+        <div style="width:5px; background:var(--acid); flex:none;"></div>
+        <div style="width:46px; flex:none; display:grid; place-items:center; background:rgba(168,240,74,.10);">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a8f04a"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0; padding:13px 14px;">
+          <div class="stack" style="font-size:21px;">Píseň o cestách</div>
+          <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:5px;">TAKE 3<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>DM</div>
+        </div>
+        <div style="flex:none; padding:13px 14px 13px 0; text-align:right;">
+          <div class="stack" style="font-size:20px; color:var(--gold);">5/7</div>
+          <div class="eyebrow" style="font-size:8.5px; margin-top:3px;">keeper</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch; border-bottom:1px solid var(--border);">
+        <div style="width:5px; background:var(--border); flex:none;"></div>
+        <div style="width:46px; flex:none; display:grid; place-items:center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#93ab84"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0; padding:13px 14px;">
+          <div class="stack" style="font-size:21px;">Nightbus</div>
+          <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:5px;">TAKE 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C</div>
+        </div>
+        <div style="flex:none; padding:13px 14px 13px 0; display:flex; align-items:center;">
+          <span class="tag" style="border-color:var(--acid); color:var(--acid);">New</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:6px; padding:13px 16px; flex-wrap:wrap;">
+        <span class="tag" style="background:var(--acid); color:#080d06; border-color:var(--acid);">Bass</span>
+        <span class="tag">Drums</span>
+        <span class="tag">Guitar</span>
+        <span class="tag">Keys</span>
+        <span class="tag">Vocals</span>
+      </div>
+
+      <div style="border-top:1px solid var(--border); background:var(--surface); padding:13px 16px 15px;">
+        <div style="display:flex; align-items:center; gap:11px;">
+          <div style="width:38px; height:38px; flex:none; display:grid; place-items:center; background:var(--acid);">
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="6" y="4" width="4" height="16" fill="#080d06"/><rect x="14" y="4" width="4" height="16" fill="#080d06"/></svg>
+          </div>
+          <div style="flex-grow:1; min-width:0;">
+            <div class="stack" style="font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Píseň o cestách<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3</div>
+            <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:3px;">1:47 / 4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>MASTER</div>
+          </div>
+          <span class="tag" style="border-color:var(--acid); color:var(--acid);">Stems</span>
+        </div>
+        <div style="margin-top:11px; height:6px; background:var(--border); display:flex;">
+          <div style="width:42%; background:var(--acid);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex-grow:1; display:flex; flex-direction:column; gap:14px; padding-top:2px;">
+      <div>
+        <div class="eyebrow" style="margin-bottom:7px;">Motion</div>
+        <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+          Rows slide in from the left on a 30ms stagger, like a flyer being printed line by line.
+          The acid rail on the playing row is the only thing that ever animates twice.
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:7px;">Atmosphere</div>
+        <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+          A 9px diagonal hatch — screen-print misregistration — over a green wash from the top and
+          a siren glow bottom-right. Square corners everywhere; nothing is rounded.
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:7px;">Desktop</div>
+        <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+          Density is the point: at 1440px the take list becomes a real table with eight columns,
+          condensed caps holding it together, and the hatch spans the full ground.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

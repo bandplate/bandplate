@@ -90,6 +90,16 @@ async function buildWorkersRuntime(env: CloudflareEnv): Promise<Runtime> {
     mailer,
     clock,
     bootstrapToken: config.bootstrapToken,
+    // Same as the Node profile — see `AuthDeps.onLoginRequest`. On Workers
+    // this reaches `wrangler tail` rather than a terminal, which is the only
+    // place an operator can see which of the two outcomes happened.
+    onLoginRequest: (email, outcome) => {
+      console.log(
+        outcome === "sent"
+          ? `[login] link sent to ${email}`
+          : `[login] no link sent — ${email} is not an active member (the page says the same either way)`,
+      );
+    },
   };
   const app = createApp(deps);
   return { config, deps, authDeps, app };

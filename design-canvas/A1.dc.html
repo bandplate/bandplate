@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Chivo:wght@300;400;600;900&display=swap">
+  <style>
+    body { margin: 0; }
+    .V { --bg:#150c07; --surface:#211408; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a;
+         --gold:#f6aa1c; --hot:#d94a1f; --olive:#6f9a2e;
+         --display:"Alfa Slab One","Bookman Old Style",Georgia,serif;
+         --body:"Chivo","Helvetica Neue",Helvetica,sans-serif; }
+    .V a { color: var(--gold); text-decoration: none; }
+    .V a:hover { color: #ffc44d; }
+    .V .eyebrow { font-family:var(--body); font-weight:900; font-size:11px; letter-spacing:.22em;
+                  text-transform:uppercase; color:var(--muted); }
+    .V .num { font-variant-numeric: tabular-nums; font-feature-settings:"tnum" 1; }
+    .V .case { border:1px solid var(--border); border-radius:3px; padding:18px 20px;
+               background:rgba(33,20,8,.55); }
+    .V .caseh { display:flex; align-items:baseline; gap:10px; margin-bottom:14px; }
+    .V .n { font-family:var(--display); font-size:15px; color:var(--gold); }
+    .V .verdict { font-size:13.5px; line-height:1.55; margin-top:12px; padding-top:12px;
+                  border-top:1px dashed var(--border); color:var(--muted); }
+    .V .chip { font-family:var(--body); font-weight:600; font-size:10.5px; letter-spacing:.12em;
+               text-transform:uppercase; padding:5px 9px; border:1px solid var(--border);
+               border-radius:999px; color:var(--muted); }
+    .V .cw { display:inline-block; position:relative; padding-top:26px; }
+    .V .cw > i { position:absolute; top:0; left:0; font-style:normal; font-family:var(--body);
+                 font-weight:900; font-size:14px; letter-spacing:.06em; color:var(--gold);
+                 white-space:nowrap; }
+  </style>
+</helmet>
+<div class="V" style="width:900px; box-sizing:border-box; font-family:var(--body); color:var(--fg);
+  background:
+    repeating-radial-gradient(circle at 82% 12%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px),
+    radial-gradient(110% 60% at 82% 8%, rgba(246,170,28,.12), transparent 62%),
+    var(--bg);
+  padding:42px 44px 50px;">
+
+  <div style="margin-bottom:12px;">
+    <div class="eyebrow" style="margin-bottom:9px;">Variant A1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>no mono</div>
+    <div style="font-family:var(--display); font-size:44px; line-height:1.0;">Two faces, tabular figures</div>
+  </div>
+  <div style="font-size:16px; line-height:1.55; color:var(--muted); max-width:64ch; margin-bottom:14px;">
+    Alfa Slab One and Chivo, nothing else. Everything the mono used to do is handled by Chivo with
+    <span style="color:var(--fg);">tabular-nums</span> switched on — numbers get fixed advance
+    widths, so a running timecode never jitters even though the face is proportional.
+  </div>
+  <div style="display:flex; gap:8px; margin-bottom:30px; flex-wrap:wrap;">
+    <span class="chip" style="border-color:var(--gold); color:var(--gold);">2 families</span>
+    <span class="chip">4 weights</span>
+    <span class="chip">~46 KB woff2</span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-bottom:16px;">
+
+    <div class="case">
+      <div class="caseh"><span class="n">01</span><span class="eyebrow">Chord progression</span></div>
+      <div style="font-family:var(--body); font-weight:900; font-size:22px; letter-spacing:.14em;
+        color:var(--gold);" class="num">Dm&nbsp; Gm&nbsp; C&nbsp; Dm</div>
+      <div style="font-size:13px; color:var(--muted); margin-top:10px; line-height:1.5;">
+        A progression is a list, not a grid — nothing needs to line up under anything, so a
+        proportional face at weight 900 with open tracking reads better than mono did.
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="caseh"><span class="n">02</span><span class="eyebrow">Chords over lyrics</span></div>
+      <div style="font-size:19px; line-height:1.25; color:var(--fg);">
+        <span class="cw"><i>Dm</i>Cesta</span> <span class="cw">se&nbsp;</span><span class="cw"><i>Gm</i>točí,</span>
+        <span class="cw">nikam&nbsp;</span><span class="cw"><i>C</i>neve</span><span class="cw"><i>Dm</i>de</span>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:14px; line-height:1.5;">
+        Chords are anchored to the syllable they land on, not counted out in spaces. This is what
+        mono was faking — and it survives any font size, any wrap, any screen width.
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="caseh"><span class="n">03</span><span class="eyebrow">Running timecode</span></div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:38px; height:38px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--gold);">
+          <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="6" y="4" width="4" height="16" fill="#150c07"/><rect x="14" y="4" width="4" height="16" fill="#150c07"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0;">
+          <div style="font-size:14px; font-weight:600;">Píseň o cestách<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>take 3</div>
+          <div class="num" style="font-size:12.5px; color:var(--muted); margin-top:3px;">
+            <span style="display:inline-block; min-width:4.2ch; color:var(--gold);">1:47</span>
+            / 4:12<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>master
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px; height:3px; border-radius:2px; background:var(--border); position:relative;">
+        <div style="position:absolute; inset:0 auto 0 0; width:42%; background:var(--gold); border-radius:2px;"></div>
+        <div style="position:absolute; left:42%; top:-3px; width:9px; height:9px; border-radius:50%; background:var(--gold);"></div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:12px; line-height:1.5;">
+        Tabular figures plus a <span style="color:var(--fg);">min-width: 4.2ch</span> on the elapsed
+        span — belt and braces, so the layout holds even if the face ships without tnum.
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="caseh"><span class="n">04</span><span class="eyebrow">List metadata</span></div>
+      <div style="display:flex; gap:13px; align-items:center;">
+        <div style="width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; border:1px solid var(--border);">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0;">
+          <div style="font-family:var(--display); font-size:19px; line-height:1.15;">Nightbus</div>
+          <div style="font-size:12.5px; color:var(--muted); margin-top:4px;" class="num">take 1<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>3:38<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>C<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>110 BPM</div>
+        </div>
+        <div style="text-align:right; flex:none;">
+          <div class="num" style="font-family:var(--body); font-weight:900; font-size:17px; color:var(--gold);">5/7</div>
+          <div class="eyebrow" style="font-size:9px;">keeper</div>
+        </div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:14px; line-height:1.5;">
+        Meta lines lose the machine texture the mono gave them and read as ordinary small copy —
+        quieter, and one less thing competing with the slab title.
+      </div>
+    </div>
+  </div>
+
+  <div class="case" style="border-color:var(--hot);">
+    <div class="caseh"><span class="n" style="color:var(--hot);">05</span><span class="eyebrow" style="color:var(--hot);">The case that hurts<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>admin machine strings</span></div>
+    <div style="display:flex; flex-direction:column; gap:9px;">
+      <div style="font-size:14px; word-break:break-all;">bpk_01j8x7q2m4kd9v_8f3a1c7e2b904d61</div>
+      <div style="font-size:14px; color:var(--muted); word-break:break-all;">takes/01j8x7q2m4kd9v/stems/bass/lossy.opus</div>
+      <div style="font-size:14px; color:var(--muted); word-break:break-all;">sha256<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>e3b0c44298fc1c149afbf4c8996fb924</div>
+    </div>
+    <div class="verdict">
+      This is where dropping the mono costs something real. In a proportional face
+      <span style="color:var(--fg);">1</span> / <span style="color:var(--fg);">l</span> and
+      <span style="color:var(--fg);">0</span> / <span style="color:var(--fg);">O</span> stop being
+      distinguishable, and these are strings a person copies once and can never re-read. All of it
+      lives in the admin UI (milestone 5) — so the fix is a single utility class using the browser&#39;s
+      own <span style="color:var(--fg);">ui-monospace</span>, no webfont downloaded, no third family
+      in the design system.
+    </div>
+  </div>
+
+  <div style="margin-top:26px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
+    <div style="border-left:3px solid var(--olive); padding:2px 0 2px 14px;">
+      <div class="eyebrow" style="margin-bottom:6px; color:#8fc248;">Wins</div>
+      <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+        One font request fewer, a warmer and less technical feel, and chord-over-lyric that is
+        actually more correct than the mono version was.
+      </div>
+    </div>
+    <div style="border-left:3px solid var(--hot); padding:2px 0 2px 14px;">
+      <div class="eyebrow" style="margin-bottom:6px; color:#ef7a52;">Costs</div>
+      <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+        Metadata loses its distinct voice — everything small is now the same grey Chivo, so
+        hierarchy has to come from weight and colour alone.
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

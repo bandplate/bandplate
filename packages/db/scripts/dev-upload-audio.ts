@@ -88,15 +88,46 @@ function toneFrequencyHz(assetId: string): number {
   return Math.round(MIN_FREQ_HZ + unit * (MAX_FREQ_HZ - MIN_FREQ_HZ));
 }
 
-/** ffmpeg's audio codec flags for the formats this app's assets actually use. `wav`/`json` aren't produced by the seed and aren't handled here. */
+/**
+ * ffmpeg's audio codec flags per asset format.
+ *
+ * `opus` was missing here until playback was first attempted end to end, and
+ * it is the format ELEVEN of the seed's thirteen audio assets use — the
+ * project's primary lossy tier (see the plan's "Audio tiers"). The old comment
+ * claimed this covered "the formats this app's assets actually use", which was
+ * true of neither the seed nor the ingest contract. So this script could never
+ * seed the common case, and the player was therefore never exercised against
+ * real bytes at all.
+ *
+ * The lesson generalises: a dev fixture script that silently covers only the
+ * rare formats looks like it works right up until someone tries the normal
+ * path. Adding a format to the schema means adding it here.
+ *
+ * `wav` is accepted too (the lossless tier's other legal format); `json`
+ * (peaks) is not audio and never reaches this — the query below takes only
+ * `master` and `stem` assets.
+ */
 function encoderArgsFor(format: string): string[] {
+  if (format === "opus") {
+    // Ogg container, which is what a `.opus` extension gets from ffmpeg.
+    // `-ar 48000` is REQUIRED, not a preference: libopus accepts only
+    // 8/12/16/24/48 kHz and fails outright on the 44.1 kHz the tone generator
+    // produces by default — "Error while opening encoder", with the real cause
+    // buried in a list of accepted rates.
+    return ["-c:a", "libopus", "-b:a", "96k", "-ar", "48000"];
+  }
   if (format === "mp3") {
     return ["-c:a", "libmp3lame", "-b:a", "128k"];
   }
   if (format === "flac") {
     return ["-c:a", "flac"];
   }
-  throw new Error(`dev-upload-audio: no encoder configured for format "${format}"`);
+  if (format === "wav") {
+    return ["-c:a", "pcm_s16le"];
+  }
+  throw new Error(
+    `dev-upload-audio: no encoder configured for format "${format}". Add one above — every format the schema allows needs an entry here, or this script silently cannot seed the common case.`,
+  );
 }
 
 async function generateTone(format: string, frequencyHz: number, outPath: string): Promise<void> {
@@ -110,6 +141,8 @@ async function generateTone(format: string, frequencyHz: number, outPath: string
     "2",
     "-ar",
     "44100",
+    // Encoder args come AFTER the input rate so a codec that needs its own
+    // (opus) can override it — order matters to ffmpeg here.
     ...encoderArgsFor(format),
     outPath,
   ]);

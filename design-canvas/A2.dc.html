@@ -1,0 +1,168 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Chivo:wght@300;400;600;900&display=swap">
+  <style>
+    body { margin: 0; }
+    .W { --bg:#150c07; --surface:#211408; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a;
+         --gold:#f6aa1c; --hot:#d94a1f; --olive:#6f9a2e;
+         --display:"Alfa Slab One","Bookman Old Style",Georgia,serif;
+         --body:"Chivo","Helvetica Neue",Helvetica,sans-serif; }
+    .W a { color: var(--gold); text-decoration: none; }
+    .W a:hover { color: #ffc44d; }
+    .W .eyebrow { font-family:var(--body); font-weight:900; font-size:11px; letter-spacing:.22em;
+                  text-transform:uppercase; color:var(--muted); }
+    .W .stamp { font-family:var(--display); line-height:.9; color:var(--gold); }
+    .W .case { border:1px solid var(--border); border-radius:3px; padding:18px 20px;
+               background:rgba(33,20,8,.55); }
+    .W .caseh { display:flex; align-items:baseline; gap:10px; margin-bottom:14px; }
+    .W .n { font-family:var(--display); font-size:15px; color:var(--gold); }
+    .W .verdict { font-size:13.5px; line-height:1.55; margin-top:12px; padding-top:12px;
+                  border-top:1px dashed var(--border); color:var(--muted); }
+    .W .chip { font-family:var(--body); font-weight:600; font-size:10.5px; letter-spacing:.12em;
+               text-transform:uppercase; padding:5px 9px; border:1px solid var(--border);
+               border-radius:999px; color:var(--muted); }
+    .W .cw { display:inline-block; position:relative; padding-top:28px; }
+    .W .cw > i { position:absolute; top:0; left:0; font-style:normal; font-family:var(--display);
+                 font-size:16px; color:var(--gold); white-space:nowrap; }
+  </style>
+</helmet>
+<div class="W" style="width:900px; box-sizing:border-box; font-family:var(--body); color:var(--fg);
+  background:
+    repeating-radial-gradient(circle at 82% 12%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px),
+    radial-gradient(110% 60% at 82% 8%, rgba(246,170,28,.12), transparent 62%),
+    var(--bg);
+  padding:42px 44px 50px;">
+
+  <div style="margin-bottom:12px;">
+    <div class="eyebrow" style="margin-bottom:9px;">Variant A2<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>no mono</div>
+    <div style="font-family:var(--display); font-size:44px; line-height:1.0;">The slab stamps the numbers</div>
+  </div>
+  <div style="font-size:16px; line-height:1.55; color:var(--muted); max-width:64ch; margin-bottom:14px;">
+    Same two families, but instead of Chivo quietly absorbing the mono&#39;s work, Alfa Slab One takes
+    it over and makes it loud. Durations, keys, BPM, vote counts and chord symbols all become
+    stamped gold marks — the numbers stop being metadata and start being label copy.
+  </div>
+  <div style="display:flex; gap:8px; margin-bottom:30px; flex-wrap:wrap;">
+    <span class="chip" style="border-color:var(--gold); color:var(--gold);">2 families</span>
+    <span class="chip">4 weights</span>
+    <span class="chip">~46 KB woff2</span>
+    <span class="chip" style="border-color:var(--hot); color:#ef7a52;">needs bigger type</span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-bottom:16px;">
+
+    <div class="case">
+      <div class="caseh"><span class="n">01</span><span class="eyebrow">Chord progression</span></div>
+      <div class="stamp" style="font-size:30px; letter-spacing:.02em;">Dm&nbsp; Gm&nbsp; C&nbsp; Dm</div>
+      <div style="font-size:13px; color:var(--muted); margin-top:12px; line-height:1.5;">
+        The progression becomes a headline in its own right. On a song page it can sit at 40px
+        under the title and be readable from a music stand across the room.
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="caseh"><span class="n">02</span><span class="eyebrow">Chords over lyrics</span></div>
+      <div style="font-size:19px; line-height:1.25; color:var(--fg);">
+        <span class="cw"><i>Dm</i>Cesta</span> <span class="cw">se&nbsp;</span><span class="cw"><i>Gm</i>točí,</span>
+        <span class="cw">nikam&nbsp;</span><span class="cw"><i>C</i>neve</span><span class="cw"><i>Dm</i>de</span>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:14px; line-height:1.5;">
+        Slab chords sit heavier over the lyric than Chivo 900 did — more authority, but they also
+        crowd the line, so the lyric needs more leading than in A1.
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="caseh"><span class="n">03</span><span class="eyebrow">Running timecode</span></div>
+      <div style="display:flex; align-items:center; gap:13px;">
+        <div style="width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--gold);">
+          <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="6" y="4" width="4" height="16" fill="#150c07"/><rect x="14" y="4" width="4" height="16" fill="#150c07"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0;">
+          <div style="font-size:14px; font-weight:600;">Píseň o cestách<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>take 3</div>
+          <div style="display:flex; align-items:baseline; gap:6px; margin-top:2px;">
+            <span class="stamp" style="font-size:21px; display:inline-block; min-width:3.4ch;">1:47</span>
+            <span style="font-size:12.5px; color:var(--muted);">of</span>
+            <span class="stamp" style="font-size:21px; color:var(--muted);">4:12</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px; height:3px; border-radius:2px; background:var(--border); position:relative;">
+        <div style="position:absolute; inset:0 auto 0 0; width:42%; background:var(--gold); border-radius:2px;"></div>
+        <div style="position:absolute; left:42%; top:-3px; width:9px; height:9px; border-radius:50%; background:var(--gold);"></div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:12px; line-height:1.5;">
+        Alfa Slab One has one weight and proportional figures, so the elapsed time needs a fixed
+        <span style="color:var(--fg);">min-width</span> or it shuffles the total sideways every second.
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="caseh"><span class="n">04</span><span class="eyebrow">List metadata</span></div>
+      <div style="display:flex; gap:13px; align-items:center;">
+        <div style="width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; border:1px solid var(--border);">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5v15l13-7.5-13-7.5z" fill="#a9917a"/></svg>
+        </div>
+        <div style="flex-grow:1; min-width:0;">
+          <div style="font-family:var(--display); font-size:19px; line-height:1.15;">Nightbus</div>
+          <div style="display:flex; gap:14px; margin-top:6px; align-items:baseline;">
+            <span><span class="stamp" style="font-size:15px;">3:38</span></span>
+            <span><span class="stamp" style="font-size:15px; color:var(--muted);">C</span></span>
+            <span><span class="stamp" style="font-size:15px; color:var(--muted);">110</span>
+              <span class="eyebrow" style="font-size:9px;">bpm</span></span>
+          </div>
+        </div>
+        <div style="text-align:right; flex:none;">
+          <div class="stamp" style="font-size:22px;">5/7</div>
+          <div class="eyebrow" style="font-size:9px; margin-top:3px;">keeper</div>
+        </div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:14px; line-height:1.5;">
+        Every row is taller — the stamps need 15px minimum to stay legible where the mono held up at
+        11px. Roughly four rows per phone screen instead of six.
+      </div>
+    </div>
+  </div>
+
+  <div class="case" style="border-color:var(--hot);">
+    <div class="caseh"><span class="n" style="color:var(--hot);">05</span><span class="eyebrow" style="color:var(--hot);">The case that hurts<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>admin machine strings</span></div>
+    <div style="display:flex; flex-direction:column; gap:9px;">
+      <div style="font-size:14px; word-break:break-all;">bpk_01j8x7q2m4kd9v_8f3a1c7e2b904d61</div>
+      <div style="font-size:14px; color:var(--muted); word-break:break-all;">takes/01j8x7q2m4kd9v/stems/bass/lossy.opus</div>
+      <div style="font-size:14px; color:var(--muted); word-break:break-all;">sha256<span style="display:inline-block;width:1px;height:0.66em;vertical-align:-0.06em;margin:0 0.6em;background:currentColor;opacity:.5;"></span>e3b0c44298fc1c149afbf4c8996fb924</div>
+    </div>
+    <div class="verdict">
+      Identical to A1 — the slab is hopeless at this and these strings stay in Chivo, so the same
+      <span style="color:var(--fg);">ui-monospace</span> utility class is needed in the admin UI.
+      Nothing about A2 solves it; nothing about A2 makes it worse.
+    </div>
+  </div>
+
+  <div style="margin-top:26px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
+    <div style="border-left:3px solid var(--olive); padding:2px 0 2px 14px;">
+      <div class="eyebrow" style="margin-bottom:6px; color:#8fc248;">Wins</div>
+      <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+        The most characterful of the three, and it solves the hierarchy problem A1 creates — a
+        duration is now visibly a different kind of thing from a sentence.
+      </div>
+    </div>
+    <div style="border-left:3px solid var(--hot); padding:2px 0 2px 14px;">
+      <div class="eyebrow" style="margin-bottom:6px; color:#ef7a52;">Costs</div>
+      <div style="font-size:14px; line-height:1.55; color:var(--muted);">
+        Density. Everything numeric has to be big, so lists get taller and a rehearsal no longer
+        fits one phone screen. It is also the loudest — a lot of gold slab per view.
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

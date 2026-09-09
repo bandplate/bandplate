@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;family=Spline+Sans+Mono:wght@400;600&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; } a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:1000px; margin:0 0 30px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:34px; } .sect > .caps { display:block; margin-bottom:12px; }
+  .frames { display:flex; gap:48px; align-items:flex-start; }
+
+  /* the record sheet's right-hand rail, 26rem */
+  .sheet { width:416px; box-sizing:border-box; background:#211408;
+           border:1px solid #3a2413; border-radius:5px; padding:22px 20px; }
+  .wide { width:620px; }
+
+  /* .bp-field */
+  .field { margin-bottom:20px; }
+  .flabel { font-weight:600; font-size:15px; color:#f2e8d8; display:block; margin-bottom:6px; }
+  .fhint { font-size:13px; color:#a9917a; margin:0 0 8px; line-height:1.5; }
+  /* .bp-textarea — filled, borderless, radius 3px */
+  .ta { width:100%; box-sizing:border-box; font-size:16px; min-height:44px;
+        padding:8px 12px; border-radius:3px; border:none; background:rgba(242,232,216,.12);
+        color:#f2e8d8; font-family:"Spline Sans Mono",ui-monospace,monospace;
+        line-height:1.6; white-space:pre; overflow:auto; }
+  .ta-lg { min-height:150px; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+         min-height:44px; padding:10px 20px; border-radius:999px; border:none;
+         font-family:inherit; font-size:15px; font-weight:600; box-sizing:border-box; }
+  .btn-primary { background:#f6aa1c; color:#150c07; }
+  .btn-secondary { background:rgba(242,232,216,.15); color:#f2e8d8; }
+  .btn-sm { min-height:44px; padding:6px 14px; font-size:14px; }
+
+  /* the rendered chart, as /songs/[slug] draws it */
+  .chart { background:#150c07; border:1px dashed #3a2413; border-radius:8px;
+           padding:16px 18px; }
+  .csec { margin-bottom:16px; }
+  .csec:last-child { margin-bottom:0; }
+  .clabel { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+            letter-spacing:.22em; text-transform:uppercase; color:#a9917a;
+            display:block; margin-bottom:5px; }
+  .cchord { font-family:"Spline Sans Mono",ui-monospace,monospace; font-size:14px;
+            color:#f6aa1c; white-space:pre-wrap; margin:0 0 3px; }
+  .clyric { font-size:15px; line-height:1.5; color:#f2e8d8; white-space:pre-wrap; margin:0; }
+
+  .ok { color:#f6aa1c; } .bad { color:#e8794f; }
+  .flag { display:flex; align-items:flex-start; gap:8px; font-size:13px; line-height:1.5;
+          margin-top:8px; }
+  .flag svg { flex:none; margin-top:2px; }
+  .note { font-size:12.5px; line-height:1.55; color:#a9917a; margin:12px 0 0; max-width:600px; }
+  .note strong { color:#f2e8d8; font-weight:600; }
+  .rowlabel { font-size:12.5px; color:#a9917a; margin:0 0 8px; }
+
+  /* structured rows (E3) */
+  .srow { display:grid; grid-template-columns:110px 1fr; gap:10px; align-items:start;
+          padding:12px 0; border-bottom:1px solid #3a2413; }
+  .sname { min-height:44px; padding:8px 12px; border-radius:3px; border:none;
+           background:rgba(242,232,216,.12); color:#f2e8d8; font-size:15px;
+           font-family:inherit; box-sizing:border-box; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>E3 — Sections as rows, no format at all</h1>
+    <p>Stop asking anyone to learn a text convention. A section is a row: a name, its chords, its words. Add a section, drag to reorder. The app writes the text.</p>
+    <p class="trade"><strong>Costs:</strong> the most machinery of the three, and the least forgiving of what people actually have. Pasting a whole chart is hostile — you would be splitting it into rows by hand — and the parser's deliberate free-text fallback, which exists so an unstructured song still renders, has nowhere to live.</p>
+  </div>
+  <div class="sect">
+    <span class="caps">Rows</span>
+    <div class="frames">
+      <div class="sheet wide">
+        <div class="srow">
+          <input class="sname" value="Verse" readonly />
+          <div>
+            <div class="ta" style="min-height:44px;margin-bottom:8px;">Am Dm7</div>
+            <div class="ta" style="font-family:inherit;font-size:15px;">Život si mě ubalil,
+pomalu mě teď kouří.
+Zlehýnka mě zapálil,
+a já si teďka hořím.</div>
+          </div>
+        </div>
+        <div class="srow">
+          <input class="sname" value="Refrén" readonly />
+          <div>
+            <div class="ta" style="min-height:44px;margin-bottom:8px;">F C G</div>
+            <div class="ta" style="font-family:inherit;font-size:15px;">Hoří, hoří, hoří.</div>
+          </div>
+        </div>
+        <div style="padding-top:14px;">
+          <span class="btn btn-secondary btn-sm">Add a section</span>
+        </div>
+      </div>
+      <div style="max-width:420px;">
+        <p class="note" style="margin-top:0;"><strong>There is no format to get wrong.</strong> No colon rule, no label-on-its-own-line rule, no pairing — the row IS the pairing.</p>
+        <p class="note">What it costs is everything that is not already in rows. The parser today degrades on purpose: a song in a convention it does not recognise still renders as plain text rather than being mangled. Rows have no room for that, so a song like it either loses its shape or needs an escape hatch — which puts the free-text box back beside the rows and gives you two editors instead of one.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;family=Spline+Sans+Mono:wght@400;600&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; } a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:1000px; margin:0 0 30px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:34px; } .sect > .caps { display:block; margin-bottom:12px; }
+  .frames { display:flex; gap:48px; align-items:flex-start; }
+
+  /* the record sheet's right-hand rail, 26rem */
+  .sheet { width:416px; box-sizing:border-box; background:#211408;
+           border:1px solid #3a2413; border-radius:5px; padding:22px 20px; }
+  .wide { width:620px; }
+
+  /* .bp-field */
+  .field { margin-bottom:20px; }
+  .flabel { font-weight:600; font-size:15px; color:#f2e8d8; display:block; margin-bottom:6px; }
+  .fhint { font-size:13px; color:#a9917a; margin:0 0 8px; line-height:1.5; }
+  /* .bp-textarea — filled, borderless, radius 3px */
+  .ta { width:100%; box-sizing:border-box; font-size:16px; min-height:44px;
+        padding:8px 12px; border-radius:3px; border:none; background:rgba(242,232,216,.12);
+        color:#f2e8d8; font-family:"Spline Sans Mono",ui-monospace,monospace;
+        line-height:1.6; white-space:pre; overflow:auto; }
+  .ta-lg { min-height:150px; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+         min-height:44px; padding:10px 20px; border-radius:999px; border:none;
+         font-family:inherit; font-size:15px; font-weight:600; box-sizing:border-box; }
+  .btn-primary { background:#f6aa1c; color:#150c07; }
+  .btn-secondary { background:rgba(242,232,216,.15); color:#f2e8d8; }
+  .btn-sm { min-height:44px; padding:6px 14px; font-size:14px; }
+
+  /* the rendered chart, as /songs/[slug] draws it */
+  .chart { background:#150c07; border:1px dashed #3a2413; border-radius:8px;
+           padding:16px 18px; }
+  .csec { margin-bottom:16px; }
+  .csec:last-child { margin-bottom:0; }
+  .clabel { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+            letter-spacing:.22em; text-transform:uppercase; color:#a9917a;
+            display:block; margin-bottom:5px; }
+  .cchord { font-family:"Spline Sans Mono",ui-monospace,monospace; font-size:14px;
+            color:#f6aa1c; white-space:pre-wrap; margin:0 0 3px; }
+  .clyric { font-size:15px; line-height:1.5; color:#f2e8d8; white-space:pre-wrap; margin:0; }
+
+  .ok { color:#f6aa1c; } .bad { color:#e8794f; }
+  .flag { display:flex; align-items:flex-start; gap:8px; font-size:13px; line-height:1.5;
+          margin-top:8px; }
+  .flag svg { flex:none; margin-top:2px; }
+  .note { font-size:12.5px; line-height:1.55; color:#a9917a; margin:12px 0 0; max-width:600px; }
+  .note strong { color:#f2e8d8; font-weight:600; }
+  .rowlabel { font-size:12.5px; color:#a9917a; margin:0 0 8px; }
+
+  /* structured rows (E3) */
+  .srow { display:grid; grid-template-columns:110px 1fr; gap:10px; align-items:start;
+          padding:12px 0; border-bottom:1px solid #3a2413; }
+  .sname { min-height:44px; padding:8px 12px; border-radius:3px; border:none;
+           background:rgba(242,232,216,.12); color:#f2e8d8; font-size:15px;
+           font-family:inherit; box-sizing:border-box; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>E2 — One box, the way a chart is written</h1>
+    <p>Drop the two boxes for one. A section is a block: label on its own line, chord line, then the words. It is how a chart is written on paper, and there is only one rule to learn instead of two contradictory ones.</p>
+    <p class="trade"><strong>Costs:</strong> the app has to split that back into the two database columns on save, and re-join them on open — a round trip that must be lossless for text nobody structured. Pasting a chart from elsewhere no longer just works: it has to be in this shape.</p>
+  </div>
+  <div class="sect">
+    <span class="caps">One field</span>
+    <div class="frames">
+      <div class="sheet wide">
+        <div class="field" style="margin-bottom:0;">
+          <span class="flabel">Chords &amp; lyrics</span>
+          <p class="fhint">A label on its own line, the chords beneath it, then the words. Blank line between sections.</p>
+          <div class="ta" style="min-height:260px;">Verse
+Am Dm7
+Život si mě ubalil,
+pomalu mě teď kouří.
+Zlehýnka mě zapálil,
+a já si teďka hořím.
+
+Refrén
+F C G
+Hoří, hoří, hoří.</div>
+        </div>
+      </div>
+      <div style="max-width:440px;">
+        <p class="note" style="margin-top:0;">One rule, and the thing on screen already looks like the thing that comes out. <strong>Nothing to pair, so nothing to mis-pair.</strong></p>
+        <p class="note">The catch is underneath: the schema keeps chords and lyrics as two columns — the ingest contract and the take pages both read them separately — so this box has to split cleanly on every save and rebuild on every open. A song whose text does not fit the shape has to survive that round trip untouched.</p>
+        <p class="note">It also changes what a paste means. Today you can paste a chord sheet into one box and a lyric sheet into the other, from two different places. Here there is one box and one shape.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

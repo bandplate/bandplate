@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-22",
+      "name": "M9 — Chords & lyrics editor"
+    },
+    {
       "id": "page-21",
       "name": "M8 — Upload panel"
     },
@@ -86,6 +90,42 @@
     }
   ],
   "artboards": [
+    {
+      "file": "ChartProblem.dc.html",
+      "title": "The problem — two conventions, neither stated",
+      "page": "page-22",
+      "x": 0,
+      "y": 0,
+      "w": 1240,
+      "h": 1400
+    },
+    {
+      "file": "ChartPreview.dc.html",
+      "title": "E1 — Show the chart as it is typed",
+      "page": "page-22",
+      "x": 1320,
+      "y": 0,
+      "w": 1240,
+      "h": 1400
+    },
+    {
+      "file": "ChartOneBox.dc.html",
+      "title": "E2 — One box, the way a chart is written",
+      "page": "page-22",
+      "x": 2640,
+      "y": 0,
+      "w": 1140,
+      "h": 900
+    },
+    {
+      "file": "ChartRows.dc.html",
+      "title": "E3 — Sections as rows, no format at all",
+      "page": "page-22",
+      "x": 2640,
+      "y": 1040,
+      "w": 1140,
+      "h": 1000
+    },
     {
       "file": "UploadDrop.dc.html",
       "title": "U1 — Drop zone in the strip",
@@ -584,6 +624,14 @@
   ],
   "annotations": [
     {
+      "id": "chart-m9",
+      "page": "page-22",
+      "x": 0,
+      "y": -320,
+      "w": 1240,
+      "text": "Chords & lyrics — settled on E3, sections as rows\n\nThe parser took TWO DIFFERENT conventions and neither box said so:\n  chords  ->  one section per LINE:  \"Verse: Am Dm7\"\n  lyrics  ->  label ALONE on its own line, words beneath, no colon\n\nGetting it wrong produced NOTHING, silently, and the only way to find out was to save and go look at the song page. The first board is that exact failure.\n\nCHOSEN: E3. A section is a row — a name, its chords, its words — and the app writes each column in whichever convention it needs. There is no colon rule to remember because there is no colon. The name box offers every word the parser accepts (read from the parser itself, so the two cannot drift), and a name it will not recognise is flagged beside the row rather than discovered later.\n\nThe two costs named on the board were both paid, not dropped:\n  - FREE TEXT SURVIVES. A song the parser cannot read as sections opens straight into the text boxes, untouched, with the toggle always there. It refuses to guess.\n  - PASTE STILL WORKS. \"Paste a chart\" splits a chart from anywhere else into rows you then correct.\n\nE1's hints were taken too: both fields now carry a worked example, and the Lyrics field has one at all for the first time. The text boxes are also the no-JS editor — they are the real form fields, always in sync."
+    },
+    {
       "id": "upload-m8",
       "page": "page-21",
       "x": 0,
@@ -698,6 +746,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-21"
+    "page": "page-22"
   }
 }

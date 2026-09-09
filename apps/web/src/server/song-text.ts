@@ -63,6 +63,17 @@ const AMBIGUOUS_SECTION_WORDS = new Set([
 
 const SECTION_WORDS = new Set([...STRONG_SECTION_WORDS, ...AMBIGUOUS_SECTION_WORDS]);
 
+/**
+ * The whole vocabulary, normalized, for a UI that wants to SHOW what it
+ * accepts — the row editor lists these and warns beside a name that is not
+ * among them.
+ *
+ * Exported rather than retyped in the client, so the editor cannot drift from
+ * the parser: a word added here appears in the picker on the next render, and
+ * nothing has to remember to update a second list.
+ */
+export const KNOWN_SECTION_WORDS: readonly string[] = [...SECTION_WORDS].sort();
+
 /** Strips a trailing verse/chorus number ("Verse 2" -> "verse") and normalizes for matching a lyric section to a chord section that covers every repeat of that part — lowercased AND diacritic-stripped (NFKD), so "Sloka 1" and "Refrén" match the same way "Verse 1" and "Chorus" do. Deliberately does NOT go through `normalizeTitle`: that also strips a trailing "(take N)"/"- take N" suffix, which is take-matching semantics that have nothing to do with section-label matching — see task-5-report.md "Fix round 3" #3. */
 function normalizeLabel(label: string | undefined): string | undefined {
   if (!label) {

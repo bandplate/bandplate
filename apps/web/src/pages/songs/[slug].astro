@@ -13,6 +13,7 @@ import { hasAllScopes } from "@bandplate/core";
 import { eventsRepo, instrumentsRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import ChartEditor from "../../components/ChartEditor.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import TakeRow from "../../components/TakeRow.astro";
@@ -27,7 +28,8 @@ import {
   updateSong,
 } from "../../server/pages/songs.js";
 import { type TakeField, createTake } from "../../server/pages/takes.js";
-import { buildSongChart } from "../../server/song-text.js";
+import { songToRows } from "../../server/song-chart-rows.js";
+import { KNOWN_SECTION_WORDS, buildSongChart } from "../../server/song-text.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -102,6 +104,13 @@ const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : und
 // those are two different shapes rather than one that always tries to
 // interleave.
 const chart = buildSongChart(song.chordProgression, song.lyrics);
+
+// The edit sheet's rows, parsed server-side so the island has nothing to work
+// out on mount — and so a song the parser cannot read as sections opens as
+// text rather than being guessed at. See `songToRows`.
+const rowsResult = songToRows(song.chordProgression, song.lyrics);
+const chartRows = rowsResult.kind === "rows" ? rowsResult.rows : [];
+const chartIsFreeform = rowsResult.kind === "freeform";
 
 const canArchive = hasAllScopes(principal, ["members:admin"]);
 const isArchived = song.archivedAt !== null;
@@ -276,22 +285,17 @@ function eventOptionLabel(event: eventsRepo.Event): string {
               error={editErrorField === "tempoBpm" ? editError : undefined}
             />
           </div>
-          <Field
-            label="Chords"
-            name="chordProgression"
-            as="textarea"
-            rows="8"
-            value={song.chordProgression ?? ""}
-            hint="Pasted as-is. Section labels like Verse or Refrén line the chords up with the lyrics."
-            error={editErrorField === "chordProgression" ? editError : undefined}
-          />
-          <Field
-            label="Lyrics"
-            name="lyrics"
-            as="textarea"
-            rows="10"
-            value={song.lyrics ?? ""}
-            error={editErrorField === "lyrics" ? editError : undefined}
+          {/* Sections rather than two boxes with two contradictory formats —
+              see `ChartEditor`. It renders the real `chordProgression` and
+              `lyrics` textareas itself, so the form contract is unchanged and
+              the no-JS path is the editor that exists today. */}
+          <ChartEditor
+            client:load
+            initialRows={chartRows}
+            freeform={chartIsFreeform}
+            chordText={song.chordProgression ?? ""}
+            lyricsText={song.lyrics ?? ""}
+            vocabulary={[...KNOWN_SECTION_WORDS]}
           />
           <Field
             label="Notes"

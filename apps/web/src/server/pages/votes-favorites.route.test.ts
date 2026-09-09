@@ -215,7 +215,19 @@ describe("vote/favorite/admin-keeper routes over real HTTP", () => {
 
   afterAll(async () => {
     if (child && !child.killed) {
+      // WAIT for it to actually exit, don't just signal it. Every route test
+      // file builds into the same `dist/` and spawns `node dist/start.mjs`, so
+      // a server still running from the previous file can be reading a bundle
+      // the next file's `pnpm build` is midway through rewriting. That
+      // surfaces, confusingly, as the NEXT file's server never becoming ready
+      // — a different file each run, which is the signature of a race rather
+      // than of a broken assertion.
+      const exited = new Promise<void>((resolve) => {
+        child?.once("exit", () => resolve());
+      });
       child.kill("SIGTERM");
+      // Bounded: a server that ignores SIGTERM must not hang the whole suite.
+      await Promise.race([exited, new Promise<void>((r) => setTimeout(r, 5_000))]);
     }
     await rm(dbDir, { recursive: true, force: true });
   });

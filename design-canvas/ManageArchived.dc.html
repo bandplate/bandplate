@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;display=swap">
+  <style>
+  body { margin: 0; background: #150c07; color: #f2e8d8;
+         font-family: "Chivo", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  a { color: #f6aa1c; text-decoration: none; }
+  a:hover { color: #ffc26b; }
+  .board { padding: 40px; box-sizing: border-box; }
+  .head { max-width: 1000px; margin: 0 0 30px; }
+  .head h1 { font-family: "Zilla Slab", Georgia, serif; font-weight: 700;
+             font-size: 26px; line-height: 1.15; margin: 0 0 8px; color: #f2e8d8; }
+  .head p { margin: 0 0 6px; font-size: 13px; line-height: 1.55; color: #a9917a; }
+  .head .trade { color: #d98f4a; }
+  .caps { font-family: "Chivo", Arial, sans-serif; font-weight: 900; font-size: 10px;
+          letter-spacing: 0.16em; text-transform: uppercase; color: #a9917a; }
+  .sect { margin-top: 34px; }
+  .sect > .caps { display: block; margin-bottom: 12px; }
+  .frames { display: flex; gap: 56px; align-items: flex-start; }
+
+  /* --- the page, as it really renders ---------------------------------- */
+  .page { box-sizing: border-box; background: #150c07;
+          border: 1px solid #3a2413; border-radius: 5px; padding: 22px 20px; }
+  .page-desk { width: 720px; }
+  .page-phone { width: 375px; padding: 18px 16px; }
+
+  /* .bp-page-title — display face 700 at --text-title 1.6875rem, lh 1.05 */
+  .ptitle { font-family: "Zilla Slab", Georgia, serif; font-weight: 700;
+            font-size: 27px; line-height: 1.05; margin: 0; color: #f2e8d8; }
+  .titlerow { display: flex; align-items: center; gap: 12px; }
+
+  /* .bp-songs-search — radius 999, fill-subtle (fg 12%), 44px input */
+  .search { display: flex; align-items: center; gap: 10px; padding: 0 16px;
+            margin: 16px 0 14px; border-radius: 999px;
+            background: rgba(242,232,216,0.12); }
+  .search input { flex: 1 1 auto; min-width: 0; min-height: 44px; border: none;
+                  background: transparent; color: #a9917a; font-family: inherit;
+                  font-size: 15px; }
+  .search svg { color: #a9917a; flex: none; }
+
+  /* .bp-filter-pill — 36px, radius 999, fill-subtle; pressed = accent */
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; min-height: 36px;
+          padding: 6px 14px; border-radius: 999px; background: rgba(242,232,216,0.12);
+          color: #f2e8d8; font-size: 14px; box-sizing: border-box; }
+  .pill-on { background: #f6aa1c; color: #150c07; }
+
+  /* .bp-field-hint — 0.8125rem muted */
+  .hint { font-size: 13px; color: #a9917a; margin: 14px 0 0; }
+
+  /* .bp-btn — 44px floor, radius 999, no border on any variant */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+         min-height: 44px; padding: 10px 20px; border-radius: 999px; border: none;
+         font-family: inherit; font-size: 15px; font-weight: 600; box-sizing: border-box;
+         white-space: nowrap; }
+  .btn-primary { background: #f6aa1c; color: #150c07; }
+  .btn-secondary { background: rgba(242,232,216,0.15); color: #f2e8d8; }
+  .btn-sm { min-height: 44px; padding: 6px 14px; font-size: 14px; }
+
+  /* .bp-song-row — 44px floor, 1rem block padding, 1px rule */
+  .rows { margin-top: 8px; }
+  .row { display: flex; align-items: center; gap: 8px; min-height: 44px;
+         padding: 16px 10px; margin-inline: -10px;
+         border-bottom: 1px solid #3a2413; }
+  .row-link { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; }
+  .row-main { flex: 1; min-width: 0; }
+  .stitle { font-family: "Zilla Slab", Georgia, serif; font-weight: 600; font-size: 19px;
+            line-height: 1.15; color: #f2e8d8; display: block;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .smeta { display: block; margin-top: 3px; font-size: 11.5px; color: #a9917a;
+           font-variant-numeric: tabular-nums; }
+  .sstats { display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+            flex: none; font-size: 11.5px; color: #a9917a;
+            font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .star { display: inline-flex; align-items: center; justify-content: center;
+          width: 36px; height: 36px; flex: none; color: #a9917a; }
+  .star-on { color: #f6aa1c; }
+
+  /* .bp-empty-state — dashed, radius 0.5rem */
+  .empty { padding: 40px 20px; text-align: center; color: #a9917a;
+           border: 1px dashed #3a2413; border-radius: 8px; font-size: 14px; }
+
+  /* .bp-badge — body face 600, note size, lowercase */
+  .badge { display: inline-flex; align-items: center; font-weight: 600;
+           font-size: 11.5px; text-transform: lowercase; padding: 2px 8px;
+           border-radius: 999px; background: rgba(242,232,216,0.12); color: #a9917a; }
+
+  .note { font-size: 12.5px; line-height: 1.5; color: #a9917a; margin: 12px 0 0;
+          max-width: 640px; }
+  .note strong { color: #f2e8d8; font-weight: 600; }
+
+  /* .bp-banner — accent tints the wash and the border, never the text */
+  .banner { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px;
+            border-radius: 8px; border: 1px solid #3a2413;
+            background: rgba(242,232,216,0.06); color: #f2e8d8; font-size: 14px;
+            line-height: 1.5; }
+  .banner-icon { font-weight: 900; color: #a9917a; flex: none; }
+  .banner strong { display: block; font-weight: 700; }
+  .hero-title { font-family: "Zilla Slab", Georgia, serif; font-weight: 700;
+                font-size: 34px; line-height: 1.05; margin: 0; color: #f2e8d8; }
+  .lede { font-size: 14px; color: #a9917a; margin: 10px 0 0; line-height: 1.5; }
+  .confirm { max-width: 460px; }
+  .confirm h2 { font-family: "Zilla Slab", Georgia, serif; font-weight: 700;
+                font-size: 22px; line-height: 1.15; margin: 0 0 10px; }
+  .confirm p { font-size: 14px; line-height: 1.55; color: #a9917a; margin: 0 0 18px; }
+  .confirm .acts { display: flex; gap: 10px; }
+  .btn-danger { background: #d94a1f; color: #f2e8d8; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>What every direction still has to answer</h1>
+    <p>Where "Add" lives is one decision. These three are the same whichever way it goes, so they are drawn once.</p>
+  </div>
+
+  <div class="sect">
+    <span class="caps">1 · Editing from the song's own page</span>
+    <div class="frames">
+      <div class="page page-desk" style="width:640px;">
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <h1 class="hero-title">Neon Skyline</h1>
+            <p class="lede">Am · 96 bpm · 14 takes, most recently 8 July 2026</p>
+          </div>
+          <span class="star star-on" style="width:44px;height:44px;"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.7l5.8-.8z"/></svg></span>
+          <span class="btn btn-secondary btn-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>Edit</span>
+        </div>
+      </div>
+      <div style="max-width:440px;">
+        <p class="note" style="margin-top:0;">The detail page is where the facts already are, so it is where correcting them belongs. <strong>A record sheet</strong> — the admin pages' own component, unchanged — carrying title, key, tempo, chords, lyrics and notes.</p>
+        <p class="note">The button sits beside the star because that pairing already exists on this page and reads as "things you do to this song", rather than inventing a second cluster.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <span class="caps">2 · An archived song still renders at its own URL</span>
+    <div class="frames">
+      <div class="page page-desk" style="width:640px;">
+        <div class="banner">
+          <span class="banner-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v4H3z"/><path d="M5 11v9h14v-9"/><path d="M10 15h4"/></svg></span>
+          <span>
+            <strong>Archived</strong>
+            Out of the library and off the take form. Its 14 takes are untouched and still play.
+          </span>
+          <span class="btn btn-secondary btn-sm" style="margin-left:auto;">Unarchive</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:14px;margin-top:20px;">
+          <div style="flex:1;min-width:0;">
+            <h1 class="hero-title" style="color:#a9917a;">Old Set Closer</h1>
+            <p class="lede">G · 84 bpm · 5 takes, most recently 3 Feb 2026</p>
+          </div>
+        </div>
+      </div>
+      <div style="max-width:440px;">
+        <p class="note" style="margin-top:0;"><strong>It does not 404.</strong> Live take rows link here, and a working link that answers "not found" is worse than one that answers "archived". The title drops to the muted colour; nothing else moves.</p>
+        <p class="note">Unarchive shows only to an admin — a member sees the banner without the button, because the banner is the explanation and the button is the permission.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <span class="caps">3 · The confirm, and what it has to say</span>
+    <div class="frames">
+      <div class="page page-desk confirm" style="width:520px;">
+        <h2>Archive Neon Skyline?</h2>
+        <p>It disappears from the song library and from the picker when you add a take. Its <strong style="color:#f2e8d8;">14 takes stay</strong>, keep playing, and still turn up in search. If the bridge uploads a take of it again, it comes back on its own. You can unarchive it here.</p>
+        <div class="acts">
+          <span class="btn btn-danger"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v4H3z"/><path d="M5 11v9h14v-9"/><path d="M10 15h4"/></svg>Archive song</span>
+          <span class="btn btn-secondary">Cancel</span>
+        </div>
+      </div>
+      <div style="max-width:440px;">
+        <p class="note" style="margin-top:0;">Three facts the member cannot get anywhere else: <strong>what disappears</strong>, <strong>what survives</strong>, and <strong>that it is reversible</strong> — twice over, by hand and by the bridge.</p>
+        <p class="note">"Its takes still turn up in search" is the one that reads as a bug if unsaid. Archiving is a repertoire decision — we do not play this any more — not a decision about the recordings.</p>
+        <p class="note">Events get the same page, with its own count: <em style="color:#f2e8d8;font-style:normal;">"Its 9 takes stay — you'll reach them from their songs."</em></p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

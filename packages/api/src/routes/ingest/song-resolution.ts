@@ -22,6 +22,28 @@ export type ResolveSongResult =
   | { found: true; song: songsRepo.Song; created: boolean; match: SongMatch }
   | { found: false; candidates: songsRepo.Song[] };
 
+/**
+ * A matched song that had been archived comes back.
+ *
+ * Not an option and not a warning: the band has just recorded a take of it, so
+ * "we don't play this any more" has stopped being true. Skipping archived
+ * songs instead is not even implementable — `songs.title_norm` is UNIQUE, so
+ * the create path would throw straight into the race handler and return the
+ * archived row anyway, just with a wasted insert and a confusing `created`
+ * flag. Un-archiving says the true thing.
+ */
+async function reviveIfArchived(
+  db: Db,
+  now: number,
+  song: songsRepo.Song,
+): Promise<songsRepo.Song> {
+  if (song.archivedAt === null) {
+    return song;
+  }
+  await songsRepo.update(db, song.id, { archivedAt: null, updatedAt: now });
+  return { ...song, archivedAt: null };
+}
+
 /** Up to 5 loose title matches for a `song_not_found` response's `candidates`. */
 async function fuzzyCandidates(db: Db, title: string): Promise<songsRepo.Song[]> {
   const results = await songsRepo.listWithStats(db, { search: title });
@@ -38,7 +60,12 @@ export async function resolveSong(
   if (externalRefNorm) {
     const byExternalRef = await songsRepo.findByAlias(db, externalRefNorm);
     if (byExternalRef) {
-      return { found: true, song: byExternalRef, created: false, match: "external-ref" };
+      return {
+        found: true,
+        song: await reviveIfArchived(db, now, byExternalRef),
+        created: false,
+        match: "external-ref",
+      };
     }
   }
 
@@ -60,12 +87,22 @@ export async function resolveSong(
         await songsRepo.addAlias(db, byTitle.id, input.externalRef, "ingest");
       }
     }
-    return { found: true, song: byTitle, created: false, match: "title" };
+    return {
+      found: true,
+      song: await reviveIfArchived(db, now, byTitle),
+      created: false,
+      match: "title",
+    };
   }
 
   const byAlias = await songsRepo.findByAlias(db, titleNorm);
   if (byAlias) {
-    return { found: true, song: byAlias, created: false, match: "alias" };
+    return {
+      found: true,
+      song: await reviveIfArchived(db, now, byAlias),
+      created: false,
+      match: "alias",
+    };
   }
 
   if (input.createIfMissing) {
@@ -96,7 +133,12 @@ export async function resolveSong(
           await songsRepo.addAlias(db, winner.id, input.externalRef!, "ingest");
         }
       }
-      return { found: true, song: winner, created: false, match: "title" };
+      return {
+        found: true,
+        song: await reviveIfArchived(db, now, winner),
+        created: false,
+        match: "title",
+      };
     }
   }
 

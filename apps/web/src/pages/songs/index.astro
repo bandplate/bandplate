@@ -11,12 +11,23 @@
 // Search and sort are the whole toolbar now: a field and three pills, no Apply,
 // no Clear — the same treatment `/events` got, and for the same reason. The
 // instrument filter is gone entirely (see `server/pages/songs.ts`).
+import { hasAllScopes } from "@bandplate/core";
 import { favoritesRepo } from "@bandplate/db";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
+import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
+import { isSameOrigin } from "../../server/csrf.js";
 import { formatShortDate } from "../../server/format.js";
-import { listSongsForLibrary, parseSongsListQuery } from "../../server/pages/songs.js";
+import {
+  type SongField,
+  countArchivedSongs,
+  createSong,
+  listSongsForLibrary,
+  parseSongsListQuery,
+} from "../../server/pages/songs.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -24,17 +35,59 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
-const query = parseSongsListQuery(Astro.url.searchParams);
 
-const [songs, favoriteSongIds] = await Promise.all([
+// M8 — adding a song. The POST comes back to this same URL and re-renders on
+// failure (which loses what was typed, the same trade the admin add forms
+// already make) or redirects on success, so a reload never re-posts.
+let createError: string | undefined;
+let createErrorField: SongField | undefined;
+let formError: string | undefined;
+let duplicateSlug: string | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = "Something about that request looked wrong. Reload the page and try again.";
+  } else {
+    const formData = await Astro.request.formData();
+    if (formData.get("intent") === "create") {
+      const result = await createSong(appDeps.db, appDeps.clock.now(), formData);
+      if (result.kind === "ok") {
+        // Straight to the song rather than back to the list: you added it
+        // because you have something to put in it.
+        return Astro.redirect(`/songs/${result.song.slug}?created=1`);
+      }
+      if (result.kind === "duplicate") {
+        createError = `${result.existing.title} is already in the library.`;
+        createErrorField = "title";
+        duplicateSlug = result.existing.slug;
+      } else {
+        createError = result.error;
+        createErrorField = result.field;
+      }
+    }
+  }
+}
+
+const query = parseSongsListQuery(Astro.url.searchParams);
+const canArchive = hasAllScopes(principal, ["members:admin"]);
+
+const [songs, favoriteSongIds, archivedCount] = await Promise.all([
   listSongsForLibrary(appDeps.db, query),
   favoritesRepo.listTargetIdsByMember(appDeps.db, principal.memberId, "song"),
+  countArchivedSongs(appDeps.db),
 ]);
 
+const justArchived = Astro.url.searchParams.get("archived_ok") === "1";
+const justUnarchived = Astro.url.searchParams.get("unarchived") === "1";
+
 const sort = query.sort ?? "title";
+const viewingArchive = query.archived === true;
+const noun = songs.length === 1 ? "song" : "songs";
 const resultsLabel = query.search
   ? `${songs.length} ${songs.length === 1 ? "song matches" : "songs match"}`
-  : `${songs.length} ${songs.length === 1 ? "song" : "songs"}`;
+  : viewingArchive
+    ? `${songs.length} archived ${noun}`
+    : `${songs.length} ${noun}`;
 
 const SORT_OPTIONS = [
   { value: "title", label: "A to Z" },
@@ -54,6 +107,23 @@ function sortHref(value: (typeof SORT_OPTIONS)[number]["value"]): string {
   if (value !== "title") {
     params.set("sort", value);
   }
+  if (viewingArchive) {
+    params.set("archived", "1");
+  }
+  const qs = params.toString();
+  return qs ? `/songs?${qs}` : "/songs";
+}
+
+/** The Archived pill toggles; it keeps the search but drops back to the
+ *  default sort, since "recently played" means little in an archive. */
+function archivedHref(): string {
+  const params = new URLSearchParams();
+  if (query.search) {
+    params.set("q", query.search);
+  }
+  if (!viewingArchive) {
+    params.set("archived", "1");
+  }
   const qs = params.toString();
   return qs ? `/songs?${qs}` : "/songs";
 }
@@ -61,7 +131,64 @@ function sortHref(value: (typeof SORT_OPTIONS)[number]["value"]): string {
 
 <AppLayout title="Songs" principal={principal} current="songs">
   <div class="bp-stack">
-    <h1 class="bp-page-title">Songs</h1>
+    {/* Direction B from the canvas: the write affordance is a primary button
+        in the title row, opening the record sheet the admin pages already
+        use. It shortens to "Add" on a phone so the title keeps its room. */}
+    <div class="bp-title-row">
+      <h1 class="bp-page-title">Songs</h1>
+      <button type="button" class="bp-btn bp-btn-primary" data-sheet-open="add-song">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Add song
+      </button>
+    </div>
+
+    {justArchived && <Banner kind="success">Archived. It's out of the library; its takes are untouched.</Banner>}
+    {justUnarchived && <Banner kind="success">Back in the library.</Banner>}
+    {formError && <Banner kind="error">{formError}</Banner>}
+
+    <RecordSheet id="add-song" eyebrow="New song" title="Add a song" subtitle="A title is all you need — the rest can wait until someone knows it.">
+      <form method="post" class="bp-sheet-form" novalidate>
+        <input type="hidden" name="intent" value="create" />
+        <div class="bp-sheet-body">
+          <Field
+            label="Title"
+            name="title"
+            required
+            autocomplete="off"
+            error={createErrorField === "title" ? createError : undefined}
+          />
+          {duplicateSlug && (
+            <p class="bp-sheet-hint bp-m0">
+              <a href={`/songs/${duplicateSlug}`}>Open it instead</a>
+            </p>
+          )}
+          <div class="bp-admin-add">
+            <Field
+              label="Key"
+              name="musicalKey"
+              hint="However you say it — Am, F# dorian."
+              error={createErrorField === "musicalKey" ? createError : undefined}
+            />
+            <Field
+              label="Tempo"
+              name="tempoBpm"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="400"
+              hint="Beats per minute."
+              error={createErrorField === "tempoBpm" ? createError : undefined}
+            />
+          </div>
+        </div>
+        <div class="bp-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary">Add song</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+        </div>
+      </form>
+    </RecordSheet>
 
     {/* The search field keeps its own tiny form — a text input needs a submit
         to be usable with the keyboard, and Enter is that submit. The sort
@@ -112,6 +239,20 @@ function sortHref(value: (typeof SORT_OPTIONS)[number]["value"]): string {
           </a>
         ))
       }
+      {/* The archive's own way in. It shows archived songs INSTEAD of live
+          ones — see `SongsListQuery.archived`. Hidden entirely when nothing
+          is archived, so a band that never archives never sees it. */}
+      {
+        (archivedCount > 0 || viewingArchive) && (
+          <a
+            href={archivedHref()}
+            class="bp-filter-pill bp-filter-pill--set-apart"
+            aria-pressed={viewingArchive ? "true" : "false"}
+          >
+            Archived
+          </a>
+        )
+      }
     </div>
 
     <p class="bp-field-hint bp-m0">{resultsLabel}</p>
@@ -122,7 +263,9 @@ function sortHref(value: (typeof SORT_OPTIONS)[number]["value"]): string {
           <p>
             {query.search
               ? "No songs match that search."
-              : "No songs yet — they'll show up here once takes start coming in."}
+              : viewingArchive
+                ? "Nothing archived."
+                : "No songs yet. Add one, or wait for the first takes to come in."}
           </p>
         </div>
       ) : (

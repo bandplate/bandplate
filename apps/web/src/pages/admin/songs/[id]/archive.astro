@@ -1,0 +1,76 @@
+---
+import { songsRepo, takesRepo } from "@bandplate/db";
+// Archive (or unarchive) a song. Under `/admin/` so `guardAdminPath` in
+// `middleware.ts` enforces `members:admin` structurally — members can create
+// and edit songs, but only an admin retires one. Same dual-mode shape as the
+// instrument confirm page: GET renders a real page, POST answers `ok` to the
+// ConfirmDialog island's fetch and redirects for a plain form.
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { archiveSongConsequence, setSongArchived } from "../../../../server/pages/songs.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/songs");
+}
+
+const archiving = Astro.url.searchParams.get("unarchive") !== "1";
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const result = await setSongArchived(appDeps.db, appDeps.clock.now(), id, archiving);
+  if (isFetch) {
+    return new Response(result.kind === "ok" ? "ok" : "not found", {
+      status: result.kind === "ok" ? 200 : 404,
+    });
+  }
+  if (result.kind !== "ok") {
+    return new Response("Song not found.", { status: 404 });
+  }
+  // Archiving sends you back to the library, because the thing you were
+  // looking at is no longer in it. Unarchiving keeps you on the song.
+  return archiving
+    ? Astro.redirect("/songs?archived_ok=1")
+    : Astro.redirect(`/songs/${result.song.slug}?saved=1`);
+}
+
+const song = await songsRepo.getById(appDeps.db, id);
+if (!song) {
+  return new Response("Song not found.", { status: 404 });
+}
+const takes = await takesRepo.listBySong(appDeps.db, song.id);
+const consequence = archiveSongConsequence(takes.length);
+---
+
+<Layout title={archiving ? "Archive song" : "Unarchive song"}>
+  {
+    archiving ? (
+      <ConfirmActionPage
+        bannerTitle={`Archive ${song.title}?`}
+        cta="Archive song"
+        cancelHref={`/songs/${song.slug}`}
+      >
+        {consequence} Archiving is a decision about the repertoire, not about the recordings.
+      </ConfirmActionPage>
+    ) : (
+      <ConfirmActionPage
+        bannerTitle={`Put ${song.title} back?`}
+        cta="Unarchive song"
+        cancelHref={`/songs/${song.slug}`}
+      >
+        It returns to the song library and to the picker when you add a take.
+      </ConfirmActionPage>
+    )
+  }
+</Layout>

@@ -224,7 +224,19 @@ describe("member browsing routes over real HTTP", () => {
 
   afterAll(async () => {
     if (child && !child.killed) {
+      // WAIT for it to actually exit, don't just signal it. Every route test
+      // file builds into the same `dist/` and spawns `node dist/start.mjs`, so
+      // a server still running from the previous file can be reading a bundle
+      // the next file's `pnpm build` is midway through rewriting. That
+      // surfaces, confusingly, as the NEXT file's server never becoming ready
+      // — a different file each run, which is the signature of a race rather
+      // than of a broken assertion.
+      const exited = new Promise<void>((resolve) => {
+        child?.once("exit", () => resolve());
+      });
       child.kill("SIGTERM");
+      // Bounded: a server that ignores SIGTERM must not hang the whole suite.
+      await Promise.race([exited, new Promise<void>((r) => setTimeout(r, 5_000))]);
     }
     await rm(dbDir, { recursive: true, force: true });
   });
@@ -366,5 +378,163 @@ describe("member browsing routes over real HTTP", () => {
     });
     const rehearsalsBody = await rehearsalsOnly.text();
     expect(rehearsalsBody).not.toContain("Route Test Venue");
+  });
+
+  // --- M8: the manual write surface, over real HTTP -----------------------
+  //
+  // These ride the server this file already boots rather than opening a fifth
+  // one: each route test costs a full `pnpm build`, and these exercise exactly
+  // the routes it is already serving. The seeded member has role `member`, so
+  // this file proves BOTH halves of the M8 authorization split in one place —
+  // a member can create and edit, and cannot archive.
+
+  it("creates a song from a plain form POST and redirects to it", async () => {
+    const body = new URLSearchParams({
+      intent: "create",
+      title: "Route Test Addition",
+      musicalKey: "Gm",
+      tempoBpm: "104",
+    });
+    const res = await fetch(`${ORIGIN}/songs`, {
+      method: "POST",
+      headers: {
+        cookie: sessionCookie,
+        origin: ORIGIN,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body,
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/songs/route-test-addition?created=1");
+
+    const page = await fetch(`${ORIGIN}/songs/route-test-addition`, {
+      headers: { cookie: sessionCookie },
+    });
+    expect(page.status).toBe(200);
+    const html = await page.text();
+    expect(html).toContain("Route Test Addition");
+    expect(html).toContain("Gm");
+  });
+
+  it("re-renders with a field error instead of 500ing on a duplicate title", async () => {
+    const body = new URLSearchParams({ intent: "create", title: "route test song" });
+    const res = await fetch(`${ORIGIN}/songs`, {
+      method: "POST",
+      headers: {
+        cookie: sessionCookie,
+        origin: ORIGIN,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+
+    // `songs.title_norm` is UNIQUE and "route test song" normalizes onto the
+    // seeded "Route Test Song" — the member gets told, not a stack trace.
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("Route Test Song is already in the library.");
+    expect(html).toContain('class="bp-field-error"');
+  });
+
+  it("saves an edit from the song's own page", async () => {
+    const body = new URLSearchParams({
+      intent: "update",
+      songId: "",
+      title: "Route Test Addition",
+      musicalKey: "Bm",
+      tempoBpm: "104",
+      chordProgression: "",
+      lyrics: "",
+      notes: "played twice as fast the second time",
+    });
+    // The form carries the id; read it off the rendered page rather than
+    // threading it out of the seed, so this exercises the real round trip.
+    const page = await fetch(`${ORIGIN}/songs/route-test-addition`, {
+      headers: { cookie: sessionCookie },
+    });
+    const html = await page.text();
+    const id = /name="songId" value="([^"]+)"/.exec(html)?.[1];
+    expect(id).toBeTruthy();
+    body.set("songId", id as string);
+
+    const res = await fetch(`${ORIGIN}/songs/route-test-addition`, {
+      method: "POST",
+      headers: {
+        cookie: sessionCookie,
+        origin: ORIGIN,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body,
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/songs/route-test-addition?saved=1");
+
+    const after = await fetch(`${ORIGIN}/songs/route-test-addition`, {
+      headers: { cookie: sessionCookie },
+    });
+    expect(await after.text()).toContain("Bm");
+  });
+
+  it("creates an event from a plain form POST", async () => {
+    const body = new URLSearchParams({
+      intent: "create",
+      kind: "session",
+      heldAt: "2026-03-04",
+      venue: "Route Test Studio",
+      title: "",
+      notes: "",
+    });
+    const res = await fetch(`${ORIGIN}/events`, {
+      method: "POST",
+      headers: {
+        cookie: sessionCookie,
+        origin: ORIGIN,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body,
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toMatch(/^\/events\/[0-9a-f-]+\?created=1$/);
+  });
+
+  it("rejects a write whose Origin doesn't match", async () => {
+    const res = await fetch(`${ORIGIN}/songs`, {
+      method: "POST",
+      headers: {
+        cookie: sessionCookie,
+        origin: "https://evil.example",
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ intent: "create", title: "Should Not Exist" }),
+    });
+
+    expect(res.status).toBe(403);
+
+    const page = await fetch(`${ORIGIN}/songs`, { headers: { cookie: sessionCookie } });
+    expect(await page.text()).not.toContain("Should Not Exist");
+  });
+
+  it("keeps archiving away from a member — it is admin-only, enforced by the path", async () => {
+    const page = await fetch(`${ORIGIN}/songs/route-test-addition`, {
+      headers: { cookie: sessionCookie },
+    });
+    const html = await page.text();
+    const id = /name="songId" value="([^"]+)"/.exec(html)?.[1] as string;
+
+    // The affordance is not rendered for a member...
+    expect(html).not.toContain("Archive this song");
+
+    // ...and the page behind it refuses them anyway, because `/admin/*` is
+    // guarded in middleware rather than by each page remembering to check.
+    const res = await fetch(`${ORIGIN}/admin/songs/${id}/archive`, {
+      headers: { cookie: sessionCookie },
+    });
+    expect(res.status).toBe(403);
   });
 });

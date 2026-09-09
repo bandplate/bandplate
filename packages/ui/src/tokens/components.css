@@ -2076,6 +2076,35 @@ a.bp-btn {
   margin: 0;
 }
 
+/* A page title with one action beside it (M8's "Add song" / "Add event").
+   `align-items: center` rather than `baseline`: the title's line-height is
+   1.05 and the button's is a 44px box, so a shared baseline drops the button
+   well below the title's optical centre. The title takes the slack so the
+   button sits hard right at any width — and at 375px "Songs" plus an
+   "Add song" pill measures ~222px against 343px of content, so nothing has
+   to shorten. */
+.bp-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bp-title-row .bp-page-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Actions under a hero, on their own line rather than crowded into the title.
+   A song's title can run to two lines and carries the favourite star inline;
+   putting Edit up there as well would make a three-object row that reflows
+   badly the moment a title is long. */
+.bp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+}
+
 /* `--text-section` — see theme.css for why this is not Chivo 700 at 18px. */
 .bp-section-title {
   font-family: var(--bp-font-display);
@@ -5028,6 +5057,21 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-filter-pill[aria-current="page"]:hover {
   background: var(--bp-color-accent);
   filter: brightness(1.06);
+}
+
+/* The odd pill out in a row of them (M8's "Archived"). The three sort pills
+   are one radio group — exactly one is always pressed — while this is an
+   independent toggle that changes WHICH RECORDS are listed, not their order.
+   Two things say so without inventing a new shape: it is pushed to the end of
+   the row (and, when the row wraps, to the end of its own line), and it rests
+   in the muted ink rather than the full foreground. Pressed, it takes the
+   same accent fill as its neighbours, because pressed is pressed. */
+.bp-filter-pill--set-apart {
+  margin-inline-start: auto;
+}
+
+.bp-filter-pill--set-apart:not([aria-pressed="true"]) {
+  color: var(--bp-color-muted);
 }
 
 /* `.bp-admin-sections` is the admin header's copy of this row. It exists for

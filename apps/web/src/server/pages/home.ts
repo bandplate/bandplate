@@ -55,9 +55,22 @@ export async function getFavorites(db: Db, memberId: string): Promise<HomeFavori
   const songById = new Map(songs.map((s) => [s.id, s]));
   const takeById = new Map(takes.map((t) => [t.id, t]));
   const eventById = new Map(events.map((e) => [e.id, e]));
-  const orderedSongs = songIds.map((id) => songById.get(id)).filter((s) => s !== undefined);
+  // Archived songs and events drop out of the pinned list. `getByIds` is a
+  // LOOKUP and deliberately returns them (a pinned TAKE still has to be able
+  // to name its archived song), so the filtering happens here, where the
+  // question is "what should this member see pinned" rather than "what row is
+  // this". The favourite row itself stays — unarchiving brings the pin back,
+  // and a member who archived something by mistake has lost nothing.
+  // Explicit predicates: a compound `x !== undefined && ...` does NOT narrow
+  // the array's element type the way the bare check does, so without these the
+  // result is `(T | undefined)[]`.
+  const orderedSongs = songIds
+    .map((id) => songById.get(id))
+    .filter((s): s is songsRepo.Song => s !== undefined && s.archivedAt === null);
   const orderedTakes = takeIds.map((id) => takeById.get(id)).filter((t) => t !== undefined);
-  const orderedEvents = eventIds.map((id) => eventById.get(id)).filter((e) => e !== undefined);
+  const orderedEvents = eventIds
+    .map((id) => eventById.get(id))
+    .filter((e): e is eventsRepo.Event => e !== undefined && e.archivedAt === null);
 
   return {
     songs: orderedSongs,
@@ -164,7 +177,10 @@ async function getPinned(db: Db, memberId: string): Promise<PinnedItem[]> {
       });
     } else if (row.targetType === "song") {
       const song = songById.get(row.targetId);
-      if (song) {
+      // Archived: the pin stays in the table but drops off the page, so
+      // unarchiving brings it straight back. A pinned TAKE of an archived song
+      // is unaffected above — the recording is still there to play.
+      if (song && song.archivedAt === null) {
         items.push({
           kind: "song",
           id: song.id,
@@ -174,7 +190,7 @@ async function getPinned(db: Db, memberId: string): Promise<PinnedItem[]> {
       }
     } else {
       const event = eventById.get(row.targetId);
-      if (event) {
+      if (event && event.archivedAt === null) {
         items.push({
           kind: "event",
           id: event.id,

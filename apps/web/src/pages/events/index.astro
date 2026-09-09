@@ -3,10 +3,22 @@
 // filterable by kind. The kind filter is a plain GET form (checkboxes),
 // same JS-off approach as /songs.
 import { favoritesRepo } from "@bandplate/db";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import EventLedger from "../../components/EventLedger.astro";
+import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { listEventsForArchive, parseEventsListKindFilter } from "../../server/pages/events.js";
+import { isSameOrigin } from "../../server/csrf.js";
+import { formatLongDate } from "../../server/format.js";
+import {
+  type EventField,
+  countArchivedEvents,
+  createEvent,
+  listEventsForArchive,
+  parseEventsListArchivedFilter,
+  parseEventsListKindFilter,
+} from "../../server/pages/events.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -14,11 +26,44 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
+
+let createError: string | undefined;
+let createErrorField: EventField | undefined;
+let formError: string | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = "Something about that request looked wrong. Reload the page and try again.";
+  } else {
+    const formData = await Astro.request.formData();
+    if (formData.get("intent") === "create") {
+      const result = await createEvent(appDeps.db, appDeps.clock.now(), formData);
+      if (result.kind === "ok") {
+        // Straight to the event, because the next thing you do is put takes
+        // in it. `dup=1` carries the same-day warning across the redirect —
+        // it names no record, so it is safe in a query string.
+        const dup = result.sameDay.length > 0 ? "&dup=1" : "";
+        return Astro.redirect(`/events/${result.event.id}?created=1${dup}`);
+      }
+      createError = result.error;
+      createErrorField = result.field;
+    }
+  }
+}
+
 const kindFilter = parseEventsListKindFilter(Astro.url.searchParams);
-const [events, favoriteEventIds] = await Promise.all([
-  listEventsForArchive(appDeps.db, kindFilter),
+const viewingArchive = parseEventsListArchivedFilter(Astro.url.searchParams);
+const [events, favoriteEventIds, archivedCount] = await Promise.all([
+  listEventsForArchive(appDeps.db, kindFilter, viewingArchive),
   favoritesRepo.listTargetIdsByMember(appDeps.db, principal.memberId, "event"),
+  countArchivedEvents(appDeps.db),
 ]);
+
+const justArchived = Astro.url.searchParams.get("archived_ok") === "1";
+// `<input type="date">` wants YYYY-MM-DD in the member's own timezone, which
+// is also what `createEvent` parses back — see `parseDateInput`.
+const now = new Date(appDeps.clock.now());
+const todayValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
 const KIND_OPTIONS = [
   { value: "rehearsal", label: "Rehearsals" },
@@ -45,20 +90,98 @@ const selected = kindFilter.length > 0 ? kindFilter : [...allKinds];
  */
 function toggleHref(kind: (typeof allKinds)[number]): string {
   const next = selected.includes(kind) ? selected.filter((k) => k !== kind) : [...selected, kind];
-  if (next.length === 0 || next.length === allKinds.length) {
-    return "/events";
-  }
   const params = new URLSearchParams();
-  for (const k of allKinds.filter((k) => next.includes(k))) {
-    params.append("kind", k);
+  if (next.length > 0 && next.length !== allKinds.length) {
+    for (const k of allKinds.filter((k) => next.includes(k))) {
+      params.append("kind", k);
+    }
   }
-  return `/events?${params.toString()}`;
+  if (viewingArchive) {
+    params.set("archived", "1");
+  }
+  const qs = params.toString();
+  return qs ? `/events?${qs}` : "/events";
+}
+
+/** The Archived pill toggles, keeping the kind filter in force. */
+function archivedHref(): string {
+  const params = new URLSearchParams();
+  if (kindFilter.length > 0 && kindFilter.length !== allKinds.length) {
+    for (const k of allKinds.filter((k) => kindFilter.includes(k))) {
+      params.append("kind", k);
+    }
+  }
+  if (!viewingArchive) {
+    params.set("archived", "1");
+  }
+  const qs = params.toString();
+  return qs ? `/events?${qs}` : "/events";
 }
 ---
 
 <AppLayout title="Events" principal={principal} current="events">
   <div class="bp-stack">
-    <h1 class="bp-page-title">Events</h1>
+    <div class="bp-title-row">
+      <h1 class="bp-page-title">Events</h1>
+      <button type="button" class="bp-btn bp-btn-primary" data-sheet-open="add-event">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Add event
+      </button>
+    </div>
+
+    {justArchived && <Banner kind="success">Archived. It's out of the archive; its takes are untouched.</Banner>}
+    {formError && <Banner kind="error">{formError}</Banner>}
+
+    <RecordSheet
+      id="add-event"
+      eyebrow="New event"
+      title="Add an event"
+      subtitle="A rehearsal, a concert, or a studio session — whatever the takes came from."
+    >
+      <form method="post" class="bp-sheet-form" novalidate>
+        <input type="hidden" name="intent" value="create" />
+        <div class="bp-sheet-body">
+          <div class="bp-sheet-field">
+            <label class="bp-eyebrow" for="event-kind">What was it</label>
+            <select class="bp-select" id="event-kind" name="kind">
+              <option value="rehearsal">Rehearsal</option>
+              <option value="concert">Concert</option>
+              <option value="session">Session</option>
+            </select>
+          </div>
+          <Field
+            label="Date"
+            name="heldAt"
+            type="date"
+            required
+            value={todayValue}
+            error={createErrorField === "heldAt" ? createError : undefined}
+          />
+          <Field
+            label="Venue"
+            name="venue"
+            hint="Where you played. Leave it empty for the usual room."
+            error={createErrorField === "venue" ? createError : undefined}
+          />
+          <Field
+            label="Title"
+            name="title"
+            hint="Only if it had a name — most rehearsals don't."
+            error={createErrorField === "title" ? createError : undefined}
+          />
+          <p class="bp-sheet-hint bp-m0">
+            If the bridge is going to upload this session, let it create the event — it files its
+            takes against the one it made.
+          </p>
+        </div>
+        <div class="bp-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary">Add event</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+        </div>
+      </form>
+    </RecordSheet>
 
     <div class="bp-filter-pills">
       {
@@ -81,6 +204,17 @@ function toggleHref(kind: (typeof allKinds)[number]): string {
             </a>
           );
         })
+      }
+      {
+        (archivedCount > 0 || viewingArchive) && (
+          <a
+            href={archivedHref()}
+            class="bp-filter-pill bp-filter-pill--set-apart"
+            aria-pressed={viewingArchive ? "true" : "false"}
+          >
+            Archived
+          </a>
+        )
       }
     </div>
 

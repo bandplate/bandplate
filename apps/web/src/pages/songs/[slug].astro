@@ -9,11 +9,21 @@
 // events, all batch-fetched) runs in ~0.5-1.3ms locally — nowhere near the
 // ~150ms bar for a Server Island, so nothing on this page is deferred. See
 // task-5-report.md for the full measurement.
+import { hasAllScopes } from "@bandplate/core";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
+import RecordSheet from "../../components/RecordSheet.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { getSongDetail } from "../../server/pages/songs.js";
+import { isSameOrigin } from "../../server/csrf.js";
+import {
+  type SongField,
+  archiveSongConsequence,
+  getSongDetail,
+  updateSong,
+} from "../../server/pages/songs.js";
 import { buildSongChart } from "../../server/song-text.js";
 
 const principal = Astro.locals.principal;
@@ -27,6 +37,38 @@ if (!slug) {
 }
 
 const appDeps = await getAppDeps();
+
+// The edit sheet posts here. On success we redirect to the song's own URL —
+// which is UNCHANGED by a rename, since the slug never moves (see
+// `songsRepo.update`).
+let editError: string | undefined;
+let editErrorField: SongField | undefined;
+let formError: string | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = "Something about that request looked wrong. Reload the page and try again.";
+  } else {
+    const formData = await Astro.request.formData();
+    if (formData.get("intent") === "update") {
+      const id = String(formData.get("songId") ?? "");
+      const result = await updateSong(appDeps.db, appDeps.clock.now(), id, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect(`/songs/${slug}?saved=1`);
+      }
+      if (result.kind === "not_found") {
+        formError = "That song is no longer here.";
+      } else if (result.kind === "duplicate") {
+        editError = `${result.existing.title} already has that title.`;
+        editErrorField = "title";
+      } else {
+        editError = result.error;
+        editErrorField = result.field;
+      }
+    }
+  }
+}
+
 const detail = await getSongDetail(appDeps.db, slug, principal.memberId);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
@@ -43,10 +85,37 @@ const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : und
 // those are two different shapes rather than one that always tries to
 // interleave.
 const chart = buildSongChart(song.chordProgression, song.lyrics);
+
+const canArchive = hasAllScopes(principal, ["members:admin"]);
+const isArchived = song.archivedAt !== null;
+const justCreated = Astro.url.searchParams.get("created") === "1";
+const justSaved = Astro.url.searchParams.get("saved") === "1";
 ---
 
 <AppLayout title={song.title} principal={principal} current="songs">
   <div class="bp-stack">
+    {/* An archived song still renders at its own URL rather than 404ing —
+        every take of it links here, and a working link that answers "not
+        found" is worse than one that says why. */}
+    {isArchived && (
+      <Banner kind="info" title="Archived">
+        <p class="bp-m0">
+          Out of the library and off the form when you add a take. Its takes are untouched and
+          still play.
+        </p>
+        {canArchive && (
+          <p class="bp-hero-actions bp-m0">
+            <a href={`/admin/songs/${song.id}/archive?unarchive=1`} class="bp-btn bp-btn-secondary bp-btn-sm">
+              Put it back
+            </a>
+          </p>
+        )}
+      </Banner>
+    )}
+    {justCreated && <Banner kind="success">Added. Fill in the rest whenever you like.</Banner>}
+    {justSaved && <Banner kind="success">Saved.</Banner>}
+    {formError && <Banner kind="error">{formError}</Banner>}
+
     <div>
       <h1 class="bp-hero-title">
         {song.title}
@@ -60,13 +129,112 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
           />
         </span>
       </h1>
-      {song.isStub && <p class="bp-field-hint bp-m0">Stub — not a full song entry yet.</p>}
+      {song.isStub && (
+        <p class="bp-field-hint bp-m0">
+          Added by the bridge from a take that named this title — nobody has confirmed the
+          details yet.
+        </p>
+      )}
       {/* NOT `.bp-mono`. A key and a tempo are values this app formatted, not a
       string anyone transcribes — the mono face is reserved for pasted chord
       charts and machine strings (docs/design-foundation.md). Tabular figures
       are what a row of numbers actually needed. */}
       {metaParts.length > 0 && <p class="bp-song-hero-meta bp-m0">{metaParts.join(", ")}</p>}
+
+      {/* Beside the star, because that pairing already reads as "things you do
+          to this song" — rather than inventing a second cluster elsewhere. */}
+      <p class="bp-hero-actions bp-m0">
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-song">
+          Edit
+        </button>
+      </p>
     </div>
+
+    <RecordSheet
+      id="edit-song"
+      eyebrow="Editing song"
+      title={song.title}
+      subtitle="Everything here is optional except the title."
+    >
+      <form method="post" class="bp-sheet-form" novalidate>
+        <input type="hidden" name="intent" value="update" />
+        <input type="hidden" name="songId" value={song.id} />
+        <div class="bp-sheet-body">
+          <Field
+            label="Title"
+            name="title"
+            required
+            value={song.title}
+            autocomplete="off"
+            hint="The web address stays as it is — renaming won't break links anyone has."
+            error={editErrorField === "title" ? editError : undefined}
+          />
+          <div class="bp-admin-add">
+            <Field
+              label="Key"
+              name="musicalKey"
+              value={song.musicalKey ?? ""}
+              error={editErrorField === "musicalKey" ? editError : undefined}
+            />
+            <Field
+              label="Tempo"
+              name="tempoBpm"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="400"
+              value={song.tempoBpm ? String(song.tempoBpm) : ""}
+              error={editErrorField === "tempoBpm" ? editError : undefined}
+            />
+          </div>
+          <Field
+            label="Chords"
+            name="chordProgression"
+            as="textarea"
+            rows="8"
+            value={song.chordProgression ?? ""}
+            hint="Pasted as-is. Section labels like Verse or Refrén line the chords up with the lyrics."
+            error={editErrorField === "chordProgression" ? editError : undefined}
+          />
+          <Field
+            label="Lyrics"
+            name="lyrics"
+            as="textarea"
+            rows="10"
+            value={song.lyrics ?? ""}
+            error={editErrorField === "lyrics" ? editError : undefined}
+          />
+          <Field
+            label="Notes"
+            name="notes"
+            as="textarea"
+            rows="4"
+            value={song.notes ?? ""}
+            hint="Anything the band needs to remember about playing it."
+            error={editErrorField === "notes" ? editError : undefined}
+          />
+          {canArchive && !isArchived && (
+            <div class="bp-sheet-extras">
+              <a
+                href={`/admin/songs/${song.id}/archive`}
+                class="bp-sheet-danger"
+                data-confirm
+                data-confirm-title={`Archive ${song.title}?`}
+                data-confirm-body={archiveSongConsequence(takes.length)}
+                data-confirm-action={`/admin/songs/${song.id}/archive`}
+                data-confirm-cta="Archive song"
+              >
+                Archive this song
+              </a>
+            </div>
+          )}
+        </div>
+        <div class="bp-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+        </div>
+      </form>
+    </RecordSheet>
 
     {/* Two columns past `lg`: the chart at its own measure on the left, takes
     and the notes about them on the right. Below that they stack, and the ORDER

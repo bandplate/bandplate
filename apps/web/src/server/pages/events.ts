@@ -1,5 +1,7 @@
-// `/events` and `/events/[id]` page logic. Read-only, same shape as
-// `server/pages/songs.ts`.
+// `/events` and `/events/[id]` page logic — reads, and (since M8) the form
+// handlers that write them. Same shape as `server/pages/songs.ts`, including
+// the note there about why the write half lives in `apps/web` rather than in
+// `@bandplate/core`.
 import { type Db, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
@@ -9,6 +11,7 @@ import {
   takesRepo,
   votesRepo,
 } from "@bandplate/db";
+import { z } from "zod";
 
 export type EventListItem = eventsRepo.EventWithTakeCount;
 
@@ -23,11 +26,27 @@ export function parseEventsListKindFilter(searchParams: URLSearchParams): events
   return [...new Set(valid)];
 }
 
+/** `?archived=1` — see the note on `SongsListQuery.archived`; same rule here. */
+export function parseEventsListArchivedFilter(searchParams: URLSearchParams): boolean {
+  return searchParams.get("archived") === "1";
+}
+
 export async function listEventsForArchive(
   db: Db,
   kind: eventsRepo.EventKind[],
+  archived = false,
 ): Promise<EventListItem[]> {
-  return eventsRepo.listRecentWithTakeCounts(db, { kind });
+  const rows = await eventsRepo.listRecentWithTakeCounts(db, {
+    kind,
+    includeArchived: archived,
+  });
+  return archived ? rows.filter((r) => r.archivedAt !== null) : rows;
+}
+
+/** How many events are archived — the Archived pill shows nothing when it is 0. */
+export async function countArchivedEvents(db: Db): Promise<number> {
+  const rows = await eventsRepo.listRecentWithTakeCounts(db, { includeArchived: true });
+  return rows.filter((r) => r.archivedAt !== null).length;
 }
 
 export interface TakeWithContext extends takesRepo.Take {
@@ -91,4 +110,186 @@ export async function getEventDetail(
       favorited: favoriteTakeIds.has(take.id),
     })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Writes (M8)
+// ---------------------------------------------------------------------------
+
+function optionalText(value: FormDataEntryValue | null): string | null {
+  if (value === null) {
+    return null;
+  }
+  const trimmed = String(value).trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+/**
+ * `<input type="date">` posts `YYYY-MM-DD` and nothing else — no time, no
+ * offset. Parsing that with `new Date(...)` would read it as UTC midnight,
+ * which in Europe/Prague is the evening BEFORE: a rehearsal entered as 8 July
+ * would file itself under 7 July for anyone west of the meridian. Splitting
+ * the parts and handing them to the local-time `Date` constructor puts the
+ * event at local midnight on the day the member actually typed.
+ *
+ * This is why `parseIsoToEpochMs` stayed in the ingest routes rather than
+ * moving to core with the rest: the bridge sends a full ISO-8601 timestamp
+ * WITH an offset, which is a different problem with a different correct
+ * answer.
+ */
+function parseDateInput(value: string): number | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return undefined;
+  }
+  const [, y, m, d] = match;
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+  return Number.isNaN(date.getTime()) ? undefined : date.getTime();
+}
+
+const eventFieldsSchema = z.object({
+  kind: z.enum(["rehearsal", "concert", "session"], {
+    errorMap: () => ({ message: "Choose what kind of session this was." }),
+  }),
+  heldAt: z
+    .string()
+    .trim()
+    .min(1, "Enter the date it was held.")
+    .transform(parseDateInput)
+    .refine((v): v is number => v !== undefined, "That date didn't look right."),
+  title: z.string().trim().max(300).nullable(),
+  venue: z.string().trim().max(300).nullable(),
+  notes: z.string().trim().max(20_000).nullable(),
+});
+
+export type EventField = "kind" | "heldAt" | "title" | "venue" | "notes";
+
+export type EventFormFailure = { kind: "invalid"; error: string; field: EventField };
+
+export type CreateEventResult =
+  | { kind: "ok"; event: eventsRepo.Event; sameDay: eventsRepo.Event[] }
+  | EventFormFailure;
+
+export type UpdateEventResult = { kind: "ok" } | { kind: "not_found" } | EventFormFailure;
+
+function parseEventFields(formData: FormData) {
+  return eventFieldsSchema.safeParse({
+    kind: formData.get("kind"),
+    heldAt: formData.get("heldAt"),
+    title: optionalText(formData.get("title")),
+    venue: optionalText(formData.get("venue")),
+    notes: optionalText(formData.get("notes")),
+  });
+}
+
+function invalidEvent(parsed: z.SafeParseError<unknown>): EventFormFailure {
+  const issue = parsed.error.issues[0];
+  return {
+    kind: "invalid",
+    error: issue?.message ?? "Invalid input.",
+    field: (issue?.path[0] as EventField | undefined) ?? "heldAt",
+  };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Create an event, and report any event of the same kind ALREADY on that day.
+ *
+ * That report is the duplicate-event guard, and it is deliberately a warning
+ * rather than a refusal. A manually created event carries no `clientRef`, so
+ * when the bridge later pushes the same rehearsal it finds nothing to match
+ * and creates a second one, splitting the day in half. The moment a human is
+ * typing the date is the only moment anyone has the context to notice — but
+ * two rehearsals on one day is also perfectly real (an afternoon and an
+ * evening), so blocking it would be wrong.
+ *
+ * What is NOT done: auto-matching on (kind, same day) inside the ingest route.
+ * That silently merges two genuinely different sessions, and nobody finds out
+ * for months.
+ */
+export async function createEvent(
+  db: Db,
+  now: number,
+  formData: FormData,
+): Promise<CreateEventResult> {
+  const parsed = parseEventFields(formData);
+  if (!parsed.success) {
+    return invalidEvent(parsed);
+  }
+
+  const dayStart = parsed.data.heldAt;
+  const existing = await eventsRepo.listRecentWithTakeCounts(db, {
+    kind: [parsed.data.kind],
+    includeArchived: true,
+  });
+  const sameDay = existing.filter((e) => e.heldAt >= dayStart && e.heldAt < dayStart + DAY_MS);
+
+  const event = await eventsRepo.create(db, {
+    kind: parsed.data.kind,
+    title: parsed.data.title,
+    heldAt: parsed.data.heldAt,
+    venue: parsed.data.venue,
+    notes: parsed.data.notes,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return { kind: "ok", event, sameDay };
+}
+
+export async function updateEvent(
+  db: Db,
+  now: number,
+  id: string,
+  formData: FormData,
+): Promise<UpdateEventResult> {
+  const parsed = parseEventFields(formData);
+  if (!parsed.success) {
+    return invalidEvent(parsed);
+  }
+  const event = await eventsRepo.getById(db, id);
+  if (!event) {
+    return { kind: "not_found" };
+  }
+  await eventsRepo.update(db, id, {
+    kind: parsed.data.kind,
+    title: parsed.data.title,
+    heldAt: parsed.data.heldAt,
+    venue: parsed.data.venue,
+    notes: parsed.data.notes,
+    updatedAt: now,
+  });
+  return { kind: "ok" };
+}
+
+export type ArchiveEventResult = { kind: "ok"; event: eventsRepo.Event } | { kind: "not_found" };
+
+export async function setEventArchived(
+  db: Db,
+  now: number,
+  id: string,
+  archived: boolean,
+): Promise<ArchiveEventResult> {
+  const event = await eventsRepo.getById(db, id);
+  if (!event) {
+    return { kind: "not_found" };
+  }
+  await eventsRepo.update(db, id, { archivedAt: archived ? now : null, updatedAt: now });
+  return { kind: "ok", event };
+}
+
+/**
+ * What archiving this event costs, in one sentence — the sibling of
+ * `archiveSongConsequence` next door, shared by the confirm dialog and the
+ * confirm page for the same reason.
+ */
+export function archiveEventConsequence(takeCount: number): string {
+  const head = "It disappears from the event archive and from home.";
+  const takes =
+    takeCount === 0
+      ? ""
+      : takeCount === 1
+        ? " Its one take stays and keeps playing — you'll reach it from its song."
+        : ` Its ${takeCount} takes stay and keep playing — you'll reach them from their songs.`;
+  return `${head}${takes} You can put it back any time.`;
 }

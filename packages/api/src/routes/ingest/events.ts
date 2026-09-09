@@ -24,14 +24,23 @@ export function registerIngestEventRoutes(router: GuardedRouter, deps: IngestEve
       );
     }
 
+    const now = deps.clock.now();
+
     // Idempotency (contract v1 §3): re-posting an existing clientRef is a
-    // lookup, not an error — no write happens at all on the repeat call.
+    // lookup, not an error — no write happens at all on the repeat call,
+    // UNLESS the event had been archived, in which case it comes back. The
+    // band has just recorded at it, so "retired" has stopped being true; and
+    // `getByClientRef` must not filter archived rows anyway, since
+    // `client_ref` is UNIQUE and a filtered lookup would drop straight into
+    // the insert below and throw on the constraint.
     const existing = await eventsRepo.getByClientRef(deps.db, parsed.data.clientRef);
     if (existing) {
+      if (existing.archivedAt !== null) {
+        await eventsRepo.update(deps.db, existing.id, { archivedAt: null, updatedAt: now });
+      }
       return c.json({ eventId: existing.id, created: false }, 200);
     }
 
-    const now = deps.clock.now();
     try {
       const created = await eventsRepo.create(deps.db, {
         kind: parsed.data.kind,

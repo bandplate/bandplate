@@ -8,12 +8,22 @@
 // event plus every take that day, with instruments and songs batch-fetched)
 // ran at ~0.5-0.7ms against seeded data — see task-5-report.md. Nothing
 // here is deferred.
+import { hasAllScopes } from "@bandplate/core";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
+import RecordSheet from "../../components/RecordSheet.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
+import { isSameOrigin } from "../../server/csrf.js";
 import { eventKindLabel, eventLabel, formatLongDate } from "../../server/format.js";
-import { getEventDetail } from "../../server/pages/events.js";
+import {
+  type EventField,
+  archiveEventConsequence,
+  getEventDetail,
+  updateEvent,
+} from "../../server/pages/events.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -26,6 +36,31 @@ if (!id) {
 }
 
 const appDeps = await getAppDeps();
+
+let editError: string | undefined;
+let editErrorField: EventField | undefined;
+let formError: string | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = "Something about that request looked wrong. Reload the page and try again.";
+  } else {
+    const formData = await Astro.request.formData();
+    if (formData.get("intent") === "update") {
+      const result = await updateEvent(appDeps.db, appDeps.clock.now(), id, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect(`/events/${id}?saved=1`);
+      }
+      if (result.kind === "not_found") {
+        formError = "That event is no longer here.";
+      } else {
+        editError = result.error;
+        editErrorField = result.field;
+      }
+    }
+  }
+}
+
 const detail = await getEventDetail(appDeps.db, id, principal.memberId);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
@@ -42,10 +77,48 @@ const kindLabel = eventKindLabel(event.kind);
 // Title-case for the browser tab, which is the one place this word is a name
 // rather than a label — `.bp-kind` uppercases it everywhere it is shown.
 const kindTitle = kindLabel.charAt(0).toUpperCase() + kindLabel.slice(1);
+
+const canArchive = hasAllScopes(principal, ["members:admin"]);
+const isArchived = event.archivedAt !== null;
+const justCreated = Astro.url.searchParams.get("created") === "1";
+const justSaved = Astro.url.searchParams.get("saved") === "1";
+// The same-day warning, carried across the redirect from `/events`. It is the
+// only moment anyone has the context to notice that the bridge will later
+// create a SECOND event for this day and split the takes between them.
+const sameDayWarning = Astro.url.searchParams.get("dup") === "1";
+const heldAtDate = new Date(event.heldAt);
+const heldAtValue = `${heldAtDate.getFullYear()}-${String(heldAtDate.getMonth() + 1).padStart(2, "0")}-${String(heldAtDate.getDate()).padStart(2, "0")}`;
 ---
 
 <AppLayout title={event.title ?? kindTitle} principal={principal} current="events">
   <div class="bp-stack">
+    {isArchived && (
+      <Banner kind="info" title="Archived">
+        <p class="bp-m0">
+          Out of the event archive and off home. Its takes are untouched and still play.
+        </p>
+        {canArchive && (
+          <p class="bp-hero-actions bp-m0">
+            <a href={`/admin/events/${event.id}/archive?unarchive=1`} class="bp-btn bp-btn-secondary bp-btn-sm">
+              Put it back
+            </a>
+          </p>
+        )}
+      </Banner>
+    )}
+    {justCreated && <Banner kind="success">Added. Takes recorded that day go here.</Banner>}
+    {sameDayWarning && (
+      <Banner kind="info" title="There was already one that day">
+        <p class="bp-m0">
+          Another {kindLabel} is filed on {formatLongDate(event.heldAt)}. That's fine if you really
+          played twice — but if this is the same session, use the one that was already there, or
+          the bridge will file its takes against it and leave this one empty.
+        </p>
+      </Banner>
+    )}
+    {justSaved && <Banner kind="success">Saved.</Banner>}
+    {formError && <Banner kind="error">{formError}</Banner>}
+
     <header class="bp-event-hero">
       <div class="bp-event-hero-line">
         <span class="bp-kind">{kindLabel}</span>
@@ -69,7 +142,81 @@ const kindTitle = kindLabel.charAt(0).toUpperCase() + kindLabel.slice(1);
       </h1>
       {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
       {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
+
+      <p class="bp-hero-actions bp-m0">
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-event">
+          Edit
+        </button>
+      </p>
     </header>
+
+    <RecordSheet
+      id="edit-event"
+      eyebrow="Editing event"
+      title={eventLabel(event) || formatLongDate(event.heldAt)}
+      subtitle="Only the date and the kind are required."
+    >
+      <form method="post" class="bp-sheet-form" novalidate>
+        <input type="hidden" name="intent" value="update" />
+        <div class="bp-sheet-body">
+          <div class="bp-sheet-field">
+            <label class="bp-eyebrow" for="edit-event-kind">What was it</label>
+            <select class="bp-select" id="edit-event-kind" name="kind">
+              <option value="rehearsal" selected={event.kind === "rehearsal"}>Rehearsal</option>
+              <option value="concert" selected={event.kind === "concert"}>Concert</option>
+              <option value="session" selected={event.kind === "session"}>Session</option>
+            </select>
+          </div>
+          <Field
+            label="Date"
+            name="heldAt"
+            type="date"
+            required
+            value={heldAtValue}
+            error={editErrorField === "heldAt" ? editError : undefined}
+          />
+          <Field
+            label="Venue"
+            name="venue"
+            value={event.venue ?? ""}
+            error={editErrorField === "venue" ? editError : undefined}
+          />
+          <Field
+            label="Title"
+            name="title"
+            value={event.title ?? ""}
+            error={editErrorField === "title" ? editError : undefined}
+          />
+          <Field
+            label="Notes"
+            name="notes"
+            as="textarea"
+            rows="4"
+            value={event.notes ?? ""}
+            error={editErrorField === "notes" ? editError : undefined}
+          />
+          {canArchive && !isArchived && (
+            <div class="bp-sheet-extras">
+              <a
+                href={`/admin/events/${event.id}/archive`}
+                class="bp-sheet-danger"
+                data-confirm
+                data-confirm-title={`Archive the ${kindLabel} of ${formatLongDate(event.heldAt)}?`}
+                data-confirm-body={archiveEventConsequence(takes.length)}
+                data-confirm-action={`/admin/events/${event.id}/archive`}
+                data-confirm-cta="Archive event"
+              >
+                Archive this event
+              </a>
+            </div>
+          )}
+        </div>
+        <div class="bp-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+        </div>
+      </form>
+    </RecordSheet>
 
     <section>
       <h2 class="bp-section-title bp-m0">Takes</h2>

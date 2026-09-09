@@ -1256,4 +1256,90 @@ describe("ingest API", () => {
       expect(await takesRepo.getById(testApp.db, takeJson.takeId)).toBeDefined();
     });
   });
+
+  // --- M8: the manual front door archives; the bridge un-archives ----------
+  describe("archived records the bridge runs into again", () => {
+    it("un-archives an event it re-posts, rather than creating a second one", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+
+      const first = await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "reaper-abc",
+          kind: "rehearsal",
+          heldAt: "2026-07-08T18:00:00+02:00",
+        }),
+      });
+      const { eventId } = await first.json();
+
+      // A human retires it in the UI.
+      await eventsRepo.update(testApp.db, eventId, { archivedAt: 5000, updatedAt: 5000 });
+
+      const again = await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "reaper-abc",
+          kind: "rehearsal",
+          heldAt: "2026-07-08T18:00:00+02:00",
+        }),
+      });
+      const body = await again.json();
+
+      expect(again.status).toBe(200);
+      expect(body).toEqual({ eventId, created: false });
+      // Back on the archive page: the band has just recorded at it.
+      expect((await eventsRepo.getById(testApp.db, eventId))?.archivedAt).toBeNull();
+      // And exactly ONE event, not a second one beside the archived first.
+      expect(await eventsRepo.listRecent(testApp.db, { includeArchived: true })).toHaveLength(1);
+    });
+
+    it("un-archives a song it matches by title", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      await seedInstruments(testApp);
+
+      const song = await songsRepo.create(testApp.db, {
+        title: "Neon Skyline",
+        slug: "neon-skyline",
+        createdAt: 1000,
+        updatedAt: 1000,
+      });
+      await songsRepo.update(testApp.db, song.id, { archivedAt: 5000, updatedAt: 5000 });
+
+      const event = await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "reaper-evt",
+          kind: "rehearsal",
+          heldAt: "2026-07-08T18:00:00+02:00",
+        }),
+      });
+      expect(event.status).toBe(200);
+
+      const res = await testApp.app.request("/ingest/v1/takes", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "reaper-take-1",
+          eventClientRef: "reaper-evt",
+          song: { title: "Neon Skyline" },
+          recordedAt: "2026-07-08T18:30:00+02:00",
+          instruments: ["bass"],
+          assets: [{ kind: "master", tier: "lossy", format: "mp3", bytes: 1000 }],
+        }),
+      });
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      // Matched the existing row rather than stubbing a second "Neon Skyline",
+      // which `songs.title_norm`'s UNIQUE index would have refused anyway.
+      expect(body.songId).toBe(song.id);
+      expect(body.songCreated).toBe(false);
+      expect((await songsRepo.getById(testApp.db, song.id))?.archivedAt).toBeNull();
+    });
+  });
 });

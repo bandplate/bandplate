@@ -1,0 +1,73 @@
+---
+import { eventsRepo, takesRepo } from "@bandplate/db";
+// Archive (or unarchive) an event — the sibling of the song confirm page next
+// door, with the same guard and the same dual-mode POST.
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { eventKindLabel, formatLongDate } from "../../../../server/format.js";
+import { archiveEventConsequence, setEventArchived } from "../../../../server/pages/events.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/events");
+}
+
+const archiving = Astro.url.searchParams.get("unarchive") !== "1";
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const result = await setEventArchived(appDeps.db, appDeps.clock.now(), id, archiving);
+  if (isFetch) {
+    return new Response(result.kind === "ok" ? "ok" : "not found", {
+      status: result.kind === "ok" ? 200 : 404,
+    });
+  }
+  if (result.kind !== "ok") {
+    return new Response("Event not found.", { status: 404 });
+  }
+  return archiving
+    ? Astro.redirect("/events?archived_ok=1")
+    : Astro.redirect(`/events/${result.event.id}?saved=1`);
+}
+
+const event = await eventsRepo.getById(appDeps.db, id);
+if (!event) {
+  return new Response("Event not found.", { status: 404 });
+}
+const takes = await takesRepo.listByEvent(appDeps.db, event.id, { order: "asc" });
+const consequence = archiveEventConsequence(takes.length);
+const what = `the ${eventKindLabel(event.kind)} of ${formatLongDate(event.heldAt)}`;
+---
+
+<Layout title={archiving ? "Archive event" : "Unarchive event"}>
+  {
+    archiving ? (
+      <ConfirmActionPage
+        bannerTitle={`Archive ${what}?`}
+        cta="Archive event"
+        cancelHref={`/events/${event.id}`}
+      >
+        {consequence}
+      </ConfirmActionPage>
+    ) : (
+      <ConfirmActionPage
+        bannerTitle={`Put ${what} back?`}
+        cta="Unarchive event"
+        cancelHref={`/events/${event.id}`}
+      >
+        It returns to the event archive and to home.
+      </ConfirmActionPage>
+    )
+  }
+</Layout>

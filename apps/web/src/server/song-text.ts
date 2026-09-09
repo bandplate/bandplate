@@ -303,15 +303,30 @@ export function buildSongChart(
   const chordSections = hasChordText ? splitChordsIntoSections(chordText as string) : [];
   const chordsRecognized = chordSections.some((c) => c.label !== undefined);
 
-  // Map of normalized label -> first chord section with that label. Built
-  // early so it can also gate ambiguous lyric words below (see
-  // `lyricsAmbiguousAllowed`); reused again further down for the actual
-  // chord/lyric pairing, rather than being rebuilt.
-  const chordByNormLabel = new Map<string, TextSection>();
+  // Map of normalized label -> EVERY chord section with that label, in order.
+  // Built early so it can also gate ambiguous lyric words below (see
+  // `lyricsAmbiguousAllowed`); reused further down for the actual chord/lyric
+  // pairing, rather than being rebuilt.
+  //
+  // A LIST, not the first match. A song whose sections repeat — three verses
+  // written out three times, which is how a chart is normally written — used
+  // to pair every one of them with the FIRST chord section of that name, so
+  // the second and third were never marked consumed and the trailing loop
+  // below appended them as chord-only sections. The row editor then rendered
+  // those as rows with no lyrics and wrote them back out, so each save added
+  // two more: 6 rows, then 8, then 10. Repeats are the normal case, so the
+  // pairing has to count them.
+  const chordsByNormLabel = new Map<string, TextSection[]>();
   for (const c of chordSections) {
     const key = normalizeLabel(c.label);
-    if (key && !chordByNormLabel.has(key)) {
-      chordByNormLabel.set(key, c);
+    if (!key) {
+      continue;
+    }
+    const existing = chordsByNormLabel.get(key);
+    if (existing) {
+      existing.push(c);
+    } else {
+      chordsByNormLabel.set(key, [c]);
     }
   }
 
@@ -331,7 +346,7 @@ export function buildSongChart(
   // lyrics-only sheet) — the same case `splitLyricsIntoSections`'s own
   // default handles when called standalone.
   const lyricsAmbiguousAllowed = hasChordText
-    ? (word: string) => chordByNormLabel.has(word)
+    ? (word: string) => chordsByNormLabel.has(word)
     : hasAmbiguousCorroboration(lyricsText ?? "", (line) => line);
   const lyricSections = hasLyricsText
     ? splitLyricsIntoSections(lyricsText as string, lyricsAmbiguousAllowed)
@@ -374,7 +389,7 @@ export function buildSongChart(
     };
   }
 
-  // `chordByNormLabel` was already built above (it also gated
+  // `chordsByNormLabel` was already built above (it also gated
   // `lyricsAmbiguousAllowed`); reused here rather than rebuilt.
   const firstUsedIndex = chordSections.findIndex((c) => {
     const key = normalizeLabel(c.label);
@@ -389,9 +404,27 @@ export function buildSongChart(
     lyricLines: [],
   }));
 
+  // How many times each label has been paired so far, so the nth "Sloka" in
+  // the lyrics takes the nth "Sloka" in the chords. That matters when the
+  // repeats genuinely differ — a last verse over a different turnaround is a
+  // real thing, and always reusing the first section would show the wrong
+  // chords under it.
+  const takenPerLabel = new Map<string, number>();
+
   for (const l of lyricSections) {
     const key = normalizeLabel(l.label);
-    const chord = key ? chordByNormLabel.get(key) : undefined;
+    const candidates = key ? chordsByNormLabel.get(key) : undefined;
+    let chord: TextSection | undefined;
+    if (key && candidates && candidates.length > 0) {
+      const taken = takenPerLabel.get(key) ?? 0;
+      // Past the end, reuse the LAST one rather than rendering the repeat
+      // bare: a chart that writes "Sloka: Am Dm Em7" once and then has three
+      // verses under it means those chords apply to all three. Reusing is
+      // also what keeps this from consuming a section twice — `consumed` is a
+      // set, so the extra pairings are free.
+      chord = candidates[Math.min(taken, candidates.length - 1)];
+      takenPerLabel.set(key, taken + 1);
+    }
     if (chord) {
       consumed.add(chord);
     }

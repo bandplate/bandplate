@@ -3,10 +3,10 @@
     {
       "allowed": {
         "origins": ["https://bandplate.xaralis93.workers.dev"],
-        "methods": ["PUT"],
-        "headers": ["content-type"]
+        "methods": ["GET", "PUT"],
+        "headers": ["content-type", "range"]
       },
-      "exposeHeaders": ["etag"],
+      "exposeHeaders": ["etag", "content-length", "content-range"],
       "maxAgeSeconds": 3600
     }
   ]

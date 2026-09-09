@@ -128,3 +128,82 @@ describe("songChartRoundTrips", () => {
     );
   });
 });
+
+// --- Repeated section names ------------------------------------------------
+//
+// The bug this pins: a chart whose sections repeat — three verses written out
+// three times, which is how a chart is normally written — grew by two empty
+// sections on EVERY save. `buildSongChart` paired all three lyric "Sloka"s
+// with the first chord "Sloka", so the other two were never consumed and were
+// appended as chord-only sections; the row editor rendered those as rows with
+// no lyrics and wrote them straight back. 6 rows, then 8, then 10.
+//
+// Removing the empty rows by hand could never fix it: the next parse of the
+// corrected text produced them again.
+describe("repeated section names", () => {
+  const CHORDS = [
+    "Sloka: Am Dm Em7",
+    "Refren: C Em7 F Fm7",
+    "Sloka: Am Dm Em7",
+    "Sloka: Am Dm F",
+  ].join("\n");
+  const LYRICS = [
+    "Sloka\nfirst verse",
+    "Refren\nthe hook",
+    "Sloka\nsecond verse",
+    "Sloka\nlast verse",
+  ].join("\n\n");
+
+  it("gives one row per section, none of them empty", () => {
+    const result = songToRows(CHORDS, LYRICS);
+    expect(result.kind).toBe("rows");
+    if (result.kind !== "rows") return;
+    expect(result.rows).toHaveLength(4);
+    expect(result.rows.every((r) => r.lyrics !== "")).toBe(true);
+    expect(result.rows.map((r) => r.label)).toEqual(["Sloka", "Refren", "Sloka", "Sloka"]);
+  });
+
+  it("gives the nth repeat the nth chords, not always the first", () => {
+    const result = songToRows(CHORDS, LYRICS);
+    if (result.kind !== "rows") throw new Error("expected rows");
+    // The last verse turns around differently. Reusing the first section here
+    // would print the wrong chords under it.
+    expect(result.rows[3]?.chords).toBe("Am Dm F");
+    expect(result.rows[0]?.chords).toBe("Am Dm Em7");
+  });
+
+  it("applies a once-written section to every repeat of it", () => {
+    // A chart that names each section's chords once and then repeats the
+    // section in the lyrics is the other common convention.
+    const result = songToRows("Sloka: Am Dm Em7\nRefren: C F", LYRICS);
+    if (result.kind !== "rows") throw new Error("expected rows");
+    expect(result.rows).toHaveLength(4);
+    expect(result.rows.map((r) => r.chords)).toEqual([
+      "Am Dm Em7",
+      "C F",
+      "Am Dm Em7",
+      "Am Dm Em7",
+    ]);
+  });
+
+  it("still surfaces a chord section with genuinely no lyrics", () => {
+    // Four chord Slokas, three sung. The fourth is real and must not vanish.
+    const result = songToRows(`${CHORDS}\nSloka: Am Dm Em7`, LYRICS);
+    if (result.kind !== "rows") throw new Error("expected rows");
+    expect(result.rows).toHaveLength(5);
+    expect(result.rows[4]?.lyrics).toBe("");
+  });
+
+  it("is stable across repeated saves — the actual reported symptom", () => {
+    let chords = CHORDS;
+    let lyrics = LYRICS;
+    const shapes: number[] = [];
+    for (let save = 0; save < 4; save++) {
+      const result = songToRows(chords, lyrics);
+      if (result.kind !== "rows") throw new Error("expected rows");
+      shapes.push(result.rows.length);
+      ({ chords, lyrics } = rowsToSongText(result.rows));
+    }
+    expect(shapes).toEqual([4, 4, 4, 4]);
+  });
+});

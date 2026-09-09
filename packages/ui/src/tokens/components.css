@@ -894,24 +894,47 @@ a.bp-btn {
   background: var(--bp-color-surface);
 }
 
+/* ONE gutter for every row type — songs, events and takes. The hover fill
+   below is the whole hover treatment now, so it has to have something to
+   inset from: at the old 4px a song title started almost against the fill's
+   edge, while a take title started 44px in behind its plate, and the two read
+   as different amounts of padding because they were.
+
+   The negative margin is what keeps the CONTENT column where it was: the row
+   bleeds its fill into the shell's 20px gutter and pads its own contents back
+   to the same left edge every heading on the page uses. */
+.bp-card-flat,
+.bp-song-row,
+.bp-take-row,
+.bp-ledger-row {
+  --bp-row-gutter: 0.625rem;
+  padding-inline: var(--bp-row-gutter);
+  margin-inline: calc(var(--bp-row-gutter) * -1);
+}
+
 .bp-card-flat,
 .bp-song-row,
 .bp-take-row {
   border: none;
   border-bottom: 1px solid var(--bp-color-border);
   border-radius: 0;
-  padding: 0.875rem 0.25rem;
+  padding-block: 0.875rem;
   background: transparent;
 }
 
-/* Deliberately lighter than `--bp-fill-subtle`. At 12% the hover fill landed
-   close enough to `--bp-color-border` that the plate's ring disappeared into
-   it — the row lit up and its left anchor went with it. A hover is a hint that
-   a row is live, not a state worth reading. */
+/* `--bp-color-surface`, and one value for every row type. This was a 5%
+   foreground wash on takes and events and the surface colour on songs, which
+   is a difference nobody chose — the two treatments simply grew in different
+   places. The surface is the better of the two: a wash of the foreground is
+   the border colour by another name, so at any weight that reads it also
+   starts swallowing the hairline and the plate's ring, while the surface is a
+   colour the palette already carries for exactly this — a plane lifted off the
+   ground. */
 .bp-card-flat:hover,
 .bp-song-row:hover,
-.bp-take-row:hover {
-  background: color-mix(in srgb, var(--bp-color-fg) 5%, transparent);
+.bp-take-row:hover,
+.bp-ledger-row:hover {
+  background: var(--bp-color-surface);
 }
 
 /* …and the plate brightens rather than being swallowed, so the anchor stays
@@ -1582,11 +1605,37 @@ a.bp-btn {
   height: var(--bp-play-disc, 34px);
   border-radius: 50%;
   background: var(--bp-color-accent);
+  transition: box-shadow 120ms ease;
+}
+
+/* A halo in the same 10%-foreground wash the favourite's hover disc is made
+   of, so the two controls in a row answer a hover with one material instead of
+   two. It rings the disc rather than filling it because the disc is already
+   full: the accent IS the play control.
+
+   Not a scale, and not a colour shift. Scale is out for the reason under the
+   favourite — the two controls have to answer alike, and the favourite cannot
+   scale. Colour is out because `--bp-color-accent` is gold on lacquer and burnt
+   umber on sand, so any shift that reads as "brighter" in one theme reads as
+   "darker" in the other; a foreground wash moves the same way in both. */
+.bp-play-toggle:hover::before,
+.bp-play-toggle:focus-visible::before,
+.bp-player-play:hover::before,
+.bp-player-play:focus-visible::before {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
 }
 
 .bp-play-toggle svg,
 .bp-player-play svg {
   position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-favorite-toggle::before,
+  .bp-play-toggle::before,
+  .bp-player-play::before {
+    transition: none;
+  }
 }
 
 /* The pressed glyph stays the ground colour, NOT an accent.
@@ -2909,12 +2958,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
   align-items: center;
   gap: 0.5rem;
   min-height: 44px;
-  padding: 1rem 0.25rem;
+  padding-block: 1rem;
   border-bottom: 1px solid var(--bp-color-border);
-}
-
-.bp-song-row:hover {
-  background: var(--bp-color-surface);
 }
 
 .bp-song-row-link {
@@ -3035,6 +3080,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
   column-gap: 0.75rem;
   row-gap: 0.25rem;
   min-height: 44px;
+  /* The containing block for the stretched link below. WITHOUT IT that overlay
+     anchors to whatever ancestor happens to be positioned and covers the page:
+     `inset: 0` is only "this row" while this row is the nearest positioned
+     ancestor. */
+  position: relative;
   /* The Actions cell on the admin tables right-aligns its contents, and this
      row renders inside one on no page — but `text-align` inherits, and a
      future embedding should not silently mirror the row. */
@@ -3105,27 +3155,42 @@ html:has(dialog.bp-filter-sheet[open]) body {
   white-space: nowrap;
 }
 
-.bp-take-label:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+/* NO underline on hover, on any row type. The row lights up; that is the
+   whole signal, and it is the same signal whether the row is a song, an event
+   or a take. A title that also underlined said "this text is the link", which
+   stopped being true the moment the whole row became one. */
+
+/* The WHOLE ROW navigates, by way of an overlay stretched from the title's
+   own link — the same thing a song row and an event row do with a link that
+   fills the row, done with an overlay here because this row is a two-line grid
+   and no single element spans it.
+
+   This was argued the other way once: the title alone navigated, because an
+   overlay makes every part of a row a link and turns text selection into
+   navigation. Both are still true. What settled it is that songs and events
+   already worked the other way, so a take row answered a hover differently
+   from the two row types beside it on the same page — and one consistent
+   rule across all three beats a better rule that applies to one of them.
+
+   The overlay also replaced the label's own 44px padding trick: the target is
+   the row now, which is comfortably past 44px on its own. */
+.bp-take-label::after {
+  content: "";
+  position: absolute;
+  inset: 0;
 }
 
-/* The title is the ONLY thing that navigates. A stretched overlay covering the
-   whole row was tried and removed: it makes every part of a row a link,
-   including the space around controls that do something else, and it turns
-   text selection into navigation. The 44px target comes from padding the link
-   itself and pulling the same amount back off the block, so the target grows
-   without the row doing. */
-.bp-take-label {
-  /* Derived from the target, and deliberately overshooting it. A flat 11px
-     measured 43.84px — a 19px x 1.15 line box plus 22px of padding — so every
-     row missed the 44px floor by 0.16px, invisibly, in both themes. Solving
-     for exactly 44px landed at 43.98: the used padding and the line box each
-     round to sub-pixels, so equality is not reachable this way. Aiming at 46px
-     costs nothing — the negative margin cancels it either way. */
-  --bp-take-label-pad: calc((46px - 1.15em) / 2);
-  padding-block: var(--bp-take-label-pad);
-  margin-block: calc(var(--bp-take-label-pad) * -1);
+/* Everything that does something ELSE has to sit above the overlay — and only
+   those things. The duration and the instrument set deliberately stay under
+   it: they are text, so under the overlay they navigate with the rest of the
+   row. So does the PLATE, which is why this raises the play control itself
+   rather than the slot around it — the plate is an `aria-hidden` stand-in on a
+   take with no ready asset, and raising its 44px box put a dead patch at the
+   start of every unplayable row. */
+.bp-take-row-lead .bp-play-toggle,
+.bp-take-favorite-mark {
+  position: relative;
+  z-index: 1;
 }
 
 /* The way back to the song. It was the page's own H1 — a heading that quietly
@@ -3255,24 +3320,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   white-space: nowrap;
 }
 
-/* The event's name, not a call to action — so it reads as part of the muted
-   line and only announces itself as a link on hover. `--bp-color-accent` here
-   made every row end in a gold sentence louder than the take's own title. */
-.bp-take-event-link {
-  color: inherit;
-  text-decoration: none;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.bp-take-event-link:hover {
-  color: var(--bp-color-fg);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 /* Inherits its size from line two — it is the same kind of text as its
    neighbours, not a smaller one. Only the colour separates it. */
 .bp-take-note {
@@ -3282,6 +3329,23 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* Kept for the take detail page, which still shows a take's own note inline. */
 .bp-take-sublabel {
   color: var(--bp-color-muted);
+}
+
+/* The take DETAIL page's link to its event. It left the take row when the row
+   became one whole-row link — a link inside a row that navigates is a second
+   destination you can only hit by aiming — but on the detail page it is an
+   ordinary link in an ordinary line of facts, so it keeps the underline the
+   row titles gave up. Muted rather than accent: as `--bp-color-accent` it
+   ended the hero in a gold sentence louder than the take's own title. */
+.bp-take-event-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.bp-take-event-link:hover {
+  color: var(--bp-color-fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* A 1px rule, not a middot — see docs/design-foundation.md "Meta lines". It
@@ -4024,6 +4088,48 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-muted);
   cursor: pointer;
   padding: 0;
+  position: relative;
+}
+
+/* The favourite answers a hover with a DISC — the same 34px disc the play
+   control beside it is made of, drawn only while the pointer is on it. That
+   gives the two controls in a row one hover language instead of two.
+
+   It is not a scale on the star, which is what this tried first: a CSS
+   `transform` on the inline `<svg>` root never took — even an `!important`
+   `scale(2)` computed back to the identity matrix — so the star did not
+   move at all. The button behind it is an ordinary box and behaves.
+
+   The colour shift is muted -> foreground, which is theme-neutral. A shift
+   toward `--bp-color-accent` would not be: it is gold on lacquer and burnt
+   umber on sand, so "brighter" in one theme is "darker" in the other. */
+.bp-favorite-toggle::before {
+  content: "";
+  position: absolute;
+  width: var(--bp-play-disc, 34px);
+  height: var(--bp-play-disc, 34px);
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.bp-favorite-toggle svg {
+  position: relative;
+}
+
+.bp-favorite-toggle:hover::before,
+.bp-favorite-toggle:focus-visible::before {
+  background: color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
+}
+
+.bp-favorite-toggle:hover {
+  color: var(--bp-color-fg);
+}
+
+/* Already gold, and gold is the same value in both themes — so the pressed
+   star keeps its colour and answers with the disc alone. */
+.bp-favorite-toggle[aria-pressed="true"]:hover {
+  color: var(--bp-component-accent-gold);
 }
 
 .bp-favorite-toggle .bp-star-filled {
@@ -4704,7 +4810,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0 0.5rem;
-  padding: 0.8125rem 0;
+  padding-block: 0.8125rem;
   border-top: 1px solid var(--bp-color-border);
 }
 
@@ -4725,23 +4831,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
   border-top-color: transparent;
 }
 
-/* Same hover wash as a take row — one list treatment, so a ledger row and a
-   take row light up identically under the pointer. */
-.bp-ledger-row:hover {
-  background: color-mix(in srgb, var(--bp-color-fg) 5%, transparent);
-}
-
 /* An event with neither title nor venue has no name; it says so, muted, so the
    word reads as a fact rather than as a title someone typed. */
 .bp-ledger-venue--none {
   color: var(--bp-color-muted);
 }
 
-.bp-ledger-link:hover .bp-ledger-venue {
-  text-decoration: underline;
-  text-decoration-color: var(--bp-color-muted);
-  text-underline-offset: 0.2em;
-}
+/* See the no-underline note beside `.bp-card-flat:hover`. */
 
 .bp-ledger-date {
   display: block;

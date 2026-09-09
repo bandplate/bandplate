@@ -245,21 +245,20 @@ const noteText = takeNote(take.label, eventKind);
 
   <div class="bp-take-line2">
     <span class="bp-take-textrun">
-      {/* The event's name is the one ELASTIC member of this line — the date and
-          the instrument set are both fixed-width, so this is what gives when the
-          row narrows, and the line is guaranteed to hold on one line at any
-          width. Below `sm` it is hidden outright rather than ellipsised to two
-          letters; see the phone rule in components.css. An untitled event has no
-          name to print, so nothing is rendered rather than a fallback repeating
-          the kind that already sits beside the title. */}
-      {event && eventName && (
-        <a
-          href={`/events/${event.id}`}
-          class="bp-take-event-link bp-take-eventname"
-        >
-          {eventName}
-        </a>
-      )}
+      {/* The event's name, as TEXT. It was a second link inside the row, which
+          is exactly what the whole-row link makes impossible: a row that
+          navigates has one destination, and a link inside it is a second one
+          you can only hit by aiming. The event is reachable from the take's own
+          page, which is where the row goes.
+
+          It is the elastic member of this line — the date and the instrument
+          set are both fixed-width, so this is what gives when the row narrows,
+          and the line is guaranteed to hold on one line at any width. Below
+          `sm` it is hidden outright rather than ellipsised to two letters; see
+          the phone rule in components.css. An untitled event has no name to
+          print, so nothing is rendered rather than a fallback repeating the
+          kind that already sits beside the title. */}
+      {eventName && <span class="bp-take-eventname">{eventName}</span>}
       {noteText && (
         <>
           {event && eventName && <span class="bp-take-rule" />}

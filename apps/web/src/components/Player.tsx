@@ -32,15 +32,59 @@
 // and again after every navigation.
 import { useStore } from "@nanostores/preact";
 import { Fragment } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { decidePlayerClickAction } from "../client/player-actions.js";
 import {
   AUDIO_SOURCE_ATTR,
+  type PlayerSource,
   type PlayerTrack,
   audioUrl,
   currentTrack,
   isPlaying,
+  peaksUrl,
+  sourcesUrl,
 } from "../client/player-store.js";
+
+/** How many bars the waveform draws, whatever the source's own resolution. Fixed rather than measured: the bars are `flex: 1 1 0`, so the browser divides whatever width the bar has, and a resize needs no JS at all. */
+const WAVEFORM_BARS = 120;
+/** What the skip controls move by. Not a preference — "play that bit again" is the move this app is for, and there is no queue to skip through. */
+const SKIP_SECONDS = 10;
+
+/** mm:ss. Chivo's tabular figures (see `.bp-player-time`) keep it from shifting as it ticks. */
+function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return "0:00";
+  }
+  const whole = Math.floor(seconds);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Reduce a peaks file to the bar count we draw, taking the MAX of each
+ * bucket rather than the mean: a waveform is about where the loud parts
+ * are, and averaging flattens exactly the transients that make one
+ * recognisable. Values are 0..1 already; anything outside is clamped
+ * rather than trusted, since this is a file from object storage.
+ */
+function downsample(peaks: number[], bars: number): number[] {
+  if (peaks.length === 0) {
+    return [];
+  }
+  const out: number[] = [];
+  for (let i = 0; i < bars; i++) {
+    const start = Math.floor((i * peaks.length) / bars);
+    const end = Math.max(start + 1, Math.floor(((i + 1) * peaks.length) / bars));
+    let max = 0;
+    for (let j = start; j < end && j < peaks.length; j++) {
+      const v = peaks[j] ?? 0;
+      if (v > max) {
+        max = v;
+      }
+    }
+    out.push(Math.max(0, Math.min(1, max)));
+  }
+  return out;
+}
 
 interface SourceButtonData {
   takeId: string;
@@ -108,6 +152,15 @@ export default function Player() {
   const pendingSeekRef = useRef<number | null>(null);
   const pendingAutoplayRef = useRef(false);
 
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  // `null` means "not fetched or none exists" — both render the plain rail,
+  // and deliberately so: a take with no waveform is not an error state, it
+  // is every take until something computes peaks.
+  const [peaks, setPeaks] = useState<number[] | null>(null);
+  const [sources, setSources] = useState<PlayerSource[] | null>(null);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+
   // Wires the real DOM events (not our own click handler's optimistic
   // guess) to `isPlaying` — this is what keeps the store honest when the
   // native `<audio controls>` UI itself is used to pause/play, not just
@@ -120,7 +173,10 @@ export default function Player() {
     const onPlay = () => isPlaying.set(true);
     const onPause = () => isPlaying.set(false);
     const onEnded = () => isPlaying.set(false);
+    const onTime = () => setPosition(audio.currentTime);
+    const onDuration = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     const onLoadedMetadata = () => {
+      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
       if (pendingSeekRef.current !== null) {
         audio.currentTime = pendingSeekRef.current;
         pendingSeekRef.current = null;
@@ -134,11 +190,15 @@ export default function Player() {
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("durationchange", onDuration);
     return () => {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("durationchange", onDuration);
     };
   }, []);
 
@@ -223,6 +283,103 @@ export default function Player() {
     return () => document.removeEventListener("astro:page-load", onPageLoad);
   }, []);
 
+  // The waveform for whatever source is loaded. Re-fetched on every source
+  // switch, which is the entire reason peaks are stored per asset rather
+  // than per take — see `peaksStorageKey`. A 404 is the ordinary case today
+  // (nothing computes peaks yet) and lands on `null`, i.e. the plain rail.
+  const sourceAssetId = track?.sourceAssetId;
+  useEffect(() => {
+    if (!sourceAssetId) {
+      setPeaks(null);
+      return;
+    }
+    let cancelled = false;
+    setPeaks(null);
+    fetch(peaksUrl(sourceAssetId))
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { peaks?: unknown } | null) => {
+        if (cancelled) {
+          return;
+        }
+        const raw = body?.peaks;
+        setPeaks(
+          Array.isArray(raw) && raw.every((v) => typeof v === "number")
+            ? downsample(raw as number[], WAVEFORM_BARS)
+            : null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPeaks(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceAssetId]);
+
+  // What this take can be heard as — fetched when the switch is OPENED, so a
+  // take nobody switches on never pays for the request.
+  const takeId = track?.takeId;
+  useEffect(() => {
+    if (!switcherOpen || !takeId) {
+      return;
+    }
+    let cancelled = false;
+    fetch(sourcesUrl(takeId))
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { sources?: PlayerSource[] } | null) => {
+        if (!cancelled) {
+          setSources(body?.sources ?? []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSources([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [switcherOpen, takeId]);
+
+  // A switch belongs to the take it was opened on; changing take closes it,
+  // and so does Escape or a click anywhere else.
+  useEffect(() => {
+    setSwitcherOpen(false);
+    setSources(null);
+  }, [takeId]);
+  useEffect(() => {
+    if (!switcherOpen) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSwitcherOpen(false);
+      }
+    };
+    const onDown = (event: MouseEvent) => {
+      const el = event.target;
+      if (el instanceof Element && !el.closest(".bp-player-switch")) {
+        setSwitcherOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [switcherOpen]);
+
+  const seekBy = useCallback((delta: number) => {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(audio.duration)) {
+      return;
+    }
+    audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + delta));
+  }, []);
+
   // Keeps `--bp-player-height` (declared on `.bp-shell`, consumed by
   // `.bp-shell-main`'s reserved bottom padding — see components.css) equal
   // to this bar's REAL rendered height, rather than a hand-copied number
@@ -264,50 +421,271 @@ export default function Player() {
         ? `Now playing: ${track.title}`
         : "";
 
+  const bars = peaks ?? [];
+  const progress = duration > 0 ? position / duration : 0;
+  // The source label without its "Solo: " prefix — the chip has a caret and
+  // names a source; the prefix would be a third thing on screen saying so.
+  const sourceName = track ? track.sourceLabel.replace(/^Solo:\s*/, "") : "";
+
   return (
     <div class="bp-player" hidden={!track} data-testid="bp-player" ref={playerRef}>
       {/* Track-change-only announcements — never touched by a timeupdate
-          handler (there isn't one), which is what keeps this from
-          spamming a screen reader on every second of playback. */}
+          handler, which is what keeps this from spamming a screen reader on
+          every second of playback. */}
       <p class="sr-only" aria-live="polite">
         {announced}
       </p>
-      <div class="bp-player-meta">
-        <span class="bp-player-title">{track?.title ?? ""}</span>
-        {/* The player subtitle is the one place a meta line genuinely has to
-            stay inline — there is no room for columns and no room for labels.
-            So it takes the third meta-line treatment from
-            docs/design-foundation.md: a 1px rule drawn between fields rather
-            than a separator character. `.bp-player-sep` is aria-hidden so the
-            fields read as separate phrases rather than as one run-on string. */}
-        <span class="bp-player-subtitle">
-          {(track
-            ? [track.subtitle, track.sourceLabel !== "Master" ? track.sourceLabel : null].filter(
-                (part): part is string => Boolean(part),
-              )
-            : []
-          ).map((part, i) => (
-            // Keyed on the part itself: the list is at most two entries, both
-            // distinct strings (a take label and a source label), so the value
-            // is a stable identity. An index key would be wrong the moment the
-            // subtitle changes but the source label does not.
-            <Fragment key={part}>
-              {i > 0 && <span class="bp-player-sep" aria-hidden="true" />}
-              {part}
-            </Fragment>
-          ))}
-        </span>
+
+      <div class="bp-player-row">
+        {/* Transport first. There was a plate here — the app's mark, turning
+            while the take played — and it read as a control sitting where a
+            control belongs without being one. The bar is chrome you operate,
+            not a picture of a record player. */}
+        <div class="bp-player-transport">
+          <button
+            type="button"
+            class="bp-player-skip"
+            onClick={() => seekBy(-SKIP_SECONDS)}
+            aria-label={`Back ${SKIP_SECONDS} seconds`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.9"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M11 5.5L4.5 12l6.5 6.5" />
+              <path d="M19.5 5.5L13 12l6.5 6.5" />
+            </svg>
+          </button>
+          {/* Its own class, sharing the take row's rules rather than its
+              NAME — `.bp-play-toggle` means "this take's play control", and a
+              route test rightly asserts a take with nothing playable renders
+              none. The shell's player is on every page, so borrowing the class
+              made that assertion unprovable. Same 44px box and 34px disc
+              either way: the two selectors sit on one rule in components.css,
+              so they cannot drift. */}
+          <button
+            type="button"
+            class="bp-player-play"
+            aria-pressed={playing}
+            aria-label={playing ? `Pause ${track?.title ?? ""}` : `Play ${track?.title ?? ""}`}
+            onClick={() => {
+              const audio = audioRef.current;
+              if (!audio) {
+                return;
+              }
+              if (audio.paused) {
+                void audio.play();
+              } else {
+                audio.pause();
+              }
+            }}
+          >
+            {playing ? (
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <rect x="7" y="5" width="3.6" height="14" rx="1.2" />
+                <rect x="13.4" y="5" width="3.6" height="14" rx="1.2" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M8 5.2v13.6L19 12z" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            class="bp-player-skip"
+            onClick={() => seekBy(SKIP_SECONDS)}
+            aria-label={`Forward ${SKIP_SECONDS} seconds`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.9"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M13 5.5L19.5 12 13 18.5" />
+              <path d="M4.5 5.5L11 12l-6.5 6.5" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="bp-player-meta">
+          <span class="bp-player-title">{track?.title ?? ""}</span>
+          <span class="bp-player-subtitle">{track?.subtitle ?? ""}</span>
+        </div>
+
+        {/* Only on a take that HAS more than one source. The list loads with
+            the track rather than on the press, so the control cannot vanish
+            under the finger that pressed it. */}
+        {track && sources !== null && sources.length > 1 && (
+          <div class="bp-player-switch">
+            <button
+              type="button"
+              class="bp-player-source-trigger"
+              aria-expanded={switcherOpen}
+              aria-haspopup="true"
+              onClick={() => setSwitcherOpen((open) => !open)}
+            >
+              <span class="bp-visually-hidden">Change source, currently</span>
+              {sourceName}
+              <svg
+                viewBox="0 0 24 24"
+                width="13"
+                height="13"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {switcherOpen && (
+              <div class="bp-player-sources" role="group" aria-label="Source">
+                {sources.map((source) => (
+                  // A plain `[data-audio-source]` control, exactly like the
+                  // stems drawer on a take's own page — so switching from here
+                  // runs the same `decidePlayerClickAction` path that
+                  // preserves the playhead, not a second implementation of it.
+                  <button
+                    key={source.assetId}
+                    type="button"
+                    class="bp-player-source"
+                    data-audio-source
+                    data-take-id={track.takeId}
+                    data-asset-id={source.assetId}
+                    data-title={track.title}
+                    data-subtitle={track.subtitle}
+                    data-source-label={source.kind === "stem" ? `Solo: ${source.label}` : "Master"}
+                    data-role="source-select"
+                    onClick={() => setSwitcherOpen(false)}
+                  >
+                    {source.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Put it away. The bar is permanent chrome that appears the moment
+            you press play and then never leaves — this stops playback and
+            clears the track, which is the honest meaning of "hide it": a bar
+            that hid itself while still playing would be a sound with no
+            visible control anywhere on the page. */}
+        <button
+          type="button"
+          class="bp-player-close"
+          aria-label="Stop and close the player"
+          onClick={() => {
+            const audio = audioRef.current;
+            if (audio) {
+              audio.pause();
+              audio.removeAttribute("src");
+              audio.load();
+            }
+            isPlaying.set(false);
+            currentTrack.set(null);
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
       </div>
-      {/* Native controls deliberately, not a custom seek bar: keyboard
-          operability, per-control labelling, and correct Range-seek
-          behavior all come from the platform for free — the exact
-          category of thing this project's past a11y/contrast defects
-          came from hand-rolling (see task-7-report.md). Always present in
-          the DOM (never conditionally rendered) for assistive tech, per
-          the brief — only the surrounding chrome's visibility toggles via
-          the `hidden` attribute above. */}
+
+      <div class="bp-player-scrub">
+        <span class="bp-player-time">{formatTime(position)}</span>
+        {/* The seek control is a REAL `<input type="range">`, sized over the
+            drawing and visually transparent. That is what keeps everything
+            the native `<audio controls>` used to give for free — keyboard
+            operability, arrow-key stepping, a labelled value a screen reader
+            can read — while letting us draw the waveform ourselves. The bars
+            behind it are `aria-hidden` decoration; the range is the control. */}
+        <span class="bp-player-track">
+          {bars.length > 0 ? (
+            <span class="bp-player-wave" aria-hidden="true">
+              {bars.map((value, i) => (
+                <span
+                  // Index is the identity: a fixed-length list of positions
+                  // along one timeline, not a list of things.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: bar N is bar N
+                  key={i}
+                  class={`bp-player-bar${i / bars.length <= progress ? " is-played" : ""}`}
+                  style={{ height: `${Math.max(8, value * 100)}%` }}
+                />
+              ))}
+            </span>
+          ) : (
+            // No peaks — the take just has no picture yet. Not an error and
+            // not an empty state: a plain rail, which is a truthful control.
+            <span class="bp-player-rail" aria-hidden="true">
+              <span class="bp-player-rail-fill" style={{ width: `${progress * 100}%` }} />
+            </span>
+          )}
+          <input
+            type="range"
+            class="bp-player-seek"
+            min={0}
+            max={duration || 0}
+            step={0.01}
+            value={position}
+            disabled={duration <= 0}
+            aria-label="Seek"
+            aria-valuetext={`${formatTime(position)} of ${formatTime(duration)}`}
+            onInput={(event) => {
+              const audio = audioRef.current;
+              const next = Number((event.currentTarget as HTMLInputElement).value);
+              if (audio && Number.isFinite(next)) {
+                audio.currentTime = next;
+                setPosition(next);
+              }
+            }}
+          />
+        </span>
+        <span class="bp-player-time">{formatTime(duration)}</span>
+      </div>
+
+      {/* No `controls`: the chrome above is ours now. Always in the DOM
+          (never conditionally rendered) so the element's own playback state
+          survives every track change — only the bar's visibility toggles. */}
       {/* biome-ignore lint/a11y/useMediaCaption: a captions track has no meaningful content for a band's own instrumental/vocal recordings — there's no dialogue to transcribe */}
-      <audio ref={audioRef} controls preload="none" class="bp-player-audio" />
+      <audio ref={audioRef} preload="none" class="bp-player-audio" />
     </div>
   );
 }

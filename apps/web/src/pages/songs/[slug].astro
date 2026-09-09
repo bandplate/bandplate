@@ -127,6 +127,17 @@ const chart = buildSongChart(song.chordProgression, song.lyrics);
           </>
         )}
 
+        {/* Nothing written down yet. Past `lg` the chart is a whole column, so
+            rendering nothing left a screen-high hole beside the takes and made
+            the page look broken rather than empty. Say what is missing. */}
+        {chart.kind === "raw" && !chart.chordText && !chart.lyricsText && (
+          <section>
+            <h2 class="bp-section-title">Chords &amp; lyrics</h2>
+            <div class="bp-empty-state">
+              <p>Nobody's written these down yet.</p>
+            </div>
+          </section>
+        )}
       </div>
 
       <div class="bp-song-detail-aside">

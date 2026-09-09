@@ -120,6 +120,65 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
     });
   });
 
+  // `GET /takes/:id/sources` — what this take can be heard as: its master,
+  // and one entry per stem it has.
+  //
+  // The player's source switch needs this wherever you are, and a take ROW
+  // (home, /takes, a song page) knows only the master — only the take's own
+  // page renders the stems. Fetched when the switch is opened rather than
+  // rendered into every row on every page: a row that is never played never
+  // pays for it, and the list is at most a dozen entries on a take that is
+  // already in the database.
+  router.get("/takes/:id/sources", requireScopes("takes:read"), async (c) => {
+    const id = c.req.param("id");
+    if (!id) {
+      return errorResponse(c, 400, "invalid_request", "Missing id parameter.");
+    }
+
+    const take = await takesRepo.getById(deps.db, id);
+    if (!take) {
+      return errorResponse(c, 404, "not_found", "Take not found.");
+    }
+
+    const assets = await assetsRepo.listByTake(deps.db, id);
+    const playable = assets.filter(
+      (a) => a.status === "ready" && (a.kind === "master" || a.kind === "stem"),
+    );
+
+    // One entry per SOURCE, not per file. A take can carry the same source at
+    // two tiers (a lossy master and a lossless one), and the switch is about
+    // what you are hearing, not which encoding — so the lossy row wins, since
+    // that is what `/audio` streams.
+    const bySource = new Map<string, (typeof playable)[number]>();
+    for (const asset of playable) {
+      const key = asset.kind === "stem" ? `stem:${asset.instrumentId}` : "master";
+      const existing = bySource.get(key);
+      if (!existing || (existing.tier === "lossless" && asset.tier === "lossy")) {
+        bySource.set(key, asset);
+      }
+    }
+
+    const instruments = await instrumentsRepo.list(deps.db, { includeArchived: true });
+    const byId = new Map(instruments.map((i) => [i.id, i]));
+
+    const sources = [...bySource.values()]
+      .map((asset) => {
+        const instrument = asset.instrumentId ? byId.get(asset.instrumentId) : undefined;
+        return {
+          assetId: asset.id,
+          kind: asset.kind,
+          // "Master" is the label the player already announces for a take's
+          // main mix — see `PlayerTrack.sourceLabel`.
+          label: instrument?.label ?? "Master",
+          icon: instrument?.icon ?? null,
+          sortOrder: instrument?.sortOrder ?? -1,
+        };
+      })
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    return c.json({ sources });
+  });
+
   // `GET /assets/:id/peaks` — the waveform for an audio asset, where `:id` is
   // the AUDIO asset, not the peaks row.
   //

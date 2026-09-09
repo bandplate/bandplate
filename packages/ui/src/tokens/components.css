@@ -1107,11 +1107,12 @@ a.bp-btn {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--bp-color-accent-gold),
-    color-mix(in srgb, var(--bp-color-accent-gold) 15%, transparent)
-  );
+  /* Flat, not a gradient. A line that fades out across the window reads as a
+     progress bar stuck at about a third — which is exactly what sits two
+     rows below it now that the player draws its own scrub. The line says
+     "there is audio"; it should not also look like it is measuring
+     something. */
+  background: var(--bp-color-accent-gold);
 }
 
 /* One orchestrated load per page, then stillness: list rows rise 8px and fade
@@ -1227,20 +1228,41 @@ a.bp-btn {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.375rem;
+  gap: 0.625rem;
   padding: 0.75rem 1.25rem;
   background: var(--bp-color-surface);
   border-top: 1px solid var(--bp-color-border);
+}
+
+/* A phone has room for the plate, the name, the source and one big play
+   button — not for a skip pair as well. Ten seconds back is a desktop
+   convenience; on a phone the waveform is the way you get there. */
+@media (max-width: 639px) {
+  .bp-player-skip {
+    display: none;
+  }
+
+  .bp-player-source-trigger {
+    max-width: 8rem;
+    overflow: hidden;
+  }
 }
 
 .bp-player[hidden] {
   display: none;
 }
 
+.bp-player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
 .bp-player-meta {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex-grow: 1;
 }
 
 .bp-player-title {
@@ -1261,23 +1283,251 @@ a.bp-btn {
   text-overflow: ellipsis;
 }
 
-/* Inline meta separator — a drawn 1px rule, never a middot. See
-   docs/design-foundation.md "Meta lines": a glyph inherits the face's own
-   metrics and colour, a rule holds its height and takes the theme's border
-   token. 60% of the subtitle's cap-height, centred on the text baseline. */
-.bp-player-sep {
-  display: inline-block;
-  width: 1px;
-  height: 0.66em;
-  vertical-align: -0.06em;
-  margin: 0 0.6em;
-  background: var(--bp-color-muted);
-  opacity: 0.55;
+/* The source switch — what am I hearing, and a way to change it from
+   wherever you are. Its list is the same `[data-audio-source]` control the
+   take page's stems drawer uses, so switching here runs the one decision
+   function that preserves the playhead. */
+.bp-player-switch {
+  position: relative;
+  flex: none;
 }
 
-.bp-player-audio {
+.bp-player-source-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 36px;
+  padding: 0.375rem 0.8125rem;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-ui, 0.9375rem);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bp-player-source-trigger:hover {
+  background: var(--bp-fill-raised);
+}
+
+.bp-player-sources {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.625rem);
+  z-index: 1;
+  min-width: 11rem;
+  padding: 0.375rem;
+  border: 1px solid var(--bp-color-border);
+  border-radius: 0.625rem;
+  background: var(--bp-color-surface);
+  box-shadow: 0 -10px 34px rgb(0 0 0 / 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.bp-player-source {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.875rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-ui, 0.9375rem);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bp-player-source:hover {
+  background: var(--bp-fill-subtle);
+}
+
+/* `syncButtons` marks the selected source — the same class every other
+   `[data-audio-source]` control gets. */
+.bp-player-source.is-active {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 16%, transparent);
+}
+
+.bp-player-sources-empty {
+  padding: 0.625rem 0.875rem;
+  font-size: var(--text-note, 0.8125rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-player-transport {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+}
+
+/* Put the player away. Quiet, and last in the row — it stops playback, which
+   is not something to press by accident while reaching for the transport. */
+.bp-player-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bp-color-muted);
+  cursor: pointer;
+}
+
+.bp-player-close:hover {
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+}
+
+/* Back 10 and forward 10, not previous/next: there is no queue in this app.
+   You are listening to one take, and the move you actually make is "play
+   that bit again". */
+.bp-player-skip {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bp-color-fg);
+  cursor: pointer;
+}
+
+.bp-player-skip:hover {
+  background: var(--bp-fill-subtle);
+}
+
+.bp-player-scrub {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bp-player-time {
+  flex: none;
+  font-size: 0.75rem;
+  color: var(--bp-color-muted);
+  /* Equal-width digits, so a value that ticks does not shove the waveform
+     left and right. Chivo's own figures — never mono; see the type rule. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* The drawing and the control are two elements stacked: the bars (or the
+   rail) are `aria-hidden` decoration, and a real `<input type="range">` lies
+   over them, transparent. That is what keeps keyboard operability,
+   arrow-key stepping and a labelled value — everything the native
+   `<audio controls>` gave for free — while letting us draw our own picture.
+   Hand-rolling the interaction instead is the exact category of thing this
+   project's past a11y defects came from. */
+.bp-player-track {
+  position: relative;
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 34px;
+}
+
+.bp-player-wave {
+  display: flex;
+  align-items: center;
+  gap: 1px;
   width: 100%;
-  height: 2.25rem;
+  height: 32px;
+}
+
+.bp-player-bar {
+  flex: 1 1 0;
+  min-width: 1px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--bp-color-fg) 22%, transparent);
+}
+
+.bp-player-bar.is-played {
+  background: var(--bp-color-accent-gold);
+}
+
+.bp-player-rail {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bp-color-fg) 14%, transparent);
+}
+
+.bp-player-rail-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--bp-color-accent-gold);
+}
+
+.bp-player-seek {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bp-player-seek::-webkit-slider-runnable-track,
+.bp-player-seek::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+/* The thumb is invisible because the colour boundary in the drawing behind
+   already IS the position — two markers for one fact. It keeps its full size
+   so the drag target is a real one. */
+.bp-player-seek::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 34px;
+  background: transparent;
+  border: none;
+}
+
+.bp-player-seek::-moz-range-thumb {
+  width: 18px;
+  height: 34px;
+  background: transparent;
+  border: none;
+}
+
+.bp-player-seek:disabled {
+  cursor: default;
+}
+
+/* An invisible thumb cannot show focus, so the whole track does. */
+.bp-player-track:has(.bp-player-seek:focus-visible) {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* Ours now, not the UA's — the bar draws its own transport, waveform and
+   timecode above. Kept in the DOM at zero size rather than removed: the
+   element IS the playback state, and it must survive every track change. */
+.bp-player-audio {
+  display: none;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1291,7 +1541,13 @@ a.bp-btn {
    more presence than an unplayable one.
    The 44px touch target is the BOX; the visible plate is 34px, so a row of
    these does not look like a row of buttons. */
-.bp-play-toggle {
+/* `.bp-player-play` is the persistent player's own control. It shares every
+   rule here rather than the class NAME, so the two are always the same size
+   while "this take has a play control" stays a thing a route test can assert.
+   It was a 48px circle of its own, which made one action look like two
+   different controls on a single screen. */
+.bp-play-toggle,
+.bp-player-play {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1313,11 +1569,13 @@ a.bp-btn {
    invisible triangle inside an empty ring. The disc is drawn by `::before` so
    it can be smaller than the 44px touch target; `--bp-play-disc` is the only
    thing the large variant has to change. */
-.bp-play-toggle {
+.bp-play-toggle,
+.bp-player-play {
   position: relative;
 }
 
-.bp-play-toggle::before {
+.bp-play-toggle::before,
+.bp-player-play::before {
   content: "";
   position: absolute;
   width: var(--bp-play-disc, 34px);
@@ -1326,7 +1584,8 @@ a.bp-btn {
   background: var(--bp-color-accent);
 }
 
-.bp-play-toggle svg {
+.bp-play-toggle svg,
+.bp-player-play svg {
   position: relative;
 }
 

@@ -32,3 +32,22 @@ export const isPlaying = atom<boolean>(false);
 export function audioUrl(assetId: string): string {
   return `/api/assets/${assetId}/audio`;
 }
+
+/** The waveform describing ONE source — keyed by the audio asset, not by the peaks row, so a caller needs nothing it does not already hold. 404s until something computes peaks; see `peaksStorageKey`. */
+export function peaksUrl(assetId: string): string {
+  return `/api/assets/${assetId}/peaks`;
+}
+
+/** What a take can be heard as. Fetched when the player's source switch is opened, not rendered into every row — see the route's comment. */
+export function sourcesUrl(takeId: string): string {
+  return `/api/takes/${takeId}/sources`;
+}
+
+export interface PlayerSource {
+  assetId: string;
+  kind: "master" | "stem";
+  /** "Master", or the instrument's label. */
+  label: string;
+  /** An `INSTRUMENT_GLYPHS` key, or null for the master. */
+  icon: string | null;
+}

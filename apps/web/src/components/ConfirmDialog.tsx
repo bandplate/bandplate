@@ -32,9 +32,28 @@ export default function ConfirmDialog() {
       if (!target) {
         return;
       }
+      // Capture phase, and stop the event dead. `<ClientRouter />` has its own
+      // document-level click listener for links, registered when the layout
+      // script runs — before this island hydrates — so in the bubble phase it
+      // gets there first and navigates to the confirm PAGE before
+      // `preventDefault()` here has run. That is why these confirms silently
+      // stopped being modals the moment admin moved from its own layout (no
+      // ClientRouter) into `AppLayout` (which has one).
       event.preventDefault();
+      event.stopPropagation();
       setError(null);
       setPending(false);
+      // Close whatever modal the trigger lives in first — a record sheet, say.
+      // `showModal()` on this dialog while another one is open leaves it in
+      // the inert subtree behind that one: the click was intercepted, nothing
+      // appeared, and the only visible outcome was that the destructive
+      // action seemed to do nothing. Confirming is also the end of whatever
+      // that sheet was for, so closing it is right rather than merely
+      // expedient.
+      const owner = target.closest("dialog");
+      if (owner instanceof HTMLDialogElement && owner.open) {
+        owner.close();
+      }
       const action =
         target.dataset.confirmAction ??
         (target instanceof HTMLAnchorElement ? target.href : undefined);
@@ -48,8 +67,8 @@ export default function ConfirmDialog() {
         cta: target.dataset.confirmCta ?? "Confirm",
       });
     }
-    document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
   }, []);
 
   useEffect(() => {

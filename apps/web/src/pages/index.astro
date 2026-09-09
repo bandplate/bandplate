@@ -42,6 +42,16 @@ const { pinned, recentEvents } = await getHomeData(appDeps.db, principal.memberI
 // last on. The rest follow in the rail beneath it.
 const [hero, ...rail] = pinned;
 
+// The hero's link is now an overlay with no text inside it, so it has to name
+// itself. Built from the same parts the visible heading and meta line show.
+const heroAccessibleName = hero
+  ? hero.kind === "take"
+    ? `${hero.song?.title ?? "Untitled take"} — take`
+    : hero.kind === "song"
+      ? `${hero.song.title} — song`
+      : `${formatShortDate(hero.event.heldAt)} — ${pinnedKindWord(hero)}`
+  : "";
+
 /** What the hero says under its title: the event it came from, then the date,
  *  on separate lines. No running time — this is an invitation back to a take,
  *  not a spec sheet. */
@@ -68,27 +78,36 @@ function heroLines(item: typeof hero): string[] {
 <AppLayout title="Home" principal={principal} current="home">
   <div class="bp-home">
     <section class="bp-home-pinned">
+      {/* The page's h1. The shelf had no name at all — the hero title named
+          the ONE thing on it, which left the rail beside it looking like
+          loose stock rather than the rest of a list. "Favorites" is the word
+          the star means everywhere else in the app. */}
+      <h1 class="bp-section-title">Favorites</h1>
       {
         hero ? (
           <>
             {/* One link, not two. The plate and the title point at the same
                 thing, so they hover, focus and click together — the plate was
                 lifting on its own while the words beside it sat inert. The
-                heading stays an `<h1>` inside it so the page still has one. */}
-            <a
-              class="bp-pinned-hero"
-              href={hero.kind === "take" ? `/takes/${hero.id}` : hero.kind === "song" ? `/songs/${hero.song.slug}` : `/events/${hero.id}`}
-            >
+                link is an overlay rather than the wrapper, so the plate's play
+                button can sit above it instead of inside it (see
+                `PinnedPlate.astro`). */}
+            <div class="bp-pinned-hero">
+              <a
+                class="bp-plate-hit"
+                aria-label={heroAccessibleName}
+                href={hero.kind === "take" ? `/takes/${hero.id}` : hero.kind === "song" ? `/songs/${hero.song.slug}` : `/events/${hero.id}`}
+              />
               <PinnedPlate item={hero} size="hero" interactive={false} />
               <div class="bp-pinned-hero-text">
                 <p class="bp-eyebrow bp-pinned-hero-eyebrow bp-m0">Back to</p>
-                <h1 class="bp-pinned-hero-title bp-m0">
+                <h2 class="bp-pinned-hero-title bp-m0">
                   {hero.kind === "take"
                     ? (hero.song?.title ?? "Untitled take")
                     : hero.kind === "song"
                       ? hero.song.title
                       : formatShortDate(hero.event.heldAt)}
-                </h1>
+                </h2>
                 {/* The kind leads the meta line, exactly as it does on the
                     rail plates below — the hero was the one pinned thing on the
                     page that never said whether it was a song, a take or an
@@ -106,12 +125,17 @@ function heroLines(item: typeof hero): string[] {
                   </span>
                 </p>
               </div>
-            </a>
+            </div>
             {rail.length > 0 && (
-              <div class="bp-pinned-rail">
-                {rail.map((item) => (
-                  <PinnedPlate item={item} size="rail" />
-                ))}
+              /* The wrapper exists only to hang the scroll fades on — the rail
+                 itself is the scroll container, and a pseudo-element on it
+                 would scroll away with the content. */
+              <div class="bp-pinned-rail-wrap">
+                <div class="bp-pinned-rail">
+                  {rail.map((item) => (
+                    <PinnedPlate item={item} size="rail" />
+                  ))}
+                </div>
               </div>
             )}
           </>

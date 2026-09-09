@@ -4929,11 +4929,30 @@ html:has(dialog.bp-filter-sheet[open]) body {
    real grooves do not scale with the record, and a 92px plate with 2px
    grooves reads as a target, not a disc. */
 .bp-plate {
+  position: relative;
   display: inline-flex;
   flex-direction: column;
   flex: none;
   text-decoration: none;
   color: inherit;
+}
+
+/* The plate's link, as a LAYER rather than as the wrapper.
+   The plate used to be one big `<a>`, which forced the play badge inside it to
+   be decoration: a `<button>` cannot live inside an anchor, so the badge could
+   only ever navigate. Playing straight from the shelf is what the shelf is
+   for, so the anchor became this overlay and the badge became a real control
+   sitting above it. Everything under it — label, spindle, caption — is inert
+   text, so covering it costs nothing. */
+.bp-plate-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 0.75rem;
+}
+
+.bp-pinned-hero > .bp-plate-hit {
+  border-radius: 1rem;
 }
 
 .bp-plate-disc {
@@ -5004,22 +5023,34 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 /* The play affordance rides the plate's edge rather than sitting in the
    middle of the label, where it would cover the name the plate exists to
-   show. It is not a button — the whole plate is the link, and playing
-   starts on the take's own page. */
+   show. It IS a button — it starts playback where it stands, which is the
+   difference between a shelf and an index. `z-index` puts it above
+   `.bp-plate-hit`, so the plate navigates and this one control does not. */
 .bp-plate-play {
   position: absolute;
   right: 2%;
   bottom: 6%;
+  z-index: 2;
   display: grid;
   place-items: center;
   width: calc(var(--bp-plate-size) * 0.28);
   height: calc(var(--bp-plate-size) * 0.28);
   min-width: 22px;
   min-height: 22px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
   background: var(--bp-color-accent);
   color: var(--bp-color-on-accent);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+  cursor: pointer;
+}
+
+/* `.bp-play-toggle`'s own sizing rules assume a row control; the plate sets
+   its own geometry from `--bp-plate-size` and must win. */
+.bp-plate .bp-plate-play {
+  width: calc(var(--bp-plate-size) * 0.28);
+  height: calc(var(--bp-plate-size) * 0.28);
 }
 
 .bp-plate--hero {
@@ -5065,33 +5096,33 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 .bp-plate:hover .bp-plate-disc,
-.bp-plate:focus-visible .bp-plate-disc {
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
   transform: translateY(-3px);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent), 0 12px 26px
     rgb(0 0 0 / 0.5);
 }
 
 .bp-plate:hover .bp-plate-label,
-.bp-plate:focus-visible .bp-plate-label {
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-label {
   filter: brightness(1.08);
 }
 
 /* The caption follows the plate rather than staying muted, so the whole cell
    reads as one hovered thing instead of a disc that moved on its own. */
 .bp-plate:hover .bp-plate-caption,
-.bp-plate:focus-visible .bp-plate-caption,
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-caption,
 .bp-plate:hover .bp-plate-caption .bp-kind,
-.bp-plate:focus-visible .bp-plate-caption .bp-kind {
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-caption .bp-kind {
   /* `.bp-kind` sets its own muted colour, so it does not inherit the
      caption's — the word TAKE stayed dim while the date beside it lit up. */
   color: var(--bp-color-fg);
 }
 
-.bp-plate:focus-visible {
+.bp-plate:has(> .bp-plate-hit:focus-visible) {
   outline: none;
 }
 
-.bp-plate:focus-visible .bp-plate-disc {
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
   outline: 2px solid var(--bp-color-accent);
   outline-offset: 3px;
 }
@@ -5102,7 +5133,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 
   .bp-plate:hover .bp-plate-disc,
-  .bp-plate:focus-visible .bp-plate-disc {
+  .bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
     transform: none;
   }
 }
@@ -5123,14 +5154,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 .bp-pinned-hero:hover .bp-plate-disc,
-.bp-pinned-hero:focus-visible .bp-plate-disc {
+.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
   transform: translateY(-3px);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent), 0 12px 26px
     rgb(0 0 0 / 0.5);
 }
 
 .bp-pinned-hero:hover .bp-plate-label,
-.bp-pinned-hero:focus-visible .bp-plate-label {
+.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-label {
   filter: brightness(1.08);
 }
 
@@ -5139,24 +5170,24 @@ html:has(dialog.bp-filter-sheet[open]) body {
    double rule the width of the title, which is a different gesture from the one
    every other plate makes. */
 .bp-pinned-hero:hover .bp-pinned-hero-meta,
-.bp-pinned-hero:focus-visible .bp-pinned-hero-meta,
+.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-pinned-hero-meta,
 .bp-pinned-hero:hover .bp-pinned-hero-meta .bp-kind,
-.bp-pinned-hero:focus-visible .bp-pinned-hero-meta .bp-kind {
+.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-pinned-hero-meta .bp-kind {
   color: var(--bp-color-fg);
 }
 
-.bp-pinned-hero:focus-visible {
+.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) {
   outline: none;
 }
 
-.bp-pinned-hero:focus-visible .bp-plate-disc {
+.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
   outline: 2px solid var(--bp-color-accent);
   outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .bp-pinned-hero:hover .bp-plate-disc,
-  .bp-pinned-hero:focus-visible .bp-plate-disc {
+  .bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
     transform: none;
   }
 }
@@ -5203,6 +5234,92 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 .bp-pinned-rail::-webkit-scrollbar {
   display: none;
+}
+
+/* A rail that scrolls says so.
+   The scrollbar is hidden (a permanent grey bar under a row of records is
+   noise), which left a plate cut off at the viewport edge looking like a
+   layout bug rather than like more shelf. This fades the last plate into the
+   page ground at both ends, and — because `animation-timeline: scroll()`
+   drives the two ends independently — the leading fade only appears once
+   there is something scrolled past, and the trailing one disappears at the
+   end. Nothing is hidden: the fade sits over the plates' outer edge, never
+   over a caption.
+
+   `pointer-events: none` is not optional: this sits on top of the plates,
+   and without it the last plate in view would stop being clickable. */
+.bp-pinned-rail-wrap {
+  position: relative;
+}
+
+.bp-pinned-rail-wrap::before,
+.bp-pinned-rail-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2.5rem;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.bp-pinned-rail-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bp-color-bg), transparent);
+  opacity: 0;
+  animation: bp-fade-in-start linear both;
+  animation-timeline: scroll(nearest inline);
+  animation-range: 0 2.5rem;
+}
+
+.bp-pinned-rail-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bp-color-bg), transparent);
+  animation: bp-fade-out-end linear both;
+  animation-timeline: scroll(nearest inline);
+  animation-range: calc(100% - 2.5rem) 100%;
+}
+
+@keyframes bp-fade-in-start {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bp-fade-out-end {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Without scroll-driven animations (Safari today) the fades are static: the
+   trailing one always shows, which is right far more often than not on a
+   shelf, and the leading one stays off rather than covering the first plate
+   of a rail that has not been scrolled. */
+@supports not (animation-timeline: scroll()) {
+  .bp-pinned-rail-wrap::before {
+    display: none;
+  }
+
+  .bp-pinned-rail-wrap::after {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Past `lg` the rail wraps instead of scrolling, so there is no edge to
+   suggest and a gradient over wrapped rows would be a smudge. */
+@media (min-width: 64rem) {
+  .bp-pinned-rail-wrap::before,
+  .bp-pinned-rail-wrap::after {
+    display: none;
+  }
 }
 
 .bp-pinned-rail > * {
@@ -6073,5 +6190,98 @@ html:has(dialog.bp-filter-sheet[open]) body {
   .bp-filter-sheet-foot {
     padding-inline: 0;
     background: transparent;
+  }
+}
+
+/* --- the take-list fold ----------------------------------------------- */
+
+/* A song's takes are near-identical rows, and a song with a dozen of them
+   buried the chart the page exists to show. Three stand above the fold; the
+   rest live in a `<details>` so the whole thing still works with JS off.
+   The control is the `<summary>`, styled as a row of its own rather than as a
+   button — it belongs to the list, not beside it. */
+.bp-take-fold {
+  position: relative;
+}
+
+.bp-take-fold-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.8125rem 0;
+  font-size: var(--text-note, 0.71875rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+  cursor: pointer;
+  list-style: none;
+  transition: color 0.15s ease;
+}
+
+/* Safari draws its own disclosure triangle through `list-style: none`. */
+.bp-take-fold-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.bp-take-fold-toggle:hover,
+.bp-take-fold-toggle:focus-visible {
+  color: var(--bp-color-fg);
+}
+
+.bp-take-fold-toggle:focus-visible {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: -2px;
+  border-radius: 0.375rem;
+}
+
+/* The chevron. Rotates when the fold opens, so the control says which way it
+   goes without the words having to. */
+.bp-take-fold-toggle::after {
+  content: "";
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+.bp-take-fold[open] .bp-take-fold-toggle::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+/* One label at a time — the same element carries both words so the control
+   never changes width as it toggles. */
+.bp-take-fold-close,
+.bp-take-fold[open] .bp-take-fold-open {
+  display: none;
+}
+
+.bp-take-fold[open] .bp-take-fold-close {
+  display: inline;
+}
+
+/* The shadow that says the list continues.
+   Sits ABOVE the control, fading the last visible row into the page ground —
+   the same gesture the pinned rail uses at its scrolling edge. Only while
+   closed: once the rest is on screen there is nothing left to suggest.
+   `pointer-events: none` so it never eats a click meant for the row under it. */
+.bp-take-fold:not([open])::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 3.25rem;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--bp-color-bg), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-take-fold-toggle,
+  .bp-take-fold-toggle::after {
+    transition: none;
   }
 }

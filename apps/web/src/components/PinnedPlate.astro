@@ -18,18 +18,16 @@ export interface Props {
   /** `hero` is the page's lead plate; `rail` is one of the small ones under it. */
   size: "hero" | "rail";
   /**
-   * Whether the plate is its own link. `false` for the hero, where the plate
-   * and the title beside it point at the same thing and must hover, focus and
-   * click as ONE target — two adjacent links to the same place is two tab
-   * stops, two hover states and a nested-anchor problem the moment the wrapper
-   * becomes the link. The wrapper takes the href instead and this renders as a
-   * plain element.
+   * Whether the plate carries its own link. `false` for the hero, where the
+   * plate and the title beside it point at the same thing and must hover,
+   * focus and click as ONE target — two adjacent links to the same place is
+   * two tab stops and two hover states. The hero's own wrapper carries the
+   * link instead, and this renders only the disc.
    */
   interactive?: boolean;
 }
 
 const { item, size, interactive = true } = Astro.props;
-const Tag = interactive ? "a" : "span";
 
 const href =
   item.kind === "take"
@@ -71,23 +69,61 @@ const accessibleName =
 const labelTone = item.kind === "take" ? "take" : "container";
 // Only a take can be played, and only when it has a ready master.
 const playable = item.kind === "take" ? item.playableAssetId : undefined;
+const playTitle = item.kind === "take" ? (item.song?.title ?? "Untitled") : "";
+const playSubtitle = item.kind === "take" ? (item.take.label ?? detail) : "";
 ---
 
-<Tag
-  href={interactive ? href : undefined}
-  class={`bp-plate bp-plate--${size} bp-plate--${labelTone}`}
-  aria-label={interactive ? accessibleName : undefined}
->
-  <span class="bp-plate-disc" aria-hidden="true">
-    <span class="bp-plate-label">{label}</span>
-    <span class="bp-plate-spindle" />
+<div class={`bp-plate bp-plate--${size} bp-plate--${labelTone}`}>
+  {/* The link is an OVERLAY, not the wrapper.
+      A plate used to be one big `<a>`, which made the play badge inside it
+      decoration — clicking it could only ever navigate, because a `<button>`
+      cannot live inside an anchor. Playing from the shelf is the whole point
+      of the shelf, so the anchor moves to a layer of its own and the badge
+      becomes a real control on top of it. One link and one button, siblings,
+      no nesting. */}
+  {interactive && <a class="bp-plate-hit" href={href} aria-label={accessibleName} />}
+  <span class="bp-plate-disc" aria-hidden={playable ? undefined : "true"}>
+    <span class="bp-plate-label" aria-hidden="true">
+      {label}
+    </span>
+    <span class="bp-plate-spindle" aria-hidden="true" />
     {
       playable && (
-        <span class="bp-plate-play">
-          <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true">
+        /* Same `data-audio-source` contract `PlayToggleButton.astro` uses, so
+           the persistent player's one document-level click delegate picks this
+           up with no island of its own — see `Player.tsx`'s header. */
+        <button
+          type="button"
+          class="bp-plate-play bp-play-toggle"
+          data-audio-source
+          data-take-id={item.id}
+          data-asset-id={playable}
+          data-title={playTitle}
+          data-subtitle={playSubtitle}
+          data-source-label="Master"
+          data-role="toggle"
+          aria-pressed="false"
+          aria-label={`Play ${playTitle}`}
+        >
+          <svg
+            class="bp-play-icon-play"
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path d="M6 4.5v15l13-7.5-13-7.5z" fill="currentColor" />
           </svg>
-        </span>
+          <svg
+            class="bp-play-icon-pause"
+            width="11"
+            height="11"
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+          >
+            <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor" />
+          </svg>
+        </button>
       )
     }
   </span>
@@ -100,4 +136,4 @@ const playable = item.kind === "take" ? item.playableAssetId : undefined;
       </span>
     )
   }
-</Tag>
+</div>

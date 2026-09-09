@@ -95,6 +95,18 @@ if (!detail) {
 }
 
 const { song, songFavorited, aliases, instrumentNotes, takes } = detail;
+
+/**
+ * How many takes stand above the fold.
+ *
+ * Three, because a song's takes are near-identical rows — same title, same
+ * event, differing only by date and duration — and a run of them pushed the
+ * chords and lyrics, which is what the page is actually for, off the screen
+ * entirely on a phone. Three is enough to show the shape of the list and that
+ * the newest is on top.
+ */
+const TAKES_BEFORE_FOLD = 3;
+const foldedTakes = takes.slice(TAKES_BEFORE_FOLD);
 const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined].filter(
   Boolean,
 );
@@ -454,7 +466,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             </div>
           ) : (
             <div class="bp-take-list">
-              {takes.map((take) => (
+              {takes.slice(0, TAKES_BEFORE_FOLD).map((take) => (
                 <TakeRow
                   take={take}
                   instruments={take.instruments}
@@ -463,6 +475,33 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                   favorited={take.favorited}
                 />
               ))}
+              {foldedTakes.length > 0 && (
+                /* `<details>`, so the fold works with JS off — the whole song
+                   page does, and a take list that needed an island to be
+                   readable would be the first thing here that didn't.
+                   `name` is deliberately absent: this is not an accordion,
+                   nothing else closes when it opens. */
+                <details class="bp-take-fold">
+                  <summary class="bp-take-fold-toggle">
+                    <span class="bp-take-fold-open">
+                      Show {foldedTakes.length} more{" "}
+                      {foldedTakes.length === 1 ? "take" : "takes"}
+                    </span>
+                    <span class="bp-take-fold-close">Show fewer</span>
+                  </summary>
+                  <div class="bp-take-list">
+                    {foldedTakes.map((take) => (
+                      <TakeRow
+                        take={take}
+                        instruments={take.instruments}
+                        context={{ kind: "song", event: take.event }}
+                        playableAssetId={take.playableAssetId}
+                        favorited={take.favorited}
+                      />
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           )
         }

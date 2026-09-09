@@ -186,6 +186,7 @@ const [allSongs, allInstruments] = await Promise.all([
         boundaries to break at. */}
         {event.venue && <span class="bp-event-hero-venue">{event.venue}</span>}
       </div>
+      <div class="bp-title-row">
       <h1 class="bp-hero-date">
         {formatLongDate(event.heldAt)}
         <span class="bp-take-favorite-mark">
@@ -198,14 +199,13 @@ const [allSongs, allInstruments] = await Promise.all([
           />
         </span>
       </h1>
-      {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
-      {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
-
-      <p class="bp-hero-actions bp-m0">
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-event">
           Edit
         </button>
-      </p>
+      </div>
+      {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
+      {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
+
     </header>
 
 

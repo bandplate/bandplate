@@ -152,6 +152,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <div>
+      <div class="bp-title-row">
       <h1 class="bp-hero-title">
         {song.title}
         <span class="bp-take-favorite-mark">
@@ -164,6 +165,10 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           />
         </span>
       </h1>
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-song">
+          Edit
+        </button>
+      </div>
       {song.isStub && (
         <p class="bp-field-hint bp-m0">
           Added by the bridge from a take that named this title — nobody has confirmed the
@@ -176,13 +181,6 @@ function eventOptionLabel(event: eventsRepo.Event): string {
       are what a row of numbers actually needed. */}
       {metaParts.length > 0 && <p class="bp-song-hero-meta bp-m0">{metaParts.join(", ")}</p>}
 
-      {/* Beside the star, because that pairing already reads as "things you do
-          to this song" — rather than inventing a second cluster elsewhere. */}
-      <p class="bp-hero-actions bp-m0">
-        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-song">
-          Edit
-        </button>
-      </p>
     </div>
 
 

@@ -329,6 +329,10 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
       onDrop={onDrop}
     >
       <div class="bp-uploader-head">
+        {/* The heading is rendered HERE, not by the page, so it and the action
+            share one row and cannot drift apart. It is server-rendered like the
+            rest of the island, so it survives a failure to hydrate. */}
+        <h2 class="bp-strip-label">Files</h2>
         <button
           type="button"
           class="bp-btn bp-btn-secondary bp-btn-sm"

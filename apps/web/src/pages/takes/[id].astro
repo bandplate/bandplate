@@ -165,7 +165,7 @@ const justUnpublished = Astro.url.searchParams.get("unpublished") === "1";
 const publishBlocked = Astro.url.searchParams.get("nothing_to_play") === "1";
 
 // A take is a container: created empty, filled over as many visits as it
-// takes. So it sits outside the archive until someone says it is ready —
+// takes. So it stays out of sight until someone says it is ready —
 // see `setTakePublished` for why that is a press rather than a side effect
 // of the first file landing.
 const isDraft = take.state === "uploading" || take.state === "new";
@@ -216,21 +216,19 @@ function assetLabel(asset: assetsRepo.Asset): string {
   <div class="bp-take-detail">
     {justCreated && (
       <Banner kind="success">
-        Take added. Nobody sees it in the archive until there's something to play and you publish
-        it.
+        Take added. Nobody will find it until there's something to play and you publish it.
       </Banner>
     )}
     {justSaved && <Banner kind="success">Saved.</Banner>}
     {justFileDeleted && <Banner kind="success">File deleted.</Banner>}
     {publishedButEmpty && (
       <Banner kind="error" title="Nothing left to play">
-        This take is published but has no playable file. Add one, or take it back out of the
-        archive.
+        This take is published but has no playable file. Add one, or unpublish it.
       </Banner>
     )}
-    {justPublished && <Banner kind="success">Published. It's in the archive now.</Banner>}
+    {justPublished && <Banner kind="success">Published. The band can find it now.</Banner>}
     {justUnpublished && (
-      <Banner kind="success">Taken back out of the archive. Only people with the link see it.</Banner>
+      <Banner kind="success">Unpublished. Only someone with the link will find it.</Banner>
     )}
     {publishBlocked && (
       <Banner kind="error">
@@ -254,6 +252,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
           It still carries the view transition from the row that led here — and
           now the two match, since a take row's own link text is the song's
           title everywhere except a song page (which is already showing it). */}
+      <div class="bp-title-row">
       <h1 class="bp-hero-title bp-m0">
         <span transition:name={`take-${take.id}`}>{song ? song.title : "Take"}</span>
         <span class="bp-take-favorite-mark">
@@ -266,6 +265,10 @@ function assetLabel(asset: assetsRepo.Asset): string {
           />
         </span>
       </h1>
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-take">
+          Edit
+        </button>
+      </div>
 
       <p class="bp-take-detail-lede bp-m0">{heroLede}</p>
 
@@ -303,7 +306,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
               <span class="bp-eyebrow">Not published yet</span>
               <p class="bp-m0">
                 {readyToPublish
-                  ? "Nobody finds this take in the archive until you publish it."
+                  ? "Nobody will find this take until you publish it."
                   : "Put something on it that can be played, and you'll be able to publish it."}
               </p>
             </div>
@@ -370,11 +373,6 @@ function assetLabel(asset: assetsRepo.Asset): string {
         }
       </div>
 
-      <p class="bp-hero-actions bp-m0">
-        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-take">
-          Edit
-        </button>
-      </p>
     </div>
 
     <RecordSheet id="edit-take" eyebrow="Editing take" title={heroTitle} subtitle={heroSubtitle}>
@@ -442,18 +440,28 @@ function assetLabel(asset: assetsRepo.Asset): string {
             value={take.notes ?? ""}
             error={editErrorField === "notes" ? editError : undefined}
           />
-          {canDelete && !isDraft && (
-            <div class="bp-sheet-extras">
-              {/* Not automatic. Deleting the last playable asset does not
-                  silently unpublish — one member's delete should not change
-                  what everyone else sees without someone saying so. */}
-              <button type="submit" form="unpublish-take" class="bp-btn bp-btn-secondary bp-btn-sm">
-                Take it back out of the archive
-              </button>
-            </div>
-          )}
+          {/* ONE extras block, not two. `.bp-sheet-extras` draws its own top
+              rule, so a second one stacked below it drew a second rule with an
+              empty band between them. */}
           {canDelete && (
             <div class="bp-sheet-extras">
+              {/* "Unpublish", not "take it out of the archive" — since M8 the
+                  word `archive` means retiring a song or an event, and reusing
+                  it here read as archiving the take. This is the exact inverse
+                  of the draft strip's "Publish take", so it says so.
+
+                  Not automatic either: deleting the last playable file does not
+                  silently unpublish, because one member's delete should not
+                  change what everyone else sees. */}
+              {!isDraft && (
+                <button
+                  type="submit"
+                  form="unpublish-take"
+                  class="bp-btn bp-btn-secondary bp-btn-sm"
+                >
+                  Unpublish this take
+                </button>
+              )}
               <a
                 href={`/admin/takes/${take.id}/delete`}
                 class="bp-sheet-danger"
@@ -590,11 +598,10 @@ function assetLabel(asset: assetsRepo.Asset): string {
     }
 
       <section class="bp-take-strip">
-      <h2 class="bp-strip-label">Files</h2>
-
-      {/* Direction U2: the action sits beside the heading, and the whole strip
-          takes a drop while something is dragged over it. Mounted here rather
-          than in `AppLayout` because it serves exactly this page. */}
+      {/* Direction U2: the action sits beside the heading — which the island
+          renders itself, so the two share one row — and the whole strip takes a
+          drop while something is dragged over it. Mounted here rather than in
+          `AppLayout` because it serves exactly this page. */}
       <AssetUploader
         client:load
         takeId={take.id}

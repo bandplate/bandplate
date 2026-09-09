@@ -1,9 +1,12 @@
 ---
-// POST-only: take a published take back out of the archive, to `new`.
+// POST-only: unpublish a take, back to `new`.
+//
+// Deliberately NOT called "archiving": since M8 that word means retiring a
+// song or an event, and a take has no such state.
 //
 // Admin-only — under `/admin/`, so `guardAdminPath` enforces it. Publishing is
 // a member's call because they made the take; UN-publishing removes something
-// everyone can already see, which is the same kind of act as archiving.
+// everyone can already see, which is the same weight of act as archiving.
 //
 // Deliberately NOT automatic: deleting the last playable asset from a
 // published take does not silently unpublish it. One member's delete should

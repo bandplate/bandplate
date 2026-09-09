@@ -2089,9 +2089,24 @@ a.bp-btn {
   gap: 0.75rem;
 }
 
-.bp-title-row .bp-page-title {
+/* The heading takes the slack, whatever heading it is — `.bp-page-title` on a
+   list, `.bp-section-title` on a strip, `.bp-hero-title`/`.bp-hero-date` on a
+   detail page. Naming one of them was the bug: beside a section heading the
+   action sat hard against the word instead of at the end of the row. */
+.bp-title-row > :first-child {
   flex: 1;
   min-width: 0;
+  /* The ROW owns the vertical rhythm, not the heading. `.bp-section-title`
+     carries a 12px bottom margin (and outranks `.bp-m0`, which is declared
+     earlier), which inside a centred flex row pushed the heading 6px above the
+     button beside it — visibly off, and invisible in the markup. */
+  margin-block: 0;
+}
+
+/* …and the row gives that spacing back, only where a section heading used to
+   provide it. A page title carries none, so this must not apply to one. */
+.bp-title-row:has(> .bp-section-title) {
+  margin-bottom: 0.75rem;
 }
 
 /* Actions under a hero, on their own line rather than crowded into the title.
@@ -2154,9 +2169,21 @@ a.bp-btn {
   background: color-mix(in srgb, var(--bp-color-accent) 6%, transparent);
 }
 
+/* The Files heading and its action on one line — the same row shape
+   `.bp-title-row` gives every other heading with an action beside it. The
+   island renders BOTH so they cannot drift apart vertically; the Astro page
+   no longer prints its own heading. */
 .bp-uploader-head {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.bp-uploader-head .bp-strip-label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
 }
 
 .bp-uploader-drop {
@@ -2270,7 +2297,9 @@ a.bp-btn {
 }
 
 @media (scripting: none) {
-  .bp-uploader {
+  /* Only the CONTROL goes, not the panel: the Files heading lives in here now,
+     and a strip with no heading would be worse than an inert button. */
+  .bp-uploader-head .bp-btn {
     display: none;
   }
 

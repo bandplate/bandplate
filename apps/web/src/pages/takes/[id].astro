@@ -30,6 +30,7 @@ import type { assetsRepo } from "@bandplate/db";
 import { instrumentsRepo, songsRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import AssetUploader from "../../components/AssetUploader.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import InstrumentSet from "../../components/InstrumentSet.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
@@ -49,6 +50,7 @@ import {
 } from "../../server/format.js";
 import {
   type TakeField,
+  deleteAssetConsequence,
   deleteTakeConsequence,
   getTakeDetail,
   updateTake,
@@ -180,6 +182,18 @@ const [allSongs, allInstruments] = await Promise.all([
 ]);
 const takeInstrumentIds = new Set(instruments.map((i) => i.id));
 const deleteConsequence = deleteTakeConsequence(assets, take.totalVotes);
+const justFileDeleted = Astro.url.searchParams.get("file_deleted") === "1";
+// A published take with nothing playable left: deleting the last file does not
+// unpublish it (one member's delete must not change what everyone sees), so
+// the page says so and an admin decides.
+const publishedButEmpty = !isDraft && !readyToPublish;
+
+/** Whether removing this one would leave the take with nothing to play. */
+function isLastPlayableAsset(asset: assetsRepo.Asset): boolean {
+  return !assets.some(
+    (a) => a.id !== asset.id && (a.kind === "master" || a.kind === "stem") && a.status === "ready",
+  );
+}
 
 function assetLabel(asset: assetsRepo.Asset): string {
   if (asset.kind === "master") {
@@ -207,6 +221,13 @@ function assetLabel(asset: assetsRepo.Asset): string {
       </Banner>
     )}
     {justSaved && <Banner kind="success">Saved.</Banner>}
+    {justFileDeleted && <Banner kind="success">File deleted.</Banner>}
+    {publishedButEmpty && (
+      <Banner kind="error" title="Nothing left to play">
+        This take is published but has no playable file. Add one, or take it back out of the
+        archive.
+      </Banner>
+    )}
     {justPublished && <Banner kind="success">Published. It's in the archive now.</Banner>}
     {justUnpublished && (
       <Banner kind="success">Taken back out of the archive. Only people with the link see it.</Banner>
@@ -570,6 +591,21 @@ function assetLabel(asset: assetsRepo.Asset): string {
 
       <section class="bp-take-strip">
       <h2 class="bp-strip-label">Files</h2>
+
+      {/* Direction U2: the action sits beside the heading, and the whole strip
+          takes a drop while something is dragged over it. Mounted here rather
+          than in `AppLayout` because it serves exactly this page. */}
+      <AssetUploader
+        client:load
+        takeId={take.id}
+        takeHasMaster={masters.length > 0}
+        instruments={allInstruments.map((i) => ({ id: i.id, label: i.label }))}
+      />
+      <p class="bp-uploader-nojs bp-field-hint bp-m0">
+        Adding files needs JavaScript. Everything else on this page — editing the take, deleting a
+        file, publishing — works without it.
+      </p>
+
       {
         displayableAssets.length === 0 ? (
           <div class="bp-empty-state">
@@ -615,6 +651,30 @@ function assetLabel(asset: assetsRepo.Asset): string {
                     </a>
                   ) : (
                     <span class="bp-asset-row-download-empty" aria-hidden="true" />
+                  )}
+                  {/* A plain confirm page, not a JSON call — uploading is the
+                      one thing here that needs script, so destroying must not. */}
+                  {canDelete && (
+                    <a
+                      class="bp-asset-row-delete"
+                      href={`/admin/assets/${asset.id}/delete`}
+                      data-confirm
+                      data-confirm-title={`Delete the ${assetLabel(asset).toLowerCase()} from this take?`}
+                      data-confirm-body={deleteAssetConsequence(
+                        assetLabel(asset).toLowerCase(),
+                        asset,
+                        isLastPlayableAsset(asset),
+                      )}
+                      data-confirm-action={`/admin/assets/${asset.id}/delete`}
+                      data-confirm-cta="Delete file"
+                      aria-label={`Delete ${assetLabel(asset)}`}
+                    >
+                      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 7h16" />
+                        <path d="M9 7V4h6v3" />
+                        <path d="M6 7l1 13h10l1-13" />
+                      </svg>
+                    </a>
                   )}
                 </li>
               ))}

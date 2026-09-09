@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;family=Spline+Sans+Mono:wght@400&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; } a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:1000px; margin:0 0 30px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:34px; } .sect > .caps { display:block; margin-bottom:12px; }
+  .frames { display:flex; gap:56px; align-items:flex-start; }
+  .page { box-sizing:border-box; background:#150c07; border:1px solid #3a2413;
+          border-radius:5px; padding:22px 20px; width:660px; }
+  .phone { width:375px; padding:18px 16px; }
+
+  /* .bp-strip-label */
+  .strip { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:11px;
+           letter-spacing:.22em; text-transform:uppercase; color:#a9917a; margin:0 0 12px; }
+  .striprow { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .striprow .strip { margin:0; flex:1; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+         min-height:44px; padding:10px 20px; border-radius:999px; border:none;
+         font-family:inherit; font-size:15px; font-weight:600; box-sizing:border-box;
+         white-space:nowrap; }
+  .btn-primary { background:#f6aa1c; color:#150c07; }
+  .btn-secondary { background:rgba(242,232,216,.15); color:#f2e8d8; }
+  .btn-sm { min-height:44px; padding:6px 14px; font-size:14px; }
+
+  /* .bp-asset-row — the list a finished upload joins */
+  .rows { list-style:none; margin:0; padding:0; }
+  .row { display:flex; align-items:center; gap:12px; padding:12px 0;
+         border-bottom:1px solid #3a2413; }
+  .rlabel { font-size:15px; flex:1; min-width:0; }
+  .rmeta { display:flex; gap:0; font-size:12.5px; color:#a9917a;
+           font-family:"Spline Sans Mono",ui-monospace,monospace; }
+  .rmeta span { padding:0 8px; border-left:1px solid #3a2413; }
+  .rmeta span:first-child { border-left:none; padding-left:0; }
+  .ricon { width:18px; height:18px; color:#a9917a; flex:none; }
+
+  /* the queue — rows in flight */
+  .q { border-bottom:1px solid #3a2413; padding:12px 0; }
+  .qtop { display:flex; align-items:center; gap:12px; }
+  .qname { font-size:15px; flex:1; min-width:0; overflow:hidden;
+           text-overflow:ellipsis; white-space:nowrap; }
+  .qstate { font-size:12.5px; color:#a9917a; white-space:nowrap; }
+  .bar { height:4px; border-radius:999px; background:rgba(242,232,216,.12);
+         margin-top:10px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:#f6aa1c; border-radius:999px; }
+  .qctl { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+  .pill { display:inline-flex; align-items:center; min-height:36px; padding:6px 14px;
+          border-radius:999px; background:rgba(242,232,216,.12); color:#f2e8d8;
+          font-size:14px; box-sizing:border-box; }
+  .pill-on { background:#f6aa1c; color:#150c07; }
+  .sel { min-height:36px; padding:6px 12px; border-radius:6px; border:none;
+         background:rgba(242,232,216,.12); color:#f2e8d8; font-family:inherit;
+         font-size:14px; }
+  .err { color:#e8794f; font-size:13px; margin:8px 0 0; }
+  .ok { color:#f6aa1c; }
+
+  .drop { border:1px dashed #3a2413; border-radius:8px; padding:28px 20px;
+          text-align:center; color:#a9917a; font-size:14px; }
+  .drop-hot { border-color:#f6aa1c; background:rgba(246,170,28,.06); color:#f2e8d8; }
+  .empty { padding:40px 20px; text-align:center; color:#a9917a;
+           border:1px dashed #3a2413; border-radius:8px; font-size:14px; }
+  .note { font-size:12.5px; line-height:1.5; color:#a9917a; margin:12px 0 0; max-width:620px; }
+  .note strong { color:#f2e8d8; font-weight:600; }
+  .sheet { width:416px; box-sizing:border-box; background:#211408;
+           border:1px solid #3a2413; border-radius:5px; padding:20px 18px; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>U1 — Drop zone in the strip</h1>
+    <p>A dashed target at the top of Files. Dropped or chosen files queue directly beneath it and turn into rows of the same list as they land, so a file in flight already looks like the file it is about to be.</p>
+    <p class="trade"><strong>Costs:</strong> the box sits there for good, including on a take that is long finished — and a phone has no drag-and-drop, so it is a large button pretending to be something else.</p>
+  </div>
+  <div class="sect">
+    <span class="caps">Idle, on a take that already has files</span>
+    <div class="frames">
+      <div class="page">
+        <p class="strip">Files</p>
+        <div class="drop"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> &nbsp;Drop audio here, or <a href="#">choose files</a></div>
+        <ul class="rows" style="margin-top:14px;">
+          <li class="row">
+              <span class="rlabel">Master</span>
+              <span class="rmeta"><span>mp3</span><span>lossy</span><span>4.2 MB</span></span>
+              <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+            </li>
+            <li class="row">
+              <span class="rlabel">Bass</span>
+              <span class="rmeta"><span>flac</span><span>lossless</span><span>38.4 MB</span></span>
+              <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+            </li>
+        </ul>
+      </div>
+      <div>
+        <span class="caps" style="display:block;margin-bottom:12px;">Mid-flight</span>
+        <div class="page" style="width:520px;">
+          <p class="strip">Files</p>
+          <div class="drop drop-hot">Drop to add — 3 files</div>
+          <div style="margin-top:14px;">
+            <div class="q">
+              <div class="qtop"><span class="qname">roost-0827-bass.flac</span><span class="qstate">64%</span></div>
+              <div class="bar"><i style="width:64%"></i></div>
+              <div class="qctl"><span class="pill pill-on">Stem</span><select class="sel"><option>Bass</option></select><span class="qstate">38.4 MB · lossless</span></div>
+            </div>
+            <div class="q">
+              <div class="qtop"><span class="qname">roost-0827-mix.mp3</span><span class="qstate ok">Done</span></div>
+            </div>
+            <ul class="rows"><li class="row">
+              <span class="rlabel">Master</span>
+              <span class="rmeta"><span>mp3</span><span>lossy</span><span>4.2 MB</span></span>
+              <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+            </li>
+            <li class="row">
+              <span class="rlabel">Bass</span>
+              <span class="rmeta"><span>flac</span><span>lossless</span><span>38.4 MB</span></span>
+              <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+            </li></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">The queue and the finished list share one column and one row rhythm, so nothing jumps when a file finishes — the row it was <strong>becomes</strong> the row it is.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

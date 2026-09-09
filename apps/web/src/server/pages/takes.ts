@@ -376,3 +376,54 @@ export function deleteTakeConsequence(assets: assetsRepo.Asset[], totalVotes: nu
       : ` The ${totalVotes} ${totalVotes === 1 ? "vote" : "votes"} cast on it ${totalVotes === 1 ? "goes" : "go"} too.`;
   return `This can't be undone. ${files}${votes} The song and the event stay.`;
 }
+
+export type DeleteAssetResult =
+  | { kind: "ok"; asset: assetsRepo.Asset; takeId: string; leavesNothingPlayable: boolean }
+  | { kind: "not_found" };
+
+/**
+ * Delete one file off a take.
+ *
+ * Deliberately does NOT unpublish the take when it removes the last playable
+ * asset — it only reports that it did. One member's delete should not change
+ * what everyone else sees; the take page shows a warning instead, and an admin
+ * decides.
+ *
+ * DB first, bucket best-effort, like `deleteTake`.
+ */
+export async function deleteAsset(
+  db: Db,
+  storage: Storage,
+  assetId: string,
+): Promise<DeleteAssetResult> {
+  const asset = await assetsRepo.getById(db, assetId);
+  if (!asset) {
+    return { kind: "not_found" };
+  }
+  await assetsRepo.remove(db, assetId);
+
+  const remaining = await assetsRepo.listByTake(db, asset.takeId);
+  try {
+    await storage.delete([asset.storageKey]);
+  } catch (err) {
+    console.error("failed to delete storage object", asset.storageKey, err);
+  }
+  return {
+    kind: "ok",
+    asset,
+    takeId: asset.takeId,
+    leavesNothingPlayable: !canPublish(remaining),
+  };
+}
+
+/** What deleting one file costs — shared by the confirm dialog and its page. */
+export function deleteAssetConsequence(
+  label: string,
+  asset: assetsRepo.Asset,
+  isLastPlayable: boolean,
+): string {
+  const head = `This can't be undone. It removes the ${label} (${asset.format}, ${asset.tier}, ${formatBytes(asset.bytes)}) from storage.`;
+  return isLastPlayable
+    ? `${head} It is the only thing this take can be played from, so the take will have nothing to play.`
+    : `${head} The take keeps its other files.`;
+}

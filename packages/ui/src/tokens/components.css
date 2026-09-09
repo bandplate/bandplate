@@ -2132,6 +2132,153 @@ a.bp-btn {
   color: var(--bp-color-muted);
 }
 
+/* ---------------------------------------------------------------------- */
+/* The upload panel (M8, direction U2). An action beside the Files heading, */
+/* and a drop target that only exists while something is being dragged      */
+/* over it — a permanent dashed box would be furniture on every take that   */
+/* is already finished, and on a phone it would be a large button           */
+/* pretending to be something it cannot do.                                 */
+/* ---------------------------------------------------------------------- */
+.bp-uploader {
+  /* Its own stacking/positioning context so the drag highlight can outline
+     the whole strip without a wrapper element. */
+  position: relative;
+  border-radius: 0.5rem;
+}
+
+/* An OUTLINE, not a border: a border would move everything below it by 1px
+   the moment a drag started, which reads as the page flinching. */
+.bp-uploader--over {
+  outline: 1px dashed var(--bp-color-accent);
+  outline-offset: 0.5rem;
+  background: color-mix(in srgb, var(--bp-color-accent) 6%, transparent);
+}
+
+.bp-uploader-head {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bp-uploader-drop {
+  margin: 0.75rem 0 0;
+  text-align: center;
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-accent);
+}
+
+.bp-uploader-queue {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.bp-uploader-item {
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+.bp-uploader-item-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bp-uploader-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-ui, 0.9375rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-uploader-state {
+  flex: none;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bp-uploader-bar {
+  height: 4px;
+  margin-top: 0.625rem;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--bp-fill-subtle);
+  overflow: hidden;
+}
+
+.bp-uploader-bar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--bp-color-accent);
+  transition: width 120ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-uploader-bar i {
+    transition: none;
+  }
+}
+
+.bp-uploader-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.625rem;
+}
+
+.bp-uploader-select {
+  min-height: 36px;
+  width: auto;
+  flex: 0 1 12rem;
+}
+
+.bp-uploader-meta {
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The app's first JS-only capability, said out loud rather than left as a
+   button that does nothing. The island is server-rendered like every other,
+   so with scripting off its "Add files" button would paint and be inert —
+   hiding it and showing the notice is the honest swap. */
+/* The delete control on a file row — same 44px target and muted rest as the
+   download beside it, danger only on hover, because a row of red bins down the
+   file list reads as a warning about the files themselves. */
+.bp-asset-row-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--radius-pill, 999px);
+  color: var(--bp-color-muted);
+}
+
+.bp-asset-row-delete:hover {
+  color: var(--bp-color-danger);
+  background: var(--bp-fill-subtle);
+}
+
+.bp-uploader-nojs {
+  display: none;
+}
+
+@media (scripting: none) {
+  .bp-uploader {
+    display: none;
+  }
+
+  .bp-uploader-nojs {
+    display: block;
+  }
+}
+
 /* `--text-section` — see theme.css for why this is not Chivo 700 at 18px. */
 .bp-section-title {
   font-family: var(--bp-font-display);

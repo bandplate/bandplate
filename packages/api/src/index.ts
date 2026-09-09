@@ -13,6 +13,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerFavoriteRoutes } from "./routes/favorites.js";
 import { registerIngestRoutes } from "./routes/ingest/index.js";
 import { registerSetupRoutes } from "./routes/setup.js";
+import { registerTakeAssetRoutes } from "./routes/take-assets.js";
 import { registerVoteRoutes } from "./routes/votes.js";
 import type { AppEnv } from "./types.js";
 
@@ -122,6 +123,7 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
   registerVoteRoutes(router, { db: deps.db, clock: deps.clock });
   registerFavoriteRoutes(router, { db: deps.db, clock: deps.clock });
   registerIngestRoutes(router, { db: deps.db, clock: deps.clock, storage: deps.storage });
+  registerTakeAssetRoutes(router, { db: deps.db, clock: deps.clock, storage: deps.storage });
 
   // The structural backstop: fails app construction itself if any route on
   // the live Hono instance doesn't correspond to a GuardedRouter

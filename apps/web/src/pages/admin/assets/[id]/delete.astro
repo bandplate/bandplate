@@ -1,0 +1,67 @@
+---
+// Delete one file off a take. Admin-only by path — members upload, admins
+// destroy — and an ordinary confirm page rather than a JSON call, deliberately:
+// uploading is the app's one JS-only capability, so the half that DESTROYS
+// something must not also depend on script.
+import { assetsRepo, instrumentsRepo, takesRepo } from "@bandplate/db";
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { deleteAsset, deleteAssetConsequence } from "../../../../server/pages/takes.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/takes");
+}
+
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const result = await deleteAsset(appDeps.db, appDeps.storage, id);
+  if (isFetch) {
+    return new Response(result.kind === "ok" ? "ok" : "not found", {
+      status: result.kind === "ok" ? 200 : 404,
+    });
+  }
+  if (result.kind !== "ok") {
+    return new Response("File not found.", { status: 404 });
+  }
+  return Astro.redirect(`/takes/${result.takeId}?file_deleted=1`);
+}
+
+const asset = await assetsRepo.getById(appDeps.db, id);
+if (!asset) {
+  return new Response("File not found.", { status: 404 });
+}
+const siblings = await assetsRepo.listByTake(appDeps.db, asset.takeId);
+const instrument = asset.instrumentId
+  ? await instrumentsRepo.getById(appDeps.db, asset.instrumentId)
+  : undefined;
+const label = asset.kind === "master" ? "master" : (instrument?.label ?? "stem");
+// Would this leave the take with nothing to play? Asked of what WOULD remain.
+const remaining = siblings.filter((a) => a.id !== asset.id);
+const isLastPlayable = !remaining.some(
+  (a) => (a.kind === "master" || a.kind === "stem") && a.status === "ready",
+);
+const take = await takesRepo.getById(appDeps.db, asset.takeId);
+---
+
+<Layout title="Delete file">
+  <ConfirmActionPage
+    bannerTitle={`Delete the ${label} from this take?`}
+    cta="Delete file"
+    cancelHref={take ? `/takes/${take.id}` : "/takes"}
+  >
+    {deleteAssetConsequence(label, asset, isLastPlayable)}
+  </ConfirmActionPage>
+</Layout>

@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-21",
+      "name": "M8 — Upload panel"
+    },
+    {
       "id": "page-20",
       "name": "M8 — Manual content"
     },
@@ -82,6 +86,42 @@
     }
   ],
   "artboards": [
+    {
+      "file": "UploadDrop.dc.html",
+      "title": "U1 — Drop zone in the strip",
+      "page": "page-21",
+      "x": 0,
+      "y": 0,
+      "w": 1320,
+      "h": 1120
+    },
+    {
+      "file": "UploadHeading.dc.html",
+      "title": "U2 — Action in the heading",
+      "page": "page-21",
+      "x": 1400,
+      "y": 0,
+      "w": 1320,
+      "h": 1120
+    },
+    {
+      "file": "UploadSheet.dc.html",
+      "title": "U3 — An upload sheet",
+      "page": "page-21",
+      "x": 2800,
+      "y": 0,
+      "w": 1120,
+      "h": 1120
+    },
+    {
+      "file": "UploadStates.dc.html",
+      "title": "Shared — every state a file passes through",
+      "page": "page-21",
+      "x": 0,
+      "y": 1260,
+      "w": 1120,
+      "h": 1900
+    },
     {
       "file": "ManageLastRow.dc.html",
       "title": "A — The last row",
@@ -544,6 +584,14 @@
   ],
   "annotations": [
     {
+      "id": "upload-m8",
+      "page": "page-21",
+      "x": 0,
+      "y": -300,
+      "w": 1320,
+      "text": "The upload panel — settled on U2, with a drop target\n\nCHOSEN: U2 — \"Add files\" beside the Files heading, the same shape \"Add song\" and \"Add take\" already took. Smallest new surface, nothing to learn.\n\nU1's drop target was taken as well, but WITHOUT its permanent box: the strip shows a dashed outline only while something is being dragged over it, so a finished take carries no furniture. An outline rather than a border, so nothing below it moves by 1px the moment a drag starts. U3's sheet was declined — a modal that must stay open while a process runs is exactly what this app has otherwise avoided.\n\nThe states board shipped as drawn. Two things it got right and worth keeping: a second file defaults to STEM once a master exists (a second master could only collide), and a stem with no instrument chosen says \"Choose which instrument this is\" instead of sitting inert.\n\nThe duration measured here is the first thing that has ever written `takes.duration_ms` — verified against real MinIO: a 6.0 MB mp3 came back 376100."
+    },
+    {
       "id": "manage-m8",
       "page": "page-20",
       "x": 0,
@@ -650,6 +698,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-20"
+    "page": "page-21"
   }
 }

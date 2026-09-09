@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;family=Spline+Sans+Mono:wght@400&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; } a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:1000px; margin:0 0 30px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:34px; } .sect > .caps { display:block; margin-bottom:12px; }
+  .frames { display:flex; gap:56px; align-items:flex-start; }
+  .page { box-sizing:border-box; background:#150c07; border:1px solid #3a2413;
+          border-radius:5px; padding:22px 20px; width:660px; }
+  .phone { width:375px; padding:18px 16px; }
+
+  /* .bp-strip-label */
+  .strip { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:11px;
+           letter-spacing:.22em; text-transform:uppercase; color:#a9917a; margin:0 0 12px; }
+  .striprow { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .striprow .strip { margin:0; flex:1; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+         min-height:44px; padding:10px 20px; border-radius:999px; border:none;
+         font-family:inherit; font-size:15px; font-weight:600; box-sizing:border-box;
+         white-space:nowrap; }
+  .btn-primary { background:#f6aa1c; color:#150c07; }
+  .btn-secondary { background:rgba(242,232,216,.15); color:#f2e8d8; }
+  .btn-sm { min-height:44px; padding:6px 14px; font-size:14px; }
+
+  /* .bp-asset-row — the list a finished upload joins */
+  .rows { list-style:none; margin:0; padding:0; }
+  .row { display:flex; align-items:center; gap:12px; padding:12px 0;
+         border-bottom:1px solid #3a2413; }
+  .rlabel { font-size:15px; flex:1; min-width:0; }
+  .rmeta { display:flex; gap:0; font-size:12.5px; color:#a9917a;
+           font-family:"Spline Sans Mono",ui-monospace,monospace; }
+  .rmeta span { padding:0 8px; border-left:1px solid #3a2413; }
+  .rmeta span:first-child { border-left:none; padding-left:0; }
+  .ricon { width:18px; height:18px; color:#a9917a; flex:none; }
+
+  /* the queue — rows in flight */
+  .q { border-bottom:1px solid #3a2413; padding:12px 0; }
+  .qtop { display:flex; align-items:center; gap:12px; }
+  .qname { font-size:15px; flex:1; min-width:0; overflow:hidden;
+           text-overflow:ellipsis; white-space:nowrap; }
+  .qstate { font-size:12.5px; color:#a9917a; white-space:nowrap; }
+  .bar { height:4px; border-radius:999px; background:rgba(242,232,216,.12);
+         margin-top:10px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:#f6aa1c; border-radius:999px; }
+  .qctl { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+  .pill { display:inline-flex; align-items:center; min-height:36px; padding:6px 14px;
+          border-radius:999px; background:rgba(242,232,216,.12); color:#f2e8d8;
+          font-size:14px; box-sizing:border-box; }
+  .pill-on { background:#f6aa1c; color:#150c07; }
+  .sel { min-height:36px; padding:6px 12px; border-radius:6px; border:none;
+         background:rgba(242,232,216,.12); color:#f2e8d8; font-family:inherit;
+         font-size:14px; }
+  .err { color:#e8794f; font-size:13px; margin:8px 0 0; }
+  .ok { color:#f6aa1c; }
+
+  .drop { border:1px dashed #3a2413; border-radius:8px; padding:28px 20px;
+          text-align:center; color:#a9917a; font-size:14px; }
+  .drop-hot { border-color:#f6aa1c; background:rgba(246,170,28,.06); color:#f2e8d8; }
+  .empty { padding:40px 20px; text-align:center; color:#a9917a;
+           border:1px dashed #3a2413; border-radius:8px; font-size:14px; }
+  .note { font-size:12.5px; line-height:1.5; color:#a9917a; margin:12px 0 0; max-width:620px; }
+  .note strong { color:#f2e8d8; font-weight:600; }
+  .sheet { width:416px; box-sizing:border-box; background:#211408;
+           border:1px solid #3a2413; border-radius:5px; padding:20px 18px; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>Every state a file passes through</h1>
+    <p>The same set whichever direction wins. A row moves down this list; only the last two are exits.</p>
+  </div>
+
+  <div class="sect">
+    <span class="caps">The happy path</span>
+    <div class="page">
+      <div class="q">
+        <div class="qtop"><span class="qname">roost-0827-mix.mp3</span><span class="qstate">Reading it</span></div>
+        <p class="note" style="margin-top:6px;">Its length is measured here, before anything is sent — nothing else in this app has ever known how long a take is.</p>
+      </div>
+      <div class="q">
+        <div class="qtop"><span class="qname">roost-0827-mix.mp3</span><span class="qstate">64%</span></div>
+        <div class="bar"><i style="width:64%"></i></div>
+        <div class="qctl"><span class="pill pill-on">Master</span><span class="qstate">4.2 MB · lossy</span></div>
+      </div>
+      <div class="q">
+        <div class="qtop"><span class="qname">roost-0827-mix.mp3</span><span class="qstate">Checking it arrived</span></div>
+        <div class="bar"><i style="width:100%"></i></div>
+      </div>
+      <div class="q" style="border-bottom:none;">
+        <div class="qtop"><span class="qname">Master</span><span class="rmeta"><span>mp3</span><span>lossy</span><span>4.2 MB</span></span></div>
+        <p class="note" style="margin-top:6px;">Done: it stops being a queue row and becomes a file row.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <span class="caps">The three that need a person</span>
+    <div class="frames">
+      <div class="page" style="width:440px;">
+        <div class="q">
+          <div class="qtop"><span class="qname">roost-0827-mix.opus</span><span class="qstate">Already there</span></div>
+          <p class="err">This take already has a lossy master (mp3, 4.2 MB).</p>
+          <div class="qctl"><span class="pill">Replace it</span><span class="pill">Skip</span></div>
+        </div>
+        <div class="q">
+          <div class="qtop"><span class="qname">roost-0827-bass.flac</span><span class="qstate">Didn't finish</span></div>
+          <p class="err">The upload stopped at 90%. Nothing was saved — it starts again from the beginning.</p>
+          <div class="qctl"><span class="pill">Try again</span><span class="pill">Remove</span></div>
+        </div>
+        <div class="q" style="border-bottom:none;">
+          <div class="qtop"><span class="qname">rehearsal-notes.pdf</span><span class="qstate">Not audio</span></div>
+          <p class="err">Only mp3, opus, flac and wav.</p>
+        </div>
+      </div>
+      <div style="max-width:440px;">
+        <p class="note" style="margin-top:0;"><strong>Already there</strong> is not an error — it is the one place the app asks before destroying something. A second lossy master lands in the same slot whatever its format, so replacing it removes the old file. A stem at a different tier is <em style="font-style:normal;color:#f2e8d8;">not</em> a collision and must not warn.</p>
+        <p class="note"><strong>Didn't finish</strong> says the whole truth. There is no resume: the storage port has no multipart by design, so a 200 MB wav that drops at 90% starts over. Better said here than discovered.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <span class="caps">Two states that are not a file</span>
+    <div class="frames">
+      <div class="page" style="width:440px;">
+        <p class="strip">Files</p>
+        <div class="empty">Nothing on this take yet. Add the mix, and any stems you have.</div>
+      </div>
+      <div class="page" style="width:440px;">
+        <p class="strip">Files</p>
+        <div class="empty" style="text-align:left;">
+          <strong style="color:#f2e8d8;display:block;margin-bottom:6px;">Uploading needs JavaScript.</strong>
+          Everything else on this page works without it — editing the take, deleting a file, publishing.
+        </div>
+      </div>
+    </div>
+    <p class="note">The JS-off notice is <strong>the app's first admission of a JS-only capability</strong>. A presigned PUT is a cross-origin PUT with signed headers, and an HTML form can only POST multipart to its own action; the alternatives are a new signing method on the storage port with two implementations, or streaming audio through the app server, which its own header comment forbids. Deleting a file stays a plain confirm page precisely so the destructive half never depends on script.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

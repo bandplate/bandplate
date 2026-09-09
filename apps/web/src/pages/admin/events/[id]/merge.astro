@@ -1,0 +1,75 @@
+---
+// Join two events for one session back together. Admin-only by path.
+//
+// `[id]` is the event that SURVIVES; `?into=` names the one folded into it.
+// The take page's warning offers this when a day holds two events of the same
+// kind, which is the shape the duplicate always takes: a member created the
+// rehearsal before the bridge pushed its own.
+import { eventsRepo, takesRepo } from "@bandplate/db";
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { eventKindLabel, eventLabel, formatLongDate } from "../../../../server/format.js";
+import { mergeEvents } from "../../../../server/pages/events.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+const into = Astro.url.searchParams.get("into");
+if (!id || !into) {
+  return Astro.redirect("/events");
+}
+
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const result = await mergeEvents(appDeps.db, appDeps.clock.now(), id, into);
+  if (isFetch) {
+    return new Response(result.kind === "ok" ? "ok" : "not found", {
+      status: result.kind === "ok" ? 200 : 404,
+    });
+  }
+  if (result.kind !== "ok") {
+    return new Response("Event not found.", { status: 404 });
+  }
+  return Astro.redirect(`/events/${result.keptId}?merged=1`);
+}
+
+const [keep, merge] = await Promise.all([
+  eventsRepo.getById(appDeps.db, id),
+  eventsRepo.getById(appDeps.db, into),
+]);
+if (!keep || !merge) {
+  return new Response("Event not found.", { status: 404 });
+}
+const moving = await takesRepo.listByEvent(appDeps.db, merge.id, { order: "asc" });
+const name = (event: eventsRepo.Event) =>
+  eventLabel({ title: event.title ?? null, venue: event.venue ?? null }) ||
+  `the ${eventKindLabel(event.kind)} of ${formatLongDate(event.heldAt)}`;
+const takeNoun = moving.length === 1 ? "take" : "takes";
+const inheritsKey = !keep.clientRef && merge.clientRef !== null;
+---
+
+<Layout title="Merge events">
+  <ConfirmActionPage
+    bannerTitle={`Move everything from ${name(merge)} into ${name(keep)}?`}
+    cta="Merge them"
+    cancelHref={`/events/${keep.id}`}
+  >
+    {moving.length === 0
+      ? "It has no takes, so nothing moves — it is just archived."
+      : `Its ${moving.length} ${takeNoun} move across, keeping their songs, their files and their votes.`}
+    {" "}The emptied event is archived rather than deleted, so anything pinned to it still resolves.
+    {inheritsKey
+      ? " This one also takes over the key the bridge files against, so the next push lands here instead of creating the split again."
+      : ""}
+  </ConfirmActionPage>
+</Layout>

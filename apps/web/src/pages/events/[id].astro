@@ -22,6 +22,7 @@ import { eventKindLabel, eventLabel, formatLongDate } from "../../server/format.
 import {
   type EventField,
   archiveEventConsequence,
+  findSameDayEvents,
   getEventDetail,
   updateEvent,
 } from "../../server/pages/events.js";
@@ -109,6 +110,11 @@ const heldAtValue = `${heldAtDate.getFullYear()}-${String(heldAtDate.getMonth() 
 // which is what it was, nearly always.
 const takeDateValue = heldAtValue;
 const justTakeDeleted = Astro.url.searchParams.get("take_deleted") === "1";
+const justMerged = Astro.url.searchParams.get("merged") === "1";
+// The duplicate this app cannot prevent, offered a repair. Shown to anyone —
+// the split is worth knowing about — but only an admin gets the merge link,
+// because it archives an event.
+const sameDay = await findSameDayEvents(appDeps.db, event);
 const [allSongs, allInstruments] = await Promise.all([
   songsRepo.list(appDeps.db),
   instrumentsRepo.list(appDeps.db),
@@ -143,6 +149,32 @@ const [allSongs, allInstruments] = await Promise.all([
     )}
     {justSaved && <Banner kind="success">Saved.</Banner>}
     {justTakeDeleted && <Banner kind="success">Take deleted, along with its files.</Banner>}
+    {justMerged && <Banner kind="success">Merged. Everything is on this one now.</Banner>}
+    {sameDay.length > 0 && (
+      <Banner kind="info" title="This day is filed twice">
+        <p class="bp-m0">
+          Another {kindLabel} sits on {formatLongDate(event.heldAt)}. If you both played twice
+          that's right — but if it's the same session, the takes are split between them and the
+          bridge will keep filing against whichever one holds its key.
+        </p>
+        <p class="bp-hero-actions bp-m0">
+          {sameDay.map((other) => (
+            <a href={`/events/${other.id}`} class="bp-btn bp-btn-secondary bp-btn-sm">
+              Open the other one
+            </a>
+          ))}
+          {canArchive &&
+            sameDay.map((other) => (
+              <a
+                href={`/admin/events/${event.id}/merge?into=${other.id}`}
+                class="bp-btn bp-btn-secondary bp-btn-sm"
+              >
+                Move its takes here
+              </a>
+            ))}
+        </p>
+      </Banner>
+    )}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <header class="bp-event-hero">

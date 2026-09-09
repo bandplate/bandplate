@@ -1,12 +1,14 @@
 // The M8 write half of `server/pages/events.ts`.
 import type { Db } from "@bandplate/db";
-import { eventsRepo } from "@bandplate/db";
+import { eventsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   countArchivedEvents,
   createEvent,
+  findSameDayEvents,
   listEventsForArchive,
+  mergeEvents,
   parseEventsListArchivedFilter,
   setEventArchived,
   updateEvent,
@@ -189,5 +191,117 @@ describe("parseEventsListArchivedFilter", () => {
     expect(parseEventsListArchivedFilter(new URLSearchParams("archived=1"))).toBe(true);
     expect(parseEventsListArchivedFilter(new URLSearchParams("archived=0"))).toBe(false);
     expect(parseEventsListArchivedFilter(new URLSearchParams(""))).toBe(false);
+  });
+});
+
+describe("mergeEvents", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  async function seedPair() {
+    // The exact shape the duplicate takes: a member made the rehearsal, then
+    // the bridge pushed its own with a clientRef.
+    const manual = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const fromBridge = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      clientRef: "reaper-abc",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const song = await songsRepo.create(db, {
+      title: "Neon Skyline",
+      slug: "neon-skyline",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const onManual = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: manual.id,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    return { manual, fromBridge, onManual };
+  }
+
+  it("moves the takes, archives the shell, and hands over the bridge's key", async () => {
+    const { manual, fromBridge, onManual } = await seedPair();
+
+    const result = await mergeEvents(db, 5000, fromBridge.id, manual.id);
+
+    expect(result).toEqual({ kind: "ok", keptId: fromBridge.id, movedTakes: 1 });
+    expect((await takesRepo.getById(db, onManual.id))?.eventId).toBe(fromBridge.id);
+    // Archived, not deleted — a favourite pointing at it still resolves.
+    expect((await eventsRepo.getById(db, manual.id))?.archivedAt).toBe(5000);
+    expect(await takesRepo.listByEvent(db, manual.id, { order: "asc" })).toEqual([]);
+  });
+
+  it("gives the survivor the key when it had none", async () => {
+    const { manual, fromBridge } = await seedPair();
+
+    // The other direction: keep the MANUAL event. Without inheriting the key,
+    // the bridge's next push would recreate the split it just repaired.
+    await mergeEvents(db, 5000, manual.id, fromBridge.id);
+
+    expect((await eventsRepo.getById(db, manual.id))?.clientRef).toBe("reaper-abc");
+    expect(await eventsRepo.getByClientRef(db, "reaper-abc")).toMatchObject({ id: manual.id });
+  });
+
+  it("leaves a key the survivor already has alone", async () => {
+    const { manual, fromBridge } = await seedPair();
+    await eventsRepo.setClientRef(db, manual.id, "reaper-manual", 2000);
+
+    await mergeEvents(db, 5000, fromBridge.id, manual.id);
+
+    expect((await eventsRepo.getById(db, fromBridge.id))?.clientRef).toBe("reaper-abc");
+  });
+
+  it("refuses to merge an event into itself", async () => {
+    const { manual } = await seedPair();
+    expect(await mergeEvents(db, 5000, manual.id, manual.id)).toEqual({ kind: "same_event" });
+  });
+
+  it("reports not_found when either side is missing", async () => {
+    const { manual } = await seedPair();
+    expect(await mergeEvents(db, 5000, manual.id, "nope")).toEqual({ kind: "not_found" });
+    expect(await mergeEvents(db, 5000, "nope", manual.id)).toEqual({ kind: "not_found" });
+  });
+});
+
+describe("findSameDayEvents", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  it("finds another event of the same kind on the same day, and not itself", async () => {
+    const morning = await createEvent(db, 1000, formData(REHEARSAL));
+    const evening = await createEvent(db, 2000, formData(REHEARSAL));
+    if (morning.kind !== "ok" || evening.kind !== "ok") throw new Error("seed failed");
+
+    const found = await findSameDayEvents(db, morning.event);
+    expect(found.map((e) => e.id)).toEqual([evening.event.id]);
+  });
+
+  it("ignores a different kind, a different day, and an archived one", async () => {
+    const base = await createEvent(db, 1000, formData(REHEARSAL));
+    if (base.kind !== "ok") throw new Error("seed failed");
+    await createEvent(db, 2000, formData({ ...REHEARSAL, kind: "concert" }));
+    await createEvent(db, 2000, formData({ ...REHEARSAL, heldAt: "2026-07-09" }));
+    const archived = await createEvent(db, 2000, formData(REHEARSAL));
+    if (archived.kind !== "ok") throw new Error("seed failed");
+    await setEventArchived(db, 3000, archived.event.id, true);
+
+    expect(await findSameDayEvents(db, base.event)).toEqual([]);
   });
 });

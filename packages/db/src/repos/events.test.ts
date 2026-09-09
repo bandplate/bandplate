@@ -231,7 +231,7 @@ describe("events repo", () => {
     expect(list.map((e) => e.id)).toEqual([rehearsal.id]);
   });
 
-  it("adoptClientRef hands a manual event the bridge's idempotency key", async () => {
+  it("setClientRef hands a manual event the bridge's idempotency key, and takes it back", async () => {
     const manual = await events.create(db, {
       kind: "rehearsal",
       heldAt: 1000,
@@ -240,10 +240,15 @@ describe("events repo", () => {
     });
     expect(manual.clientRef).toBeNull();
 
-    await events.adoptClientRef(db, manual.id, "reaper-abc", 2000);
+    await events.setClientRef(db, manual.id, "reaper-abc", 2000);
 
     const found = await events.getByClientRef(db, "reaper-abc");
     expect(found?.id).toBe(manual.id);
     expect(found?.updatedAt).toBe(2000);
+
+    // `client_ref` is UNIQUE, so releasing is what makes handing it to another
+    // event possible at all.
+    await events.setClientRef(db, manual.id, null, 3000);
+    expect(await events.getByClientRef(db, "reaper-abc")).toBeUndefined();
   });
 });

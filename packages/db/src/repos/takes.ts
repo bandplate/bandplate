@@ -161,6 +161,27 @@ export async function addInstrument(db: Db, takeId: string, instrumentId: string
   await db.insert(takeInstruments).values({ takeId, instrumentId }).onConflictDoNothing();
 }
 
+/**
+ * Move every take from one event onto another, in one statement.
+ *
+ * The ONE place `eventId` moves, and the reason `UpdateTakeInput` deliberately
+ * has none: a take belongs to the session it was recorded in, so this is not
+ * an edit anyone makes to a single take. It exists for exactly one repair —
+ * a rehearsal that ended up as two events because a human created it before
+ * the bridge pushed its own, and the day is now split in half.
+ */
+export async function moveAllToEvent(
+  db: Db,
+  fromEventId: string,
+  toEventId: string,
+  updatedAt: number,
+): Promise<void> {
+  await db
+    .update(takes)
+    .set({ eventId: toEventId, updatedAt })
+    .where(eq(takes.eventId, fromEventId));
+}
+
 export async function getById(db: Db, id: string): Promise<Take | undefined> {
   const [row] = await db.select().from(takes).where(eq(takes.id, id)).limit(1);
   return row;

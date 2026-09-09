@@ -64,16 +64,20 @@ export async function update(db: Db, id: string, input: UpdateEventInput): Promi
 }
 
 /**
- * Hand a manually created event the bridge's idempotency key, so a later push
- * of the same rehearsal converges on this row instead of creating a second
- * one. Its own function rather than a field on `UpdateEventInput` precisely so
- * it cannot happen as a side effect of the edit form — adopting a `clientRef`
- * decides which of two rows the bridge will keep writing to forever.
+ * Move the bridge's idempotency key onto (or off) an event.
+ *
+ * Its own function rather than a field on `UpdateEventInput` precisely so it
+ * cannot happen as a side effect of the edit form — which row holds the
+ * `clientRef` decides which one the bridge writes to forever.
+ *
+ * `null` RELEASES it, and that half is not optional: `events.client_ref` is
+ * UNIQUE, so handing a key to one event while another still holds it fails on
+ * the constraint. A merge has to release before it adopts.
  */
-export async function adoptClientRef(
+export async function setClientRef(
   db: Db,
   id: string,
-  clientRef: string,
+  clientRef: string | null,
   updatedAt: number,
 ): Promise<void> {
   await db.update(events).set({ clientRef, updatedAt }).where(eq(events.id, id));

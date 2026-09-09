@@ -293,3 +293,82 @@ export function archiveEventConsequence(takeCount: number): string {
         : ` Its ${takeCount} takes stay and keep playing — you'll reach them from their songs.`;
   return `${head}${takes} You can put it back any time.`;
 }
+
+/**
+ * Two events for one session, joined back into one.
+ *
+ * The repair for the duplicate this app cannot prevent: a member creates the
+ * rehearsal (no `clientRef`), the bridge later pushes the same one (with a
+ * `clientRef`), nothing matches, and the day exists twice with its takes split
+ * between them.
+ *
+ * The bridge's event is the one that SURVIVES, always — it holds the
+ * idempotency key the bridge will keep writing against, and taking that key
+ * off it would only send the next push into the same split. The manual event's
+ * takes move over and the empty shell is archived rather than deleted, so a
+ * favourite pointing at it still resolves.
+ *
+ * Where NEITHER has a `clientRef` (two manual events), the caller picks which
+ * to keep and the survivor adopts nothing.
+ */
+export type MergeEventsResult =
+  | { kind: "ok"; keptId: string; movedTakes: number }
+  | { kind: "not_found" }
+  | { kind: "same_event" };
+
+export async function mergeEvents(
+  db: Db,
+  now: number,
+  keepId: string,
+  mergeId: string,
+): Promise<MergeEventsResult> {
+  if (keepId === mergeId) {
+    return { kind: "same_event" };
+  }
+  const [keep, merge] = await Promise.all([
+    eventsRepo.getById(db, keepId),
+    eventsRepo.getById(db, mergeId),
+  ]);
+  if (!keep || !merge) {
+    return { kind: "not_found" };
+  }
+
+  const moving = await takesRepo.listByEvent(db, mergeId, { order: "asc" });
+  await takesRepo.moveAllToEvent(db, mergeId, keepId, now);
+
+  // If the survivor has no key and the one being folded in does, it inherits
+  // it — otherwise the bridge's next push would recreate the event we just
+  // merged away.
+  //
+  // RELEASE FIRST. `events.client_ref` is UNIQUE, so adopting a key another
+  // row still holds fails on the constraint. Not a batch: D1 would apply both
+  // statements atomically but SQLite still checks the constraint per
+  // statement, so the order is what matters, not the atomicity. Interrupted
+  // between the two, the key is simply on neither event and the bridge's next
+  // push creates a fresh one — visible, and repairable by this same action.
+  if (!keep.clientRef && merge.clientRef) {
+    await eventsRepo.setClientRef(db, mergeId, null, now);
+    await eventsRepo.setClientRef(db, keepId, merge.clientRef, now);
+  }
+  await eventsRepo.update(db, mergeId, { archivedAt: now, updatedAt: now });
+
+  return { kind: "ok", keptId: keepId, movedTakes: moving.length };
+}
+
+/**
+ * Any OTHER event of the same kind on the same day. What the duplicate warning
+ * is built from, and what the merge offer needs.
+ */
+export async function findSameDayEvents(
+  db: Db,
+  event: eventsRepo.Event,
+): Promise<eventsRepo.Event[]> {
+  const dayStart = new Date(event.heldAt);
+  dayStart.setHours(0, 0, 0, 0);
+  const start = dayStart.getTime();
+  const all = await eventsRepo.listRecentWithTakeCounts(db, {
+    kind: [event.kind],
+    includeArchived: false,
+  });
+  return all.filter((e) => e.id !== event.id && e.heldAt >= start && e.heldAt < start + DAY_MS);
+}

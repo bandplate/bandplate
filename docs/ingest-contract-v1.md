@@ -39,6 +39,35 @@ requests, so a typed client can be generated rather than hand-written.
 The bridge never talks to the object store directly except through presigned URLs
 the server hands it. It never needs storage credentials.
 
+### There is now a second front door
+
+Since M8 a member can create songs, events and takes in the browser and upload
+audio to them. That surface is **not** this contract and does not use these
+endpoints — `/ingest/v1/*` stays bearer-only, closed to a session cookie.
+
+What a bridge author needs to know about it:
+
+- **Events and takes can exist that this contract never created.** A manual
+  event carries `clientRef: null`, so `POST /events` will not match it and will
+  create a second event for the same day. That is a known, accepted split with
+  an admin repair in the UI ("this day is filed twice → move its takes here"),
+  which hands the surviving event the bridge's `clientRef` so later pushes
+  converge. The server deliberately does **not** guess a match from
+  `(kind, date)`: that would silently merge an afternoon and an evening
+  rehearsal, and nobody would find out.
+- **A song or event you match may have been archived**, and matching it
+  un-archives it — the band has evidently just played it. `POST /events` with a
+  known `clientRef` and `resolveSong`'s every matching branch do this. A bridge
+  needs no change; the behaviour is mentioned because it is a write on what
+  looks like a read.
+- **A take can exist with no assets at all.** The manual path creates the take
+  first and adds audio afterwards, which this contract forbids
+  (`assets` requires at least one entry). Anything reading takes must not
+  assume a take has files.
+- **`takes.durationMs` may already be set, measured** rather than declared —
+  the browser reads it off an `<audio>` element before uploading. A re-declared
+  take does not overwrite it.
+
 ---
 
 ## 2. Authentication

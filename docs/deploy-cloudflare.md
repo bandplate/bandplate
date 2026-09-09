@@ -69,12 +69,34 @@ Do these in order — each later step needs something from the one before it.
    the account's R2 S3 endpoint
    (`https://<account-id>.r2.cloudflarestorage.com`).
 
-3. **A mail provider account** (Resend or Postmark) and an API key. The
+3. **A CORS rule on the bucket** — do not skip this one. Since M8 the
+   browser uploads audio by PUTting a presigned URL directly at R2, which
+   is a cross-origin request and so preflights. **MinIO allows `*` by
+   default, so local development works and production does not**, and it
+   fails at the PUT with an opaque CORS error that reads exactly like a
+   signing bug. On the bucket's **Settings → CORS policy**:
+
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://your-app-origin"],
+       "AllowedMethods": ["PUT"],
+       "AllowedHeaders": ["content-type"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+   `AllowedOrigins` is the app's own origin — the same value as
+   `BANDPLATE_APP_ORIGIN`. Downloads and playback do not need this: those
+   go through the app's own 302, not a cross-origin fetch.
+
+4. **A mail provider account** (Resend or Postmark) and an API key. The
    app is email-only after bootstrap — a Workers deploy with no working
    mailer is a lockout, exactly like the Node profile with no SMTP
    configured (see `packages/mail/src/factory.ts`'s doc comment).
 
-4. **The Worker itself** — no separate step needed. `pnpm exec wrangler deploy`
+5. **The Worker itself** — no separate step needed. `pnpm exec wrangler deploy`
    creates the Workers project on first run, using the `name` in
    `wrangler.toml`.
 

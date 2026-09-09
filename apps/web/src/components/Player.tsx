@@ -32,7 +32,7 @@
 // and again after every navigation.
 import { useStore } from "@nanostores/preact";
 import { Fragment } from "preact";
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { decidePlayerClickAction } from "../client/player-actions.js";
 import {
   AUDIO_SOURCE_ATTR,
@@ -46,8 +46,24 @@ import {
   sourcesUrl,
 } from "../client/player-store.js";
 
-/** How many bars the waveform draws, whatever the source's own resolution. Fixed rather than measured: the bars are `flex: 1 1 0`, so the browser divides whatever width the bar has, and a resize needs no JS at all. */
+/**
+ * How wide one bar plus its gap should be, in CSS pixels.
+ *
+ * The bar COUNT is derived from this and the measured rail, rather than
+ * fixed: bars are `flex: 1 1 0`, so a fixed count means the browser divides
+ * whatever width it has between them, and 120 bars that look right on a
+ * 340px phone become 14px slabs on a 1800px desktop. Deriving the count
+ * instead keeps one density everywhere and gives a wide screen the detail it
+ * has room for.
+ */
+const BAR_PITCH_PX = 3;
+
+/** Until the rail has been measured — and in any environment with no `ResizeObserver`. */
 const WAVEFORM_BARS = 120;
+
+/** Floor and ceiling on the derived count: never a handful of slabs, never more bars than the file has samples to fill them (`downsamplePeaks` would just repeat buckets). */
+const MIN_WAVEFORM_BARS = 60;
+const MAX_WAVEFORM_BARS = 1000;
 /** What the skip controls move by. Not a preference — "play that bit again" is the move this app is for, and there is no queue to skip through. */
 const SKIP_SECONDS = 10;
 
@@ -119,6 +135,8 @@ export default function Player() {
   const playing = useStore(isPlaying);
   const audioRef = useRef<HTMLAudioElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
+  /** The waveform's own box — measured to decide how many bars fit. */
+  const trackRef = useRef<HTMLSpanElement>(null);
   // A source switch on the take already playing must preserve
   // `currentTime` — `loadedmetadata` for the NEW source is the first
   // point `currentTime` can be legally set, so the seek (and any pending
@@ -131,7 +149,11 @@ export default function Player() {
   // `null` means "not fetched or none exists" — both render the plain rail,
   // and deliberately so: a take with no waveform is not an error state, it
   // is every take until something computes peaks.
+  // The file's own values, NOT the drawn bars: the bar count depends on how
+  // wide the rail is, so downsampling happens at render and a resize redraws
+  // without re-fetching.
   const [peaks, setPeaks] = useState<number[] | null>(null);
+  const [barCount, setBarCount] = useState(WAVEFORM_BARS);
   const [sources, setSources] = useState<PlayerSource[] | null>(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
@@ -282,9 +304,7 @@ export default function Player() {
         // indistinguishable from a 404. The wrapped shape stays accepted.
         const raw = Array.isArray(body) ? body : body?.peaks;
         setPeaks(
-          Array.isArray(raw) && raw.every((v) => typeof v === "number")
-            ? downsamplePeaks(raw as number[], WAVEFORM_BARS)
-            : null,
+          Array.isArray(raw) && raw.every((v) => typeof v === "number") ? (raw as number[]) : null,
         );
       })
       .catch(() => {
@@ -406,7 +426,37 @@ export default function Player() {
         ? `Now playing: ${track.title}`
         : "";
 
-  const bars = peaks ?? [];
+  // One bar per `BAR_PITCH_PX` of actual rail. Observed rather than read once:
+  // the player is persistent, so it outlives rotations, window drags and the
+  // viewport change when the mobile keyboard opens, and a stale count would
+  // stretch or crowd the bars until the next track.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const measure = (width: number) => {
+      if (width <= 0) {
+        return;
+      }
+      setBarCount(
+        Math.max(MIN_WAVEFORM_BARS, Math.min(MAX_WAVEFORM_BARS, Math.round(width / BAR_PITCH_PX))),
+      );
+    };
+    measure(el.getBoundingClientRect().width);
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        measure(entry.contentRect.width);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const bars = useMemo(
+    () => (peaks ? downsamplePeaks(peaks, Math.max(1, Math.min(barCount, peaks.length))) : []),
+    [peaks, barCount],
+  );
   const progress = duration > 0 ? position / duration : 0;
   // The source label without its "Solo: " prefix — the chip has a caret and
   // names a source; the prefix would be a third thing on screen saying so.
@@ -622,7 +672,7 @@ export default function Player() {
             operability, arrow-key stepping, a labelled value a screen reader
             can read — while letting us draw the waveform ourselves. The bars
             behind it are `aria-hidden` decoration; the range is the control. */}
-        <span class="bp-player-track">
+        <span class="bp-player-track" ref={trackRef}>
           {bars.length > 0 ? (
             <span class="bp-player-wave" aria-hidden="true">
               {bars.map((value, i) => (

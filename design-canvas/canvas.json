@@ -1,6 +1,10 @@
 {
  "pages": [
   {
+   "id": "page-19",
+   "name": "M7 — Take detail header"
+  },
+  {
    "id": "page-18",
    "name": "M7 — Take row"
   },
@@ -74,6 +78,33 @@
   }
  ],
  "artboards": [
+  {
+   "file": "TakeHeadFacts.dc.html",
+   "title": "H3 — Labelled facts",
+   "page": "page-19",
+   "x": 2640,
+   "y": 0,
+   "w": 1240,
+   "h": 1980
+  },
+  {
+   "file": "TakeHeadCrumb.dc.html",
+   "title": "H2 — Breadcrumb",
+   "page": "page-19",
+   "x": 1320,
+   "y": 0,
+   "w": 1240,
+   "h": 1980
+  },
+  {
+   "file": "TakeHeadWays.dc.html",
+   "title": "H1 — Two ways out",
+   "page": "page-19",
+   "x": 0,
+   "y": 0,
+   "w": 1240,
+   "h": 1980
+  },
   {
    "file": "InstrumentSet.dc.html",
    "title": "Instrument set — a primitive",
@@ -473,6 +504,14 @@
  ],
  "annotations": [
   {
+   "id": "takehead-m7",
+   "page": "page-19",
+   "x": 0,
+   "y": -300,
+   "w": 1240,
+   "text": "Take detail header — three directions\n\nThe header stacks five bands of unequal weight today: a heading, a muted event/date line, a note, a facts line, and one lone button — and the only way to the event is a small muted link (or, for an untitled rehearsal, the kind badge itself, which nobody would think to click).\n\nEach board shows the same two takes: a CONCERT with a named event, a note and a settled verdict, and a REHEARSAL with none of those — the common case in a seeded archive, and the one the current header handles worst.\n\nAll three make the song and the event equally reachable, rehearsals included. Each board also shows the top of the Listen strip, so you can see how far down the page the play control lands."
+  },
+  {
    "id": "takerow-m7",
    "page": "page-18",
    "x": 0,
@@ -563,6 +602,6 @@
  ],
  "launch": {
   "view": "canvas",
-  "page": "page-18"
+  "page": "page-19"
  }
 }

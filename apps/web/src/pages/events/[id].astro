@@ -12,7 +12,7 @@ import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { eventLabel, formatLongDate } from "../../server/format.js";
+import { eventKindLabel, eventLabel, formatLongDate } from "../../server/format.js";
 import { getEventDetail } from "../../server/pages/events.js";
 
 const principal = Astro.locals.principal;
@@ -32,11 +32,19 @@ if (!detail) {
 }
 
 const { event, eventFavorited, takes } = detail;
-const kindLabel =
-  event.kind === "rehearsal" ? "Rehearsal" : event.kind === "concert" ? "Concert" : "Session";
+// `eventKindLabel`, not a ternary of its own. This page said "Concert" while
+// every take row, the ledger and the take page said "live" for the same event
+// — one fact, two words, depending which screen you were on. It also hard-coded
+// a three-value vocabulary and fell back to "Session" for anything else, which
+// silently mislabels a kind an admin adds later; the helper passes an
+// unrecognised value through as itself.
+const kindLabel = eventKindLabel(event.kind);
+// Title-case for the browser tab, which is the one place this word is a name
+// rather than a label — `.bp-kind` uppercases it everywhere it is shown.
+const kindTitle = kindLabel.charAt(0).toUpperCase() + kindLabel.slice(1);
 ---
 
-<AppLayout title={event.title ?? kindLabel} principal={principal} current="events">
+<AppLayout title={event.title ?? kindTitle} principal={principal} current="events">
   <div class="bp-stack">
     <header class="bp-event-hero">
       <div class="bp-event-hero-line">
@@ -54,7 +62,7 @@ const kindLabel =
             targetType="event"
             targetId={event.id}
             favorited={eventFavorited}
-            label={eventLabel(event) || `this ${event.kind}`}
+            label={eventLabel(event) || `this ${kindLabel}`}
             size="lg"
           />
         </span>

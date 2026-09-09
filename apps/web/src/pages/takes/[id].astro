@@ -39,6 +39,7 @@ import {
   formatBytes,
   formatDuration,
   formatLongDate,
+  formatShortDate,
   takeNote,
 } from "../../server/format.js";
 import { getTakeDetail } from "../../server/pages/takes.js";
@@ -92,6 +93,21 @@ const eventName = event
   ? eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
   : "";
 const noteText = takeNote(take.label, kindLabel);
+// One plain sentence under the heading, carrying the two facts a heading of a
+// song title cannot: which session this came out of, and when.
+//
+// It is assembled rather than templated because `eventKindLabel` returns the
+// word the band uses — "live" for a concert — and "a take from a live on
+// July 8" is not a sentence. Where the event has a name the name carries it;
+// where it does not, the kind becomes an ADJECTIVE on the take ("A rehearsal
+// take", "A live take"), which is grammatical for every value the vocabulary
+// can hold, including one an admin adds later.
+const heroLede = event
+  ? eventName
+    ? `A take from ${eventName}, ${formatLongDate(event.heldAt)}`
+    : `A ${kindLabel} take, ${formatLongDate(event.heldAt)}`
+  : `Recorded ${formatLongDate(take.recordedAt)}`;
+
 const heroTitle = song ? song.title : `Take from ${formatLongDate(take.recordedAt)}`;
 const heroSubtitle = event ? `${kindLabel} — ${formatLongDate(event.heldAt)}` : (take.label ?? "");
 
@@ -121,10 +137,16 @@ function assetLabel(asset: assetsRepo.Asset): string {
           this page look like the song's page. The heading names what you are
           on; getting to the song is a button below it, where an action
           belongs. */}
+      {/* The SONG's title, not "Take of <song>". The heading names the thing
+          you are looking at, and what you are looking at is a performance of
+          that song; the sentence under it says which one. "Take of …" was
+          scaffolding standing in for a subtitle that did not exist yet.
+
+          It still carries the view transition from the row that led here — and
+          now the two match, since a take row's own link text is the song's
+          title everywhere except a song page (which is already showing it). */}
       <h1 class="bp-hero-title bp-m0">
-        <span transition:name={`take-${take.id}`}>
-          {song ? `Take of ${song.title}` : "Take"}
-        </span>
+        <span transition:name={`take-${take.id}`}>{song ? song.title : "Take"}</span>
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
             targetType="take"
@@ -135,92 +157,81 @@ function assetLabel(asset: assetsRepo.Asset): string {
           />
         </span>
       </h1>
-      <p class="bp-take-detail-subline bp-m0">
-        {/* Event name, then the date with the kind badge beside it — the take
-            row's own order, so the two read the same way. An untitled event has
-            nothing to say beyond its kind and the badge already says it ("this
-            rehearsal" next to a `rehearsal` badge was the same word twice), so
-            in that case the badge itself becomes the link and there is no name
-            ahead of the date. */}
-        {
-          event && eventName && (
-            <>
-              <a href={`/events/${event.id}`} class="bp-take-event-link">
-                {eventName}
-              </a>
-              <span class="bp-take-detail-sep" aria-hidden="true" />
-            </>
-          )
-        }
-        <span>{formatLongDate(event ? event.heldAt : take.recordedAt)}</span>
-        {
-          event && kindLabel ? (
-            eventName ? (
-              <span class="bp-kind">{kindLabel}</span>
-            ) : (
-              <a
-                href={`/events/${event.id}`}
-                class="bp-take-event-link"
-                aria-label={`View this ${kindLabel}`}
-              >
-                <span class="bp-kind">{kindLabel}</span>
-              </a>
-            )
-          ) : null
-        }
-      </p>
-      {noteText && <p class="bp-take-detail-note bp-m0">{noteText}</p>}
 
-      {/* The same line a take row carries, with the same treatment: the note
-          size, a drawn rule, and the instrument set. It was a strip of its own
-          labelled "This take", which is a heading over two facts that the hero
-          was already the natural home for — and it put the take's length three
-          strips away from the control that plays it.
+      <p class="bp-take-detail-lede bp-m0">{heroLede}</p>
 
-          NO rule against the instrument set on either side: the set carries a
-          tinted pad, which is what holds it together as one object, and a rule
-          beside a thing that is already bounded reads as a stray mark. Rules
-          separate WORDS from words — here, the duration from the verdict. */}
+      {/* One quiet run of everything measurable about the take. No rule against
+          the instrument set on either side: the set carries a tinted pad, which
+          is what holds it together as one object, and a rule beside a thing that
+          is already bounded reads as a stray mark. */}
       <p class="bp-take-detail-facts bp-m0">
         <span>{formatDuration(take.durationMs)}</span>
         <InstrumentSet instruments={instruments} />
-        {/* The band's call, last on the take's own facts line. A settled state
-            is one word and needs no gloss — it sat in the vote strip with a
-            sentence explaining it, then on the event/date line, and it reads
-            best at the end of the run that describes the take itself. Only
-            keeper or rejected: `new` is every take until someone acts. */}
+        {/* The band's call. A settled state is one word and needs no gloss.
+            Only keeper or rejected: `new` is every take until someone acts. */}
         {
           (take.state === "keeper" || take.state === "rejected") && (
-            <span class="bp-take-detail-verdict">
-              <span class="bp-take-detail-sep" aria-hidden="true" />
-              <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-                {TAKE_STATE_LABEL[take.state]}
-              </span>
+            <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
+              {TAKE_STATE_LABEL[take.state]}
             </span>
           )
         }
+        {noteText && <span class="bp-take-detail-note">&ldquo;{noteText}&rdquo;</span>}
       </p>
-      {
-        song && (
-          <a href={`/songs/${song.slug}`} class="bp-btn bp-btn-quiet bp-btn-sm bp-take-song-link">
-            Go to the song
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M5 12h13" />
-              <path d="M13 6l6 6-6 6" />
-            </svg>
-          </a>
-        )
-      }
+
+      {/* BOTH ways out, as a matched pair. A take belongs to a song and to an
+          event equally, and the header used to reflect neither of those well:
+          the song got a button, while the event got a muted link inside a line
+          of facts — or, for an untitled rehearsal, nothing but the kind badge
+          itself, which nobody would think to click. Each control now says what
+          it leads to and names the thing itself, so a rehearsal is reachable
+          exactly as a concert is. */}
+      <div class="bp-take-ways">
+        {
+          song && (
+            <a href={`/songs/${song.slug}`} class="bp-take-way">
+              <span class="bp-take-way-kind">Song</span>
+              <span class="bp-take-way-name">{song.title}</span>
+              <svg
+            class="bp-take-way-arrow"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h13" />
+            <path d="M13 6l6 6-6 6" />
+          </svg>
+            </a>
+          )
+        }
+        {
+          event && (
+            <a href={`/events/${event.id}`} class="bp-take-way">
+              <span class="bp-take-way-kind">{kindLabel}</span>
+              {/* An untitled event has no name to print, so its DATE names it —
+                  which is exactly what the event ledger shows for one too. */}
+              <span class="bp-take-way-name">{eventName || formatShortDate(event.heldAt)}</span>
+              <svg
+            class="bp-take-way-arrow"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h13" />
+            <path d="M13 6l6 6-6 6" />
+          </svg>
+            </a>
+          )
+        }
+      </div>
     </div>
 
     {

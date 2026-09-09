@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;700;900&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; }
+  a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:900px; margin:0 0 6px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:30px; }
+  .sect > .caps { display:block; margin-bottom:12px; }
+  .pair { display:flex; gap:56px; align-items:flex-start; flex-wrap:wrap; }
+  .frame { border:1px solid #3a2413; border-radius:8px; padding:26px 24px 22px;
+           background:#150c07; box-sizing:border-box; }
+  .frame.w-desk { width:1120px; }
+  .frame.w-phone { width:375px; padding:20px 16px 18px; }
+  .capt { font-size:11.5px; color:#6b573f; margin:0 0 8px; }
+
+  /* the page continues below the header, so the boards show where it lands */
+  .after { margin-top:22px; padding-top:16px; border-top:1px solid #3a2413; }
+  .after .caps { display:block; margin-bottom:10px; }
+  .after .listen { display:flex; align-items:center; gap:14px; }
+  .disc { width:56px; height:56px; border-radius:50%; background:#f6aa1c; color:#150c07;
+          display:inline-flex; align-items:center; justify-content:center; flex:none; }
+  .disc svg { width:20px; height:20px; margin-left:3px; }
+  .listen b { font-family:"Zilla Slab",Georgia,serif; font-weight:600; font-size:19px; display:block; }
+  .listen span { font-size:11.5px; color:#a9917a; }
+
+  .h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:36px;
+        line-height:1.1; margin:0; display:flex; align-items:center; gap:14px;
+        flex-wrap:wrap; }
+  .w-phone .h1 { font-size:27px; gap:10px; }
+  .h1-date { font-size:32px; }
+  .w-phone .h1-date { font-size:24px; }
+  .fav { display:inline-flex; color:#a9917a; }
+  .star { width:20px; height:20px; }
+  .kind { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+
+  .lede { margin:10px 0 0; font-size:14px; line-height:1.5; color:#a9917a; }
+  .w-phone .lede { font-size:13px; }
+
+  .factrow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px;
+             font-size:11.5px; color:#a9917a; }
+  .fact b { font-family:"Chivo",Arial,sans-serif; font-weight:400; font-variant-numeric:tabular-nums;
+            color:#a9917a; }
+  .note { color:#a9917a; font-style:normal; }
+  .badge { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+           letter-spacing:.14em; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
+  .badge-ok { background:rgba(111,154,46,.24); color:#c6de9b; }
+  .nil { color:#6b573f; }
+
+  .is { display:inline-flex; align-items:center; gap:8px; color:#a9917a;
+        background:rgba(242,232,216,.06); border-radius:6px; padding:5px 10px; flex:none; }
+  .is-dense { gap:6px; padding:4px 8px; }
+  .is-g { width:20px; height:20px; fill:currentColor; flex:none; }
+  .is-dense .is-g { width:16px; height:16px; }
+
+  /* D1 */
+  .ways { display:flex; gap:14px; margin-top:22px; flex-wrap:wrap; }
+  .w-phone .ways { flex-direction:column; gap:10px; }
+  .w-phone .way { flex:none; }
+  .way { display:flex; align-items:center; gap:14px; flex:1 1 320px; min-width:0;
+         padding:14px 16px; border:1px solid #3a2413; border-radius:8px;
+         background:rgba(242,232,216,.03); color:#f2e8d8; }
+  .way:hover { background:#211408; color:#f2e8d8; }
+  .way-k { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+           letter-spacing:.16em; text-transform:uppercase; color:#a9917a; flex:none;
+           width:74px; }
+  .way-v { font-family:"Zilla Slab",Georgia,serif; font-weight:600; font-size:17px;
+           min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+           flex:1 1 auto; }
+  .arw { width:18px; height:18px; color:#a9917a; flex:none; }
+
+  /* D2 */
+  .crumbs { display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:14px;
+            flex-wrap:wrap; }
+  .crumbs a { color:#a9917a; }
+  .crumbs a:hover { color:#f2e8d8; text-decoration:underline; text-underline-offset:3px; }
+  .crumb-now { color:#6b573f; }
+  .chv { width:14px; height:14px; color:#3a2413; flex:none; }
+
+  /* D3 */
+  .facts { display:grid; grid-template-columns:132px minmax(0,1fr); gap:0;
+           margin:20px 0 0; font-size:13.5px; }
+  .w-phone .facts { grid-template-columns:104px minmax(0,1fr); font-size:13px; }
+  .facts dt { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+              letter-spacing:.16em; text-transform:uppercase; color:#a9917a;
+              padding:11px 0; border-top:1px solid #3a2413; }
+  .facts dd { margin:0; padding:9px 0; border-top:1px solid #3a2413; color:#f2e8d8;
+              display:flex; align-items:center; min-height:22px; }
+  .lnk { color:#f2e8d8; text-decoration:underline; text-decoration-color:#6b573f;
+         text-underline-offset:3px; }
+  .lnk:hover { color:#f6aa1c; text-decoration-color:#f6aa1c; }
+</style>
+</helmet>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="g-drum" viewBox="0 0 512 512"><path fill="currentColor" d="M476.865 25.514L282.941 145.422l19.32 9.215L486.333 40.822l-9.467-15.308zM73.6 65.508l-7.748 16.246l286.595 136.709l1.389 2.715c3.244 6.346 9.677 12.524 17.723 16.373l.003.002l.004.002c8.566 4.084 17.188 5.364 23.63 4.373c6.443-.992 10.352-3.63 12.523-8.18s1.665-8.39-1.725-13.603s-10.122-10.882-18.935-15.086c-8.063-3.843-16.927-4.961-23.91-3.487l-2.983.63zm121.097 97.65c-40.936 2.913-77.435 8.644-106.084 16.283c-21.165 5.644-38.06 12.392-48.953 19.26S25 211.723 25 216s3.767 10.43 14.66 17.299s27.788 13.616 48.953 19.26C130.943 263.847 190.374 271 256 271c49.18 0 94.88-4.017 132.512-10.781c-8.123-.325-16.546-2.53-24.703-6.422l-.002-.002l-.004-.002c-10.2-4.878-18.614-12.38-24.135-21.484l-72.705-34.68l-36.498 22.566c-4.5 9.65-12.051 18.021-21.662 23.977l-.002.002l-.004.002c-10.715 6.625-22.297 10.072-33.281 9.588c-10.985-.484-21.794-5.485-27.856-15.29c-6.062-9.803-5.366-21.696-.515-31.294c4.85-9.598 13.3-17.76 23.785-24.243l.002-.001h.002c9.63-5.951 20.504-8.973 31.16-8.688l6.904-4.27l-14.3-6.82zm127.432.36l-.545.336l41.3 19.7c10.563-1.44 21.702.385 31.92 5.257h.005c11.125 5.306 20.412 12.504 26.275 21.52c5.863 9.014 7.844 20.763 2.88 31.167c-3.08 6.457-8.178 11.27-14.2 14.395c4.699-1.07 9.273-2.174 13.623-3.334c21.165-5.644 38.06-12.392 48.953-19.26S487 220.277 487 216s-3.767-10.43-14.66-17.299s-27.788-13.616-48.953-19.26c-27.516-7.337-62.286-12.91-101.258-15.923m-93.81 15.677l-21.499 13.293l-3.033-.3c-7.102-.708-15.793 1.364-23.39 6.058l-.002.002c-8.305 5.135-14.382 11.502-17.186 17.05c-2.804 5.55-2.89 9.422-.238 13.71c2.651 4.288 6.822 6.486 13.336 6.773c6.513.287 14.949-1.923 23.023-6.916c7.58-4.699 13.305-11.538 15.842-18.199l1.086-2.85l31.383-19.404zM39.642 253.912l26.941 44.9l33.31-24.982a409 409 0 0 1-15.92-3.879c-17.352-4.627-32.253-9.928-44.331-16.039m432.714 0c-12.078 6.11-26.98 11.412-44.332 16.04c-6.926 1.846-14.283 3.565-21.949 5.175l38.926 24.377zM487 264.492l-17.576 29.293a91 91 0 0 0 2.209-.97c5.948-2.72 10.255-5.583 12.627-7.944S487 281.188 487 280zm-462 .002V280c0 1.188.369 2.51 2.74 4.871s6.679 5.224 12.627 7.943q1.07.49 2.207.971zm98.639 14.027l-36.737 27.553c1.874.36 3.74.72 5.674 1.065c21.728 3.862 47.224 6.792 74.612 8.775l-36.143-36.143a574 574 0 0 1-7.406-1.25m233.996 4.538c-23.345 2.877-48.603 4.787-75.155 5.552l37.08 27.809zm27.261.045l-37.195 32.59c26.286-1.979 50.764-4.83 71.723-8.555c1.011-.18 1.972-.373 2.967-.557zm-224.369.697l32.317 32.316l36.676-27.506c-24.226-.698-47.389-2.342-68.993-4.81M256 291.25l-36.322 27.242c12.024.332 24.171.508 36.322.508c12.15 0 24.298-.176 36.322-.508zM25 305.121V440c0 5.5 4.3 11.699 16.09 18.436c3.953 2.259 8.63 4.452 13.91 6.554V317.13c-8.28-2.377-15.693-5.007-22.117-7.943c-2.813-1.287-5.44-2.63-7.883-4.065zm462 0c-2.443 1.435-5.07 2.778-7.883 4.065c-6.424 2.936-13.838 5.566-22.117 7.943V464.99c5.28-2.103 9.957-4.295 13.91-6.554C482.7 451.699 487 445.5 487 440zM73 321.63v149.488c6.196 1.816 12.868 3.523 19.953 5.098c25.716 5.714 56.789 9.79 90.047 12.2V334.978c-34.264-1.945-66.46-5.297-93.576-10.118A430 430 0 0 1 73 321.63m366 0a430 430 0 0 1-16.424 3.232c-27.115 4.82-59.312 8.173-93.576 10.118v153.435c33.258-2.409 64.331-6.485 90.047-12.2c7.085-1.574 13.757-3.281 19.953-5.097zm-238 14.24v153.684a1039 1039 0 0 0 55 1.445c18.483 0 36.972-.485 55-1.445V335.87c-18.053.752-36.52 1.129-55 1.129s-36.947-.377-55-1.129"/></symbol>
+    <symbol id="g-guitar" viewBox="0 0 512 512"><path fill="currentColor" d="m491.938 18.813l-17.72 2.375l-89.374 11.968l-6.22.844l-1.562 6.094l-18.5 72.156l-136.187 137.28c-2.094-4.4-4.324-8.708-6.875-12.843c-7.317-11.86-18.338-22.357-34.844-25.687c-6.457-1.303-12.664-1.702-18.53-1.28c-17.602 1.26-32.182 9.775-41.69 22.5c-10.95 14.654-15.87 34.054-15.31 54.405c-36.16 4.516-66.336 31.382-80.657 64.313c-15.608 35.885-11.856 80.956 24.655 111.156c43.28 35.8 88.28 31.622 119.875 11.22c28.593-18.467 47.778-48.14 50.813-74.752c18.615-2.81 38.424-9.03 56.375-17.968c20.474-10.195 38.536-23.433 48.406-40.063l7.625-12.874l-14.908-1.22c-34.56-2.818-53.76-12.87-66.406-26.217l146-147.22l18.938 1.375l6.156.438l2.813-5.5l6.125-11.907l25.03 11.906L464 132.438l-24.53-11.656l7.655-14.874l25.844 12.28l8.03-16.874l-25.313-12.03L464 73.155L491.03 86l8.033-16.875L472.53 56.53l11.22-21.81zm-124.532 111l13.22 13.093l-200.22 201.875a61 61 0 0 0-5.062-5.717a61 61 0 0 0-8.47-7zm-235.47 210.093c10.914-.046 21.837 4.094 30.25 12.438a42.57 42.57 0 0 1 .25 60.406a42.57 42.57 0 0 1-60.405.25a42.575 42.575 0 0 1-.25-60.406c8.345-8.415 19.245-12.64 30.157-12.688z"/></symbol>
+    <symbol id="g-microphone" viewBox="0 0 512 512"><path fill="currentColor" d="M388.938 29.47c-23.008 0-46.153 9.4-62.688 25.405c5.74 46.14 21.326 75.594 43.75 94.28c22.25 18.543 52.078 26.88 87.75 28.345c13.432-16.07 21.188-37.085 21.188-58c0-23.467-9.75-47.063-26.344-63.656C436 39.25 412.404 29.47 388.938 29.47m-76.282 42.374c-8.808 14.244-13.75 30.986-13.75 47.656c0 23.467 9.782 47.063 26.375 63.656c16.595 16.594 40.19 26.375 63.658 26.375c18.678 0 37.44-6.196 52.687-17.093c-31.55-3.2-59.626-12.46-81.875-31c-23.277-19.397-39.553-48.64-47.094-89.593zm-27.78 67.72l-64.47 83.78c2.898 19.6 10.458 35.1 22.094 46.187c11.692 11.142 27.714 18.118 48.594 19.626l79.312-65.28c-21.2-3.826-41.14-14.11-56.437-29.407c-14.927-14.927-25.057-34.286-29.095-54.907zM300 201.468h.03a8 8 0 0 1 .533 0a8 8 0 0 1 5.875 13.374l-34.313 38.78a8.004 8.004 0 1 1-12-10.593l34.313-38.78a8 8 0 0 1 5.562-2.78zM207.594 240L103 375.906c3.487 13.327 7.326 20.944 12.5 26.03c5.03 4.948 12.386 8.46 23.563 12.408l135.312-111.438c-17.067-3.61-31.595-11.003-42.906-21.78c-11.346-10.81-19.323-24.827-23.876-41.126zM95.97 402.375c-9.12 5.382-17.37 14.08-23.126 24.406c-9.656 17.317-11.52 37.236-2.25 50.47c6.665 4.337 10.566 4.81 13.844 4.344c1.794-.256 3.618-.954 5.624-1.875c-3.18-9.575-6.3-20.93-2.5-33.314c3.03-9.87 10.323-19.044 23.47-27.5a49.5 49.5 0 0 1-6.75-5.562c-3.217-3.163-5.94-6.78-8.313-10.97z"/></symbol>
+    <symbol id="g-trumpet" viewBox="0 0 512 512"><path fill="currentColor" d="M385.853 21.083c-2.876-.097-4.956.287-6.693 1.058c4.438 38.628-3.264 69.792-21.635 99.469c-19.234 31.07-49.316 60.967-88.852 100.502l-3.586 3.722l21.079 21.079l3.722-3.586c28.35-28.35 51.736-51.808 74.16-69.922a50 50 0 0 1 7.662-.918a48 48 0 0 1 2.582-.033c12.806.18 23.989 5.554 32.149 13.714c16.225 16.225 21.424 44.398-3.31 73.522c-8.9-7.421-17.504-10.952-25.503-10.69a25 25 0 0 0-4.064.47c-10.692 2.138-17.328 9.532-22.984 15.189l-23.334 23.334l12.726 12.728l23.336-23.336c5.657-5.657 10.335-9.575 13.785-10.265a9.4 9.4 0 0 1 2.133-.188c2.622.075 6.14 1.307 11.451 5.711l-39.39 39.39l12.728 12.73l45.961-45.962c36.549-36.548 33.505-81.048 9.193-105.36c-8.559-8.558-19.627-14.465-31.962-16.952q1.59-1.026 3.183-2.014c29.677-18.371 60.841-26.073 99.469-21.635c.771-1.737 1.155-3.817 1.058-6.693c-.16-4.804-1.931-11.321-5.304-18.549c-6.746-14.455-19.647-31.608-34.625-46.586s-32.131-27.88-46.586-34.625c-7.228-3.373-13.745-5.143-18.549-5.304M217.492 202.584l-15.557 15.557l12.729 12.727l15.556-15.555zm23.486 24.596l-14.143 14.143l111.723 111.722l14.143-14.14zm-50.309 2.227l-15.556 15.556l12.728 12.727l15.557-15.555zm23.438 24.644l-14.143 14.143L311.69 379.916l14.14-14.142L214.108 254.05zm-50.203 2.121l-15.557 15.557l12.729 12.729L176.63 268.9l-12.726-12.729zm23.334 24.748l-14.143 14.143l111.723 111.723l14.142-14.141zm-13.75 39.99L51.355 447.683l12.963 12.963l39.988-38.525c.004.092.001.186.006.279c.877 17.378 8.833 33.331 20.701 45.2c11.868 11.867 27.822 19.822 45.2 20.698c17.377.877 35.967-5.7 51.673-21.406l48.791-48.79l-12.728-12.73l-42.414 42.415c-7.028-7.302-6.922-10.348-6-13.532c.964-3.332 5.28-8.376 10.937-14.033l26.162-26.162l-12.726-12.728l-26.164 26.164c-5.657 5.656-12.655 11.926-15.5 21.755c-2.715 9.379.623 20.584 10.172 30.83c-10.453 7.99-21.092 10.756-31.297 10.24c-12.41-.625-24.387-6.459-33.38-15.45c-8.99-8.992-14.824-20.968-15.45-33.377c-.334-6.622.726-13.428 3.681-20.246l65.117-62.735l-17.6-17.601zM33.796 455.578l-12.728 12.728l22.627 22.627l12.728-12.728z"/></symbol>
+    <symbol id="g-trombone" viewBox="0 0 512 512"><path fill="currentColor" d="M92.2 34.29h-2.29c-15.74.37-31.19 7.48-41.51 20.73c-8.73 11.3-13.05 25.74-11.34 40.04c1.7 14.34 9.3 27.44 20.43 36.24l118.81 94.3l-10.5 13.1l-11.1-9l-14.7 19.4s34.9 27.7 52.3 41.4l15.4-19.7l-28.8-21.8l10.5-13.1l28.7 21.7l15.5-19.6L73.28 111.7c-6.61-4.8-10.48-11.85-11.4-19.58c-.92-7.72 1.18-15.49 6.48-21.67c9.87-12.71 28.34-14.92 41.04-4.9l58.2 45.85c.3.2 70.3 55.3 106.4 102.4c7.2 9.4 13 18.3 16.4 26.3c2.1 5.3 3.7 9.8 2.1 13.5c-2.4 5.8-.2 12.5 5.2 15.7c5.3 3.1 12.2 1.8 16.1-3.1l54.1-68.8c3.9-4.9 3.5-11.9-.9-16.4c-4.3-4.5-11.4-5.1-16.4-1.3c-3.2 2.4-7.9 1.9-13.5 1.1c-8.6-1.4-18.7-4.9-29.5-9.7c-54.2-24.1-124.2-79.18-124.7-79.45l-58.1-45.74a54.34 54.34 0 0 0-32.6-11.62M110 76.64L84.01 109.7L97.12 120l25.98-33.06zm32 24.06l-25.9 33.1l13 10.3L155 111zm55.4 43.7l-26 33l13 10.4l26-33.1zm-75.1 55.8L104 223.5l23.5 13.5l13.5-17.2zm124.3 48.1l-41.2 52.5l215.8 169.8c14.5 11.4 35.5 8.9 47-5.6c11.3-14.5 8.8-35.5-5.6-46.8zm-.7 32.5l201.2 157c3.6 2.8 4.3 8.1 1.4 11.8c-2.9 3.6-8.2 4.3-11.8 1.4L235.6 294z"/></symbol>
+    <symbol id="g-saxophone" viewBox="0 0 512 512"><path fill="currentColor" d="M151.21 26.775c-18.385 2.518-37.75 18.106-48.784 28.028l15.607 18.527c17.103-12.17 32.453-18.857 36.975-5.98c43.955 125.186 102.805 440.16 214.205 416.636c90.158-25.674 42.966-127.593 56.11-188.435c2.508-10.346 8.965-23.229 21.237-22.842c11.477.362 6.472-5.97 2.8-7.682c-35.743-19.406-80.315-25.59-117.909-38.12c-11.833-3.945-8.18 4.162-5.371 10.28c4.217 9.188 2.88 41.07 5.293 54.526a32.6 32.6 0 0 1 15.105-3.707c18.12 0 33 14.881 33 33c0 6.41-1.87 12.412-5.08 17.496c10.623 5.506 17.947 16.611 17.947 29.318c0 18.12-14.88 33-33 33c-1.186 0-2.358-.067-3.513-.191c-.511 4.767-2.01 8.147-4.81 9.693c-10.326 3.204-45.397-73.375-83.014-161.382c-6.54 3.924-12.608 5.998-19.31 5.212c17.077 46.103 35.722 91.756 58.396 136.98l-16.09 8.067c-45.888-91.528-75.273-184.003-107.725-277.195l16.998-5.92c2.355 6.764 4.67 13.496 6.996 20.24a27.1 27.1 0 0 1 10.82-5.945c-14.584-34.816-28.005-66.631-38.576-90.332c-5.286-7.657-17.624-13.574-28.306-13.272zM89.522 67.424C77.28 80.24 66.187 94.324 58.33 106.93l7.474 8.806c8.001-5.403 22.698-19.026 37.948-31.418zm135.737 79.97c-5.1 0-9.041 3.942-9.041 9.042s3.941 9.04 9.04 9.04c5.1 0 9.042-3.94 9.042-9.04s-3.942-9.041-9.041-9.041zm12.707 34.122c-5.1 0-9.041 3.941-9.041 9.04c0 5.1 3.941 9.042 9.04 9.042c5.1 0 9.04-3.942 9.04-9.041s-3.94-9.041-9.04-9.041zm13.904 36.752c-5.1 0-9.041 3.94-9.041 9.039s3.941 9.04 9.04 9.04c5.1 0 9.042-3.94 9.042-9.04s-3.942-9.04-9.041-9.04zm94.61 87.738c-8.392 0-15 6.609-15 15s6.608 15 15 15c8.39 0 15-6.61 15-15s-6.61-15-15-15m12.866 46.814c-8.39 0-15 6.61-15 15s6.61 15 15 15s15-6.609 15-15s-6.609-15-15-15"/></symbol>
+  </defs>
+</svg>
+<div class="board">
+  <div class="head">
+    <h1>H1 — Two ways out</h1>
+    <p>The song is the heading, because that is what the take IS a take of. One plain sentence says the rest — “A take from Live at The Attic on July 8, 2026” — and the facts sit under it in one quiet run. The two destinations are then a matched pair of real controls at the bottom, each labelled with what it leads to and named with the thing itself, so a rehearsal gets a way out exactly as a concert does.</p>
+    <p class="trade"><strong>Trade-off.</strong> The pair is the biggest thing in the header, under a heading that is a song title — so the page can read as being about the song rather than about this one take. Two boxes is also the most furniture of the three.</p>
+  </div>
+  <div class="sect">
+    <span class="caps">Desktop — 1120 px</span>
+    <p class="capt">A concert take: named event, a note, a settled verdict.</p>
+    <div class="frame w-desk"><div class="hero">
+  <h1 class="h1">Because the Night (cover)<span class="fav"><svg class="star" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z"></path></svg></span></h1>
+  <p class="lede">A take from Live at The Attic on July 8, 2026</p>
+  <div class="factrow">
+    <span class="fact"><b>3:44</b></span>
+    <span class="is " role="img" aria-label="Instruments"><svg class="is-g"><use href="#g-guitar"></use></svg><svg class="is-g"><use href="#g-microphone"></use></svg></span>
+    <span class="badge badge-ok">keeper</span>
+    <span class="note">“just for fun”</span>
+  </div>
+  <div class="ways">
+    <a class="way" href="#"><span class="way-k">Song</span><span class="way-v">Because the Night (cover)</span><svg class="arw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></a>
+    <a class="way" href="#"><span class="way-k">Live</span><span class="way-v">Live at The Attic</span><svg class="arw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></a>
+  </div>
+</div><div class="after">
+  <span class="caps">Listen</span>
+  <div class="listen">
+    <span class="disc"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5l12 7.5-12 7.5z"></path></svg></span>
+    <span><b>Play this take</b><span>master mix</span></span>
+  </div>
+</div></div>
+    <p class="capt" style="margin-top:20px">A rehearsal take: no event name, no note, no verdict — the common case in a seeded archive.</p>
+    <div class="frame w-desk"><div class="hero">
+  <h1 class="h1">Neon Skyline<span class="fav"><svg class="star" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z"></path></svg></span></h1>
+  <p class="lede">A take from a rehearsal on September 11, 2025</p>
+  <div class="factrow">
+    <span class="fact"><b>3:45</b></span>
+    <span class="is is-dense" role="img" aria-label="Instruments"><svg class="is-g"><use href="#g-drum"></use></svg><svg class="is-g"><use href="#g-guitar"></use></svg><svg class="is-g"><use href="#g-microphone"></use></svg><svg class="is-g"><use href="#g-trumpet"></use></svg><svg class="is-g"><use href="#g-saxophone"></use></svg></span>
+    
+    
+  </div>
+  <div class="ways">
+    <a class="way" href="#"><span class="way-k">Song</span><span class="way-v">Neon Skyline</span><svg class="arw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></a>
+    <a class="way" href="#"><span class="way-k">Rehearsal</span><span class="way-v">Sep 11, 2025</span><svg class="arw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></a>
+  </div>
+</div><div class="after">
+  <span class="caps">Listen</span>
+  <div class="listen">
+    <span class="disc"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5l12 7.5-12 7.5z"></path></svg></span>
+    <span><b>Play this take</b><span>master mix</span></span>
+  </div>
+</div></div>
+  </div>
+  <div class="sect">
+    <span class="caps">Phone — 375 px</span>
+    <div class="pair">
+      <div><p class="capt">Concert</p><div class="frame w-phone"><div class="hero">
+  <h1 class="h1">Because the Night (cover)<span class="fav"><svg class="star" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z"></path></svg></span></h1>
+  <p class="lede">A take from Live at The Attic on Jul 8, 2026</p>
+  <div class="factrow">
+    <span class="fact"><b>3:44</b></span>
+    <span class="is " role="img" aria-label="Instruments"><svg class="is-g"><use href="#g-guitar"></use></svg><svg class="is-g"><use href="#g-microphone"></use></svg></span>
+    <span class="badge badge-ok">keeper</span>
+    <span class="note">“just for fun”</span>
+  </div>
+  <div class="ways">
+    <a class="way" href="#"><span class="way-k">Song</span><span class="way-v">Because the Night (cover)</span><svg class="arw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></a>
+    <a class="way" href="#"><span class="way-k">Live</span><span class="way-v">Live at The Attic</span><svg class="arw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></a>
+  </div>
+</div><div class="after">
+  <span class="caps">Listen</span>
+  <div class="listen">
+    <span class="disc"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5l12 7.5-12 7.5z"></path></svg></span>
+    <span><b>Play this take</b><span>master mix</span></span>
+  </div>
+</div></div></div>
+      <div><p class="capt">Rehearsal</p><div class="frame w-phone"><div class="hero">
+  <h1 class="h1">Neon Skyline<span class="fav"><svg class="star" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 0.8l2.1 4.5 4.9.7-3.6 3.5.9 4.9L8 12.2l-4.3 2.2.9-4.9-3.6-3.5 4.9-.7z"></path></svg></span></h1>
+  <p class="lede">A take from a rehearsal on Sep 11, 2025</p>
+  <div class="factrow">
+    <span class="fact"><b>3:45</b></span>
+    <span class="is is-dense" role="img" aria-label="Instruments"><svg class="is-g"><use href="#g-drum"></use></svg><svg class="is-g"><use href="#g-guitar"></use></svg><svg class="is-g"><use href="#g-microphone"></use></svg><svg class="is-g"><use href="#g-trumpet"></use></svg><svg class="is-g"><use href="#g-saxophone"></use></svg></span>
+    
+    
+  </div>
+  <div class="ways">
+    <a class="way" href="#"><span class="way-k">Song</span><span class="way-v">Neon Skyline</span><svg class="arw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></a>
+    <a class="way" href="#"><span class="way-k">Rehearsal</span><span class="way-v">Sep 11, 2025</span><svg class="arw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></a>
+  </div>
+</div><div class="after">
+  <span class="caps">Listen</span>
+  <div class="listen">
+    <span class="disc"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5l12 7.5-12 7.5z"></path></svg></span>
+    <span><b>Play this take</b><span>master mix</span></span>
+  </div>
+</div></div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

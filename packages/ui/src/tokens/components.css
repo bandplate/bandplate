@@ -3193,14 +3193,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   z-index: 1;
 }
 
-/* The way back to the song. It was the page's own H1 — a heading that quietly
-   navigated elsewhere, which nobody reads as a way out, and which made a take
-   look like the song's page. An action gets a control. */
-.bp-take-song-link {
-  align-self: flex-start;
-  margin-top: 0.25rem;
-}
-
 /* The favourite sits at the ROW'S far right end, past the duration — where
    `.bp-song-row` and `.bp-ledger-row` have always put theirs. It used to sit
    beside the take's title, which made the same control land in two different
@@ -3685,37 +3677,94 @@ html:has(dialog.bp-filter-sheet[open]) body {
   padding-bottom: 1.25rem;
 }
 
-.bp-take-detail-subline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 0.625rem;
-  margin-top: 0.4375rem;
+/* One plain sentence under the heading — direction H1 from the canvas. It
+   replaced a run of fragments (event link, drawn rule, date, kind badge) that
+   asked a reader to assemble the sentence themselves, and that had a different
+   shape depending on whether the event had a name. */
+.bp-take-detail-lede {
+  margin-top: 0.625rem;
   font-size: var(--text-meta, 0.78125rem);
+  line-height: 1.5;
   color: var(--bp-color-muted);
   font-variant-numeric: tabular-nums;
 }
 
-/* The drawn rule the whole system uses between two runs on one line, rather
-   than a middle dot. */
-.bp-take-detail-sep {
-  display: inline-block;
-  width: 1px;
-  height: 0.75rem;
-  flex: none;
-  background: var(--bp-color-border);
+/* Both ways out of a take, as a matched pair. Two equal controls, because a
+   take belongs to its song and to its event equally — the shape is the
+   argument. They wrap to a column below `sm` rather than squeezing two names
+   into half a phone each. */
+.bp-take-ways {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  margin-top: 1.375rem;
 }
 
-.bp-take-detail-note {
-  margin-top: 0.375rem;
-  font-size: var(--text-note, 0.71875rem);
-  color: var(--bp-color-muted);
-}
-
-.bp-take-detail-verdict {
-  display: inline-flex;
+.bp-take-way {
+  display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.875rem;
+  flex: 1 1 20rem;
+  min-width: 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--bp-color-border);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--bp-color-fg) 3%, transparent);
+  color: var(--bp-color-fg);
+  text-decoration: none;
+}
+
+/* The same fill a row gets under the pointer, for the same reason — one hover
+   material across the app. */
+.bp-take-way:hover {
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
+}
+
+/* What this leads to: "Song", or the event's kind. Fixed width so the two
+   names beside them start on the same x down the pair — which only works if
+   the width clears the LONGEST word the vocabulary can hold. At 4.625rem
+   "REHEARSAL" overran it and shoved its own name right, so the pair no longer
+   lined up in exactly the case the pair exists for. Sized past it, with room
+   for a kind an admin adds later. */
+.bp-take-way-kind {
+  font-family: var(--bp-font-body);
+  font-weight: 900;
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+  flex: none;
+  width: 6rem;
+}
+
+/* The thing itself, named. "Go to the song" said what the control did and
+   nothing about where it went. */
+.bp-take-way-name {
+  font-family: var(--bp-font-display);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  line-height: 1.2;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-take-way-arrow {
+  width: 18px;
+  height: 18px;
+  color: var(--bp-color-muted);
+  flex: none;
+}
+
+/* Inline in the facts run now, in quotation marks, rather than a band of its
+   own between the sentence and the facts. It is the one fact on this page a
+   person typed, and it reads as one among the others rather than as an
+   announcement. */
+.bp-take-detail-note {
+  color: var(--bp-color-muted);
 }
 
 .bp-pinned-hero-sep {

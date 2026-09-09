@@ -91,6 +91,21 @@ Do these in order — each later step needs something from the one before it.
    `BANDPLATE_APP_ORIGIN`. Downloads and playback do not need this: those
    go through the app's own 302, not a cross-origin fetch.
 
+   Or from the CLI, which is what `deploy/worker/r2-cors.json` is for
+   (edit the origin in it first):
+
+   ```
+   pnpm exec wrangler r2 bucket cors set bandplate --file ../../deploy/worker/r2-cors.json
+   ```
+
+   **The CLI takes a different shape from the dashboard** — a `rules`
+   array of `{allowed: {origins, methods, headers}}`, not the flat
+   `AllowedOrigins`/`AllowedMethods` above. Passing the dashboard's JSON
+   to the CLI fails with "must contain a 'rules' array". Check the result
+   with `wrangler r2 bucket cors list bandplate`; before the rule exists
+   that command errors with "The CORS configuration does not exist",
+   which is the answer, not a failure.
+
 4. **A mail provider account** (Resend or Postmark) and an API key. The
    app is email-only after bootstrap — a Workers deploy with no working
    mailer is a lockout, exactly like the Node profile with no SMTP

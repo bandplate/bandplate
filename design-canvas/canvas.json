@@ -1,511 +1,568 @@
 {
-  "pages": [
-    {
-      "id": "page-17",
-      "name": "M6 \u2014 Player"
-    },
-    {
-      "id": "page-16",
-      "name": "M6 \u2014 Admin editing"
-    },
-    {
-      "id": "page-15",
-      "name": "M6 \u2014 Auth"
-    },
-    {
-      "id": "page-14",
-      "name": "M5 \u2014 Admin"
-    },
-    {
-      "id": "page-13",
-      "name": "M4 \u2014 Takes"
-    },
-    {
-      "id": "page-12",
-      "name": "M4 \u2014 Songs"
-    },
-    {
-      "id": "page-11",
-      "name": "M4 \u2014 Me"
-    },
-    {
-      "id": "page-10",
-      "name": "M4 \u2014 Home"
-    },
-    {
-      "id": "page-9",
-      "name": "M4 \u2014 Take detail"
-    },
-    {
-      "id": "page-8",
-      "name": "M4 \u2014 Song detail"
-    },
-    {
-      "id": "page-7",
-      "name": "M2 \u2014 Primitives"
-    },
-    {
-      "id": "page-6",
-      "name": "Type revisit"
-    },
-    {
-      "id": "page-5",
-      "name": "M3 \u2014 Shell"
-    },
-    {
-      "id": "page-4",
-      "name": "Logo"
-    },
-    {
-      "id": "page-1",
-      "name": "Foundation"
-    },
-    {
-      "id": "page-2",
-      "name": "A \u2014 without mono"
-    },
-    {
-      "id": "page-3",
-      "name": "Directions"
-    }
-  ],
-  "artboards": [
-    {
-      "file": "Player.dc.html",
-      "x": 0,
-      "y": 0,
-      "w": 2882,
-      "h": 700,
-      "page": "page-17",
-      "title": "P1 \u2014 The plate, with a source switch"
-    },
-    {
-      "file": "PlayerRail.dc.html",
-      "x": 3002,
-      "y": 0,
-      "w": 1678,
-      "h": 790,
-      "page": "page-17",
-      "title": "P2 \u2014 The rail"
-    },
-    {
-      "file": "PlayerDesk.dc.html",
-      "x": 4800,
-      "y": 0,
-      "w": 1678,
-      "h": 790,
-      "page": "page-17",
-      "title": "P3 \u2014 The desk"
-    },
-    {
-      "file": "WaveformStates.dc.html",
-      "x": 0,
-      "y": 860,
-      "w": 1812,
-      "h": 560,
-      "page": "page-17",
-      "title": "The waveform itself"
-    },
-    {
-      "file": "AdminEdit.dc.html",
-      "x": 0,
-      "y": 0,
-      "w": 1398,
-      "h": 1020,
-      "page": "page-16",
-      "title": "E1 \u2014 The drawer row"
-    },
-    {
-      "file": "AdminEditSheet.dc.html",
-      "x": 1518,
-      "y": 0,
-      "w": 1398,
-      "h": 1020,
-      "page": "page-16",
-      "title": "E2 \u2014 The record sheet"
-    },
-    {
-      "file": "AdminEditInline.dc.html",
-      "x": 3036,
-      "y": 0,
-      "w": 1398,
-      "h": 1020,
-      "page": "page-16",
-      "title": "E3 \u2014 In place"
-    },
-    {
-      "file": "Auth.dc.html",
-      "x": 0,
-      "y": 0,
-      "w": 2242,
-      "h": 900,
-      "page": "page-15",
-      "title": "L1 \u2014 Centre label"
-    },
-    {
-      "file": "AuthSplit.dc.html",
-      "x": 2362,
-      "y": 0,
-      "w": 2242,
-      "h": 900,
-      "page": "page-15",
-      "title": "L2 \u2014 Split press"
-    },
-    {
-      "file": "AuthSleeve.dc.html",
-      "x": 4724,
-      "y": 0,
-      "w": 2242,
-      "h": 900,
-      "page": "page-15",
-      "title": "L3 \u2014 Sleeve"
-    },
-    {
-      "file": "AuthStates.dc.html",
-      "x": 0,
-      "y": 1060,
-      "w": 2716,
-      "h": 880,
-      "page": "page-15",
-      "title": "The other states"
-    },
-    {
-      "file": "Admin.dc.html",
-      "title": "Admin",
-      "page": "page-14",
-      "x": 0,
-      "y": 0,
-      "w": 2200,
-      "h": 980
-    },
-    {
-      "file": "Takes.dc.html",
-      "title": "Takes",
-      "page": "page-13",
-      "x": 0,
-      "y": 0,
-      "w": 2360,
-      "h": 1040
-    },
-    {
-      "file": "Songs.dc.html",
-      "title": "Songs",
-      "page": "page-12",
-      "x": 0,
-      "y": 0,
-      "w": 3060,
-      "h": 980
-    },
-    {
-      "file": "Me.dc.html",
-      "title": "Me",
-      "page": "page-11",
-      "x": 0,
-      "y": 0,
-      "w": 3020,
-      "h": 1020
-    },
-    {
-      "file": "Home.dc.html",
-      "title": "Home",
-      "page": "page-10",
-      "x": 0,
-      "y": 0,
-      "w": 2000,
-      "h": 1060
-    },
-    {
-      "file": "TakeDetail.dc.html",
-      "title": "Take detail",
-      "page": "page-9",
-      "x": 0,
-      "y": 0,
-      "w": 2680,
-      "h": 1180
-    },
-    {
-      "file": "SongDetail.dc.html",
-      "title": "Song detail",
-      "page": "page-8",
-      "x": 0,
-      "y": 0,
-      "w": 1720,
-      "h": 1120
-    },
-    {
-      "file": "TakeRowRevised.dc.html",
-      "title": "Take row \u2014 V2 chosen",
-      "page": "page-7",
-      "x": 1400,
-      "y": -3300,
-      "w": 1240,
-      "h": 1120
-    },
-    {
-      "file": "InstrumentIcons.dc.html",
-      "title": "Instrument icons \u2014 real glyphs",
-      "page": "page-7",
-      "x": 0,
-      "y": -3300,
-      "w": 1240,
-      "h": 1300
-    },
-    {
-      "file": "SkinS3r.dc.html",
-      "title": "S3 revised \u2014 Label, filled",
-      "page": "page-7",
-      "x": 0,
-      "y": -1620,
-      "w": 1060,
-      "h": 1560
-    },
-    {
-      "file": "SkinS3.dc.html",
-      "title": "S3 \u2014 Label (original)",
-      "page": "page-7",
-      "x": 2160,
-      "y": 0,
-      "w": 1000,
-      "h": 1500
-    },
-    {
-      "file": "SkinS2.dc.html",
-      "title": "S2 \u2014 Sleeve",
-      "page": "page-7",
-      "x": 1080,
-      "y": 0,
-      "w": 1000,
-      "h": 1500
-    },
-    {
-      "file": "SkinS1.dc.html",
-      "title": "S1 \u2014 Bare plate",
-      "page": "page-7",
-      "x": 0,
-      "y": 0,
-      "w": 1000,
-      "h": 1500
-    },
-    {
-      "file": "SlabNeighbourhood.dc.html",
-      "title": "Seven beside Zilla Slab",
-      "page": "page-6",
-      "x": 0,
-      "y": -1500,
-      "w": 1560,
-      "h": 1400
-    },
-    {
-      "file": "TypeRevisit.dc.html",
-      "title": "Four display faces",
-      "page": "page-6",
-      "x": 0,
-      "y": 0,
-      "w": 1780,
-      "h": 1180
-    },
-    {
-      "file": "MetaLines.dc.html",
-      "title": "Meta lines \u2014 killing the middot",
-      "page": "page-6",
-      "x": 1860,
-      "y": 0,
-      "w": 1780,
-      "h": 1080
-    },
-    {
-      "file": "ShellC.dc.html",
-      "title": "C \u2014 Header",
-      "page": "page-5",
-      "x": 3560,
-      "y": 0,
-      "w": 1700,
-      "h": 1420
-    },
-    {
-      "file": "ShellB.dc.html",
-      "title": "B \u2014 Deck",
-      "page": "page-5",
-      "x": 1780,
-      "y": 0,
-      "w": 1700,
-      "h": 1420
-    },
-    {
-      "file": "ShellA.dc.html",
-      "title": "A \u2014 Console",
-      "page": "page-5",
-      "x": 0,
-      "y": 0,
-      "w": 1700,
-      "h": 1420
-    },
-    {
-      "file": "LogoDark.dc.html",
-      "title": "Marks \u2014 dark",
-      "page": "page-4",
-      "x": 0,
-      "y": 0,
-      "w": 1180,
-      "h": 2000
-    },
-    {
-      "file": "LogoLight.dc.html",
-      "title": "Marks \u2014 light",
-      "page": "page-4",
-      "x": 1260,
-      "y": 0,
-      "w": 1180,
-      "h": 2000
-    },
-    {
-      "file": "LogoUse.dc.html",
-      "title": "In application \u2014 05 Cut chosen",
-      "page": "page-4",
-      "x": 0,
-      "y": 2150,
-      "w": 1180,
-      "h": 2000
-    },
-    {
-      "file": "Main.dc.html",
-      "title": "Dubplate foundation \u2014 settled",
-      "page": "page-1",
-      "x": 0,
-      "y": 0,
-      "w": 940,
-      "h": 2120
-    },
-    {
-      "file": "A1.dc.html",
-      "title": "A1 \u2014 Two faces, tabular figures",
-      "page": "page-2",
-      "x": 0,
-      "y": 0,
-      "w": 900,
-      "h": 1420
-    },
-    {
-      "file": "A2.dc.html",
-      "title": "A2 \u2014 The slab stamps the numbers",
-      "page": "page-2",
-      "x": 980,
-      "y": 0,
-      "w": 900,
-      "h": 1420
-    },
-    {
-      "file": "A3.dc.html",
-      "title": "A3 \u2014 Mono demoted (chosen)",
-      "page": "page-2",
-      "x": 1960,
-      "y": 0,
-      "w": 900,
-      "h": 1420
-    },
-    {
-      "file": "DirectionB.dc.html",
-      "title": "B \u2014 Session Flyer",
-      "page": "page-3",
-      "x": 0,
-      "y": 0,
-      "w": 900,
-      "h": 1720
-    },
-    {
-      "file": "DirectionC.dc.html",
-      "title": "C \u2014 Roots Press",
-      "page": "page-3",
-      "x": 980,
-      "y": 0,
-      "w": 900,
-      "h": 1720
-    }
-  ],
-  "annotations": [
-    {
-      "id": "song",
-      "page": "page-8",
-      "x": 0,
-      "y": -260,
-      "w": 1720,
-      "text": "Song detail\n\nTwo columns on desktop: chart left at a 40ch measure, takes right with room to be a real list. On a phone the same two blocks stack, takes first \u2014 you open a song to hear it, not to read it.\n\nNo left indent anywhere; the chorus label is muted like every other section and the emphasis sits on the words."
-    },
-    {
-      "id": "takerow",
-      "page": "page-7",
-      "x": 1400,
-      "y": -3500,
-      "w": 1240,
-      "text": "Take row \u2014 V2 chosen, strictly\n\nYes, it is one component: six call sites, three context modes, and not one opts out of the vote control or hides it once a take is a keeper. That is most of what looked wrong.\n\nDecided: keeper / not-a-keeper lives ONLY on take detail \u2014 not in any list, including home's \"needs your vote\", which becomes a queue of things to go and listen to rather than a place to judge them unheard.\n\nThe left column is what changes regardless."
-    },
-    {
-      "id": "icons",
-      "page": "page-7",
-      "x": 0,
-      "y": -3500,
-      "w": 1240,
-      "text": "Instruments \u2014 second attempt\n\nThe first icon set was twelve SVG paths I wrote by hand from imagination. Withdrawn.\n\nThese are Game Icons, drawn as one family \u2014 the only set surveyed that covers a band. Lucide, Tabler, Phosphor and Material between them have guitar, piano, microphone and violin, and no drums, trombone, flute or clarinet.\n\nThe catch is CC BY 3.0: visible attribution, which every self-deployer inherits. Read the two notes at the bottom before deciding."
-    },
-    {
-      "id": "skins",
-      "page": "page-7",
-      "x": 0,
-      "y": -240,
-      "w": 1000,
-      "text": "Milestone 2 \u2014 primitive skins\n\nLabel (S3) was chosen, then revised twice: outlines replaced by fills, then the fills roughly doubled in weight.\n\nThe revised board is above; the three original candidates are below it for reference.\n\nThe three notes along the bottom of the revised board are the interesting part \u2014 raising the fills broke two things that had to be fixed rather than ignored."
-    },
-    {
-      "id": "typeagain",
-      "page": "page-6",
-      "x": 0,
-      "y": -200,
-      "w": 1780,
-      "text": "Type revisit\n\nTOP \u2014 eight contemporary slabs including Zilla Slab, your current pick. Same sizes, same Czech titles, the column layout from the meta-line decision. Available weights and a measured title width on each.\n\nBELOW LEFT \u2014 the original four (now rendering correctly; the first version had a quoting bug that fell every column back to Georgia).\n\nBELOW RIGHT \u2014 meta lines. Settled: columns in lists, labelled fields on detail pages, a 1px rule where a line must stay inline. Never the middot."
-    },
-    {
-      "id": "shell",
-      "page": "page-5",
-      "x": 0,
-      "y": -230,
-      "w": 1700,
-      "text": "Milestone 3 \u2014 the shell\n\nThree structurally different answers to one question: where does navigation live, and how does the player relate to it. Everything after this inherits the answer, which is why it comes before the primitives.\n\nEach board shows the SAME screen \u2014 an event with takes, one playing \u2014 at phone and desktop width, so the difference you see is the shell and nothing else. Tokens, type and rows are identical across all three."
-    },
-    {
-      "id": "logo",
-      "page": "page-4",
-      "x": 0,
-      "y": -210,
-      "w": 1180,
-      "text": "Logo \u2014 05 Cut chosen (2026-09-08)\n\nTwelve candidates. 01-06 work the plate itself; 07-12 push outside it \u2014 dub delay, the sound system, the offbeat chop, the letterform.\n\n05 Cut won on meaning: a dubplate is cut, once, for one sound, and it is the only mark here that shows the verb the app is named after. It also holds at 16px.\n\nShipped in apps/web/public/ with a simplified sub-32px variant; spec in docs/design-foundation.md."
-    },
-    {
-      "id": "settled",
-      "page": "page-1",
-      "x": 0,
-      "y": -200,
-      "w": 940,
-      "text": "Milestone 1 \u2014 settled\n\nDirection A's palette, A3's typography rule. Written up in docs/design-foundation.md. This is the sheet milestone 2 builds primitives against."
-    },
-    {
-      "id": "sub",
-      "page": "page-2",
-      "x": 0,
-      "y": -210,
-      "w": 900,
-      "text": "Milestone 1b \u2014 A without the mono\n\nA3 was chosen: mono kept, but only where a character grid carries meaning."
-    },
-    {
-      "id": "brief",
-      "page": "page-3",
-      "x": 0,
-      "y": -170,
-      "w": 900,
-      "text": "Milestone 1 \u2014 the two directions not taken. Kept for reference."
-    }
-  ],
-  "launch": {
-    "view": "canvas",
-    "page": "page-17"
+ "pages": [
+  {
+   "id": "page-18",
+   "name": "M7 — Take row"
+  },
+  {
+   "id": "page-17",
+   "name": "M6 — Player"
+  },
+  {
+   "id": "page-16",
+   "name": "M6 — Admin editing"
+  },
+  {
+   "id": "page-15",
+   "name": "M6 — Auth"
+  },
+  {
+   "id": "page-14",
+   "name": "M5 — Admin"
+  },
+  {
+   "id": "page-13",
+   "name": "M4 — Takes"
+  },
+  {
+   "id": "page-12",
+   "name": "M4 — Songs"
+  },
+  {
+   "id": "page-11",
+   "name": "M4 — Me"
+  },
+  {
+   "id": "page-10",
+   "name": "M4 — Home"
+  },
+  {
+   "id": "page-9",
+   "name": "M4 — Take detail"
+  },
+  {
+   "id": "page-8",
+   "name": "M4 — Song detail"
+  },
+  {
+   "id": "page-7",
+   "name": "M2 — Primitives"
+  },
+  {
+   "id": "page-6",
+   "name": "Type revisit"
+  },
+  {
+   "id": "page-5",
+   "name": "M3 — Shell"
+  },
+  {
+   "id": "page-4",
+   "name": "Logo"
+  },
+  {
+   "id": "page-1",
+   "name": "Foundation"
+  },
+  {
+   "id": "page-2",
+   "name": "A — without mono"
+  },
+  {
+   "id": "page-3",
+   "name": "Directions"
   }
+ ],
+ "artboards": [
+  {
+   "file": "InstrumentSet.dc.html",
+   "title": "Instrument set — a primitive",
+   "page": "page-18",
+   "x": 1740,
+   "y": 1820,
+   "w": 1000,
+   "h": 1620
+  },
+  {
+   "file": "TakeRowPhone.dc.html",
+   "title": "R3 on a phone — what gets cut",
+   "page": "page-18",
+   "x": 0,
+   "y": 1820,
+   "w": 1620,
+   "h": 1200
+  },
+  {
+   "file": "TakeRowAnchored.dc.html",
+   "title": "R3 — Anchored ends",
+   "page": "page-18",
+   "x": 2580,
+   "y": 0,
+   "w": 1200,
+   "h": 1680
+  },
+  {
+   "file": "TakeRowStanza.dc.html",
+   "title": "R2 — Two-line stanza",
+   "page": "page-18",
+   "x": 1290,
+   "y": 0,
+   "w": 1200,
+   "h": 1680
+  },
+  {
+   "file": "TakeRowLedger.dc.html",
+   "title": "R1 — Ledger (fixed columns)",
+   "page": "page-18",
+   "x": 0,
+   "y": 0,
+   "w": 1200,
+   "h": 1680
+  },
+  {
+   "file": "Player.dc.html",
+   "x": 0,
+   "y": 0,
+   "w": 2882,
+   "h": 700,
+   "page": "page-17",
+   "title": "P1 — The plate, with a source switch"
+  },
+  {
+   "file": "PlayerRail.dc.html",
+   "x": 3002,
+   "y": 0,
+   "w": 1678,
+   "h": 790,
+   "page": "page-17",
+   "title": "P2 — The rail"
+  },
+  {
+   "file": "PlayerDesk.dc.html",
+   "x": 4800,
+   "y": 0,
+   "w": 1678,
+   "h": 790,
+   "page": "page-17",
+   "title": "P3 — The desk"
+  },
+  {
+   "file": "WaveformStates.dc.html",
+   "x": 0,
+   "y": 860,
+   "w": 1812,
+   "h": 560,
+   "page": "page-17",
+   "title": "The waveform itself"
+  },
+  {
+   "file": "AdminEdit.dc.html",
+   "x": 0,
+   "y": 0,
+   "w": 1398,
+   "h": 1020,
+   "page": "page-16",
+   "title": "E1 — The drawer row"
+  },
+  {
+   "file": "AdminEditSheet.dc.html",
+   "x": 1518,
+   "y": 0,
+   "w": 1398,
+   "h": 1020,
+   "page": "page-16",
+   "title": "E2 — The record sheet"
+  },
+  {
+   "file": "AdminEditInline.dc.html",
+   "x": 3036,
+   "y": 0,
+   "w": 1398,
+   "h": 1020,
+   "page": "page-16",
+   "title": "E3 — In place"
+  },
+  {
+   "file": "Auth.dc.html",
+   "x": 0,
+   "y": 0,
+   "w": 2242,
+   "h": 900,
+   "page": "page-15",
+   "title": "L1 — Centre label"
+  },
+  {
+   "file": "AuthSplit.dc.html",
+   "x": 2362,
+   "y": 0,
+   "w": 2242,
+   "h": 900,
+   "page": "page-15",
+   "title": "L2 — Split press"
+  },
+  {
+   "file": "AuthSleeve.dc.html",
+   "x": 4724,
+   "y": 0,
+   "w": 2242,
+   "h": 900,
+   "page": "page-15",
+   "title": "L3 — Sleeve"
+  },
+  {
+   "file": "AuthStates.dc.html",
+   "x": 0,
+   "y": 1060,
+   "w": 2716,
+   "h": 880,
+   "page": "page-15",
+   "title": "The other states"
+  },
+  {
+   "file": "Admin.dc.html",
+   "title": "Admin",
+   "page": "page-14",
+   "x": 0,
+   "y": 0,
+   "w": 2200,
+   "h": 980
+  },
+  {
+   "file": "Takes.dc.html",
+   "title": "Takes",
+   "page": "page-13",
+   "x": 0,
+   "y": 0,
+   "w": 2360,
+   "h": 1040
+  },
+  {
+   "file": "Songs.dc.html",
+   "title": "Songs",
+   "page": "page-12",
+   "x": 0,
+   "y": 0,
+   "w": 3060,
+   "h": 980
+  },
+  {
+   "file": "Me.dc.html",
+   "title": "Me",
+   "page": "page-11",
+   "x": 0,
+   "y": 0,
+   "w": 3020,
+   "h": 1020
+  },
+  {
+   "file": "Home.dc.html",
+   "title": "Home",
+   "page": "page-10",
+   "x": 0,
+   "y": 0,
+   "w": 2000,
+   "h": 1060
+  },
+  {
+   "file": "TakeDetail.dc.html",
+   "title": "Take detail",
+   "page": "page-9",
+   "x": 0,
+   "y": 0,
+   "w": 2680,
+   "h": 1180
+  },
+  {
+   "file": "SongDetail.dc.html",
+   "title": "Song detail",
+   "page": "page-8",
+   "x": 0,
+   "y": 0,
+   "w": 1720,
+   "h": 1120
+  },
+  {
+   "file": "TakeRowRevised.dc.html",
+   "title": "Take row — V2 chosen",
+   "page": "page-7",
+   "x": 1400,
+   "y": -3300,
+   "w": 1240,
+   "h": 1120
+  },
+  {
+   "file": "InstrumentIcons.dc.html",
+   "title": "Instrument icons — real glyphs",
+   "page": "page-7",
+   "x": 0,
+   "y": -3300,
+   "w": 1240,
+   "h": 1300
+  },
+  {
+   "file": "SkinS3r.dc.html",
+   "title": "S3 revised — Label, filled",
+   "page": "page-7",
+   "x": 0,
+   "y": -1620,
+   "w": 1060,
+   "h": 1560
+  },
+  {
+   "file": "SkinS3.dc.html",
+   "title": "S3 — Label (original)",
+   "page": "page-7",
+   "x": 2160,
+   "y": 0,
+   "w": 1000,
+   "h": 1500
+  },
+  {
+   "file": "SkinS2.dc.html",
+   "title": "S2 — Sleeve",
+   "page": "page-7",
+   "x": 1080,
+   "y": 0,
+   "w": 1000,
+   "h": 1500
+  },
+  {
+   "file": "SkinS1.dc.html",
+   "title": "S1 — Bare plate",
+   "page": "page-7",
+   "x": 0,
+   "y": 0,
+   "w": 1000,
+   "h": 1500
+  },
+  {
+   "file": "SlabNeighbourhood.dc.html",
+   "title": "Seven beside Zilla Slab",
+   "page": "page-6",
+   "x": 0,
+   "y": -1500,
+   "w": 1560,
+   "h": 1400
+  },
+  {
+   "file": "TypeRevisit.dc.html",
+   "title": "Four display faces",
+   "page": "page-6",
+   "x": 0,
+   "y": 0,
+   "w": 1780,
+   "h": 1180
+  },
+  {
+   "file": "MetaLines.dc.html",
+   "title": "Meta lines — killing the middot",
+   "page": "page-6",
+   "x": 1860,
+   "y": 0,
+   "w": 1780,
+   "h": 1080
+  },
+  {
+   "file": "ShellC.dc.html",
+   "title": "C — Header",
+   "page": "page-5",
+   "x": 3560,
+   "y": 0,
+   "w": 1700,
+   "h": 1420
+  },
+  {
+   "file": "ShellB.dc.html",
+   "title": "B — Deck",
+   "page": "page-5",
+   "x": 1780,
+   "y": 0,
+   "w": 1700,
+   "h": 1420
+  },
+  {
+   "file": "ShellA.dc.html",
+   "title": "A — Console",
+   "page": "page-5",
+   "x": 0,
+   "y": 0,
+   "w": 1700,
+   "h": 1420
+  },
+  {
+   "file": "LogoDark.dc.html",
+   "title": "Marks — dark",
+   "page": "page-4",
+   "x": 0,
+   "y": 0,
+   "w": 1180,
+   "h": 2000
+  },
+  {
+   "file": "LogoLight.dc.html",
+   "title": "Marks — light",
+   "page": "page-4",
+   "x": 1260,
+   "y": 0,
+   "w": 1180,
+   "h": 2000
+  },
+  {
+   "file": "LogoUse.dc.html",
+   "title": "In application — 05 Cut chosen",
+   "page": "page-4",
+   "x": 0,
+   "y": 2150,
+   "w": 1180,
+   "h": 2000
+  },
+  {
+   "file": "Main.dc.html",
+   "title": "Dubplate foundation — settled",
+   "page": "page-1",
+   "x": 0,
+   "y": 0,
+   "w": 940,
+   "h": 2120
+  },
+  {
+   "file": "A1.dc.html",
+   "title": "A1 — Two faces, tabular figures",
+   "page": "page-2",
+   "x": 0,
+   "y": 0,
+   "w": 900,
+   "h": 1420
+  },
+  {
+   "file": "A2.dc.html",
+   "title": "A2 — The slab stamps the numbers",
+   "page": "page-2",
+   "x": 980,
+   "y": 0,
+   "w": 900,
+   "h": 1420
+  },
+  {
+   "file": "A3.dc.html",
+   "title": "A3 — Mono demoted (chosen)",
+   "page": "page-2",
+   "x": 1960,
+   "y": 0,
+   "w": 900,
+   "h": 1420
+  },
+  {
+   "file": "DirectionB.dc.html",
+   "title": "B — Session Flyer",
+   "page": "page-3",
+   "x": 0,
+   "y": 0,
+   "w": 900,
+   "h": 1720
+  },
+  {
+   "file": "DirectionC.dc.html",
+   "title": "C — Roots Press",
+   "page": "page-3",
+   "x": 980,
+   "y": 0,
+   "w": 900,
+   "h": 1720
+  }
+ ],
+ "annotations": [
+  {
+   "id": "takerow-m7",
+   "page": "page-18",
+   "x": 0,
+   "y": -260,
+   "w": 1200,
+   "text": "Take row — settled on R3\n\nTOP ROW: the three directions. Each shows the SAME six rows in three container widths (1120 / 560 / 343 px), so what differs between the boards is the layout rule and nothing else.\n\nThe six rows are the field matrix: everything present; no venue; no event at all; no instruments; no duration (upload in flight) plus a take note; and a long Czech title with a long event name.\n\nR3 is the chosen direction. Two changes since it was picked: the instrument run is now attached to the right at EVERY width (it never rejoins the text run), and a tinted pad holds the glyphs together in place of the drawn rule that used to separate them.\n\nBOTTOM LEFT: what to cut on a phone, where the chip and the text still compete for one line.\n\nBOTTOM RIGHT: that chip as a primitive — five places render an instrument run today, each with its own class, size and hand-written aria-label."
+  },
+  {
+   "id": "song",
+   "page": "page-8",
+   "x": 0,
+   "y": -260,
+   "w": 1720,
+   "text": "Song detail\n\nTwo columns on desktop: chart left at a 40ch measure, takes right with room to be a real list. On a phone the same two blocks stack, takes first — you open a song to hear it, not to read it.\n\nNo left indent anywhere; the chorus label is muted like every other section and the emphasis sits on the words."
+  },
+  {
+   "id": "takerow",
+   "page": "page-7",
+   "x": 1400,
+   "y": -3500,
+   "w": 1240,
+   "text": "Take row — V2 chosen, strictly\n\nYes, it is one component: six call sites, three context modes, and not one opts out of the vote control or hides it once a take is a keeper. That is most of what looked wrong.\n\nDecided: keeper / not-a-keeper lives ONLY on take detail — not in any list, including home's \"needs your vote\", which becomes a queue of things to go and listen to rather than a place to judge them unheard.\n\nThe left column is what changes regardless."
+  },
+  {
+   "id": "icons",
+   "page": "page-7",
+   "x": 0,
+   "y": -3500,
+   "w": 1240,
+   "text": "Instruments — second attempt\n\nThe first icon set was twelve SVG paths I wrote by hand from imagination. Withdrawn.\n\nThese are Game Icons, drawn as one family — the only set surveyed that covers a band. Lucide, Tabler, Phosphor and Material between them have guitar, piano, microphone and violin, and no drums, trombone, flute or clarinet.\n\nThe catch is CC BY 3.0: visible attribution, which every self-deployer inherits. Read the two notes at the bottom before deciding."
+  },
+  {
+   "id": "skins",
+   "page": "page-7",
+   "x": 0,
+   "y": -240,
+   "w": 1000,
+   "text": "Milestone 2 — primitive skins\n\nLabel (S3) was chosen, then revised twice: outlines replaced by fills, then the fills roughly doubled in weight.\n\nThe revised board is above; the three original candidates are below it for reference.\n\nThe three notes along the bottom of the revised board are the interesting part — raising the fills broke two things that had to be fixed rather than ignored."
+  },
+  {
+   "id": "typeagain",
+   "page": "page-6",
+   "x": 0,
+   "y": -200,
+   "w": 1780,
+   "text": "Type revisit\n\nTOP — eight contemporary slabs including Zilla Slab, your current pick. Same sizes, same Czech titles, the column layout from the meta-line decision. Available weights and a measured title width on each.\n\nBELOW LEFT — the original four (now rendering correctly; the first version had a quoting bug that fell every column back to Georgia).\n\nBELOW RIGHT — meta lines. Settled: columns in lists, labelled fields on detail pages, a 1px rule where a line must stay inline. Never the middot."
+  },
+  {
+   "id": "shell",
+   "page": "page-5",
+   "x": 0,
+   "y": -230,
+   "w": 1700,
+   "text": "Milestone 3 — the shell\n\nThree structurally different answers to one question: where does navigation live, and how does the player relate to it. Everything after this inherits the answer, which is why it comes before the primitives.\n\nEach board shows the SAME screen — an event with takes, one playing — at phone and desktop width, so the difference you see is the shell and nothing else. Tokens, type and rows are identical across all three."
+  },
+  {
+   "id": "logo",
+   "page": "page-4",
+   "x": 0,
+   "y": -210,
+   "w": 1180,
+   "text": "Logo — 05 Cut chosen (2026-09-08)\n\nTwelve candidates. 01-06 work the plate itself; 07-12 push outside it — dub delay, the sound system, the offbeat chop, the letterform.\n\n05 Cut won on meaning: a dubplate is cut, once, for one sound, and it is the only mark here that shows the verb the app is named after. It also holds at 16px.\n\nShipped in apps/web/public/ with a simplified sub-32px variant; spec in docs/design-foundation.md."
+  },
+  {
+   "id": "settled",
+   "page": "page-1",
+   "x": 0,
+   "y": -200,
+   "w": 940,
+   "text": "Milestone 1 — settled\n\nDirection A's palette, A3's typography rule. Written up in docs/design-foundation.md. This is the sheet milestone 2 builds primitives against."
+  },
+  {
+   "id": "sub",
+   "page": "page-2",
+   "x": 0,
+   "y": -210,
+   "w": 900,
+   "text": "Milestone 1b — A without the mono\n\nA3 was chosen: mono kept, but only where a character grid carries meaning."
+  },
+  {
+   "id": "brief",
+   "page": "page-3",
+   "x": 0,
+   "y": -170,
+   "w": 900,
+   "text": "Milestone 1 — the two directions not taken. Kept for reference."
+  }
+ ],
+ "launch": {
+  "view": "canvas",
+  "page": "page-18"
+ }
 }

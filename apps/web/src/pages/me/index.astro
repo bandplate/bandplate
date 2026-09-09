@@ -14,7 +14,7 @@
 // What is left is the page's actual subject: the takes still waiting for your
 // ear, and the calls you have already made. Identity is a line at the top, not
 // a card — this is the one page where the app already knows who is looking.
-import InstrumentIcon from "../../components/InstrumentIcon.astro";
+import InstrumentSet from "../../components/InstrumentSet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { formatShortDate } from "../../server/format.js";
@@ -154,14 +154,8 @@ const initials = member.displayName
 
       {
         instruments.length > 0 && (
-          <p
-            class="bp-me-instruments bp-m0"
-            role="img"
-            aria-label={`Plays: ${instruments.map((i) => i.label).join(", ")}`}
-          >
-            {instruments.map((instrument) => (
-              <InstrumentIcon icon={instrument.icon} label={instrument.label} />
-            ))}
+          <p class="bp-me-instruments bp-m0">
+            <InstrumentSet instruments={instruments} verb="Plays" />
           </p>
         )
       }

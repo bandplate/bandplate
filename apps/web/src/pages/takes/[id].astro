@@ -28,7 +28,7 @@ import { hasAllScopes } from "@bandplate/core";
 // transition, just not a pixel-identical one. See task-6-report.md.
 import type { assetsRepo } from "@bandplate/db";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
-import InstrumentIcon from "../../components/InstrumentIcon.astro";
+import InstrumentSet from "../../components/InstrumentSet.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -172,28 +172,18 @@ function assetLabel(asset: assetsRepo.Asset): string {
       {noteText && <p class="bp-take-detail-note bp-m0">{noteText}</p>}
 
       {/* The same line a take row carries, with the same treatment: the note
-          size, a drawn rule, and the instrument glyphs. It was a strip of its
-          own labelled "This take", which is a heading over two facts that the
-          hero was already the natural home for — and it put the take's length
-          three strips away from the control that plays it. */}
+          size, a drawn rule, and the instrument set. It was a strip of its own
+          labelled "This take", which is a heading over two facts that the hero
+          was already the natural home for — and it put the take's length three
+          strips away from the control that plays it.
+
+          NO rule against the instrument set on either side: the set carries a
+          tinted pad, which is what holds it together as one object, and a rule
+          beside a thing that is already bounded reads as a stray mark. Rules
+          separate WORDS from words — here, the duration from the verdict. */}
       <p class="bp-take-detail-facts bp-m0">
         <span>{formatDuration(take.durationMs)}</span>
-        {
-          instruments.length > 0 && (
-            <>
-              <span class="bp-take-detail-sep" aria-hidden="true" />
-              <span
-                class="bp-take-instruments"
-                role="img"
-                aria-label={`Instruments: ${instruments.map((i) => i.label).join(", ")}`}
-              >
-                {instruments.map((instrument) => (
-                  <InstrumentIcon icon={instrument.icon} label={instrument.label} />
-                ))}
-              </span>
-            </>
-          )
-        }
+        <InstrumentSet instruments={instruments} />
         {/* The band's call, last on the take's own facts line. A settled state
             is one word and needs no gloss — it sat in the vote strip with a
             sentence explaining it, then on the event/date line, and it reads

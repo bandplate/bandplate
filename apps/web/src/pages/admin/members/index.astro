@@ -2,7 +2,7 @@
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AdminHeader from "../../../components/AdminHeader.astro";
-import InstrumentIcon from "../../../components/InstrumentIcon.astro";
+import InstrumentSet from "../../../components/InstrumentSet.astro";
 import RecordSheet from "../../../components/RecordSheet.astro";
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
@@ -196,15 +196,13 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                   )}
                 </td>
                 <td data-label="Instruments">
-                  {memberInstruments.length > 0 ? (
-                    <span class="bp-cell-editor-icons" role="img" aria-label={`Plays: ${memberInstruments.map((i) => i.label).join(", ")}`}>
-                      {memberInstruments.map((instrument) => (
-                        <InstrumentIcon icon={instrument.icon} label={instrument.label} size={18} />
-                      ))}
-                    </span>
-                  ) : (
-                    <span class="bp-kind">none</span>
-                  )}
+                  <InstrumentSet
+                    instruments={memberInstruments}
+                    verb="Plays"
+                    tone="bare"
+                    size={18}
+                    emptyLabel="none"
+                  />
                 </td>
                 <td data-label="Last seen" class="bp-table-quiet bp-table-when">{formatTimestamp(member.lastSeenAt)}</td>
                 {/* The row carries no controls at all now — one trigger, and

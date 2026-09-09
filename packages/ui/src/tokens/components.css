@@ -2527,13 +2527,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   background: var(--bp-fill-subtle);
 }
 
-.bp-cell-editor-icons {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: var(--bp-color-muted);
-}
-
 .bp-cell-editor-body {
   display: flex;
   flex-wrap: wrap;
@@ -3013,37 +3006,51 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* ---------------------------------------------------------------------- */
 /* Take row — the Label skin applied to the list primitive.                */
 /* ---------------------------------------------------------------------- */
-/* Three columns: a plate, the take, and its numbers. The plate gives every
-   row the same left anchor whether or not it is playable; the trailing column
-   is right-aligned and fixed-width so durations and tallies line up DOWN the
-   list, which is the "columns in lists" decision from
-   docs/design-foundation.md "Meta lines" — a duration is compared with the
-   duration above it, never read as part of a sentence.
+/* TWO LINES, ONE ARRANGEMENT, EVERY WIDTH — direction R3 from the canvas.
+   Line one is the plate, the title (with its kind), the duration and the
+   favourite. Line two is the take's remaining words on the left and its
+   instrument set attached hard right. Nothing rearranges between a 1120px
+   event page, a 560px song-detail column and a 343px phone: the row carries
+   mass at both edges at all three, and the sets align down the list the way
+   the durations above them already do.
+
+   What this replaced stacked four muted lines under the title and left the
+   right half of a desktop row empty apart from an orphaned duration.
+
    Box model (hairline, padding, hover) comes from `.bp-card-flat`. */
 .bp-take-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  /* `start`, not `center`: a row is two or three lines tall depending on
-     whether the take has a label, and a centred plate floated at the row's
-     midpoint instead of sitting against the title it belongs to. */
-  align-items: start;
-  gap: 0 0.75rem;
+  /* Line two spans the title AND duration columns as ONE area, with the
+     instrument set pushed to its end. Giving the set a grid column of its own
+     made it share a column with the duration above it, so a six-glyph set
+     squeezed the title down to an ellipsis — the two lines' columns must not
+     be coupled. Line two runs under the favourite as well: stopping it at the
+     duration left a 36px strip of nothing at the right end of every row, which
+     is dead space a narrow list cannot spare. */
+  grid-template-columns: auto minmax(0, 1fr) auto 36px;
+  grid-template-areas:
+    "lead title dur   fav"
+    ".    line2 line2 line2";
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
   min-height: 44px;
-  /* Anchor for the stretched link below. */
-  position: relative;
+  /* The Actions cell on the admin tables right-aligns its contents, and this
+     row renders inside one on no page — but `text-align` inherits, and a
+     future embedding should not silently mirror the row. */
+  text-align: left;
 }
 
 /* Not a control: no role, no tabstop, `aria-hidden` in the markup. It stands
    in for the play button on a take whose asset is not ready, so the list edge
    stays straight. Deliberately NOT a play triangle — the brief forbids a play
-   affordance that cannot play. */
-/* The plate stands in for the play control on a take with no ready asset, so it
-   has to occupy the SAME BOX as that control, not the same visual size. The play
-   toggle is a 44px touch target with a 34px disc centred inside it; the plate
-   was a bare 34px element, so every row without a recording started its title
-   5px to the left of every row with one — a ragged left edge down the list that
-   looked like inconsistent padding, because that is what it was. Same 44px box,
-   ring drawn by `::before` at the disc's size and position. */
+   affordance that cannot play.
+
+   It occupies the SAME BOX as the play control, not the same visual size: the
+   toggle is a 44px touch target with a 34px disc centred inside it, so a bare
+   34px plate started every unrecorded take's title 5px left of every recorded
+   one — a ragged left edge down the list. Same 44px box, ring drawn by
+   `::before` at the disc's size and position. */
 .bp-take-plate {
   position: relative;
   display: inline-flex;
@@ -3067,18 +3074,22 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 /* No centre dot. The plate and the play control should differ by ONE thing —
    whether the play sign is there — and a dot was a second difference that read
-   as a mark of its own. What is left is the same circle at the same size in the
-   same place, with the accent fill and the triangle absent. */
+   as a mark of its own. */
 
-.bp-take-row-main {
-  min-width: 0;
+.bp-take-row-lead {
+  grid-area: lead;
 }
 
+/* The title's line. `min-height: 44px` is the touch target for the link
+   inside it; the negative margins below keep that target from setting the
+   row's height. */
 .bp-take-row-line {
+  grid-area: title;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
+  min-height: 44px;
 }
 
 .bp-take-label {
@@ -3106,75 +3117,165 @@ html:has(dialog.bp-filter-sheet[open]) body {
    itself and pulling the same amount back off the block, so the target grows
    without the row doing. */
 .bp-take-label {
-  /* Derived from the target, and deliberately overshooting it.
-     A flat 11px looked right and measured 43.84px — a 19px x 1.15 line box
-     plus 22px of padding — so every row missed the 44px floor by 0.16px, in
-     both themes, invisibly, until `/dev/ui` started rendering this component.
-     Solving for exactly 44px then landed at 43.98: the used padding and the
-     line box each round to sub-pixels, so equality is not reachable this way.
-     Aiming at 46px costs nothing — the negative margin below cancels whatever
-     this is, so the row's layout height is unchanged either way — and leaves
-     the floor met no matter which way the rounding goes. */
+  /* Derived from the target, and deliberately overshooting it. A flat 11px
+     measured 43.84px — a 19px x 1.15 line box plus 22px of padding — so every
+     row missed the 44px floor by 0.16px, invisibly, in both themes. Solving
+     for exactly 44px landed at 43.98: the used padding and the line box each
+     round to sub-pixels, so equality is not reachable this way. Aiming at 46px
+     costs nothing — the negative margin cancels it either way. */
   --bp-take-label-pad: calc((46px - 1.15em) / 2);
   padding-block: var(--bp-take-label-pad);
   margin-block: calc(var(--bp-take-label-pad) * -1);
 }
 
-/* The star is a 44px touch target next to a ~22px title, so on a centred flex
-   line it set the line's height and left ~11px of dead space above and below
-   the words — which is what the gap between the title and the event line under
-   it actually was. Negative block margins take the control out of the line's
-   height calculation without shrinking the control: the hit area is still 44px,
-   it just overhangs the text line instead of stretching it. */
-/* The way back to the song. It was the page's own H1 — a heading that
-   quietly navigated elsewhere, which nobody reads as a way out, and which
-   made a take look like the song's page. An action gets a control. */
+/* The way back to the song. It was the page's own H1 — a heading that quietly
+   navigated elsewhere, which nobody reads as a way out, and which made a take
+   look like the song's page. An action gets a control. */
 .bp-take-song-link {
   align-self: flex-start;
   margin-top: 0.25rem;
 }
 
+/* The favourite sits at the ROW'S far right end, past the duration — where
+   `.bp-song-row` and `.bp-ledger-row` have always put theirs. It used to sit
+   beside the take's title, which made the same control land in two different
+   places depending on what kind of thing the row was.
+
+   Negative block margins take the 44px control out of the line's height
+   calculation without shrinking it: the hit area is still 44px, it just
+   overhangs the text line instead of stretching it. */
 .bp-take-favorite-mark {
+  grid-area: fav;
   display: inline-flex;
+  justify-self: end;
   flex: none;
   margin-block: -0.6875rem;
 }
 
-/* One muted line under the title carrying everything that is not a number:
-   the take's own label, its instruments, a date when the page does not imply
-   one. Instruments are a comma-separated run of text, not a row of outlined
-   pills — seven pills per row was more chrome than the titles they sat under,
-   and an instrument list is read, not clicked. */
-/* Whatever is left of the take that is not a number: its own label, a date
-   where the page does not imply one, a link to the event. The instruments are
-   NOT here any more. */
-/* ONE size for the whole line. It had none of its own after this block was
-   rewritten, so it inherited the 16px browser default while the sublabel
-   inside it carried `--text-note` — three sizes on a single line of secondary
-   text, which is exactly what it looked like. Everything on this line is the
-   same kind of thing (an aside about the take), so it is all `--text-note`. */
-.bp-take-subline {
+/* The numbers column. `tabular-nums` plus a fixed min-width is what makes a
+   column of durations align rather than shuffle — see the foundation's note on
+   why this is Chivo and not the mono face. */
+.bp-take-row-duration {
+  grid-area: dur;
+  font-family: var(--bp-font-body);
+  /* Matches the subline and the badge. Everything in this row that is not the
+     title is one size; the difference between them is colour and position. */
+  font-size: var(--text-note, 0.71875rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--bp-color-muted);
+  min-width: 3.25ch;
+  text-align: right;
+}
+
+/* Line two. Everything the take has that is not the title and not a number:
+   the event's name, the take's own note, the recorded date — then the
+   instrument set, pushed to the far end. */
+.bp-take-line2 {
+  grid-area: line2;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 0.625rem;
-  margin-top: 0.1875rem;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  /* A backstop, not the mechanism. The elastic members below are what keep
+     this line honest; this only guarantees that a failure of that is a clip
+     and not text running underneath the instrument set. */
+  overflow: hidden;
+  /* Pulls line two up against the title, whose 44px touch target overhangs
+     its own text. Without it the two lines read as two rows. */
+  margin-top: -0.5rem;
   font-size: var(--text-note, 0.71875rem);
   line-height: 1.45;
   color: var(--bp-color-muted);
 }
 
-/* `--text-note`, and NOT italic. Chivo's italic is a true cut but it sits
-   awkwardly against Zilla Slab's upright slabs directly above it — the row
-   gained a slant nothing else in the system has. Size and colour separate the
-   note from the title; the slant was doing no work the other two were not.
-   The `opacity: 0.82` this used to carry is gone: see `--text-note`. */
-/* Inherits its size from the subline — it is the same kind of text as its
+/* The words. ONE size for all of them: this line had none of its own once and
+   inherited the 16px browser default while a sublabel inside it carried
+   `--text-note` — three sizes on a single line of secondary text. Everything
+   here is the same kind of thing (an aside about the take), so it is all
+   `--text-note`, and only colour and order separate the parts. */
+/* Only HERE does the set push itself to the end of the line — a `margin-left:
+   auto` on the primitive itself would silently right-align it inside every
+   other flex host that mounts it.
+
+   The right margin is OPTICAL, not geometric. The favourite above is a 16px
+   star centred in a 44px touch target, so its glyph stops 14px short of the
+   grid's right edge while its box does not. A set flush with that edge
+   therefore reads as 14px wider than the star sitting directly above it — a
+   filled pill's edge IS its visual extent, where an outline star's is not.
+   Inset by the same 14px and the two line up as drawn rather than as boxed. */
+.bp-take-line2 .bp-instrument-set {
+  margin-left: auto;
+  margin-right: calc((44px - 16px) / 2);
+}
+
+.bp-take-textrun {
+  display: flex;
+  align-items: center;
+  gap: 0 0.5rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+/* The line's ELASTIC members — its words. The date and the instrument set are
+   both fixed-width, so these are what give when the row narrows, and that is
+   what guarantees the line holds on ONE line at any width without anything
+   running underneath anything else. A note left as `flex: none` was exactly
+   that bug: "new arrangement attempt" could not shrink, so it overflowed its
+   own box and printed under the instrument set.
+
+   Neither GROWS. `flex-grow: 1` on the event's name made it absorb every
+   spare pixel on a wide row, which pushed the date across the gap and parked
+   it against the instrument set — the words read as one left-aligned phrase
+   and one right-aligned stray. The words stay together at the start of the
+   line; only the set moves, by its own auto margin.
+
+   They shrink at different rates. The name gives three times as fast as the
+   note, because it is the more recoverable of the two — it names a page one
+   tap away, where a take's own note is written nowhere else in the list. */
+.bp-take-eventname {
+  flex: 0 3 auto;
+}
+
+.bp-take-elastic,
+.bp-take-eventname {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-take-elastic {
+  flex: 0 1 auto;
+}
+
+.bp-take-fixed {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The event's name, not a call to action — so it reads as part of the muted
+   line and only announces itself as a link on hover. `--bp-color-accent` here
+   made every row end in a gold sentence louder than the take's own title. */
+.bp-take-event-link {
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-take-event-link:hover {
+  color: var(--bp-color-fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Inherits its size from line two — it is the same kind of text as its
    neighbours, not a smaller one. Only the colour separates it. */
 .bp-take-note {
-  margin-top: 0.125rem;
-  font-size: var(--text-note, 0.71875rem);
-  line-height: 1.45;
   color: var(--bp-color-muted);
 }
 
@@ -3183,32 +3284,72 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-muted);
 }
 
-/* A row of glyphs, not a sentence. See `InstrumentIcon.astro` for why the set
-   cannot be exhaustive and what happens to a slug it has not seen. */
-/* On the row's second line, beside the event. Separated from the text before
-   it by a drawn rule rather than a gap, so a glyph run does not read as more
-   words in the same sentence. */
-.bp-take-instruments {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  min-width: 0;
-  color: var(--bp-color-muted);
-}
-
-.bp-take-subline > .bp-take-instruments:not(:first-child)::before {
-  content: "";
+/* A 1px rule, not a middot — see docs/design-foundation.md "Meta lines". It
+   separates WORDS from words; nothing is ever drawn between the words and the
+   instrument set, which carries its own pad for exactly that reason. */
+.bp-take-rule {
   display: inline-block;
   width: 1px;
   height: 0.75rem;
-  margin-right: 0.375rem;
+  flex: none;
   background: var(--bp-color-border);
+}
+
+/* PHONE: the words go, the date and the set stay.
+   Below `sm` the line cannot hold the event's name, a note, the date AND the
+   set. The two elastic members are what give, so they were what collapsed —
+   to "Re…" and "new …", which cost a third of the line each and say nothing.
+   Dropping them outright leaves two facts that are both fixed-width, so
+   NOTHING on a phone row can truncate at any name length. Both are
+   recoverable: the event names a page one tap away, and the note is on the
+   take's own page. The set is not recoverable by looking harder at a list,
+   which is why it is the one that stays. `sm` and up is untouched.
+
+   The rules go with them: with one fact left there is nothing to separate. */
+@media (max-width: 559px) {
+  .bp-take-eventname,
+  .bp-take-note,
+  .bp-take-rule {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Instrument set — a run of glyphs as ONE object. See InstrumentSet.astro */
+/* ---------------------------------------------------------------------- */
+/* The tinted pad is what lets a glyph run sit directly beside text with
+   nothing drawn between them. Before it, the run needed a 1px rule against the
+   date, because a row of pictograms with only a gap before it read as more
+   words in the same sentence. */
+.bp-instrument-set {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+  padding: 0.3125rem 0.625rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
+  color: var(--bp-color-muted);
+}
+
+/* More than four glyphs and the set draws small — see InstrumentSet.astro on
+   why this follows the COUNT and not the viewport. */
+.bp-instrument-set--dense {
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* For a set already inside a box of its own — a table cell, a labelled field —
+   where a second container reads as a box in a box. */
+.bp-instrument-set--bare {
+  padding: 0;
+  border-radius: 0;
+  background: none;
 }
 
 /* 20px by default, and that number is set by the weakest glyph rather than by
    the average: the thin-bodied instruments (flute, clarinet, the brass) lose
-   their form below it, while drums and keys survive to 14. One size for the
-   set. */
+   their form below it, while drums and keys survive to 14. */
 .bp-instrument {
   display: inline-flex;
   align-items: center;
@@ -3239,104 +3380,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   letter-spacing: 0.02em;
 }
 
-/* The event gets a line to itself, DIRECTLY under the title. It was the last
-   item on the subline, where it wrapped mid-sentence behind the date and the
-   instrument glyphs — an event is a NAME ("Live at The Attic — The Attic"), and
-   a name broken across a line it shares with three other things reads as
-   debris. Ordering it above the date/instrument line also fixes what that
-   wrapping looked like down a list: the event sometimes landed before the
-   glyphs and sometimes after them, depending on how long its name was, so no
-   two rows broke the same way. Fixed order, one line each, every row alike. */
-.bp-take-eventline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 0.5rem;
-  margin-top: 0.125rem;
-  font-size: var(--text-note, 0.71875rem);
-  line-height: 1.45;
-  color: var(--bp-color-muted);
-  min-width: 0;
-}
-
-/* The event's name, not a call to action — so it reads as part of the muted
-   subline and only announces itself as a link on hover. `--bp-color-accent`
-   here made every row end in a gold sentence louder than the take's own
-   title. */
-.bp-take-event-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.bp-take-event-link:hover {
-  color: var(--bp-color-fg);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* The numbers column. `tabular-nums` plus a fixed min-width is what makes a
-   column of durations align rather than shuffle — see the foundation's note on
-   why this is Chivo and not the mono face. */
-/* The numbers column, and now the instruments too — they moved here when the
-   vote control left. On the take's own line they were more words competing with
-   the title; here they are a column, scannable down the list the way the
-   durations beside them already are. */
-/* The duration sits on the TITLE's line, not at the row's top edge and not at
-   its midpoint. `padding-top` was doing this by eye and drifted the moment the
-   row gained or lost a line; matching the title's own line box (19px × 1.15)
-   and centring inside it holds however many lines the row grows. */
-.bp-take-row-trailing {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.875rem;
-  flex: none;
-  min-height: 1.375rem;
-}
-
-.bp-take-row-duration {
-  font-family: var(--bp-font-body);
-  /* Matches the subline and the badge. Everything in this row that is not the
-     title is one size; the difference between them is colour and position. */
-  font-size: var(--text-note, 0.71875rem);
-  font-variant-numeric: tabular-nums;
-  color: var(--bp-color-muted);
-  min-width: 3.25ch;
-  text-align: right;
-}
-
-/* The row keeps ONE layout at every width: title line, event, note,
-   instruments, each on its own line. A container query used to merge the three
-   meta lines into one on wide lists, to stop a desktop row leaving its right
-   half empty — but that made the row read differently depending on how wide its
-   list happened to be, which is exactly what the four-line rule exists to
-   prevent. The horizontal room is claimed at the PAGE level instead (the
-   shell's 72rem measure and the song page's two columns), where widening
-   changes what fits on screen rather than what a row looks like. */
-
-/* Below `sm` the trailing column drops under the take rather than squeezing
-   the title to nothing — the title is what you are scanning for. */
-/* Below `sm` the trailing column drops under the take rather than squeezing
-   the title to nothing — the title is what you are scanning for. Duration goes
-   hard left and the vote control hard right, so the two read as one line
-   instead of three wrapped fragments. */
-@media (max-width: 559px) {
-  .bp-take-row {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .bp-take-row-trailing {
-    grid-column: 2;
-    justify-content: space-between;
-    width: 100%;
-    margin-top: 0.625rem;
-    min-height: 0;
-  }
-
-  .bp-take-row-duration {
-    text-align: left;
-  }
-}
 
 /* ---------------------------------------------------------------------- */
 /* Song / event hero — Coda Caption spent on exactly one thing per page:   */
@@ -4951,13 +4994,10 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 /* The same glyph run every take row uses, not the text tags this page had —
    an instrument is an instrument wherever it appears. */
+/* Just the spacing now — the glyphs are an `InstrumentSet`, which owns its own
+   layout, pad and colour. */
 .bp-me-instruments {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
   margin-top: 1rem;
-  color: var(--bp-color-muted);
 }
 
 .bp-me-admin-link {

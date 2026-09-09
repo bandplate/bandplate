@@ -1,0 +1,96 @@
+---
+// A RUN of instrument glyphs, as one object.
+//
+// `InstrumentIcon` draws one instrument; this draws a set of them. Five places
+// rendered a set before this existed — the take row, the take detail's facts
+// line, `/me`, the admin members table, and the take row's own second copy —
+// each with its own class name (`.bp-take-instruments`, `.bp-me-instruments`,
+// `.bp-cell-editor-icons`), its own size, and its own hand-written
+// `aria-label`. Two of them announced "Instruments:", two announced "Plays:".
+// One component owns all of that.
+//
+// --- The pad, not a rule ------------------------------------------------
+//
+// The set carries a tinted pad (`tone="chip"`, the default): a 6% wash of the
+// foreground behind the glyphs. That is not decoration — it is what lets the
+// glyphs sit directly beside text with nothing drawn between them. On the take
+// row the run used to need a 1px rule separating it from the date, because
+// without one a row of pictograms read as more words in the same sentence. A
+// held-together group needs no separator, and one fewer hairline per row down
+// a list is worth having.
+//
+// `tone="bare"` is for a set that already sits inside a box of its own — a
+// table cell, a labelled field — where a second container reads as a box in a
+// box.
+//
+// --- Density follows the COUNT, not the viewport ------------------------
+//
+// A set of six glyphs is nearly twice the width of a set of three, and on the
+// take row it shares one line with the date and (where there is room) the
+// event's name. Rather than a breakpoint — which would make the same take look
+// different in a wide list and a narrow one, the thing R3 was chosen to avoid
+// — the glyphs shrink when the set holds MORE THAN FOUR. A take with a rhythm
+// section reads at full size everywhere; a take with a horn section reads
+// small everywhere. `size` overrides it outright for callers that have their
+// own reason (the admin table's 18px rows).
+import type { instrumentsRepo } from "@bandplate/db";
+import InstrumentIcon from "./InstrumentIcon.astro";
+
+/** Above this count the set draws at `DENSE_SIZE`. See the header comment. */
+const DENSE_ABOVE = 4;
+const BASE_SIZE = 20;
+const DENSE_SIZE = 16;
+
+export interface Props {
+  instruments: instrumentsRepo.Instrument[];
+  /**
+   * The verb the accessible label opens with. A take's set is a list of what
+   * was recorded ("Instruments: bass, drums"); a member's is a list of what
+   * they play ("Plays: bass, drums"). Same component, different sentence.
+   */
+  verb?: "Instruments" | "Plays";
+  /** `"chip"` (default) draws the tinted pad; `"bare"` draws glyphs alone. */
+  tone?: "chip" | "bare";
+  /** Overrides the count-driven size. See the header comment. */
+  size?: number;
+  /**
+   * What an EMPTY set renders. `null` (the default) renders nothing at all —
+   * correct in a row or on a facts line, where an absent fact should take no
+   * room. A table cell passes a word, because a blank cell in a column of
+   * filled ones reads as a loading failure rather than as "none".
+   */
+  emptyLabel?: string | null;
+}
+
+const { instruments, verb = "Instruments", tone = "chip", size, emptyLabel = null } = Astro.props;
+
+const dense = size === undefined && instruments.length > DENSE_ABOVE;
+const glyphSize = size ?? (dense ? DENSE_SIZE : BASE_SIZE);
+const classes = [
+  "bp-instrument-set",
+  tone === "bare" ? "bp-instrument-set--bare" : "",
+  dense ? "bp-instrument-set--dense" : "",
+]
+  .filter(Boolean)
+  .join(" ");
+---
+
+{
+  instruments.length === 0 ? (
+    emptyLabel ? (
+      <span class="bp-kind">{emptyLabel}</span>
+    ) : null
+  ) : (
+    /* ONE label for the group, not one announcement per glyph — seven
+       consecutive "image" announcements is not a readable list. */
+    <span
+      class={classes}
+      role="img"
+      aria-label={`${verb}: ${instruments.map((i) => i.label).join(", ")}`}
+    >
+      {instruments.map((instrument) => (
+        <InstrumentIcon icon={instrument.icon} label={instrument.label} size={glyphSize} />
+      ))}
+    </span>
+  )
+}

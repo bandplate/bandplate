@@ -34,33 +34,26 @@
 // always phrased as "View this rehearsal/concert/session", never a repeat
 // of the take's own label.
 //
-// --- The seam for increments 4 and 5 (both now filled) -----------------
+// --- The seam for increment 4 -------------------------------------------
 //
-// Two named slots are the extension points increments 4 and 5 live in —
-// NOT a fourth prop each, and not a fork of this component:
+// One named slot, not a prop and not a fork of this component:
 //
 //   - `leading`  — increment 4's play/pause affordance, rendered before the
 //     take's own label. Filled with `PlayToggleButton` when `playableAssetId`
 //     is given; omitted entirely (an empty `<slot>` emits no markup at all)
 //     when it isn't — satisfying the brief's "no fake play affordance" rule
 //     by construction, not by a conditional a caller has to remember.
-//   - `trailing` — the numbers column. It HELD the vote control until this
-//     row was looked at across all six pages that render it: keeper /
-//     not-a-keeper appeared everywhere, including on takes already decided,
-//     and two chunky buttons out-shouted the song title on every row. Voting
-//     now lives on `/takes/[id]` alone — a vote cast without playing the take
-//     is not worth much, and the page where you play it is the page where you
-//     decide. The slot stays for callers that want something here; its default
-//     content is now the instruments and the duration, which read as columns
-//     down a list rather than as more words on the take's own line.
 //
-// Both slots default to that content rather than requiring every caller to
-// pass a `<Fragment slot="...">` — a caller only needs to opt OUT (an
-// explicit empty `<Fragment slot="trailing" />`) in the one case that needs
-// to, never opt in. Neither slot needed a new prop shape, a fork, or a
-// change to `context` to hold two real controls — see task-8-report.md's
-// "did the TakeRow slots hold" section for the one place they didn't quite
-// (the favorite mark below, which was never a slot to begin with).
+// There WAS a second slot, `trailing`, holding a right-hand numbers column: it
+// carried the vote control, then the instruments, then the duration alone. It
+// is gone. The row is a two-line grid now (direction R3 — see the block in
+// components.css), and a "column" that is one grid cell on one of two lines is
+// not a column; every caller took its default anyway, so the slot only ever
+// added a shape nobody used. The duration and the favourite are plain grid
+// children, and the instruments are an `InstrumentSet`. Voting stays on
+// `/takes/[id]` alone — a vote cast without playing the take is not worth
+// much, and putting the control on all six pages that render this row was what
+// made it shout.
 //
 // `TakeRowContext` itself (and its two ref types) lives in the sibling
 // `take-row-context.ts`, not exported from here — see that file's header
@@ -116,7 +109,7 @@ import {
   takeNote,
 } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
-import InstrumentIcon from "./InstrumentIcon.astro";
+import InstrumentSet from "./InstrumentSet.astro";
 import PlayToggleButton from "./PlayToggleButton.astro";
 import type { TakeRowContext } from "./take-row-context.js";
 
@@ -129,7 +122,7 @@ export interface Props {
    *  than once on one page must pass `null` for every occurrence after the
    *  first — see this file's header comment. */
   transitionName?: string | null;
-  /** Shows the gold favorite marker next to the take's label. Defaults to
+  /** Fills the favourite star at the row's right end. Defaults to
    *  `false` — see this file's header comment. */
   favorited?: boolean;
   /**
@@ -188,7 +181,8 @@ const noteText = takeNote(take.label, eventKind);
 ---
 
 <div class="bp-take-row">
-  <slot name="leading">
+  <div class="bp-take-row-lead">
+    <slot name="leading">
     {
       playableAssetId ? (
         <PlayToggleButton
@@ -206,83 +200,81 @@ const noteText = takeNote(take.label, eventKind);
         <span class="bp-take-plate" aria-hidden="true" />
       )
     }
-  </slot>
-  <div class="bp-take-row-main">
-    {/* FOUR lines, in this order, on EVERY page that renders this row — the
-        structure does not branch on `context`. A line is present when its data
-        is and absent when it isn't; nothing reorders, so a take read on the
-        home page, in search results, on a song page and on an event page is
-        read the same way each time. That was the actual complaint behind
-        several rounds of this: the same facts kept landing in different places
-        (and wrapping differently) depending on how long a venue name was.
-
-          1. title + kind badge + favourite
-          2. the event's name, when it has one
-          3. the take's own note, when it has one
-          4. date (where the page doesn't already imply it) + instruments
-    */}
-    <div class="bp-take-row-line">
-      <a
-        href={`/takes/${take.id}`}
-        class="bp-take-label"
-        transition:name={resolvedTransitionName}
-        data-take-id={take.id}
-      >
-        {primaryLabel}
-      </a>
-
-      <span class="bp-take-favorite-mark">
-        <FavoriteToggle
-          targetType="take"
-          targetId={take.id}
-          favorited={favorited}
-          label={primaryLabel}
-        />
-      </span>
-    </div>
-    {/* The event's name and its kind on one line — the kind as small caps, not
-        a pill. A pill is a thing you can press; a kind is a label on a fact, so
-        it takes the same voice the event ledger on home uses. An untitled event
-        has no name to print, so the kind stands alone and carries the link. */}
-    {event && (
-      <div class="bp-take-meta bp-take-eventline">
-        <a href={`/events/${event.id}`} class="bp-take-event-link">
-          {eventName || <span class="bp-kind">{eventKind}</span>}
-        </a>
-        {eventName && eventKind && <span class="bp-kind">{eventKind}</span>}
-      </div>
-    )}
-    {noteText && <div class="bp-take-meta bp-take-note">{noteText}</div>}
-    {(showDate || instruments.length > 0) && (
-      <div class="bp-take-meta bp-take-subline">
-        {showDate && <span>{formatShortDate(take.recordedAt)}</span>}
-        {instruments.length > 0 && (
-          <span
-            class="bp-take-instruments"
-            role="img"
-            aria-label={`Instruments: ${instruments.map((i) => i.label).join(", ")}`}
-          >
-            {instruments.map((instrument) => (
-              <InstrumentIcon icon={instrument.icon} label={instrument.label} />
-            ))}
-          </span>
-        )}
-      </div>
-    )}
+    </slot>
   </div>
-  {/* The trailing column is where the vote control used to be. Instruments moved
-      into it so they read as a COLUMN down the list rather than as more words on
-      the take's own line — the same reason the duration lives here. Voting is on
-      `/takes/[id]` only: a vote cast without playing the take is not worth much,
-      and putting the control on all six pages that render this row was what made
-      it shout. Callers that want something here still have the slot. */}
-  {/* The trailing column is the duration and nothing else. Instruments were
-      briefly here — they read as a column, which was the point — but on a row
-      that already carries a date, a badge and an event they crowded the right
-      edge at any width narrower than a full page. They sit on the second line
-      now, beside the event, where the row has room. */}
-  <div class="bp-take-row-trailing">
-    <slot name="trailing" />
-    <span class="bp-take-row-duration">{formatDuration(take.durationMs)}</span>
+  {/* LINE ONE: the title, its kind, the duration, the favourite.
+      LINE TWO: the take's remaining words on the left, its instrument set
+      attached hard right.
+
+      The structure does not branch on `context` and does not change with
+      width — see the R3 note in components.css. A part is present when its
+      data is and absent when it is not; nothing reorders, so a take read on
+      the home page, in search results, on a song page and on an event page is
+      read the same way each time. That was the actual complaint behind
+      several rounds of this: the same facts kept landing in different places
+      (and wrapping differently) depending on how long a venue name was. */}
+  <div class="bp-take-row-line">
+    <a
+      href={`/takes/${take.id}`}
+      class="bp-take-label"
+      transition:name={resolvedTransitionName}
+      data-take-id={take.id}
+    >
+      {primaryLabel}
+    </a>
+    {/* The kind as small caps, not a pill. A pill is a thing you can press; a
+        kind is a label on a fact, so it takes the same voice the event ledger
+        on home uses. */}
+    {eventKind && <span class="bp-kind">{eventKind}</span>}
+  </div>
+
+  <span class="bp-take-row-duration">{formatDuration(take.durationMs)}</span>
+
+  {/* At the row's far right end, past the duration — where `.bp-song-row` and
+      the event ledger have always put theirs. It sat beside the title until
+      now, which made the same control land in two different places depending
+      on what kind of thing the row was. */}
+  <span class="bp-take-favorite-mark">
+    <FavoriteToggle
+      targetType="take"
+      targetId={take.id}
+      favorited={favorited}
+      label={primaryLabel}
+    />
+  </span>
+
+  <div class="bp-take-line2">
+    <span class="bp-take-textrun">
+      {/* The event's name is the one ELASTIC member of this line — the date and
+          the instrument set are both fixed-width, so this is what gives when the
+          row narrows, and the line is guaranteed to hold on one line at any
+          width. Below `sm` it is hidden outright rather than ellipsised to two
+          letters; see the phone rule in components.css. An untitled event has no
+          name to print, so nothing is rendered rather than a fallback repeating
+          the kind that already sits beside the title. */}
+      {event && eventName && (
+        <a
+          href={`/events/${event.id}`}
+          class="bp-take-event-link bp-take-eventname"
+        >
+          {eventName}
+        </a>
+      )}
+      {noteText && (
+        <>
+          {event && eventName && <span class="bp-take-rule" />}
+          <span class="bp-take-note bp-take-elastic">{noteText}</span>
+        </>
+      )}
+      {showDate && (
+        <>
+          {((event && eventName) || noteText) && <span class="bp-take-rule" />}
+          <span class="bp-take-fixed">{formatShortDate(take.recordedAt)}</span>
+        </>
+      )}
+    </span>
+    {/* No rule between the words and the set: the set carries its own tinted
+        pad, which is what holds it together as one object. */}
+    <InstrumentSet instruments={instruments} />
   </div>
 </div>

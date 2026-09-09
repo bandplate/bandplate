@@ -22,8 +22,12 @@
 //     `songToRows` refuses rather than guessing, this editor opens straight
 //     into the text boxes for such a song, and the toggle is always there.
 //     No song loses its shape by being opened.
-//  2. PASTING STILL WORKS. `parsePastedChart` splits a chart from anywhere
-//     else into rows — the cost E3 was chosen despite.
+//
+// There is no toggle and no paste box: rows are the editor. A song the parser
+// CANNOT read stays in the text boxes — it opens there and edits there, and
+// once its text is in a shape the parser recognises it opens as rows the next
+// time. That is the only door in or out, deliberately, so there is one way to
+// edit a chart rather than two that can disagree.
 //
 // The text boxes are also the no-JS path: the two `<textarea>`s ARE the form
 // fields, always present and always in sync, so with scripting off you get
@@ -34,7 +38,6 @@ import {
   isKnownSection,
   moveRow,
   newRow,
-  parsePastedChart,
   rowsToText,
 } from "../client/chart-rows.js";
 
@@ -79,11 +82,9 @@ export default function ChartEditor({
       ? initialRows.map((r) => newRow(r.label, r.chords, r.lyrics))
       : [newRow()],
   );
-  // A song whose text was not readable as sections opens as TEXT. Anything
-  // else would mean guessing at a shape the parser itself declined to guess.
-  const [asText, setAsText] = useState(freeform);
-  const [importing, setImporting] = useState(false);
-  const [pasted, setPasted] = useState("");
+  // A song whose text was not readable as sections IS text — there is nothing
+  // to toggle, because guessing at a shape the parser itself declined to guess
+  // is the one thing this editor must not do.
   const chordsRef = useRef<HTMLTextAreaElement>(null);
   const lyricsRef = useRef<HTMLTextAreaElement>(null);
 
@@ -93,7 +94,7 @@ export default function ChartEditor({
   // the POST carries exactly what the rows say — and so switching to text
   // shows what the rows produced rather than what was there before.
   useEffect(() => {
-    if (asText) {
+    if (freeform) {
       return;
     }
     if (chordsRef.current) {
@@ -102,7 +103,7 @@ export default function ChartEditor({
     if (lyricsRef.current) {
       lyricsRef.current.value = text.lyrics;
     }
-  }, [text, asText]);
+  }, [text, freeform]);
 
   const update = useCallback((id: string, patch: Partial<EditorRow>) => {
     setRows((current) => current.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -113,7 +114,7 @@ export default function ChartEditor({
   );
 
   return (
-    <div class={`bp-chart-editor${asText ? " bp-chart-editor--text" : ""}`}>
+    <div class={`bp-chart-editor${freeform ? " bp-chart-editor--text" : ""}`}>
       <div class="bp-chart-rows-pane">
         <div class="bp-sheet-field">
           <span class="bp-eyebrow">Chords &amp; lyrics</span>
@@ -217,56 +218,7 @@ export default function ChartEditor({
           >
             Add a section
           </button>
-          <button
-            type="button"
-            class="bp-btn bp-btn-quiet bp-btn-sm"
-            onClick={() => setImporting((v) => !v)}
-          >
-            Paste a chart
-          </button>
         </div>
-
-        {importing && (
-          <div class="bp-sheet-field">
-            <label class="bp-eyebrow" for="bp-chart-paste">
-              Paste a chart
-            </label>
-            <p class="bp-sheet-hint bp-m0">
-              However it is written elsewhere — this splits it into sections you can correct.
-            </p>
-            <textarea
-              class="bp-textarea bp-mono"
-              id="bp-chart-paste"
-              rows={6}
-              value={pasted}
-              onInput={(e) => setPasted(e.currentTarget.value)}
-            />
-            <div class="bp-chart-actions">
-              <button
-                type="button"
-                class="bp-btn bp-btn-secondary bp-btn-sm"
-                disabled={pasted.trim() === ""}
-                onClick={() => {
-                  const parsed = parsePastedChart(pasted, vocabulary);
-                  if (parsed.length > 0) {
-                    setRows(parsed);
-                  }
-                  setPasted("");
-                  setImporting(false);
-                }}
-              >
-                Split it into sections
-              </button>
-              <button
-                type="button"
-                class="bp-btn bp-btn-quiet bp-btn-sm"
-                onClick={() => setImporting(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
 
         {unknownNames.length > 0 && (
           <p class="bp-sheet-hint bp-m0">
@@ -293,7 +245,7 @@ export default function ChartEditor({
             name="chordProgression"
             rows={8}
             ref={chordsRef}
-            defaultValue={asText ? chordText : text.chords}
+            defaultValue={freeform ? chordText : text.chords}
           />
         </div>
         <div class="bp-sheet-field">
@@ -309,25 +261,17 @@ export default function ChartEditor({
             name="lyrics"
             rows={10}
             ref={lyricsRef}
-            defaultValue={asText ? lyricsText : text.lyrics}
+            defaultValue={freeform ? lyricsText : text.lyrics}
           />
         </div>
       </div>
 
-      <div class="bp-chart-actions">
-        <button
-          type="button"
-          class="bp-btn bp-btn-quiet bp-btn-sm bp-chart-toggle"
-          onClick={() => setAsText((v) => !v)}
-        >
-          {asText ? "Edit as sections" : "Edit as plain text"}
-        </button>
-      </div>
-
-      {asText && freeform && (
+      {freeform && (
         <p class="bp-sheet-hint bp-m0">
           This song's text isn't written in sections the song page recognises, so it renders as
-          plain text. Switch to sections to give it structure — nothing is lost either way.
+          plain text — nothing is lost, but the chords don't line up with the words. Give a part a
+          name on its own line and put its chords after a colon (
+          <code class="bp-mono">Verse: Am Dm7</code>), save, and it opens as sections next time.
         </p>
       )}
     </div>

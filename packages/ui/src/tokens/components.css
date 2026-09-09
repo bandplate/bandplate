@@ -2358,9 +2358,11 @@ a.bp-btn {
   margin-top: 0.875rem;
 }
 
-/* One pane at a time. The text pane is never removed from the DOM — it holds
-   the actual `name="chordProgression"` / `name="lyrics"` fields the form
-   posts, so hiding it must not detach it. */
+/* One pane at a time, and no way to switch: rows are the editor. The text pane
+   is never removed from the DOM — it holds the actual
+   `name="chordProgression"` / `name="lyrics"` fields the form posts, so hiding
+   it must not detach it. `--text` is set only for a song whose text the parser
+   could not read as sections, which edits as text until its text parses. */
 .bp-chart-editor .bp-chart-text-pane {
   display: none;
 }
@@ -2373,12 +2375,11 @@ a.bp-btn {
   display: block;
 }
 
-/* With scripting off the island renders but cannot switch panes, so CSS makes
-   the same choice: the text boxes ARE the editor, exactly as they are today.
-   The rows would be inert, and an inert editor is worse than none. */
+/* With scripting off the island renders but nothing can be typed into a row,
+   so CSS makes the same choice the freeform case does: the text boxes ARE the
+   editor, exactly as they are today. An inert editor is worse than none. */
 @media (scripting: none) {
-  .bp-chart-editor .bp-chart-rows-pane,
-  .bp-chart-editor .bp-chart-toggle {
+  .bp-chart-editor .bp-chart-rows-pane {
     display: none;
   }
 

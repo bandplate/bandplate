@@ -10,7 +10,7 @@
 // ~150ms bar for a Server Island, so nothing on this page is deferred. See
 // task-5-report.md for the full measurement.
 import { hasAllScopes } from "@bandplate/core";
-import { eventsRepo, instrumentsRepo } from "@bandplate/db";
+import { assetsRepo, eventsRepo, instrumentsRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import ChartEditor from "../../components/ChartEditor.tsx";
@@ -24,6 +24,7 @@ import { eventLabel, formatShortDate } from "../../server/format.js";
 import {
   type SongField,
   archiveSongConsequence,
+  deleteSongConsequence,
   getSongDetail,
   updateSong,
 } from "../../server/pages/songs.js";
@@ -116,6 +117,20 @@ const canArchive = hasAllScopes(principal, ["members:admin"]);
 const isArchived = song.archivedAt !== null;
 const justCreated = Astro.url.searchParams.get("created") === "1";
 const justSaved = Astro.url.searchParams.get("saved") === "1";
+
+// What a permanent delete would take with it, counted for the confirm. Only
+// for an admin — nobody else can reach the page it warns about, and it is a
+// query per take.
+let songFileCount = 0;
+let songByteTotal = 0;
+if (canArchive) {
+  for (const take of takes) {
+    for (const asset of await assetsRepo.listByTake(appDeps.db, take.id)) {
+      songFileCount += 1;
+      songByteTotal += asset.bytes;
+    }
+  }
+}
 
 // The take sheet's pickers. Newest event first, which is nearly always the one
 // being added to, so it is also the default.
@@ -306,18 +321,34 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             hint="Anything the band needs to remember about playing it."
             error={editErrorField === "notes" ? editError : undefined}
           />
-          {canArchive && !isArchived && (
+          {/* One extras block: `.bp-sheet-extras` draws its own top rule, and
+              two of them would draw two. Archiving comes first because it is
+              what almost every "get this out of here" actually wants. */}
+          {canArchive && (
             <div class="bp-sheet-extras">
+              {!isArchived && (
+                <a
+                  href={`/admin/songs/${song.id}/archive`}
+                  class="bp-sheet-danger"
+                  data-confirm
+                  data-confirm-title={`Archive ${song.title}?`}
+                  data-confirm-body={archiveSongConsequence(takes.length)}
+                  data-confirm-action={`/admin/songs/${song.id}/archive`}
+                  data-confirm-cta="Archive song"
+                >
+                  Archive this song
+                </a>
+              )}
               <a
-                href={`/admin/songs/${song.id}/archive`}
+                href={`/admin/songs/${song.id}/delete`}
                 class="bp-sheet-danger"
                 data-confirm
-                data-confirm-title={`Archive ${song.title}?`}
-                data-confirm-body={archiveSongConsequence(takes.length)}
-                data-confirm-action={`/admin/songs/${song.id}/archive`}
-                data-confirm-cta="Archive song"
+                data-confirm-title={`Delete ${song.title} and everything under it?`}
+                data-confirm-body={deleteSongConsequence(takes.length, songFileCount, songByteTotal)}
+                data-confirm-action={`/admin/songs/${song.id}/delete`}
+                data-confirm-cta="Delete song"
               >
-                Archive this song
+                Delete this song for good
               </a>
             </div>
           )}

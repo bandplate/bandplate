@@ -17,7 +17,7 @@
 // `/search` filters takes and keeps it. On a page listing songs it was a
 // dozen checkboxes answering a question about a different object, and on a
 // phone it pushed the songs themselves below the fold.
-import { allocateSongSlug, normalizeTitle } from "@bandplate/core";
+import { type Storage, allocateSongSlug, normalizeTitle } from "@bandplate/core";
 import { type Db, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
@@ -28,6 +28,7 @@ import {
   votesRepo,
 } from "@bandplate/db";
 import { z } from "zod";
+import { formatBytes } from "../format.js";
 
 export type SongListItem = songsRepo.SongWithStats;
 
@@ -363,4 +364,82 @@ export function archiveSongConsequence(takeCount: number): string {
   const tail =
     " If the bridge uploads a take of it again it comes back on its own, and you can put it back by hand any time.";
   return `${head}${takes}${tail}`;
+}
+
+export type DeleteSongResult =
+  | { kind: "ok"; song: songsRepo.Song; deletedTakes: number; deletedAssets: number }
+  | { kind: "not_found" };
+
+/**
+ * Delete a song and everything under it, permanently.
+ *
+ * The heaviest action in the app, and the only one that reaches recordings the
+ * band made rather than metadata about them: a song's takes go with it, and so
+ * do their audio files, their votes and everyone's pins.
+ *
+ * It is offered anyway, beside archiving rather than instead of it, because
+ * the two answer different questions. Archiving says "we don't play this any
+ * more" and keeps every recording. This says "this should never have been
+ * here" — the stub the bridge invented from a mis-typed title, the duplicate,
+ * the test song. Those genuinely need removing, and leaving them archived
+ * forever is its own kind of mess.
+ *
+ * Takes go one at a time through `takesRepo.remove` rather than a single bulk
+ * delete, because each one also owns objects in the bucket and votes and pins
+ * of its own — the same path `deleteTake` uses, so the two cannot diverge in
+ * what they forget.
+ *
+ * DB first, bucket best-effort, like every other delete here: a storage
+ * failure leaves stray objects rather than rows pointing at nothing.
+ */
+export async function deleteSong(db: Db, storage: Storage, id: string): Promise<DeleteSongResult> {
+  const song = await songsRepo.getById(db, id);
+  if (!song) {
+    return { kind: "not_found" };
+  }
+
+  const takes = await takesRepo.listBySong(db, id);
+  const storageKeys: string[] = [];
+  for (const take of takes) {
+    const assets = await assetsRepo.listByTake(db, take.id);
+    for (const asset of assets) {
+      storageKeys.push(asset.storageKey);
+    }
+    await takesRepo.remove(db, take.id);
+  }
+  await songsRepo.remove(db, id);
+
+  if (storageKeys.length > 0) {
+    try {
+      await storage.delete(storageKeys);
+    } catch (err) {
+      console.error("failed to delete storage objects for song", id, err);
+    }
+  }
+
+  return { kind: "ok", song, deletedTakes: takes.length, deletedAssets: storageKeys.length };
+}
+
+/**
+ * What deleting this song costs, in one sentence — said by both the confirm
+ * dialog and the confirm page, like its archive counterpart above.
+ *
+ * It leads with the RECORDINGS, not the song, because that is the part nobody
+ * expects: a song row is cheap, and the takes under it are the band's actual
+ * work.
+ */
+export function deleteSongConsequence(
+  takeCount: number,
+  fileCount: number,
+  byteTotal: number,
+): string {
+  if (takeCount === 0) {
+    return "This can't be undone. It has no takes, so nothing recorded is lost — the song itself goes, along with its aliases and notes.";
+  }
+  const takes = `${takeCount} ${takeCount === 1 ? "take" : "takes"}`;
+  const files =
+    fileCount === 0
+      ? ""
+      : ` and ${fileCount} audio ${fileCount === 1 ? "file" : "files"} (${formatBytes(byteTotal)})`;
+  return `This can't be undone. It permanently removes ${takes}${files}, every vote cast on them, and anyone's pin. Archive it instead if you only want it out of the library — that keeps every recording.`;
 }

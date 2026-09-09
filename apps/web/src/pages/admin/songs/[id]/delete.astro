@@ -1,0 +1,70 @@
+---
+// Delete a song and everything under it, permanently. Admin-only by path.
+//
+// Beside archiving rather than instead of it: archiving says "we don't play
+// this any more" and keeps every recording; this says "this should never have
+// been here" — a stub the bridge invented from a mis-typed title, a duplicate,
+// a test song. See `deleteSong` for why both exist.
+import { assetsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { deleteSong, deleteSongConsequence } from "../../../../server/pages/songs.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/songs");
+}
+
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const result = await deleteSong(appDeps.db, appDeps.storage, id);
+  if (isFetch) {
+    return new Response(result.kind === "ok" ? "ok" : "not found", {
+      status: result.kind === "ok" ? 200 : 404,
+    });
+  }
+  if (result.kind !== "ok") {
+    return new Response("Song not found.", { status: 404 });
+  }
+  return Astro.redirect("/songs?song_deleted=1");
+}
+
+const song = await songsRepo.getById(appDeps.db, id);
+if (!song) {
+  return new Response("Song not found.", { status: 404 });
+}
+const takes = await takesRepo.listBySong(appDeps.db, song.id);
+// Counted for the copy, before anything is destroyed — "3 takes and 14 audio
+// files (212 MB)" is the fact that makes someone stop and check.
+let fileCount = 0;
+let byteTotal = 0;
+for (const take of takes) {
+  for (const asset of await assetsRepo.listByTake(appDeps.db, take.id)) {
+    fileCount += 1;
+    byteTotal += asset.bytes;
+  }
+}
+const consequence = deleteSongConsequence(takes.length, fileCount, byteTotal);
+---
+
+<Layout title="Delete song">
+  <ConfirmActionPage
+    bannerTitle={`Delete ${song.title} and everything under it?`}
+    cta="Delete song"
+    cancelHref={`/songs/${song.slug}`}
+  >
+    {consequence}
+  </ConfirmActionPage>
+</Layout>

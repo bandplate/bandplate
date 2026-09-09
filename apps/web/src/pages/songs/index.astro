@@ -79,6 +79,7 @@ const [songs, favoriteSongIds, archivedCount] = await Promise.all([
 
 const justArchived = Astro.url.searchParams.get("archived_ok") === "1";
 const justUnarchived = Astro.url.searchParams.get("unarchived") === "1";
+const justDeleted = Astro.url.searchParams.get("song_deleted") === "1";
 
 const sort = query.sort ?? "title";
 const viewingArchive = query.archived === true;
@@ -146,6 +147,7 @@ function archivedHref(): string {
 
     {justArchived && <Banner kind="success">Archived. It's out of the library; its takes are untouched.</Banner>}
     {justUnarchived && <Banner kind="success">Back in the library.</Banner>}
+    {justDeleted && <Banner kind="success">Song deleted, along with its takes and their files.</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <RecordSheet id="add-song" eyebrow="New song" title="Add a song" subtitle="A title is all you need — the rest can wait until someone knows it.">

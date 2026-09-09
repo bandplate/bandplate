@@ -1,13 +1,24 @@
 // The M8 write half of `server/pages/songs.ts`. The read half is covered by
 // `songs.test.ts`; these are kept apart because they seed differently and the
 // combined file would be the longest in the directory.
+import type { Storage } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
-import { songsRepo } from "@bandplate/db";
+import {
+  assetsRepo,
+  eventsRepo,
+  favoritesRepo,
+  membersRepo,
+  songsRepo,
+  takesRepo,
+  votesRepo,
+} from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   countArchivedSongs,
   createSong,
+  deleteSong,
+  deleteSongConsequence,
   listSongsForLibrary,
   parseSongsListQuery,
   setSongArchived,
@@ -224,5 +235,154 @@ describe("parseSongsListQuery", () => {
   it("keeps the search and sort it already parsed", () => {
     const q = parseSongsListQuery(new URLSearchParams("q=neon&sort=takes&archived=1"));
     expect(q).toEqual({ search: "neon", sort: "takes", archived: true });
+  });
+});
+
+describe("deleteSong", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  function recordingStorage() {
+    const deleted: string[][] = [];
+    const storage = {
+      signedUploadUrl: async () => "u",
+      signedDownloadUrl: async () => "d",
+      head: async () => null,
+      delete: async (keys: string[]) => {
+        deleted.push(keys);
+      },
+      put: async () => {},
+    } as unknown as Storage;
+    return { storage, deleted };
+  }
+
+  async function seedSongWithTake() {
+    const created = await createSong(db, 1000, formData({ title: "Neon Skyline" }));
+    if (created.kind !== "ok") throw new Error("seed failed");
+    const song = created.song;
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const take = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await assetsRepo.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 4_200_000,
+        createdAt: 1000,
+      },
+    ]);
+    await songsRepo.addAlias(db, song.id, "Neon Sky", "manual");
+    return { song, take, event };
+  }
+
+  it("takes the song, its takes, their files and its aliases", async () => {
+    const { song, take } = await seedSongWithTake();
+    const { storage, deleted } = recordingStorage();
+
+    const result = await deleteSong(db, storage, song.id);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.deletedTakes).toBe(1);
+    expect(result.deletedAssets).toBe(1);
+    expect(await songsRepo.getById(db, song.id)).toBeUndefined();
+    expect(await takesRepo.getById(db, take.id)).toBeUndefined();
+    expect(await assetsRepo.listByTake(db, take.id)).toEqual([]);
+    expect(await songsRepo.listAliases(db, song.id)).toEqual([]);
+    expect(deleted).toEqual([[`takes/${take.id}/master/lossy.mp3`]]);
+  });
+
+  it("leaves no vote or pin pointing at nothing", async () => {
+    const { song, take } = await seedSongWithTake();
+    const member = await membersRepo.create(db, {
+      displayName: "Robin",
+      slug: "robin",
+      email: "robin@example.com",
+      status: "active",
+      createdAt: 1000,
+    });
+    await votesRepo.castVote(db, {
+      takeId: take.id,
+      memberId: member.id,
+      keeper: true,
+      now: 1000,
+    });
+    await favoritesRepo.add(db, {
+      memberId: member.id,
+      targetType: "take",
+      targetId: take.id,
+      createdAt: 1000,
+    });
+    await favoritesRepo.add(db, {
+      memberId: member.id,
+      targetType: "song",
+      targetId: song.id,
+      createdAt: 1000,
+    });
+    const { storage } = recordingStorage();
+
+    await deleteSong(db, storage, song.id);
+
+    // Foreign keys are never enforced here (D1 parity), so nothing cleans
+    // these up on our behalf.
+    expect(await votesRepo.listByTake(db, take.id)).toEqual([]);
+    expect(await favoritesRepo.listByMember(db, member.id)).toEqual([]);
+  });
+
+  it("leaves the event alone — the session still happened", async () => {
+    const { song, event } = await seedSongWithTake();
+    const { storage } = recordingStorage();
+
+    await deleteSong(db, storage, song.id);
+
+    expect(await eventsRepo.getById(db, event.id)).toBeDefined();
+  });
+
+  it("still deletes when the bucket refuses", async () => {
+    const { song } = await seedSongWithTake();
+    const storage = {
+      ...recordingStorage().storage,
+      delete: async () => {
+        throw new Error("bucket unreachable");
+      },
+    } as unknown as Storage;
+
+    expect((await deleteSong(db, storage, song.id)).kind).toBe("ok");
+    expect(await songsRepo.getById(db, song.id)).toBeUndefined();
+  });
+
+  it("reports not_found rather than silently succeeding", async () => {
+    const { storage } = recordingStorage();
+    expect(await deleteSong(db, storage, "nope")).toEqual({ kind: "not_found" });
+  });
+});
+
+describe("deleteSongConsequence", () => {
+  it("says plainly when nothing recorded is lost", () => {
+    expect(deleteSongConsequence(0, 0, 0)).toContain("no takes, so nothing recorded is lost");
+  });
+
+  it("leads with the recordings, and points at archiving instead", () => {
+    const text = deleteSongConsequence(3, 14, 212_000_000);
+    expect(text).toContain("3 takes");
+    expect(text).toContain("14 audio files");
+    expect(text).toContain("Archive it instead");
   });
 });

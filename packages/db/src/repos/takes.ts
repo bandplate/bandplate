@@ -3,6 +3,7 @@ import { type SQL, and, asc, desc, eq, gte, inArray, lte, notInArray, sql } from
 import type { Db } from "../client.js";
 import {
   assets,
+  favorites,
   instruments,
   songAliases,
   songs,
@@ -226,6 +227,16 @@ export async function remove(db: Db, id: string): Promise<void> {
   await db.batch([
     db.delete(assets).where(eq(assets.takeId, id)),
     db.delete(takeInstruments).where(eq(takeInstruments.takeId, id)),
+    // Votes and pins go too. They used to be left behind: FKs are never
+    // enforced here (`PRAGMA foreign_keys` stays off for D1 parity), so a
+    // deleted take left rows in `votes` and `favorites` pointing at nothing —
+    // harmless while the only caller was the ingest DELETE, which can only
+    // touch an `uploading`/`new` take nobody has voted on, and a real leak the
+    // moment a member could delete a published one.
+    db
+      .delete(votes)
+      .where(eq(votes.takeId, id)),
+    db.delete(favorites).where(and(eq(favorites.targetType, "take"), eq(favorites.targetId, id))),
     db.delete(takes).where(eq(takes.id, id)),
   ]);
 }

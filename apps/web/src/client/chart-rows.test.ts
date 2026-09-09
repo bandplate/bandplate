@@ -3,11 +3,9 @@ import { KNOWN_SECTION_WORDS } from "../server/song-text.js";
 import {
   type EditorRow,
   isKnownSection,
-  looksLikeChordLine,
   moveRow,
   newRow,
   normalizeSectionName,
-  parsePastedChart,
   rowsToText,
 } from "./chart-rows.js";
 
@@ -88,52 +86,5 @@ describe("moveRow", () => {
   it("does nothing at the ends — no wrapping", () => {
     expect(moveRow(rows, 0, -1)).toBe(rows);
     expect(moveRow(rows, 2, 1)).toBe(rows);
-  });
-});
-
-describe("looksLikeChordLine", () => {
-  it("recognises chord lines, decoration and all", () => {
-    expect(looksLikeChordLine("Am Dm7 F C")).toBe(true);
-    expect(looksLikeChordLine("Am - F - C - G (x2)")).toBe(true);
-    expect(looksLikeChordLine("| Am | F |")).toBe(true);
-    expect(looksLikeChordLine("F#m7 Bb C/E")).toBe(true);
-  });
-
-  it("does not mistake words for chords", () => {
-    expect(looksLikeChordLine("Život si mě ubalil,")).toBe(false);
-    expect(looksLikeChordLine("and I am burning now")).toBe(false);
-  });
-});
-
-describe("parsePastedChart", () => {
-  it("splits a chart in the shape people actually have", () => {
-    const rows = parsePastedChart(
-      `Verse
-Am Dm7
-Život si mě ubalil,
-pomalu mě teď kouří.
-
-Refrén: F C G
-Hoří, hoří, hoří.`,
-      VOCAB,
-    );
-
-    expect(rows.map((r) => [r.label, r.chords, r.lyrics])).toEqual([
-      ["Verse", "Am Dm7", "Život si mě ubalil,\npomalu mě teď kouří."],
-      ["Refrén", "F C G", "Hoří, hoří, hoří."],
-    ]);
-  });
-
-  it("takes a label with a trailing colon and nothing after it", () => {
-    const rows = parsePastedChart("Chorus:\nF C\nwords here", VOCAB);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ label: "Chorus", chords: "F C", lyrics: "words here" });
-  });
-
-  it("puts text it cannot name into one unnamed row rather than losing it", () => {
-    // Nothing is dropped; the member names it and the warning goes away.
-    const rows = parsePastedChart("some words\nmore words", VOCAB);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ label: "", lyrics: "some words\nmore words" });
   });
 });

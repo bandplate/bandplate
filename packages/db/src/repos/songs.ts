@@ -2,6 +2,7 @@ import { normalizeTitle, uuidv7 } from "@bandplate/core";
 import { type SQL, and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
+  favorites,
   instruments,
   songAliases,
   songInstrumentNotes,
@@ -362,6 +363,29 @@ export async function addAlias(
     throw new Error("insert into song_aliases returned no row");
   }
   return row;
+}
+
+/**
+ * Delete a song and everything that belongs to it ALONE — its aliases, its
+ * per-instrument notes, and every member's pin on it.
+ *
+ * Its TAKES are not touched here, and that is deliberate: a take owns audio
+ * objects in the bucket, and a repo has no business reaching for storage. The
+ * caller deletes the takes first (each through `takesRepo.remove`, which also
+ * takes their votes and pins) and then calls this. `deleteSong` in
+ * `apps/web/src/server/pages/songs.ts` is that caller, and it is the only one.
+ *
+ * Explicit deletes rather than the schema's `ON DELETE CASCADE`: FKs are never
+ * enforced here — `PRAGMA foreign_keys` stays off so behaviour matches D1,
+ * which does not enforce them either — so a cascade would silently do nothing.
+ */
+export async function remove(db: Db, id: string): Promise<void> {
+  await db.batch([
+    db.delete(songAliases).where(eq(songAliases.songId, id)),
+    db.delete(songInstrumentNotes).where(eq(songInstrumentNotes.songId, id)),
+    db.delete(favorites).where(and(eq(favorites.targetType, "song"), eq(favorites.targetId, id))),
+    db.delete(songs).where(eq(songs.id, id)),
+  ]);
 }
 
 /**

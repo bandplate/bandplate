@@ -41,6 +41,24 @@ export async function remove(
     );
 }
 
+/**
+ * Every member's pin on one target, gone.
+ *
+ * For deletion only: a take or a song that no longer exists must not leave
+ * favourite rows pointing at nothing. `targetExists` in the favorites page
+ * handler deliberately does NOT filter, so a stale pin can still be cleared by
+ * hand — but a row whose target was deleted outright has nothing to clear.
+ */
+export async function removeAllForTarget(
+  db: Db,
+  targetType: FavoriteTargetType,
+  targetId: string,
+): Promise<void> {
+  await db
+    .delete(favorites)
+    .where(and(eq(favorites.targetType, targetType), eq(favorites.targetId, targetId)));
+}
+
 export async function listByMember(db: Db, memberId: string): Promise<Favorite[]> {
   return db
     .select()

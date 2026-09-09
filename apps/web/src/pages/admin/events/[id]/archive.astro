@@ -65,6 +65,7 @@ const what = `the ${eventKindLabel(event.kind)} of ${formatLongDate(event.heldAt
         bannerTitle={`Put ${what} back?`}
         cta="Unarchive event"
         cancelHref={`/events/${event.id}`}
+        tone="neutral"
       >
         It returns to the event archive and to home.
       </ConfirmActionPage>

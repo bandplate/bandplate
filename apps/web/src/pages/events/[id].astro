@@ -125,15 +125,15 @@ const [allSongs, allInstruments] = await Promise.all([
   <div class="bp-stack">
     {isArchived && (
       <Banner kind="info" title="Archived">
-        <p class="bp-m0">
-          Out of the event archive and off home. Its takes are untouched and still play.
-        </p>
+        Out of the event archive and off home. Its takes are untouched and still play.
         {canArchive && (
-          <p class="bp-hero-actions bp-m0">
-            <a href={`/admin/events/${event.id}/archive?unarchive=1`} class="bp-btn bp-btn-secondary bp-btn-sm">
-              Put it back
-            </a>
-          </p>
+          <a
+            slot="action"
+            href={`/admin/events/${event.id}/archive?unarchive=1`}
+            class="bp-btn bp-btn-secondary bp-btn-sm"
+          >
+            Put it back
+          </a>
         )}
       </Banner>
     )}
@@ -152,12 +152,10 @@ const [allSongs, allInstruments] = await Promise.all([
     {justMerged && <Banner kind="success">Merged. Everything is on this one now.</Banner>}
     {sameDay.length > 0 && (
       <Banner kind="info" title="This day is filed twice">
-        <p class="bp-m0">
-          Another {kindLabel} sits on {formatLongDate(event.heldAt)}. If you both played twice
-          that's right — but if it's the same session, the takes are split between them and the
-          bridge will keep filing against whichever one holds its key.
-        </p>
-        <p class="bp-hero-actions bp-m0">
+        Another {kindLabel} sits on {formatLongDate(event.heldAt)}. If you both played twice that's
+        right — but if it's the same session, the takes are split between them and the bridge will
+        keep filing against whichever one holds its key.
+        <Fragment slot="action">
           {sameDay.map((other) => (
             <a href={`/events/${other.id}`} class="bp-btn bp-btn-secondary bp-btn-sm">
               Open the other one
@@ -172,7 +170,7 @@ const [allSongs, allInstruments] = await Promise.all([
                 Move its takes here
               </a>
             ))}
-        </p>
+        </Fragment>
       </Banner>
     )}
     {formError && <Banner kind="error">{formError}</Banner>}

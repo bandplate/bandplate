@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; } a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:980px; margin:0 0 30px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:32px; } .sect > .caps { display:block; margin-bottom:12px; }
+  .page { width:1080px; box-sizing:border-box; }
+  .phone { width:375px; box-sizing:border-box; }
+  .note { font-size:12.5px; line-height:1.55; color:#a9917a; margin:12px 0 0; max-width:640px; }
+  .note strong { color:#f2e8d8; font-weight:600; }
+
+  /* today's .bp-banner, exactly */
+  .old { border-radius:3px; border:none; padding:14px 18px; margin-bottom:20px;
+         font-size:15px; display:flex; gap:10px; align-items:flex-start; color:#f2e8d8; }
+  .old strong { display:block; font-family:"Zilla Slab",Georgia,serif; font-weight:600;
+                font-size:17px; line-height:1.25; }
+  .old .ico { flex-shrink:0; font-weight:600; }
+  .ok   { background:rgba(111,154,46,.24); }
+  .bad  { background:rgba(217,74,31,.24); }
+  .info { background:rgba(242,232,216,.12); }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+         min-height:44px; padding:10px 20px; border-radius:999px; border:none;
+         font-family:inherit; font-size:15px; font-weight:600; box-sizing:border-box;
+         white-space:nowrap; }
+  .btn-secondary { background:rgba(242,232,216,.15); color:#f2e8d8; }
+  .btn-sm { min-height:44px; padding:6px 14px; font-size:14px; }
+
+  .b2 { display:flex; align-items:flex-start; gap:14px; padding:16px 18px;
+        border-radius:8px; margin-bottom:14px; color:#f2e8d8; font-size:15px;
+        line-height:1.5; }
+  .b2-ico { flex:none; width:32px; height:32px; border-radius:999px;
+            display:inline-flex; align-items:center; justify-content:center;
+            background:rgba(242,232,216,.14); }
+  .b2-say { max-width:62ch; }
+  .b2-say strong { display:block; font-family:"Zilla Slab",Georgia,serif;
+                   font-weight:600; font-size:17px; line-height:1.25; margin-bottom:2px; }
+  .b2-act { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>B2 — Everything on the left, at a measure</h1>
+    <p>The same drawn mark and 8px corners, but nothing is pinned right: the words are capped at a reading measure and the action sits directly under the sentence that explains it. The fill still spans the page.</p>
+    <p class="trade"><strong>Costs:</strong> on a wide screen the block reads as a long bar with its content huddled at one end — the same empty right-hand side as today, just tidier. It fixes the icon and the measure without answering what the width is FOR.</p>
+  </div>
+  <div class="sect">
+    <span class="caps">Desktop</span>
+    <div class="page">
+      <div class="b2 info">
+        <span class="b2-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v4H3z"/><path d="M5 11v9h14v-9"/><path d="M10 15h4"/></svg></span>
+        <div class="b2-say"><strong>Archived</strong>Out of the library and off the form when you add a take. Its takes are untouched and still play.<div class="b2-act"><span class="btn btn-secondary btn-sm">Put it back</span></div></div>
+      </div>
+      <div class="b2 ok">
+        <span class="b2-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 6"/></svg></span>
+        <div class="b2-say">Saved.</div>
+      </div>
+      <div class="b2 bad">
+        <span class="b2-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 7v6"/><path d="M12 17h.01"/></svg></span>
+        <div class="b2-say">There's nothing on this take that can be played yet, so there's nothing to publish.</div>
+      </div>
+    </div>
+    <p class="note">The one real argument for it: an action stays beside the words that justify it, which is what makes a destructive or corrective button safe to press. <strong>B1 buys alignment and pays for it in distance.</strong></p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

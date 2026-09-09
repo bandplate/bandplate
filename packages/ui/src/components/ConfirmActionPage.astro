@@ -1,35 +1,72 @@
 ---
-// Shared no-JS confirm-page body — the part of a destructive-action confirm
-// page that never actually differs between actions: a `Banner` that names
-// the object and states the consequence, plus a plain `<form method="post">`
-// with a danger submit and a Cancel link back out. This was near-identical,
-// hand-copied markup across `admin/members/[id]/revoke-sessions.astro`,
-// `admin/instruments/[id]/archive.astro` and `admin/tokens/[id]/revoke.astro`
-// — the server-side logic (which repo call runs, which redirect query
-// string) genuinely differs per action and stays in each page's
-// frontmatter, but the body itself was duplicated three times with only
-// the copy swapped. Render THIS for a fourth destructive action, not a
-// fourth copy of the markup.
+// Shared no-JS confirm-page body — the part of a confirm page that never
+// actually differs between actions: a `Banner` that names the object and
+// states the consequence, plus a plain `<form method="post">` with a submit
+// and a Cancel link back out. The server-side logic (which repo call runs,
+// which redirect query string) genuinely differs per action and stays in each
+// page's frontmatter; the body itself was duplicated with only the copy
+// swapped. Render THIS for a new action, not another copy of the markup.
+//
+// --- `tone` -----------------------------------------------------------
+//
+// This used to hardcode an ERROR banner and a DANGER button, which was right
+// for the three destructive confirms it was written for and wrong for
+// everything M8 added: "put it back", "move its takes here" and "promote to
+// keeper" are not destructive, and dressing them in the danger colour taught
+// the member to ignore it — which is the one thing that colour has to keep
+// meaning.
+//
+// Ask for `tone="neutral"` when nothing is destroyed. It stays `danger` by
+// default so a new destructive action cannot be dressed as a safe one by
+// forgetting a prop.
 import Banner from "./Banner.astro";
 
 export interface Props {
   /** Names the object and states the consequence — never a bare "Are you sure?". */
   bannerTitle: string;
-  /** The danger button's label — should echo the verb the trigger used (e.g. "Revoke token"). */
+  /** The button's label — should echo the verb the trigger used ("Revoke token"). */
   cta: string;
   /** Where "Cancel" goes back to. */
   cancelHref: string;
+  /** `"neutral"` when nothing is destroyed. Defaults to `danger`. */
+  tone?: "danger" | "neutral";
 }
 
-const { bannerTitle, cta, cancelHref } = Astro.props;
+const { bannerTitle, cta, cancelHref, tone = "danger" } = Astro.props;
+const danger = tone === "danger";
 ---
 
 <main id="main" class="bp-container" style="max-width: 30rem; margin-top: 3rem;">
-  <Banner kind="error" title={bannerTitle}>
+  <Banner kind={danger ? "error" : "info"} title={bannerTitle}>
     <slot />
   </Banner>
   <form method="post" style="display:flex; gap:0.75rem;">
-    <button type="submit" class="bp-btn bp-btn-danger">{cta}</button>
+    <button type="submit" class={`bp-btn ${danger ? "bp-btn-danger" : "bp-btn-primary"}`}>
+      {
+        danger && (
+          /* Not decoration. Solid danger against solid accent measures 1.03:1
+             in the LIGHT theme — burnt gold and rust are nearly the same
+             lightness — so colour alone cannot mark a destructive action, and
+             `.bp-btn-danger > svg` has always reserved this space. It was
+             empty: every OTHER danger button in the app carries its icon, and
+             this one, the last stop before something is destroyed, did not. */
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 4.5v9" />
+            <path d="M12 18h.01" />
+            <path d="M10.3 3.2 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
+          </svg>
+        )
+      }
+      {cta}
+    </button>
     <a href={cancelHref} class="bp-btn bp-btn-secondary">Cancel</a>
   </form>
 </main>

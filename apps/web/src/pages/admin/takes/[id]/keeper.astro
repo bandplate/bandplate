@@ -52,11 +52,15 @@ const { take, song } = detail;
 const takeLabel = `${song ? song.title : "Untitled take"} — ${formatLongDate(take.recordedAt)}${take.label ? ` (${take.label})` : ""}`;
 ---
 
+{/* Neither one destroys anything — both are a state the band can change back.
+    Reject in the danger colour would spend it on a reversible call and leave
+    nothing louder for an actual delete. */}
 <Layout title={rejecting ? "Reject take" : "Promote to keeper"}>
   <ConfirmActionPage
     bannerTitle={rejecting ? `Reject ${takeLabel}?` : `Promote ${takeLabel} to keeper?`}
     cta={rejecting ? "Reject" : "Promote to keeper"}
     cancelHref={`/takes/${id}`}
+    tone="neutral"
   >
     {
       rejecting ? (

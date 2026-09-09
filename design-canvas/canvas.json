@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-23",
+      "name": "M10 — Banners"
+    },
+    {
       "id": "page-22",
       "name": "M9 — Chords & lyrics editor"
     },
@@ -90,6 +94,42 @@
     }
   ],
   "artboards": [
+    {
+      "file": "BannerProblem.dc.html",
+      "title": "What is wrong with it now",
+      "page": "page-23",
+      "x": 0,
+      "y": 0,
+      "w": 1200,
+      "h": 900
+    },
+    {
+      "file": "BannerRight.dc.html",
+      "title": "B1 — Mark, measure, action on the right",
+      "page": "page-23",
+      "x": 1280,
+      "y": 0,
+      "w": 1200,
+      "h": 900
+    },
+    {
+      "file": "BannerMeasure.dc.html",
+      "title": "B2 — Everything on the left, at a measure",
+      "page": "page-23",
+      "x": 0,
+      "y": 1020,
+      "w": 1200,
+      "h": 760
+    },
+    {
+      "file": "BannerShrink.dc.html",
+      "title": "B3 — Only as wide as it needs to be",
+      "page": "page-23",
+      "x": 1280,
+      "y": 1020,
+      "w": 1200,
+      "h": 760
+    },
     {
       "file": "ChartProblem.dc.html",
       "title": "The problem — two conventions, neither stated",
@@ -624,6 +664,14 @@
   ],
   "annotations": [
     {
+      "id": "banner-m10",
+      "page": "page-23",
+      "x": 0,
+      "y": -300,
+      "w": 1200,
+      "text": "Banners — settled on B1, one shape\n\nFour things were wrong. The icon was a TYPED CHARACTER (\"i\", \"✓\", \"!\") in the body face where every other icon in this app is drawn SVG; nothing capped the measure, so \"Saved.\" stretched the width of the page; the action sat stranded at the bottom-left of an empty block; and the corners were 3px where every neighbour uses 8px.\n\nCHOSEN: B1. Drawn mark in a tinted disc, words at a 62ch measure, action pinned to the far end so the space between them is structure. ONE shape — the action is just optional, because a \"Saved\" and an \"Archived\" are the same kind of thing.\n\nTwo more found while building it, both older than this run:\n  - `.bp-banner strong` was display:block and caught emphasis in the BODY, so a sentence with one bold word broke into three lines. Now scoped to the title.\n  - `ConfirmActionPage` hardcoded an error banner and a danger button, so \"put it back\" and \"promote to keeper\" wore the danger colour — which teaches people to ignore it. It takes a `tone` now, danger by default. Its danger button also had NO icon, though the CSS has always reserved the space: solid danger against solid accent measures 1.03:1 in the light theme, so colour alone cannot mark a destructive action, and this was the last stop before one."
+    },
+    {
       "id": "chart-m9",
       "page": "page-22",
       "x": 0,
@@ -746,6 +794,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-22"
+    "page": "page-23"
   }
 }

@@ -158,16 +158,16 @@ function eventOptionLabel(event: eventsRepo.Event): string {
         found" is worse than one that says why. */}
     {isArchived && (
       <Banner kind="info" title="Archived">
-        <p class="bp-m0">
-          Out of the library and off the form when you add a take. Its takes are untouched and
-          still play.
-        </p>
+        Out of the library and off the form when you add a take. Its takes are untouched and still
+        play.
         {canArchive && (
-          <p class="bp-hero-actions bp-m0">
-            <a href={`/admin/songs/${song.id}/archive?unarchive=1`} class="bp-btn bp-btn-secondary bp-btn-sm">
-              Put it back
-            </a>
-          </p>
+          <a
+            slot="action"
+            href={`/admin/songs/${song.id}/archive?unarchive=1`}
+            class="bp-btn bp-btn-secondary bp-btn-sm"
+          >
+            Put it back
+          </a>
         )}
       </Banner>
     )}

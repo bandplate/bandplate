@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; } a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:980px; margin:0 0 30px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:32px; } .sect > .caps { display:block; margin-bottom:12px; }
+  .page { width:1080px; box-sizing:border-box; }
+  .phone { width:375px; box-sizing:border-box; }
+  .note { font-size:12.5px; line-height:1.55; color:#a9917a; margin:12px 0 0; max-width:640px; }
+  .note strong { color:#f2e8d8; font-weight:600; }
+
+  /* today's .bp-banner, exactly */
+  .old { border-radius:3px; border:none; padding:14px 18px; margin-bottom:20px;
+         font-size:15px; display:flex; gap:10px; align-items:flex-start; color:#f2e8d8; }
+  .old strong { display:block; font-family:"Zilla Slab",Georgia,serif; font-weight:600;
+                font-size:17px; line-height:1.25; }
+  .old .ico { flex-shrink:0; font-weight:600; }
+  .ok   { background:rgba(111,154,46,.24); }
+  .bad  { background:rgba(217,74,31,.24); }
+  .info { background:rgba(242,232,216,.12); }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+         min-height:44px; padding:10px 20px; border-radius:999px; border:none;
+         font-family:inherit; font-size:15px; font-weight:600; box-sizing:border-box;
+         white-space:nowrap; }
+  .btn-secondary { background:rgba(242,232,216,.15); color:#f2e8d8; }
+  .btn-sm { min-height:44px; padding:6px 14px; font-size:14px; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>What is wrong with it now</h1>
+    <p>The banner is a full-bleed bar with a text character for an icon and its action stranded at the bottom-left of a very wide empty box.</p>
+    
+  </div>
+  <div class="sect">
+    <span class="caps">Today</span>
+    <div class="page">
+      <div class="old info">
+        <span class="ico">i</span>
+        <div>
+          <strong>Archived</strong>
+          Out of the library and off the form when you add a take. Its takes are untouched and still play.
+          <p style="margin:12px 0 0;"><span class="btn btn-secondary btn-sm">Put it back</span></p>
+        </div>
+      </div>
+      <div class="old ok"><span class="ico">✓</span><div>Saved.</div></div>
+      <div class="old bad"><span class="ico">!</span><div>There's nothing on this take that can be played yet, so there's nothing to publish.</div></div>
+    </div>
+    <p class="note"><strong>The icon is a typed character.</strong> "i", "✓", "!" — set in the body face beside a display-face heading, at whatever size the text happens to be. Every other icon in this app is drawn SVG on a 16/20/24 grid.</p>
+    <p class="note"><strong>Nothing limits the measure.</strong> One short sentence stretches the full width of the page, so the eye has to travel the whole bar to find out there is nothing else there.</p>
+    <p class="note"><strong>The action is stranded.</strong> "Put it back" sits under the text at the far left of an otherwise empty block, and the emptiness reads as a mistake rather than as space.</p>
+    <p class="note"><strong>3px corners.</strong> Cards, empty states and the draft strip all use 8px; the banner is the only rectangle among them.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

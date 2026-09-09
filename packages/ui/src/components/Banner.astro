@@ -1,23 +1,69 @@
 ---
 // Banner primitive — success/error/info callout. Text always inherits
 // `--bp-color-fg` (set by `.bp-banner`, never an accent color); the accent
-// only tints the border and background wash. See components.css's file
-// header for the contrast rationale.
+// only tints the background wash. See components.css's file header for the
+// contrast rationale.
+//
+// Direction B1 from the canvas. Three things it fixes:
+//
+//  - The icon was a TYPED CHARACTER — "✓", "!", "i" — set in the body face
+//    beside a display-face heading, at whatever size the text happened to be.
+//    Every other icon in this app is drawn SVG on a 16/20/24 grid, and this is
+//    now one too, in a tinted disc so it reads as a mark rather than as the
+//    first letter of the sentence.
+//  - Nothing capped the measure, so "Saved." stretched the full width of the
+//    page and the eye had to travel the whole bar to find nothing else there.
+//  - An action sat stranded at the bottom-left of an otherwise empty block.
+//    It goes in the `action` slot now and is pinned to the far end of the row,
+//    which is what makes the width deliberate instead of accidental.
+//
+// ONE SHAPE, and the action is optional — a "Saved" and an "Archived" are the
+// same kind of thing and read as one.
 export interface Props {
   kind?: "success" | "error" | "info";
   title?: string;
 }
 
 const { kind = "info", title } = Astro.props;
-
-const icon = kind === "success" ? "✓" : kind === "error" ? "!" : "i";
 const role = kind === "error" ? "alert" : "status";
+const hasAction = Astro.slots.has("action");
 ---
 
 <div class={`bp-banner bp-banner-${kind}`} role={role}>
-  <span class="bp-banner-icon" aria-hidden="true">{icon}</span>
-  <div>
-    {title && <strong>{title}</strong>}
-    <div><slot /></div>
+  <span class="bp-banner-icon" aria-hidden="true">
+    {
+      kind === "success" && (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12.5l5.5 5.5L20 6" />
+        </svg>
+      )
+    }
+    {
+      kind === "error" && (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <path d="M12 4.5v10" />
+          <path d="M12 19.5h.01" />
+        </svg>
+      )
+    }
+    {
+      kind === "info" && (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <path d="M12 10v9.5" />
+          <path d="M12 4.5h.01" />
+        </svg>
+      )
+    }
+  </span>
+  <div class="bp-banner-say">
+    {title && <strong class="bp-banner-title">{title}</strong>}
+    <slot />
   </div>
+  {
+    hasAction && (
+      <div class="bp-banner-action">
+        <slot name="action" />
+      </div>
+    )
+  }
 </div>

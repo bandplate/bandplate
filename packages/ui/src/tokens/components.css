@@ -473,34 +473,89 @@ a.bp-btn {
 /* Banner                                                                  */
 /* ---------------------------------------------------------------------- */
 
+/* Direction B1. `align-items: center` rather than `flex-start`: with the icon
+   in a 32px disc and the action a 44px pill, a top-aligned row put three
+   objects of three different heights on three different lines. 0.5rem corners
+   to match the cards, empty states and the draft strip — this was the only
+   3px rectangle among them. */
 .bp-banner {
-  border-radius: var(--radius-sm, 3px);
+  border-radius: 0.5rem;
   border: none;
   padding: 0.875rem 1.125rem;
   margin-bottom: 1.25rem;
   font-size: 0.9375rem;
+  line-height: 1.5;
   display: flex;
-  gap: 0.625rem;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem 0.875rem;
+  align-items: center;
   color: var(--bp-color-fg);
 }
 
+/* A drawn mark in a tinted disc, not a typed character. The disc is what
+   separates it from the sentence — without one, an 18px glyph beside 15px text
+   reads as the first word. */
 .bp-banner-icon {
-  flex-shrink: 0;
-  font-family: var(--bp-font-body);
-  font-weight: 600;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill, 999px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bp-color-fg) 14%, transparent);
+}
+
+/* The measure. A banner is prose, and prose past ~62 characters per line is
+   harder to read, not more informative — "Saved." used to stretch the width of
+   a 1900px page. */
+.bp-banner-say {
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 62ch;
+}
+
+/* Pinned to the far end, so the space between the sentence and the button is
+   structure rather than a gap. `margin-inline-start: auto` rather than
+   `justify-content: space-between` because the row wraps: on a phone the
+   action drops to its own line and goes full width, where `space-between`
+   would strand it mid-row. */
+.bp-banner-action {
+  flex: none;
+  margin-inline-start: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 559px) {
+  .bp-banner-action {
+    flex: 1 1 100%;
+    margin-inline-start: 0;
+  }
+
+  .bp-banner-action > * {
+    flex: 1 1 auto;
+  }
 }
 
 /* Banner titles had no rule at all, so they fell through to the browser's
    default <strong> — the body face at 700, which is the small-bold-heading
    problem again, arrived at by omission rather than by choice. Every heading
-   in this system is the display face; this is one. */
-.bp-banner strong {
+   in this system is the display face; this is one.
+
+   Scoped to `.bp-banner-title`, NOT to every `strong` in the banner. It used
+   to be `.bp-banner strong`, which caught emphasis inside the body copy too
+   and gave it `display: block` — so a sentence like "This take will be marked
+   **keeper** — the band's pick" broke into three lines around the one bold
+   word. */
+.bp-banner-title {
   display: block;
   font-family: var(--bp-font-display);
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.25;
+  margin-bottom: 0.125rem;
 }
 
 /* Fill only, no boundary. The old rules leaned on a 2px border for kind,
@@ -2109,16 +2164,6 @@ a.bp-btn {
   margin-bottom: 0.75rem;
 }
 
-/* Actions under a hero, on their own line rather than crowded into the title.
-   A song's title can run to two lines and carries the favourite star inline;
-   putting Edit up there as well would make a three-object row that reflows
-   badly the moment a title is long. */
-.bp-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.875rem;
-}
 
 /* "Not published yet" — the strip on a take that exists but nobody can find.
    A dashed edge rather than a filled banner: this is not news that just

@@ -103,7 +103,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
 }
 ---
 
-<AppLayout title={song ? song.title : "Take"} principal={principal} current="home">
+<AppLayout title={song ? `Take of ${song.title}` : "Take"} principal={principal} current="home">
   {/* Direction T3 from the design canvas: labelled STRIPS hanging off one
       edge, divided by rules, no cards. It is the same grammar the song page
       uses, which is the whole argument for it — a member moving between the
@@ -115,16 +115,16 @@ function assetLabel(asset: assetsRepo.Asset): string {
       the decision, not the point of the page. */}
   <div class="bp-take-detail">
     <div class="bp-take-detail-hero">
+      {/* "Take of <song>", not the song's own title. The title WAS a link to
+          the song — a page heading that quietly navigates somewhere else,
+          which is the one shape nobody reads as a way out, and it also made
+          this page look like the song's page. The heading names what you are
+          on; getting to the song is a button below it, where an action
+          belongs. */}
       <h1 class="bp-hero-title bp-m0">
-        {
-          song ? (
-            <a href={`/songs/${song.slug}`} class="bp-hero-title-link" transition:name={`take-${take.id}`}>
-              {song.title}
-            </a>
-          ) : (
-            <span transition:name={`take-${take.id}`}>Take</span>
-          )
-        }
+        <span transition:name={`take-${take.id}`}>
+          {song ? `Take of ${song.title}` : "Take"}
+        </span>
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
             targetType="take"
@@ -170,6 +170,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
         }
       </p>
       {noteText && <p class="bp-take-detail-note bp-m0">{noteText}</p>}
+
       {/* The same line a take row carries, with the same treatment: the note
           size, a drawn rule, and the instrument glyphs. It was a strip of its
           own labelled "This take", which is a heading over two facts that the
@@ -209,6 +210,27 @@ function assetLabel(asset: assetsRepo.Asset): string {
           )
         }
       </p>
+      {
+        song && (
+          <a href={`/songs/${song.slug}`} class="bp-btn bp-btn-quiet bp-btn-sm bp-take-song-link">
+            Go to the song
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h13" />
+              <path d="M13 6l6 6-6 6" />
+            </svg>
+          </a>
+        )
+      }
     </div>
 
     {

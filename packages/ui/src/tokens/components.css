@@ -3126,6 +3126,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
    it actually was. Negative block margins take the control out of the line's
    height calculation without shrinking the control: the hit area is still 44px,
    it just overhangs the text line instead of stretching it. */
+/* The way back to the song. It was the page's own H1 — a heading that
+   quietly navigated elsewhere, which nobody reads as a way out, and which
+   made a take look like the song's page. An action gets a control. */
+.bp-take-song-link {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
 .bp-take-favorite-mark {
   display: inline-flex;
   flex: none;
@@ -3551,20 +3559,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* underline in this file uses (4.65:1 / 6.93:1 — see dubplate.css).          */
 /* ---------------------------------------------------------------------- */
 
-/* No standing underline. Under a 44px slab it draws as a heavy bar the width of
-   the title — it read as a rule under the heading, or a strike through it, not
-   as a link. It announces itself on hover, the same way the event link in a
-   take row does. */
-.bp-hero-title-link {
-  color: var(--bp-color-fg);
-  text-decoration: none;
-}
-
-.bp-hero-title-link:hover {
-  text-decoration: underline;
-  text-decoration-color: var(--bp-color-muted);
-  text-underline-offset: 0.2em;
-}
 
 /* Take detail, direction T3 — labelled strips off one edge, divided by rules.
    The definition list this replaces (`.bp-take-detail-meta`, now gone) put the

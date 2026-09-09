@@ -131,4 +131,119 @@ describe("events repo", () => {
     const list = await events.listRecentWithTakeCounts(db);
     expect(list.map((e) => e.id)).toEqual([newer.id, older.id]);
   });
+
+  // --- M8: manual editing and archiving ------------------------------------
+
+  it("update writes only the keys it is given", async () => {
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      venue: "The Attic",
+      notes: "went long",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    await events.update(db, event.id, { venue: "The Cellar", updatedAt: 2000 });
+
+    const after = await events.getById(db, event.id);
+    expect(after?.venue).toBe("The Cellar");
+    expect(after?.notes).toBe("went long");
+    expect(after?.kind).toBe("rehearsal");
+    expect(after?.updatedAt).toBe(2000);
+  });
+
+  it("update archives and unarchives via archivedAt", async () => {
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    await events.update(db, event.id, { archivedAt: 5000, updatedAt: 5000 });
+    expect((await events.getById(db, event.id))?.archivedAt).toBe(5000);
+
+    await events.update(db, event.id, { archivedAt: null, updatedAt: 6000 });
+    expect((await events.getById(db, event.id))?.archivedAt).toBeNull();
+  });
+
+  it("listings exclude archived events, lookups still return them", async () => {
+    const live = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 2000,
+      createdAt: 2000,
+      updatedAt: 2000,
+    });
+    const retired = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      clientRef: "seed-retired",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await events.update(db, retired.id, { archivedAt: 3000, updatedAt: 3000 });
+
+    expect((await events.listRecent(db)).map((e) => e.id)).toEqual([live.id]);
+    expect((await events.listRecentWithTakeCounts(db)).map((e) => e.id)).toEqual([live.id]);
+
+    // The listings-filter/lookups-don't rule: a take row pointing at an
+    // archived event must still be able to name it.
+    expect((await events.getById(db, retired.id))?.id).toBe(retired.id);
+    expect((await events.getByIds(db, [retired.id])).map((e) => e.id)).toEqual([retired.id]);
+    expect((await events.getByClientRef(db, "seed-retired"))?.id).toBe(retired.id);
+  });
+
+  it("includeArchived brings archived events back into the listings", async () => {
+    const retired = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await events.update(db, retired.id, { archivedAt: 3000, updatedAt: 3000 });
+
+    expect((await events.listRecent(db, { includeArchived: true })).map((e) => e.id)).toEqual([
+      retired.id,
+    ]);
+    expect(
+      (await events.listRecentWithTakeCounts(db, { includeArchived: true })).map((e) => e.id),
+    ).toEqual([retired.id]);
+  });
+
+  it("listRecentWithTakeCounts combines the kind and archived filters", async () => {
+    const rehearsal = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 3000,
+      createdAt: 3000,
+      updatedAt: 3000,
+    });
+    await events.create(db, { kind: "concert", heldAt: 2000, createdAt: 2000, updatedAt: 2000 });
+    const archivedRehearsal = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await events.update(db, archivedRehearsal.id, { archivedAt: 4000, updatedAt: 4000 });
+
+    const list = await events.listRecentWithTakeCounts(db, { kind: ["rehearsal"] });
+    expect(list.map((e) => e.id)).toEqual([rehearsal.id]);
+  });
+
+  it("adoptClientRef hands a manual event the bridge's idempotency key", async () => {
+    const manual = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    expect(manual.clientRef).toBeNull();
+
+    await events.adoptClientRef(db, manual.id, "reaper-abc", 2000);
+
+    const found = await events.getByClientRef(db, "reaper-abc");
+    expect(found?.id).toBe(manual.id);
+    expect(found?.updatedAt).toBe(2000);
+  });
 });

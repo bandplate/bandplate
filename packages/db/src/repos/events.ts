@@ -1,5 +1,5 @@
 import { uuidv7 } from "@bandplate/core";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { events, takes } from "../schema/sqlite/index.js";
 
@@ -39,6 +39,52 @@ export async function create(db: Db, input: CreateEventInput): Promise<Event> {
   return row;
 }
 
+export interface UpdateEventInput {
+  kind?: EventKind;
+  title?: string | null;
+  heldAt?: number;
+  venue?: string | null;
+  notes?: string | null;
+  /** `null` unarchives; a number archives at that timestamp. */
+  archivedAt?: number | null;
+  updatedAt: number;
+}
+
+/**
+ * Write only the keys the caller supplied — a member editing a venue cannot
+ * silently blank the notes. `updatedAt` is required rather than derived here
+ * so the clock stays in the caller's hands (`deps.clock.now()`), the same way
+ * `create` takes it.
+ *
+ * `clientRef` is deliberately absent: it is the bridge's idempotency key, not
+ * a field a human edits. The one place it moves is `adoptClientRef` below.
+ */
+export async function update(db: Db, id: string, input: UpdateEventInput): Promise<void> {
+  await db.update(events).set(input).where(eq(events.id, id));
+}
+
+/**
+ * Hand a manually created event the bridge's idempotency key, so a later push
+ * of the same rehearsal converges on this row instead of creating a second
+ * one. Its own function rather than a field on `UpdateEventInput` precisely so
+ * it cannot happen as a side effect of the edit form — adopting a `clientRef`
+ * decides which of two rows the bridge will keep writing to forever.
+ */
+export async function adoptClientRef(
+  db: Db,
+  id: string,
+  clientRef: string,
+  updatedAt: number,
+): Promise<void> {
+  await db.update(events).set({ clientRef, updatedAt }).where(eq(events.id, id));
+}
+
+/**
+ * A LOOKUP, not a listing: it resolves an event a take already points at, so
+ * it must keep returning archived rows. Filtering here would blank the event
+ * name on a live take row. See `listRecent*` for the browse surfaces, which
+ * do filter.
+ */
 export async function getById(db: Db, id: string): Promise<Event | undefined> {
   const [row] = await db.select().from(events).where(eq(events.id, id)).limit(1);
   return row;
@@ -48,13 +94,22 @@ export async function getById(db: Db, id: string): Promise<Event | undefined> {
  * Ingest idempotency lookup: `clientRef` is unique, generated once by the
  * bridge and reused forever (contract v1 §3). Re-posting the same
  * `clientRef` must return the existing row rather than create a duplicate.
+ *
+ * Must NOT filter on `archivedAt`. `client_ref` is UNIQUE, so a filtered
+ * lookup would miss an archived event and send the bridge down the create
+ * path straight into the constraint. Callers unarchive on a match instead —
+ * the band just played it, so it is not retired after all.
  */
 export async function getByClientRef(db: Db, clientRef: string): Promise<Event | undefined> {
   const [row] = await db.select().from(events).where(eq(events.clientRef, clientRef)).limit(1);
   return row;
 }
 
-/** Batch lookup — avoids one round trip per row when rendering a take list's event links. */
+/**
+ * Batch LOOKUP — avoids one round trip per row when rendering a take list's
+ * event links. Like `getById`, it does not filter archived rows: these
+ * resolve an event a take already points at.
+ */
 export async function getByIds(db: Db, ids: string[]): Promise<Event[]> {
   if (ids.length === 0) {
     return [];
@@ -64,11 +119,17 @@ export async function getByIds(db: Db, ids: string[]): Promise<Event[]> {
 
 export interface ListRecentOptions {
   limit?: number;
+  /** Archived events are a browse-surface omission, so listings exclude them by default. */
+  includeArchived?: boolean;
 }
 
 /** Newest first — this ordering is the default everywhere events appear. */
 export async function listRecent(db: Db, options: ListRecentOptions = {}): Promise<Event[]> {
-  const query = db.select().from(events).orderBy(desc(events.heldAt));
+  const query = db
+    .select()
+    .from(events)
+    .where(options.includeArchived ? undefined : isNull(events.archivedAt))
+    .orderBy(desc(events.heldAt));
   if (options.limit !== undefined) {
     return query.limit(options.limit);
   }
@@ -83,6 +144,8 @@ export interface ListRecentWithTakeCountsOptions {
   limit?: number;
   /** Restrict to these kinds — e.g. the archive's "rehearsals only" filter. */
   kind?: EventKind[];
+  /** Archived events are a browse-surface omission, so listings exclude them by default. */
+  includeArchived?: boolean;
 }
 
 /**
@@ -97,21 +160,24 @@ export async function listRecentWithTakeCounts(
   db: Db,
   options: ListRecentWithTakeCountsOptions = {},
 ): Promise<EventWithTakeCount[]> {
-  const hasKindFilter = options.kind !== undefined && options.kind.length > 0;
-  const base = db
+  // Conditions collected into a list and combined with `and()` rather than
+  // branching per combination: with a kind filter and an archived filter that
+  // would already be four near-identical query builders. `and()` of an empty
+  // list is `undefined`, which `.where()` treats as no filter at all.
+  const conditions = [];
+  if (options.kind !== undefined && options.kind.length > 0) {
+    conditions.push(inArray(events.kind, options.kind));
+  }
+  if (!options.includeArchived) {
+    conditions.push(isNull(events.archivedAt));
+  }
+  const query = db
     .select({ event: events, takeCount: sql<number>`count(${takes.id})` })
-    .from(events);
-  const query = hasKindFilter
-    ? base
-        .leftJoin(takes, eq(takes.eventId, events.id))
-        // biome-ignore lint/style/noNonNullAssertion: guarded by hasKindFilter above
-        .where(inArray(events.kind, options.kind!))
-        .groupBy(events.id)
-        .orderBy(desc(events.heldAt))
-    : base
-        .leftJoin(takes, eq(takes.eventId, events.id))
-        .groupBy(events.id)
-        .orderBy(desc(events.heldAt));
+    .from(events)
+    .leftJoin(takes, eq(takes.eventId, events.id))
+    .where(and(...conditions))
+    .groupBy(events.id)
+    .orderBy(desc(events.heldAt));
   const rows = options.limit !== undefined ? await query.limit(options.limit) : await query;
   return rows.map((row) => ({ ...row.event, takeCount: row.takeCount }));
 }

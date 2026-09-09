@@ -43,10 +43,28 @@ export function isScope(value: string): value is Scope {
  */
 export type MemberRole = "member" | "admin";
 
+/**
+ * What an ordinary member holds.
+ *
+ * The three content write scopes are here deliberately (M8): the archive is a
+ * shared library, and routing every new song or uploaded take through an admin
+ * makes the admin a bottleneck at precisely the moment the band is standing in
+ * the rehearsal room. Members create and edit; they do not destroy.
+ *
+ * DESTRUCTION IS NOT A SCOPE. Archiving a song or event, deleting a take or an
+ * asset — all of it sits behind `members:admin` and lives under `/admin/*`, so
+ * `guardAdminPath` enforces it structurally rather than each page remembering
+ * to check. Resist adding `songs:delete` and friends: a scope per destructive
+ * verb multiplies the test surface without changing who can actually do what,
+ * which is the same reasoning that keeps this vocabulary coarse.
+ */
 const MEMBER_SCOPES: readonly Scope[] = [
   "songs:read",
+  "songs:write",
   "takes:read",
+  "takes:write",
   "events:read",
+  "events:write",
   "votes:write",
   "favorites:write",
 ];

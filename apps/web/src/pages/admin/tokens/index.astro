@@ -72,13 +72,13 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
 
     {created && (
       <Banner kind="success" title="Token created">
-        <p class="mb-2">
+        <p class="bp-m0">
           <strong>Copy this secret now — it will not be shown again.</strong>
         </p>
         {/* The one place mono earns its keep on these pages: a random secret
             is read a character at a time, and that is exactly what a
             fixed-width face is for. Email addresses and labels are words. */}
-        <p class="bp-mono mb-2">{created.rawToken}</p>
+        <p class="bp-mono">{created.rawToken}</p>
         <CopyButton client:load value={created.rawToken} label="Copy secret" />
       </Banner>
     )}

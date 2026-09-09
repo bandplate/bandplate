@@ -1131,3 +1131,132 @@ describe("takes.search", () => {
     expect(truncated).toBe(false);
   });
 });
+
+// --- M8: manual editing -----------------------------------------------------
+
+describe("takes.update", () => {
+  let db: Db;
+  let songId: string;
+  let otherSongId: string;
+  let eventId: string;
+  let bassId: string;
+  let drumsId: string;
+  let guitarId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    songId = (
+      await songs.create(db, {
+        title: "Update A",
+        slug: "update-a",
+        createdAt: now,
+        updatedAt: now,
+      })
+    ).id;
+    otherSongId = (
+      await songs.create(db, {
+        title: "Update B",
+        slug: "update-b",
+        createdAt: now,
+        updatedAt: now,
+      })
+    ).id;
+    eventId = (
+      await events.create(db, { kind: "rehearsal", heldAt: now, createdAt: now, updatedAt: now })
+    ).id;
+    bassId = (await instruments.create(db, { slug: "bass", label: "Bass" })).id;
+    drumsId = (await instruments.create(db, { slug: "drums", label: "Drums" })).id;
+    guitarId = (await instruments.create(db, { slug: "guitar", label: "Guitar" })).id;
+  });
+
+  async function seed(instrumentIds?: string[]) {
+    return takes.create(db, {
+      songId,
+      eventId,
+      label: "first pass",
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+      instrumentIds,
+    });
+  }
+
+  async function instrumentIdsOf(takeId: string): Promise<string[]> {
+    const rows = await db
+      .select()
+      .from(schema.takeInstruments)
+      .where(eq(schema.takeInstruments.takeId, takeId));
+    return rows.map((r) => r.instrumentId).sort();
+  }
+
+  it("writes only the keys it is given", async () => {
+    const take = await seed();
+
+    await takes.update(db, take.id, { notes: "muddy", updatedAt: 2000 });
+
+    const after = await takes.getById(db, take.id);
+    expect(after?.notes).toBe("muddy");
+    expect(after?.label).toBe("first pass");
+    expect(after?.recordedAt).toBe(1000);
+    expect(after?.updatedAt).toBe(2000);
+  });
+
+  it("writes durationMs — the only setter for it", async () => {
+    const take = await seed();
+    expect(take.durationMs).toBeNull();
+
+    await takes.update(db, take.id, { durationMs: 214_000, updatedAt: 2000 });
+
+    expect((await takes.getById(db, take.id))?.durationMs).toBe(214_000);
+  });
+
+  it("moves a take to a different song", async () => {
+    const take = await seed();
+
+    await takes.update(db, take.id, { songId: otherSongId, updatedAt: 2000 });
+
+    expect((await takes.getById(db, take.id))?.songId).toBe(otherSongId);
+  });
+
+  it("leaves the instrument set alone when instrumentIds is omitted", async () => {
+    const take = await seed([bassId, drumsId]);
+
+    await takes.update(db, take.id, { label: "second pass", updatedAt: 2000 });
+
+    expect(await instrumentIdsOf(take.id)).toEqual([bassId, drumsId].sort());
+  });
+
+  it("replaces the instrument set when instrumentIds is given", async () => {
+    const take = await seed([bassId, drumsId]);
+
+    await takes.update(db, take.id, { updatedAt: 2000 }, [drumsId, guitarId]);
+
+    expect(await instrumentIdsOf(take.id)).toEqual([drumsId, guitarId].sort());
+  });
+
+  it("clears the instrument set when instrumentIds is empty", async () => {
+    const take = await seed([bassId, drumsId]);
+
+    await takes.update(db, take.id, { updatedAt: 2000 }, []);
+
+    expect(await instrumentIdsOf(take.id)).toEqual([]);
+  });
+
+  it("dedupes instrumentIds rather than colliding on the composite PK", async () => {
+    const take = await seed();
+
+    await takes.update(db, take.id, { updatedAt: 2000 }, [bassId, bassId, drumsId]);
+
+    expect(await instrumentIdsOf(take.id)).toEqual([bassId, drumsId].sort());
+  });
+
+  it("addInstrument is idempotent and leaves the rest of the set alone", async () => {
+    const take = await seed([bassId]);
+
+    await takes.addInstrument(db, take.id, drumsId);
+    await takes.addInstrument(db, take.id, drumsId);
+
+    expect(await instrumentIdsOf(take.id)).toEqual([bassId, drumsId].sort());
+  });
+});

@@ -350,4 +350,154 @@ describe("songs repo", () => {
       expect(results.map((s) => s.slug)).toEqual(["apple-song", "stats-song", "zebra-song"]);
     });
   });
+
+  // --- M8: manual editing and archiving ------------------------------------
+
+  it("update recomputes titleNorm but never touches the slug", async () => {
+    const song = await songs.create(db, {
+      title: "Pritel",
+      slug: "pritel",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    await songs.update(db, song.id, { title: "Přítel o cestách", updatedAt: 2000 });
+
+    const after = await songs.getById(db, song.id);
+    expect(after?.title).toBe("Přítel o cestách");
+    expect(after?.titleNorm).toBe(normalizeTitle("Přítel o cestách"));
+    // The URL is the slug, and it stays put — see `update`'s doc comment.
+    expect(after?.slug).toBe("pritel");
+    expect(after?.updatedAt).toBe(2000);
+  });
+
+  it("update writes only the keys it is given", async () => {
+    const song = await songs.create(db, {
+      title: "Nightbus",
+      slug: "nightbus",
+      lyrics: "the whole first verse",
+      musicalKey: "Am",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    await songs.update(db, song.id, { musicalKey: "Dm", updatedAt: 2000 });
+
+    const after = await songs.getById(db, song.id);
+    expect(after?.musicalKey).toBe("Dm");
+    expect(after?.lyrics).toBe("the whole first verse");
+    expect(after?.title).toBe("Nightbus");
+  });
+
+  it("update rejects a rename onto another song's normalized title", async () => {
+    await songs.create(db, {
+      title: "Žár",
+      slug: "zar",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const other = await songs.create(db, {
+      title: "Nightbus",
+      slug: "nightbus",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    // `titleNorm` is UNIQUE, so the collision surfaces as a constraint error
+    // the service layer pre-checks for and catches as the race fallback.
+    await expect(songs.update(db, other.id, { title: "Zar", updatedAt: 2000 })).rejects.toThrow();
+  });
+
+  it("listings exclude archived songs, lookups still return them", async () => {
+    const live = await songs.create(db, {
+      title: "Alpha",
+      slug: "alpha",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const retired = await songs.create(db, {
+      title: "Beta",
+      slug: "beta",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await songs.update(db, retired.id, { archivedAt: 3000, updatedAt: 3000 });
+
+    expect((await songs.list(db)).map((r) => r.id)).toEqual([live.id]);
+    expect((await songs.listWithStats(db)).map((r) => r.id)).toEqual([live.id]);
+
+    // A take of an archived song still links to /songs/beta, so the lookups
+    // must keep resolving it.
+    expect((await songs.getBySlug(db, "beta"))?.id).toBe(retired.id);
+    expect((await songs.getById(db, retired.id))?.id).toBe(retired.id);
+    expect((await songs.getByIds(db, [retired.id])).map((r) => r.id)).toEqual([retired.id]);
+    expect((await songs.findByTitleNorm(db, "beta"))?.id).toBe(retired.id);
+  });
+
+  it("includeArchived brings archived songs back into the listings", async () => {
+    const retired = await songs.create(db, {
+      title: "Beta",
+      slug: "beta",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await songs.update(db, retired.id, { archivedAt: 3000, updatedAt: 3000 });
+
+    expect((await songs.list(db, { includeArchived: true })).map((r) => r.id)).toEqual([
+      retired.id,
+    ]);
+    expect((await songs.listWithStats(db, { includeArchived: true })).map((r) => r.id)).toEqual([
+      retired.id,
+    ]);
+  });
+
+  it("listWithStats combines the search and archived filters", async () => {
+    const live = await songs.create(db, {
+      title: "Neon Skyline",
+      slug: "neon-skyline",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const retired = await songs.create(db, {
+      title: "Neon Dust",
+      slug: "neon-dust",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await songs.update(db, retired.id, { archivedAt: 3000, updatedAt: 3000 });
+
+    const found = await songs.listWithStats(db, { search: "neon" });
+    expect(found.map((r) => r.id)).toEqual([live.id]);
+  });
+
+  it("update unarchives via a null archivedAt", async () => {
+    const song = await songs.create(db, {
+      title: "Alpha",
+      slug: "alpha",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await songs.update(db, song.id, { archivedAt: 3000, updatedAt: 3000 });
+    await songs.update(db, song.id, { archivedAt: null, updatedAt: 4000 });
+
+    expect((await songs.getById(db, song.id))?.archivedAt).toBeNull();
+    expect((await songs.list(db)).map((r) => r.id)).toEqual([song.id]);
+  });
+
+  it("removeAlias drops one alias and leaves the others", async () => {
+    const song = await songs.create(db, {
+      title: "Nightbus",
+      slug: "nightbus",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const manual = await songs.addAlias(db, song.id, "Night Bus", "manual");
+    await songs.addAlias(db, song.id, "reaper:region-guid:abc", "ingest");
+
+    await songs.removeAlias(db, manual.id);
+
+    const left = await songs.listAliases(db, song.id);
+    expect(left.map((a) => a.source)).toEqual(["ingest"]);
+    expect(await songs.findByAlias(db, normalizeTitle("Night Bus"))).toBeUndefined();
+  });
 });

@@ -67,8 +67,45 @@ export async function getById(db: Db, id: string): Promise<Asset | undefined> {
   return row;
 }
 
-export async function markReady(db: Db, id: string, readyAt: number): Promise<void> {
-  await db.update(assets).set({ status: "ready", readyAt }).where(eq(assets.id, id));
+export interface MarkReadyMeta {
+  /**
+   * Measured, not declared. A browser upload reads this off an `<audio>`
+   * element before the PUT; ingest has no measurement and omits it.
+   */
+  durationMs?: number | null;
+  /** The object's real size, when the caller HEADed it. */
+  bytes?: number;
+}
+
+/**
+ * Flip an asset to `ready`, optionally recording what the caller measured in
+ * the same statement. The meta is an argument here rather than a second
+ * setter precisely so the flip and the measurement cannot end up as two
+ * writes — there is no interactive transaction to hold them together.
+ */
+export async function markReady(
+  db: Db,
+  id: string,
+  readyAt: number,
+  meta: MarkReadyMeta = {},
+): Promise<void> {
+  await db
+    .update(assets)
+    .set({ status: "ready", readyAt, ...meta })
+    .where(eq(assets.id, id));
+}
+
+/**
+ * Delete one asset row. A single statement, no batch: nothing references an
+ * asset, so there are no dependent rows to keep in step.
+ *
+ * The object in the bucket is a separate, best-effort delete the caller makes
+ * afterwards — DB first, so a storage failure leaves an orphaned object
+ * rather than a row pointing at nothing. Same ordering and same reasoning as
+ * `DELETE /ingest/v1/takes/:takeId`.
+ */
+export async function remove(db: Db, id: string): Promise<void> {
+  await db.delete(assets).where(eq(assets.id, id));
 }
 
 /**

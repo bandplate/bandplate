@@ -1,5 +1,5 @@
 import { normalizeTitle, uuidv7 } from "@bandplate/core";
-import { type SQL, and, desc, eq, inArray, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
   instruments,
@@ -103,6 +103,51 @@ export async function createWithAlias(
   return row;
 }
 
+export interface UpdateSongInput {
+  title?: string;
+  tempoBpm?: number | null;
+  musicalKey?: string | null;
+  chordProgression?: string | null;
+  lyrics?: string | null;
+  notes?: string | null;
+  isStub?: boolean;
+  /** `null` unarchives; a number archives at that timestamp. */
+  archivedAt?: number | null;
+  updatedAt: number;
+}
+
+/**
+ * Write only the keys the caller supplied — a member editing lyrics cannot
+ * silently blank the chords.
+ *
+ * Two fields are deliberately NOT in the input:
+ *
+ * `titleNorm` is DERIVED here whenever `title` changes, never accepted, so it
+ * cannot drift from the title it is supposed to normalize — the same rule
+ * `create` and `createWithAlias` already follow. It is UNIQUE, so a rename
+ * onto another song's normalized title throws; callers pre-check with
+ * `findByTitleNorm` for a friendly field error and catch the throw as the
+ * race fallback, the shape `resolveSong` already uses.
+ *
+ * `slug` is absent because it is allocated once at creation and a rename
+ * never changes it. `/songs/[slug]` is the URL: regenerating it on a title
+ * edit would silently break every link and bookmark that already exists, and
+ * there is no redirect table to catch them. A song whose title has been fixed
+ * keeps its original slug, which is mildly ugly and reliably correct.
+ */
+export async function update(db: Db, id: string, input: UpdateSongInput): Promise<void> {
+  const { title, ...rest } = input;
+  const values = title === undefined ? rest : { ...rest, title, titleNorm: normalizeTitle(title) };
+  await db.update(songs).set(values).where(eq(songs.id, id));
+}
+
+/**
+ * A LOOKUP, not a listing: archived songs must still render at their own URL.
+ * A take of an archived song links here, and 404ing a link that works is
+ * worse than a page carrying an "Archived" banner. Same reasoning as
+ * `getById`/`getByIds` below, and the mirror of `listWithStats`, which does
+ * filter because it is a browse surface.
+ */
 export async function getBySlug(db: Db, slug: string): Promise<Song | undefined> {
   const [row] = await db.select().from(songs).where(eq(songs.slug, slug)).limit(1);
   return row;
@@ -113,7 +158,11 @@ export async function getById(db: Db, id: string): Promise<Song | undefined> {
   return row;
 }
 
-/** Batch lookup — avoids one round trip per row when rendering an event's take list. */
+/**
+ * Batch LOOKUP — avoids one round trip per row when rendering an event's take
+ * list. Does not filter archived rows: these resolve a song a take already
+ * points at, and filtering would blank the title on a live take row.
+ */
 export async function getByIds(db: Db, ids: string[]): Promise<Song[]> {
   if (ids.length === 0) {
     return [];
@@ -137,9 +186,18 @@ export async function findByAlias(db: Db, aliasNorm: string): Promise<Song | und
   return row?.song;
 }
 
+export interface ListSongsOptions {
+  /** Archived songs are a browse-surface omission, so listings exclude them by default. */
+  includeArchived?: boolean;
+}
+
 /** Alphabetical by normalized title — SQLite row order is not contractual otherwise. */
-export async function list(db: Db): Promise<Song[]> {
-  return db.select().from(songs).orderBy(songs.titleNorm);
+export async function list(db: Db, options: ListSongsOptions = {}): Promise<Song[]> {
+  return db
+    .select()
+    .from(songs)
+    .where(options.includeArchived ? undefined : isNull(songs.archivedAt))
+    .orderBy(songs.titleNorm);
 }
 
 export interface SongWithStats extends Song {
@@ -161,6 +219,8 @@ export interface ListWithStatsOptions {
    */
   instrumentIds?: string[];
   sort?: SongSort;
+  /** Archived songs are a browse-surface omission, so listings exclude them by default. */
+  includeArchived?: boolean;
 }
 
 /**
@@ -191,6 +251,9 @@ export async function listWithStats(
   if (songIdFilter) {
     conditions.push(inArray(songs.id, [...songIdFilter]));
   }
+  if (!options.includeArchived) {
+    conditions.push(isNull(songs.archivedAt));
+  }
 
   const base = db
     .select({
@@ -217,13 +280,13 @@ export async function listWithStats(
         ? [desc(sql`count(${takes.id})`), songs.titleNorm]
         : [songs.titleNorm];
 
-  const rows =
-    conditions.length > 0
-      ? await base
-          .where(and(...conditions))
-          .groupBy(songs.id)
-          .orderBy(...orderBy)
-      : await base.groupBy(songs.id).orderBy(...orderBy);
+  // `and()` of an empty list is `undefined`, which `.where()` treats as no
+  // filter — so one query builder covers every combination of search,
+  // instrument and archived filters.
+  const rows = await base
+    .where(and(...conditions))
+    .groupBy(songs.id)
+    .orderBy(...orderBy);
 
   return rows.map((row) => ({
     ...row.song,
@@ -299,4 +362,15 @@ export async function addAlias(
     throw new Error("insert into song_aliases returned no row");
   }
   return row;
+}
+
+/**
+ * Drop one alias. Deliberately NOT a replace-all `setAliases`: an alias with
+ * `source: "ingest"` is what makes the bridge match this song instead of
+ * re-creating it as a stub on the next run (contract v1 §6, case 1), so a
+ * human saving an edit form must not be able to sweep one away as a side
+ * effect. Removing an alias is its own explicit act.
+ */
+export async function removeAlias(db: Db, aliasId: string): Promise<void> {
+  await db.delete(songAliases).where(eq(songAliases.id, aliasId));
 }

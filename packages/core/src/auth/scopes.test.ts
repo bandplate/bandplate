@@ -3,10 +3,19 @@ import { hasAllScopes } from "./principal.js";
 import { SCOPES, scopesForRole } from "./scopes.js";
 
 describe("scopesForRole", () => {
-  it("gives members every :read scope plus votes:write and favorites:write, nothing else", () => {
+  it("gives members every :read scope, the three content :write scopes, votes and favorites", () => {
     const scopes = scopesForRole("member");
     expect(scopes.sort()).toEqual(
-      ["songs:read", "takes:read", "events:read", "votes:write", "favorites:write"].sort(),
+      [
+        "songs:read",
+        "songs:write",
+        "takes:read",
+        "takes:write",
+        "events:read",
+        "events:write",
+        "votes:write",
+        "favorites:write",
+      ].sort(),
     );
   });
 
@@ -15,10 +24,21 @@ describe("scopesForRole", () => {
     expect(scopes.sort()).toEqual([...SCOPES].sort());
   });
 
-  it("never gives a member a :write scope other than votes:write/favorites:write", () => {
+  /*
+   * This replaces an earlier assertion that a member held no `:write` scope
+   * beyond votes and favorites. That was the right invariant while the ingest
+   * API was the only way content got in; M8 deliberately reversed it, because
+   * a member who can add a song is the whole point of a shared band archive.
+   *
+   * The invariant that SURVIVES is the one below: three scopes are admin-only,
+   * and no widening of the member role may quietly pick one up. Destruction is
+   * not on this list because it is not a scope at all — it is `members:admin`
+   * plus the `/admin/*` path guard.
+   */
+  it("never gives a member an admin-only scope", () => {
+    const adminOnly = ["ingest:write", "members:admin", "tokens:admin"];
     const scopes = scopesForRole("member");
-    const writeScopes = scopes.filter((s) => s.endsWith(":write"));
-    expect(writeScopes.sort()).toEqual(["votes:write", "favorites:write"].sort());
+    expect(scopes.filter((s) => adminOnly.includes(s))).toEqual([]);
   });
 });
 

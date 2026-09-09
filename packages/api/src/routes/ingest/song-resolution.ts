@@ -7,7 +7,7 @@
 //   4. No match, `createIfMissing: true` -> a stub song is created.
 //   5. No match, `createIfMissing: false` -> not found (caller 409s with
 //      fuzzy candidates).
-import { normalizeTitle, slugify } from "@bandplate/core";
+import { allocateSongSlug, normalizeTitle } from "@bandplate/core";
 import { type Db, songsRepo } from "@bandplate/db";
 
 export type SongMatch = "external-ref" | "title" | "alias" | "created-stub";
@@ -21,21 +21,6 @@ export interface ResolveSongInput {
 export type ResolveSongResult =
   | { found: true; song: songsRepo.Song; created: boolean; match: SongMatch }
   | { found: false; candidates: songsRepo.Song[] };
-
-async function uniqueSongSlug(db: Db, title: string): Promise<string> {
-  const base = slugify(title);
-  let candidate = base;
-  let suffix = 2;
-  // Bounded by construction (999 attempts) rather than unbounded — a
-  // collision streak this long would mean something else is wrong (e.g.
-  // the same title being stubbed out concurrently in a tight loop), and an
-  // infinite loop here would hang the request instead of surfacing that.
-  while ((await songsRepo.getBySlug(db, candidate)) !== undefined && suffix < 1000) {
-    candidate = `${base}-${suffix}`;
-    suffix += 1;
-  }
-  return candidate;
-}
 
 /** Up to 5 loose title matches for a `song_not_found` response's `candidates`. */
 async function fuzzyCandidates(db: Db, title: string): Promise<songsRepo.Song[]> {
@@ -84,7 +69,7 @@ export async function resolveSong(
   }
 
   if (input.createIfMissing) {
-    const slug = await uniqueSongSlug(db, input.title);
+    const slug = await allocateSongSlug(db, input.title);
     try {
       const song = await songsRepo.createWithAlias(
         db,

@@ -21,6 +21,15 @@ export default defineWorkersConfig(async () => {
   return {
     test: {
       include: ["src/**/*.test.ts"],
+      // `barrel-is-workers-safe.test.ts` is the one file that cannot run
+      // here. It bundles the barrel with esbuild to prove the module graph
+      // never reaches a `node:*` import — and esbuild is itself a Node
+      // program (`node:os`, a child process), so loading it inside workerd
+      // fails before it can bundle anything. Running it under Node is not a
+      // weaker check: what it asserts about the graph is runtime-independent,
+      // and the rest of this suite exercising the same code against real D1
+      // is the empirical half.
+      exclude: ["src/barrel-is-workers-safe.test.ts"],
       setupFiles: ["./test/apply-migrations.ts"],
       poolOptions: {
         workers: {

@@ -2,10 +2,11 @@
 // `POST /ingest/v1/takes/:id/commit`, `DELETE /ingest/v1/takes/:id` —
 // contract v1 §4 "Phase 2 — declare a take", "Phase 3 — commit", and §8.
 import type { Clock, Storage } from "@bandplate/core";
+import { buildUploadItems } from "@bandplate/core";
 import { type Db, assetsRepo, eventsRepo, takesRepo } from "@bandplate/db";
 import { errorResponse } from "../../errors.js";
 import { type GuardedRouter, requireServiceScopes } from "../../route-registry.js";
-import { buildUploadItems, syncDeclaredAssets } from "./asset-sync.js";
+import { syncDeclaredAssets } from "./asset-sync.js";
 import { loadInstrumentVocab, unknownSlugs } from "./instrument-vocab.js";
 import { commitTakeSchema, createTakeSchema } from "./schemas.js";
 import { resolveSong } from "./song-resolution.js";

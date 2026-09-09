@@ -247,9 +247,15 @@ export const events = sqliteTable(
     notes: text("notes"),
     // Ingest idempotency key.
     clientRef: text("client_ref").unique(),
+    archivedAt: ts("archived_at"),
     createdAt: ts("created_at").notNull(),
     updatedAt: ts("updated_at").notNull(),
   },
+  // Deliberately NO (archived_at, held_at) index. The archive listing filters
+  // `archived_at IS NULL` on top of this one, and at band scale — hundreds of
+  // events — that costs nothing worth a second index's write amplification on
+  // every ingest push. Same call as `songs.archived_at`, whose listing already
+  // does a full group-by scan.
   (t) => [index("events_held_at_idx").on(t.heldAt)],
 );
 

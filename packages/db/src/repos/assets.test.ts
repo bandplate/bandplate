@@ -310,3 +310,98 @@ describe("assets slot unique index", () => {
     expect(created.map((a) => a.instrumentId).sort()).toEqual([bassId, drumsId].sort());
   });
 });
+
+// --- M8: manual asset management --------------------------------------------
+
+describe("assets.remove", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  it("deletes only the named asset", async () => {
+    const take = await seedTake(db);
+    const now = Date.now();
+    const [master, stem] = await assets.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 100,
+        createdAt: now,
+      },
+      {
+        takeId: take.id,
+        kind: "stem",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/stems/bass/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 200,
+        createdAt: now,
+      },
+    ]);
+
+    // biome-ignore lint/style/noNonNullAssertion: createMany returned both rows
+    await assets.remove(db, stem!.id);
+
+    const left = await assets.listByTake(db, take.id);
+    // biome-ignore lint/style/noNonNullAssertion: createMany returned both rows
+    expect(left.map((a) => a.id)).toEqual([master!.id]);
+  });
+});
+
+describe("assets.markReady", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  async function seedPending() {
+    const take = await seedTake(db);
+    const now = Date.now();
+    const [asset] = await assets.createMany(db, [
+      {
+        takeId: take.id,
+        kind: "master",
+        tier: "lossy",
+        format: "mp3",
+        storageKey: `takes/${take.id}/master/lossy.mp3`,
+        contentType: "audio/mpeg",
+        bytes: 100,
+        createdAt: now,
+      },
+    ]);
+    // biome-ignore lint/style/noNonNullAssertion: createMany returned the row
+    return asset!;
+  }
+
+  it("flips status without meta, leaving duration alone", async () => {
+    const asset = await seedPending();
+
+    await assets.markReady(db, asset.id, 5000);
+
+    const after = await assets.getById(db, asset.id);
+    expect(after?.status).toBe("ready");
+    expect(after?.readyAt).toBe(5000);
+    expect(after?.durationMs).toBeNull();
+    expect(after?.bytes).toBe(100);
+  });
+
+  it("records the measured duration and size in the same statement", async () => {
+    const asset = await seedPending();
+
+    await assets.markReady(db, asset.id, 5000, { durationMs: 214_000, bytes: 4_200_000 });
+
+    const after = await assets.getById(db, asset.id);
+    expect(after?.status).toBe("ready");
+    expect(after?.readyAt).toBe(5000);
+    expect(after?.durationMs).toBe(214_000);
+    expect(after?.bytes).toBe(4_200_000);
+  });
+});

@@ -29,6 +29,13 @@
       "when": 1788863550787,
       "tag": "0003_add_instrument_icon",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788941743384,
+      "tag": "0004_add_event_archived_at",
+      "breakpoints": true
     }
   ]
 }

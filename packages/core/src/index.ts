@@ -9,3 +9,5 @@ export * from "./rate-limiter.js";
 export * from "./auth/index.js";
 export * from "./services/auth.js";
 export * from "./services/members.js";
+export * from "./services/assets.js";
+export * from "./services/songs.js";

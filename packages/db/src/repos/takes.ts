@@ -80,6 +80,87 @@ export async function create(db: Db, input: CreateTakeInput): Promise<Take> {
   return row;
 }
 
+export interface UpdateTakeInput {
+  label?: string | null;
+  notes?: string | null;
+  recordedAt?: number;
+  /**
+   * Moving a take to a different song. "The bridge filed this under the wrong
+   * song" is the likeliest correction after a run, and it is a one-column fix.
+   *
+   * There is deliberately no `eventId`: a take belongs to the session it was
+   * recorded in, so getting that wrong is a bridge bug rather than a member's
+   * typo. Moving takes between events happens only in the event-adoption
+   * repair path, which has its own function.
+   */
+  songId?: string;
+  /**
+   * The take's duration in milliseconds. Nothing wrote this before manual
+   * uploads existed — ingest declares it and the seed fakes it — so this is
+   * the only setter, rather than a bespoke `setDuration`.
+   */
+  durationMs?: number | null;
+  updatedAt: number;
+}
+
+/**
+ * Update a take's metadata and, optionally, replace its instrument set.
+ *
+ * The instrument half is replace-all and must be atomic with the update, so
+ * it goes through `db.batch([...])` — a delete followed by an insert as two
+ * separate awaits could leave a take with zero `take_instruments` rows if the
+ * second failed, and a take with no instruments silently vanishes from
+ * `listByInstruments`. Same shape (and same reasoning) as
+ * `membersRepo.setInstruments`.
+ *
+ * Passing `undefined` leaves the instrument set alone; passing `[]` clears it.
+ * The distinction matters because the edit form and the metadata-only callers
+ * are different paths.
+ */
+export async function update(
+  db: Db,
+  id: string,
+  input: UpdateTakeInput,
+  instrumentIds?: string[],
+): Promise<void> {
+  const updateTake = db.update(takes).set(input).where(eq(takes.id, id));
+
+  if (instrumentIds === undefined) {
+    await updateTake;
+    return;
+  }
+
+  const deleteExisting = db.delete(takeInstruments).where(eq(takeInstruments.takeId, id));
+  const unique = [...new Set(instrumentIds)];
+
+  if (unique.length === 0) {
+    await db.batch([updateTake, deleteExisting]);
+    return;
+  }
+
+  await db.batch([
+    updateTake,
+    deleteExisting,
+    db.insert(takeInstruments).values(unique.map((instrumentId) => ({ takeId: id, instrumentId }))),
+  ]);
+}
+
+/**
+ * Add one instrument to a take without disturbing the rest of the set.
+ *
+ * Uploading a stem calls this: a bass stem existing is PROOF bass was played,
+ * so `take_instruments` — "what was played", the superset of "what has its own
+ * file" — must contain it. Without this, a take that is literally serving a
+ * bass stem would be missing from a "takes with bass" search.
+ *
+ * Idempotent via the composite PK, so it needs no read-then-write and no
+ * batch. The reverse is NOT symmetric: deleting a stem does not remove the
+ * instrument, because deleting a file does not un-play an instrument.
+ */
+export async function addInstrument(db: Db, takeId: string, instrumentId: string): Promise<void> {
+  await db.insert(takeInstruments).values({ takeId, instrumentId }).onConflictDoNothing();
+}
+
 export async function getById(db: Db, id: string): Promise<Take | undefined> {
   const [row] = await db.select().from(takes).where(eq(takes.id, id)).limit(1);
   return row;

@@ -1942,7 +1942,13 @@ a.bp-btn {
        1920px an uncapped take row would run a date and a duration to opposite
        ends of the screen. */
     max-width: 72rem;
-    margin: 0;
+    /* CENTRED in the space beside the sidebar, not pinned against it. This was
+       `margin: 0`, which cancelled the base rule's `margin: 0 auto` — fine
+       when 72rem nearly filled a 1450px window, and wrong on anything wider:
+       at 1900px it left 508px of dead screen on the right with everything
+       jammed left. `margin-inline` rather than `margin` so the block margins
+       the base rule sets are left alone. */
+    margin-inline: auto;
   }
 }
 

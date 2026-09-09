@@ -131,6 +131,12 @@ const [allSongs, allInstruments] = await Promise.all([
             slot="action"
             href={`/admin/events/${event.id}/archive?unarchive=1`}
             class="bp-btn bp-btn-secondary bp-btn-sm"
+            data-confirm
+            data-confirm-title={`Put the ${kindLabel} of ${formatLongDate(event.heldAt)} back?`}
+            data-confirm-body="It returns to the event archive and to home."
+            data-confirm-action={`/admin/events/${event.id}/archive?unarchive=1`}
+            data-confirm-cta="Unarchive event"
+            data-confirm-tone="neutral"
           >
             Put it back
           </a>
@@ -166,6 +172,12 @@ const [allSongs, allInstruments] = await Promise.all([
               <a
                 href={`/admin/events/${event.id}/merge?into=${other.id}`}
                 class="bp-btn bp-btn-secondary bp-btn-sm"
+                data-confirm
+                data-confirm-title="Move the other one's takes here?"
+                data-confirm-body="Its takes move across, keeping their songs, their files and their votes. The emptied event is archived rather than deleted, and this one takes over the key the bridge files against."
+                data-confirm-action={`/admin/events/${event.id}/merge?into=${other.id}`}
+                data-confirm-cta="Merge them"
+                data-confirm-tone="neutral"
               >
                 Move its takes here
               </a>

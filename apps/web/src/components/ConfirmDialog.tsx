@@ -18,6 +18,22 @@ interface ConfirmState {
   body: string;
   action: string;
   cta: string;
+  /**
+   * Where to go afterwards, when reloading the current page would land on
+   * something that no longer exists. Optional: most confirms act ON the page
+   * they were fired from and it survives — archiving a song leaves the song
+   * page standing, with a banner. DELETING it does not.
+   */
+  redirect: string | undefined;
+  /**
+   * `false` when nothing is destroyed. The CTA used to be `.bp-btn-danger`
+   * unconditionally, so "put it back" and "promote to keeper" arrived in the
+   * danger colour — which teaches people to ignore it, and that colour has one
+   * job. Mirrors `ConfirmActionPage`'s `tone`, and defaults the same way: a
+   * trigger that says nothing is treated as destructive, so a new destructive
+   * action cannot be dressed as a safe one by forgetting an attribute.
+   */
+  danger: boolean;
 }
 
 export default function ConfirmDialog() {
@@ -65,6 +81,8 @@ export default function ConfirmDialog() {
         body: target.dataset.confirmBody ?? "This can't be undone.",
         action,
         cta: target.dataset.confirmCta ?? "Confirm",
+        redirect: target.dataset.confirmRedirect,
+        danger: target.dataset.confirmTone !== "neutral",
       });
     }
     document.addEventListener("click", onClick, true);
@@ -116,7 +134,12 @@ export default function ConfirmDialog() {
       // unwanted token. `location.replace()` with the same URL always
       // does a fresh GET navigation instead, regardless of how the
       // current document was loaded.
-      window.location.replace(window.location.href);
+      // Somewhere else when the trigger named one, because the page this was
+      // fired from may not exist any more — deleting a song from its own page
+      // used to reload straight into a 404. The no-JS confirm pages already
+      // redirect somewhere sensible; this is the same destination, said in the
+      // markup so both paths agree.
+      window.location.replace(state.redirect ?? window.location.href);
     } catch (err) {
       setPending(false);
       setError(err instanceof Error ? err.message : "That didn't work. Try again.");
@@ -152,10 +175,28 @@ export default function ConfirmDialog() {
             </button>
             <button
               type="button"
-              class="bp-btn bp-btn-danger"
+              class={`bp-btn ${state.danger ? "bp-btn-danger" : "bp-btn-primary"}`}
               onClick={handleConfirm}
               disabled={pending}
             >
+              {state.danger && (
+                /* Colour cannot be the only marker: solid danger against solid
+                   accent measures 1.03:1 in the light theme. Same icon and
+                   same reason as `ConfirmActionPage`'s. */
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 4.5v9" />
+                  <path d="M12 18h.01" />
+                  <path d="M10.3 3.2 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
+                </svg>
+              )}
               {pending ? "Working…" : state.cta}
             </button>
           </div>

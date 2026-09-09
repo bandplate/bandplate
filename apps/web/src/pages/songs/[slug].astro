@@ -165,6 +165,12 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             slot="action"
             href={`/admin/songs/${song.id}/archive?unarchive=1`}
             class="bp-btn bp-btn-secondary bp-btn-sm"
+            data-confirm
+            data-confirm-title={`Put ${song.title} back?`}
+            data-confirm-body="It returns to the song library and to the picker when you add a take."
+            data-confirm-action={`/admin/songs/${song.id}/archive?unarchive=1`}
+            data-confirm-cta="Unarchive song"
+            data-confirm-tone="neutral"
           >
             Put it back
           </a>
@@ -347,6 +353,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                 data-confirm-body={deleteSongConsequence(takes.length, songFileCount, songByteTotal)}
                 data-confirm-action={`/admin/songs/${song.id}/delete`}
                 data-confirm-cta="Delete song"
+                data-confirm-redirect="/songs?song_deleted=1"
               >
                 Delete this song for good
               </a>

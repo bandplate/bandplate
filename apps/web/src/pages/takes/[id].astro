@@ -61,8 +61,14 @@ if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { take, song, event, instruments, assets, hasLossless, favorited, myVote } = detail;
-const instrumentLabelById = new Map(instruments.map((i) => [i.id, i.label]));
+const { take, song, event, instruments, instrumentsById, assets, hasLossless, favorited, myVote } =
+  detail;
+// Labels come from the VOCABULARY, not from `instruments` (what was played on
+// this take). The two are different sets by contract, and a stem whose
+// instrument is missing from the take's list — every stem added by a later
+// re-render — read as "Unknown instrument" while sitting in a file named
+// after it.
+const instrumentLabelById = new Map([...instrumentsById].map(([id, i]) => [id, i.label]));
 const isAdmin = hasAllScopes(principal, ["members:admin"]);
 
 // `peaks` assets are waveform data for the future player, not something a

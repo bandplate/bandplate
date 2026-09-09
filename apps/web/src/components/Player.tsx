@@ -40,6 +40,7 @@ import {
   type PlayerTrack,
   audioUrl,
   currentTrack,
+  downsamplePeaks,
   isPlaying,
   peaksUrl,
   sourcesUrl,
@@ -57,33 +58,6 @@ function formatTime(seconds: number): string {
   }
   const whole = Math.floor(seconds);
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-}
-
-/**
- * Reduce a peaks file to the bar count we draw, taking the MAX of each
- * bucket rather than the mean: a waveform is about where the loud parts
- * are, and averaging flattens exactly the transients that make one
- * recognisable. Values are 0..1 already; anything outside is clamped
- * rather than trusted, since this is a file from object storage.
- */
-function downsample(peaks: number[], bars: number): number[] {
-  if (peaks.length === 0) {
-    return [];
-  }
-  const out: number[] = [];
-  for (let i = 0; i < bars; i++) {
-    const start = Math.floor((i * peaks.length) / bars);
-    const end = Math.max(start + 1, Math.floor(((i + 1) * peaks.length) / bars));
-    let max = 0;
-    for (let j = start; j < end && j < peaks.length; j++) {
-      const v = peaks[j] ?? 0;
-      if (v > max) {
-        max = v;
-      }
-    }
-    out.push(Math.max(0, Math.min(1, max)));
-  }
-  return out;
 }
 
 interface SourceButtonData {
@@ -309,7 +283,7 @@ export default function Player() {
         const raw = Array.isArray(body) ? body : body?.peaks;
         setPeaks(
           Array.isArray(raw) && raw.every((v) => typeof v === "number")
-            ? downsample(raw as number[], WAVEFORM_BARS)
+            ? downsamplePeaks(raw as number[], WAVEFORM_BARS)
             : null,
         );
       })
@@ -327,7 +301,13 @@ export default function Player() {
   // take nobody switches on never pays for the request.
   const takeId = track?.takeId;
   useEffect(() => {
-    if (!switcherOpen || !takeId) {
+    // Gated on the TAKE, not on the drawer being open. The gate below only
+    // renders the trigger once `sources` has loaded and holds more than one
+    // entry -- so waiting for `switcherOpen` meant waiting for a press on a
+    // button that could never appear, and the switcher was unreachable on
+    // every take. The comment on that gate has always said the list loads
+    // with the track; this makes it true.
+    if (!takeId) {
       return;
     }
     let cancelled = false;
@@ -346,7 +326,7 @@ export default function Player() {
     return () => {
       cancelled = true;
     };
-  }, [switcherOpen, takeId]);
+  }, [takeId]);
 
   // A switch belongs to the take it was opened on; changing take closes it,
   // and so does Escape or a click anywhere else.

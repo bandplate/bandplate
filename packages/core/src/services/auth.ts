@@ -11,6 +11,7 @@ import {
 import type { MemberPrincipal, MemberRole, Scope, ServicePrincipal } from "../auth/index.js";
 import { scopesForRole } from "../auth/index.js";
 import { generateToken, hashToken, timingSafeEqualHex } from "../crypto.js";
+import { buildSetupTestMessage } from "../mail-messages.js";
 import type { Clock, Mailer } from "../ports/index.js";
 import { slugify } from "../text.js";
 
@@ -91,6 +92,16 @@ export interface AuthDeps {
   clock: Clock;
   /** The operator-configured `BANDPLATE_BOOTSTRAP_TOKEN` value. Required by `bootstrapAdmin` only. */
   bootstrapToken?: string;
+  /**
+   * The app's own origin. Used by `bootstrapAdmin` only, and only for the
+   * confirmation email — every other message derives its origin from the link
+   * it carries, but this one has no link to derive it from.
+   *
+   * Optional so a caller that never bootstraps (the API's own `AuthDeps`, a
+   * test) doesn't have to supply it; the message simply loses its button and
+   * its mark, never its meaning.
+   */
+  appOrigin?: string;
   loginTokenTtlMs?: number;
   sessionTtlMs?: number;
   sessionRefreshThresholdMs?: number;
@@ -208,7 +219,10 @@ export async function requestLogin(
     const send = () =>
       deps.mailer.sendLoginLink(member.email, meta.buildLoginUrl(rawToken), {
         displayName: member.displayName,
-        expiresAt,
+        // Minutes, computed HERE because this is where the clock is. The
+        // mailers used to receive the epoch and each render it as an ISO
+        // timestamp, which is not a thing anyone reads.
+        expiresInMinutes: Math.max(1, Math.round((expiresAt - now) / 60_000)),
       });
     if (deps.deferMailSend) {
       deps.deferMailSend(send);
@@ -557,11 +571,10 @@ export async function bootstrapAdmin(
   let testEmailSent = false;
   try {
     await withTimeout(
-      deps.mailer.send({
-        to: member.email,
-        subject: "bandplate is set up",
-        text: "This is a test message confirming outbound mail works for your bandplate deployment.",
-      }),
+      // Shares the shell with the sign-in and invite messages: this is the
+      // first thing a new deployer ever sees from their own install, and it
+      // used to be one unstyled sentence of machine voice.
+      deps.mailer.send(buildSetupTestMessage({ to: member.email, appOrigin: deps.appOrigin })),
       deps.bootstrapMailTimeoutMs ?? DEFAULT_BOOTSTRAP_MAIL_TIMEOUT_MS,
     );
     testEmailSent = true;

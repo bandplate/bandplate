@@ -16,16 +16,7 @@
 // a Node deploy with a broken SMTP config, so this fails the *send* loudly
 // (throws) rather than swallowing a non-2xx provider response.
 import type { Mailer, SendLoginLinkOptions } from "@bandplate/core";
-
-/** Escapes the five HTML-significant characters, mirroring `smtp.ts`. */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+import { buildLoginLinkMessage } from "@bandplate/core";
 
 export type HttpMailProvider = "resend" | "postmark";
 
@@ -112,21 +103,16 @@ export function createHttpMailer(config: HttpMailerConfig): Mailer {
 
   return {
     async sendLoginLink(to, url, opts?: SendLoginLinkOptions): Promise<void> {
-      const expiresLine = opts?.expiresAt
-        ? ` This link expires at ${new Date(opts.expiresAt).toISOString()}.`
-        : "";
-      const greeting = opts?.displayName ? `Hi ${opts.displayName},\n\n` : "";
-      const safeUrl = escapeHtml(url);
-      const safeGreeting = opts?.displayName ? `Hi ${escapeHtml(opts.displayName)},<br><br>` : "";
-      const safeExpiresLine = opts?.expiresAt
-        ? ` This link expires at ${escapeHtml(new Date(opts.expiresAt).toISOString())}.`
-        : "";
-      await sendMessage({
-        to,
-        subject: "Your bandplate login link",
-        text: `${greeting}Use this link to sign in:\n${url}\n${expiresLine}`,
-        html: `<p>${safeGreeting}Use this link to sign in: <a href="${safeUrl}">${safeUrl}</a>${safeExpiresLine}</p>`,
-      });
+      // Same builder the SMTP mailer uses — see its note. These two used to
+      // hold separate copies of the same three strings.
+      await sendMessage(
+        buildLoginLinkMessage({
+          to,
+          url,
+          displayName: opts?.displayName,
+          expiresInMinutes: opts?.expiresInMinutes,
+        }),
+      );
     },
     async send(msg): Promise<void> {
       await sendMessage(msg);

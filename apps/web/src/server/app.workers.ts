@@ -90,6 +90,9 @@ async function buildWorkersRuntime(env: CloudflareEnv): Promise<Runtime> {
     mailer,
     clock,
     bootstrapToken: config.bootstrapToken,
+    // Only `bootstrapAdmin`'s confirmation email uses this — it is the one
+    // message with no link of its own to take an origin from.
+    appOrigin: config.appOrigin,
     // Same as the Node profile — see `AuthDeps.onLoginRequest`. On Workers
     // this reaches `wrangler tail` rather than a terminal, which is the only
     // place an operator can see which of the two outcomes happened.

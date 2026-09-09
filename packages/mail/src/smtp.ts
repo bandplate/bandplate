@@ -10,7 +10,7 @@
 // this subpath directly and pass the resulting `Mailer` into `AppDeps`
 // themselves — there is no generic factory that can reach this module,
 // by design (see `factory.ts`).
-import type { Mailer } from "@bandplate/core";
+import { type Mailer, buildLoginLinkMessage } from "@bandplate/core";
 import nodemailer from "nodemailer";
 
 export interface SmtpConfig {
@@ -20,17 +20,6 @@ export interface SmtpConfig {
   auth?: { user: string; pass: string };
   /** The `From:` address used for every outgoing message. */
   from: string;
-}
-
-/** Escapes the five HTML-significant characters. Used before interpolating
- * any caller-supplied string (display name, URL) into the HTML body. */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 export function createSmtpMailer(config: SmtpConfig): Mailer {
@@ -43,26 +32,17 @@ export function createSmtpMailer(config: SmtpConfig): Mailer {
 
   return {
     async sendLoginLink(to, url, opts) {
-      const expiresLine = opts?.expiresAt
-        ? ` This link expires at ${new Date(opts.expiresAt).toISOString()}.`
-        : "";
-      const greeting = opts?.displayName ? `Hi ${opts.displayName},\n\n` : "";
-      // `displayName` is admin-set and `url` is server-built (from a
-      // generated token), so this is low severity either way — but both
-      // are escaped before landing in the HTML body regardless, since
-      // neither is a compile-time constant.
-      const safeUrl = escapeHtml(url);
-      const safeGreeting = opts?.displayName ? `Hi ${escapeHtml(opts.displayName)},<br><br>` : "";
-      const safeExpiresLine = opts?.expiresAt
-        ? ` This link expires at ${escapeHtml(new Date(opts.expiresAt).toISOString())}.`
-        : "";
-      await transport.sendMail({
-        from: config.from,
+      // The words live in `@bandplate/core`'s `buildLoginLinkMessage`. This
+      // used to build subject, text and html here — and the HTTP mailer built
+      // the same three strings again, with nothing keeping the two in step.
+      // A transport decides how a message goes on the wire, not what it says.
+      const msg = buildLoginLinkMessage({
         to,
-        subject: "Your bandplate login link",
-        text: `${greeting}Use this link to sign in:\n${url}\n${expiresLine}`,
-        html: `<p>${safeGreeting}Use this link to sign in: <a href="${safeUrl}">${safeUrl}</a>${safeExpiresLine}</p>`,
+        url,
+        displayName: opts?.displayName,
+        expiresInMinutes: opts?.expiresInMinutes,
       });
+      await transport.sendMail({ from: config.from, ...msg });
     },
     async send(msg) {
       await transport.sendMail({

@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;family=Spline+Sans+Mono:wght@400&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; } a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:980px; margin:0 0 30px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:32px; } .sect > .caps { display:block; margin-bottom:12px; }
+  .frames { display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap; }
+  .note { font-size:12.5px; line-height:1.55; color:#a9917a; margin:12px 0 0; max-width:560px; }
+  .note strong { color:#f2e8d8; font-weight:600; }
+  .bad { color:#e8794f; }
+
+  /* an inbox frame — 600px is the email column standard */
+  .mail { width:600px; box-sizing:border-box; border:1px solid #3a2413; border-radius:6px;
+          overflow:hidden; }
+  .mail-head { padding:10px 14px; background:rgba(242,232,216,.06);
+               border-bottom:1px solid #3a2413; font-size:12px; color:#a9917a; }
+  .mail-head b { color:#f2e8d8; font-weight:600; }
+  .mail-body { padding:0; }
+
+  /* plain-text rendering, as a mail client shows it */
+  .plain { margin:0; padding:20px 22px; font-family:"Spline Sans Mono",ui-monospace,monospace;
+           font-size:13px; line-height:1.65; white-space:pre-wrap; color:#e6dccd;
+           background:#1b110a; }
+  .flag { display:inline; background:rgba(217,74,31,.28); border-radius:2px; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>The three messages, as they go out today</h1>
+    <p>bandplate sends exactly three: the sign-in link (the only door in), the invite, and a one-line test at setup. Two of them are plain text with no HTML part at all; the third has one line of HTML.</p>
+    
+  </div>
+  <div class="sect">
+    <span class="caps">1 · The sign-in link — HTML part</span>
+    <div class="frames">
+      <div class="mail">
+        <div class="mail-head"><b>Your bandplate login link</b><br>from bandplate</div>
+        <div class="mail-body"><div class="plain" style="font-family:'Chivo',Arial,sans-serif;font-size:15px;white-space:normal;">Hi Vařič,<br><br>Use this link to sign in: <a href="#">http://localhost:4321/login/9xKQ2mWfVn3pLdA7RtYzB4cHsJ6uE1oN</a><span class="flag"> This link expires at 2026-09-09T12:49:33.412Z.</span></div></div>
+      </div>
+      <div style="max-width:460px;">
+        <p class="note bad" style="margin-top:0;"><strong>The whole message is one paragraph.</strong> No wordmark, no button, nothing that says who sent it beyond the subject line — and this is the ONLY way into the app.</p>
+        <p class="note bad"><strong>The link text is the URL.</strong> A 60-character string carrying a single-use token, printed as the thing you are meant to click. It wraps badly and it looks like exactly the sort of link people are told not to click.</p>
+        <p class="note bad"><strong>The expiry is an ISO timestamp.</strong> "2026-09-09T12:49:33.412Z" is machine output. Nobody reads it, and it is in UTC.</p>
+        <p class="note bad"><strong>And it starts with a stray space</strong> — the expiry sentence is built with a leading space, so it runs on after the link with an odd gap.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <span class="caps">2 · The sign-in link — plain-text part, and the stray space in situ</span>
+    <div class="frames">
+      <div class="mail">
+        <div class="mail-head"><b>Your bandplate login link</b><br>from bandplate</div>
+        <div class="mail-body"><pre class="plain">Hi Vařič,
+
+Use this link to sign in:
+http://localhost:4321/login/9xKQ2mWfVn3pLdA7RtYzB4cHsJ6uE1oN
+<span class="flag"> This link expires at 2026-09-09T12:49:33.412Z.</span></pre></div>
+      </div>
+      <div style="max-width:460px;">
+        <p class="note" style="margin-top:0;">The text part is the better of the two — it at least puts the link on its own line. The highlighted leading space is the same bug as above, visible here as an indent on the last line.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <span class="caps">3 · The invite, and the setup test — NO html part at all</span>
+    <div class="frames">
+      <div class="mail">
+        <div class="mail-head"><b>You've been added to bandplate</b><br>from bandplate</div>
+        <div class="mail-body"><pre class="plain">Hi Vařič,
+
+You've been added to bandplate — your band's rehearsal and recording archive.
+
+There's no password to set up. Go to http://localhost:4321/login, enter this address
+(xaralis93@gmail.com), and we'll email you a link that signs you in.
+
+http://localhost:4321/login</pre></div>
+      </div>
+      <div class="mail">
+        <div class="mail-head"><b>bandplate is set up</b><br>from bandplate</div>
+        <div class="mail-body"><pre class="plain">This is a test message confirming outbound mail works for your bandplate deployment.</pre></div>
+      </div>
+    </div>
+    <p class="note"><strong>The invite reads well</strong> — it explains that there is no password, which is the one thing a new member needs. It just arrives as bare monospace text while the sign-in mail arrives as HTML, so the two look like they came from different systems.</p>
+    <p class="note"><strong>The setup test says nothing useful.</strong> It confirms mail works, which is its whole job, but it is the first thing a new deployer ever sees from their own install.</p>
+    <p class="note bad"><strong>And the sign-in body exists TWICE in the codebase</strong> — once in the SMTP mailer, once in the HTTP one — as two copies of the same strings that nothing keeps in step.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

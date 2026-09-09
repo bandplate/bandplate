@@ -4,8 +4,15 @@
 export interface SendLoginLinkOptions {
   /** The member's display name, for a friendlier email body. */
   displayName?: string;
-  /** Epoch ms the link expires at, for "this link expires at ..." copy. */
-  expiresAt?: number;
+  /**
+   * How long the link is good for, in whole minutes. The CALLER computes it,
+   * because the caller has the clock (`deps.clock`) and a mailer does not.
+   *
+   * This replaced an `expiresAt` epoch, which every mailer then rendered as
+   * an ISO timestamp — "This link expires at 2026-09-09T12:49:33.412Z", in
+   * UTC, which nobody reads.
+   */
+  expiresInMinutes?: number;
 }
 
 export interface MailMessage {

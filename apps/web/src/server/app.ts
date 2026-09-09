@@ -96,6 +96,9 @@ async function buildRuntime(): Promise<Runtime> {
     mailer,
     clock,
     bootstrapToken: config.bootstrapToken,
+    // Only `bootstrapAdmin`'s confirmation email uses this — it is the one
+    // message with no link of its own to take an origin from.
+    appOrigin: config.appOrigin,
     // Wired in every configuration, not just dev — see
     // `AuthDeps.onLoginRequest`. `/login` cannot tell the caller which of
     // these happened without becoming an enumeration oracle, so the operator's

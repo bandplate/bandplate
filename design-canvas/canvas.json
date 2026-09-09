@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-24",
+      "name": "M11 — Email"
+    },
+    {
       "id": "page-23",
       "name": "M10 — Banners"
     },
@@ -94,6 +98,42 @@
     }
   ],
   "artboards": [
+    {
+      "file": "MailToday.dc.html",
+      "title": "The three messages, as they go out today",
+      "page": "page-24",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 1600
+    },
+    {
+      "file": "MailPlain.dc.html",
+      "title": "M1 — Plain text, written properly",
+      "page": "page-24",
+      "x": 1260,
+      "y": 0,
+      "w": 1140,
+      "h": 900
+    },
+    {
+      "file": "MailLight.dc.html",
+      "title": "M2 — Text first, plain light HTML part",
+      "page": "page-24",
+      "x": 2480,
+      "y": 0,
+      "w": 1800,
+      "h": 1100
+    },
+    {
+      "file": "MailBranded.dc.html",
+      "title": "M3 — The app's own skin",
+      "page": "page-24",
+      "x": 1260,
+      "y": 1180,
+      "w": 1140,
+      "h": 1000
+    },
     {
       "file": "BannerProblem.dc.html",
       "title": "What is wrong with it now",
@@ -664,6 +704,14 @@
   ],
   "annotations": [
     {
+      "id": "mail-m11",
+      "page": "page-24",
+      "x": 0,
+      "y": -320,
+      "w": 1180,
+      "text": "Email — three messages, and one of them is the only door in\n\nbandplate sends exactly three: the SIGN-IN LINK (no password exists, so this is the only way into the app), the INVITE, and a one-line test at setup.\n\nWhat is wrong today, on the first board: the sign-in mail's HTML is a single paragraph whose link text is the 60-character token URL; the expiry is an ISO timestamp in UTC; there is a stray leading space before it; the invite and the setup test have NO html part at all, so they arrive looking like a different system; and the sign-in body exists TWICE in the codebase, once per mailer, with nothing keeping the copies in step.\n\nThe three directions differ on ONE axis: how much the email looks like the app.\n\nWorth reading before choosing. The project's own plan says of this message: \"keep it plain-text-first with a minimal HTML part, since deliverability matters more than styling when it's the only door.\" M1 and M2 sit inside that. M3 argues with it."
+    },
+    {
       "id": "banner-m10",
       "page": "page-23",
       "x": 0,
@@ -794,6 +842,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-23"
+    "page": "page-24"
   }
 }

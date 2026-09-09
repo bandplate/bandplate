@@ -19,7 +19,7 @@ describe("http-api mailer", () => {
 
     await mailer.sendLoginLink("alex@example.com", "https://band.example/login/abc", {
       displayName: "Alex",
-      expiresAt: 1700000000000,
+      expiresInMinutes: 15,
     });
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);

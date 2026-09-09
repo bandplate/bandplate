@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&amp;family=Chivo:wght@400;600;900&amp;family=Spline+Sans+Mono:wght@400&amp;display=swap">
+  <style>
+  body { margin:0; background:#150c07; color:#f2e8d8;
+         font-family:"Chivo","Helvetica Neue",Helvetica,Arial,sans-serif; }
+  a { color:#f6aa1c; text-decoration:none; } a:hover { color:#ffc26b; }
+  .board { padding:40px; box-sizing:border-box; }
+  .head { max-width:980px; margin:0 0 30px; }
+  .head h1 { font-family:"Zilla Slab",Georgia,serif; font-weight:700; font-size:26px;
+             line-height:1.15; margin:0 0 8px; }
+  .head p { margin:0 0 6px; font-size:13px; line-height:1.55; color:#a9917a; }
+  .head .trade { color:#d98f4a; }
+  .caps { font-family:"Chivo",Arial,sans-serif; font-weight:900; font-size:10px;
+          letter-spacing:.16em; text-transform:uppercase; color:#a9917a; }
+  .sect { margin-top:32px; } .sect > .caps { display:block; margin-bottom:12px; }
+  .frames { display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap; }
+  .note { font-size:12.5px; line-height:1.55; color:#a9917a; margin:12px 0 0; max-width:560px; }
+  .note strong { color:#f2e8d8; font-weight:600; }
+  .bad { color:#e8794f; }
+
+  /* an inbox frame — 600px is the email column standard */
+  .mail { width:600px; box-sizing:border-box; border:1px solid #3a2413; border-radius:6px;
+          overflow:hidden; }
+  .mail-head { padding:10px 14px; background:rgba(242,232,216,.06);
+               border-bottom:1px solid #3a2413; font-size:12px; color:#a9917a; }
+  .mail-head b { color:#f2e8d8; font-weight:600; }
+  .mail-body { padding:0; }
+
+  /* plain-text rendering, as a mail client shows it */
+  .plain { margin:0; padding:20px 22px; font-family:"Spline Sans Mono",ui-monospace,monospace;
+           font-size:13px; line-height:1.65; white-space:pre-wrap; color:#e6dccd;
+           background:#1b110a; }
+  .flag { display:inline; background:rgba(217,74,31,.28); border-radius:2px; }
+
+  .m2 { background:#ffffff; color:#1c0f06; padding:32px 28px;
+        font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        font-size:16px; line-height:1.55; }
+  .m2-mark { margin:0 0 24px; }
+  .m2-mark img { width:40px; height:40px; border-radius:9px; vertical-align:middle;
+                 display:inline-block; }
+  .m2-mark b { font-family:Georgia,"Times New Roman",serif; font-weight:700; font-size:19px;
+               color:#1c0f06; vertical-align:middle; margin-left:10px; }
+  /* what the reader sees before they allow images — the alt box, and the
+     wordmark carrying on regardless */
+  .m2-mark-blocked { display:inline-block; width:40px; height:40px; border-radius:9px;
+                     border:1px dashed #ddd0ba; vertical-align:middle; }
+  .m2 p { margin:0 0 16px; }
+  .m2-btn { display:inline-block; background:#7a4e05; color:#ffffff; text-decoration:none;
+            padding:14px 26px; border-radius:6px; font-weight:600; font-size:16px; }
+  .m2-alt { font-size:13px; color:#6d5947; word-break:break-all; }
+  .m2-foot { margin-top:26px; padding-top:18px; border-top:1px solid #ddd0ba;
+             font-size:13px; color:#6d5947; }
+</style>
+</helmet>
+<div class="board">
+  <div class="head">
+    <h1>M2 — Text first, with a plain light HTML part</h1>
+    <p>The text part stays the real message. Alongside it, one column on white: the wordmark, one sentence, a real button, the URL beneath it as a fallback, and a footer that says why this arrived. Nothing that fails in Outlook.</p>
+    <p class="trade"><strong>Costs:</strong> every change has to be made twice — the text and the HTML have to keep saying the same thing, and nothing enforces that. It is also the most email-specific code in the repo: inline styles, no stylesheet, a light background whatever the reader's theme.</p>
+  </div>
+  <div class="sect">
+    <span class="caps">The HTML part</span>
+    <div class="frames">
+      <div class="mail">
+        <div class="mail-head"><b>Your sign-in link for bandplate</b><br>from bandplate</div>
+        <div class="mail-body"><div class="m2">
+          <p class="m2-mark"><img src="bandplate-mark.png" alt="" /><b>bandplate</b></p>
+          <p>Hi Vařič,</p>
+          <p>Here is your link to sign in. It works once, and only for the next 15 minutes.</p>
+          <p><a href="#" class="m2-btn">Sign in to bandplate</a></p>
+          <p class="m2-alt">Or paste this into your browser:<br>http://localhost:4321/login/9xKQ2mWfVn3pLdA7RtYzB4cHsJ6uE1oN</p>
+          <p class="m2-foot">You are getting this because someone entered this address on the bandplate sign-in page. If that was not you, ignore it — nobody can sign in without the link.</p>
+        </div></div>
+      </div>
+      <div class="mail">
+        <div class="mail-head"><b>Your sign-in link for bandplate</b><br>from bandplate — images not loaded</div>
+        <div class="mail-body"><div class="m2">
+          <p class="m2-mark"><span class="m2-mark-blocked"></span><b>bandplate</b></p>
+          <p>Hi Vařič,</p>
+          <p>Here is your link to sign in. It works once, and only for the next 15 minutes.</p>
+          <p><a href="#" class="m2-btn">Sign in to bandplate</a></p>
+          <p class="m2-alt">Or paste this into your browser:<br>http://localhost:4321/login/9xKQ2mWfVn3pLdA7RtYzB4cHsJ6uE1oN</p>
+          <p class="m2-foot">You are getting this because someone entered this address on the bandplate sign-in page. If that was not you, ignore it — nobody can sign in without the link.</p>
+        </div></div>
+      </div>
+      <div style="max-width:440px;">
+        <p class="note" style="margin-top:0;"><strong>The mark is a hosted PNG, and the wordmark beside it is TEXT.</strong> Email rules out the app's real logo: it is an SVG drawn in <code>currentColor</code> behind a mask, and Gmail strips SVG outright — a data: URI is stripped too. So the email uses <code>icon-192.png</code>, which the app already serves, at the origin it already knows.</p>
+        <p class="note"><strong>Most clients block remote images until the reader allows them</strong>, which is the second frame. The mark carries <code>alt=""</code> — decorative, not named — because the word beside it is the name; an <code>alt="bandplate"</code> would read "bandplate bandplate" once images loaded, and say it twice to a screen reader.</p>
+        <p class="note"><strong>Light, not branded dark.</strong> A dark-background email is a rendering minefield: Gmail and Outlook both invert colours in dark mode by rules you do not control, and the result is frequently unreadable. White is the one background that renders the same everywhere.</p>
+        <p class="note"><strong>Georgia for the wordmark</strong>, not the app's Zilla Slab — email cannot rely on a web font, and Georgia is on effectively every machine. It reads as a serif wordmark, which is the point of it.</p>
+        <p class="note">The button is a real link with padding, not an image and not a table-in-a-table. The URL is still printed underneath, because a button that does not render leaves nothing to click.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

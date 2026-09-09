@@ -11,6 +11,7 @@
 // layer can get this rule from.
 import { type Db, membersRepo } from "@bandplate/db";
 import { z } from "zod";
+import { buildInviteMessage } from "../mail-messages.js";
 import type { Mailer } from "../ports/mailer.js";
 
 export const createMemberSchema = z.object({
@@ -178,24 +179,20 @@ export async function sendMemberInvite(
   member: { displayName: string; email: string },
 ): Promise<boolean> {
   const signInUrl = `${deps.appOrigin.replace(/\/+$/, "")}/login`;
-  const text = [
-    `Hi ${member.displayName},`,
-    "",
-    "You've been added to bandplate — your band's rehearsal and recording archive.",
-    "",
-    `There's no password to set up. Go to ${signInUrl}, enter this address`,
-    `(${member.email}), and we'll email you a link that signs you in.`,
-    "",
-    signInUrl,
-  ].join("\n");
 
   try {
     await withTimeout(
-      deps.mailer.send({
-        to: member.email,
-        subject: "You've been added to bandplate",
-        text,
-      }),
+      // The words and the styling live in `mail-messages.ts`, alongside the
+      // sign-in message. This used to be a bare text-only body built inline —
+      // which meant a member's FIRST mail from the app looked nothing like
+      // their second, and the two drifted independently.
+      deps.mailer.send(
+        buildInviteMessage({
+          to: member.email,
+          displayName: member.displayName,
+          signInUrl,
+        }),
+      ),
       deps.inviteMailTimeoutMs ?? DEFAULT_INVITE_MAIL_TIMEOUT_MS,
     );
     return true;

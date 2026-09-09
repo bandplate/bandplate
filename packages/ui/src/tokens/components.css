@@ -2105,6 +2105,33 @@ a.bp-btn {
   margin-top: 0.875rem;
 }
 
+/* "Not published yet" — the strip on a take that exists but nobody can find.
+   A dashed edge rather than a filled banner: this is not news that just
+   happened (which is what `.bp-banner` is for, and why it announces itself to
+   a screen reader), it is a standing condition of the page for as long as the
+   take is a draft. It reads as an outline around something unfinished. */
+.bp-take-draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-top: 1.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px dashed var(--bp-color-border);
+  border-radius: 0.5rem;
+}
+
+.bp-take-draft-say {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.bp-take-draft-say p {
+  margin-top: 0.25rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+}
+
 /* `--text-section` — see theme.css for why this is not Chivo 700 at 18px. */
 .bp-section-title {
   font-family: var(--bp-font-display);

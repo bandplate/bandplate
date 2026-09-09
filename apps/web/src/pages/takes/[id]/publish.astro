@@ -1,0 +1,44 @@
+---
+// POST-only: let a take out of the drawer it was created in.
+//
+// A MEMBER page, not an admin one. Members create takes, so members publish
+// them — the M8 split puts only destruction behind `members:admin`. Going the
+// other way (un-publishing, which takes something out of everyone's view) is
+// admin-only and lives under `/admin/`.
+//
+// A GET bounces to the take, the same way `vote.astro` does.
+import { getAppDeps } from "../../../server/app.js";
+import { isSameOrigin } from "../../../server/csrf.js";
+import { setTakePublished } from "../../../server/pages/takes.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const takeId = Astro.params.id;
+if (!takeId) {
+  return Astro.redirect("/");
+}
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(`/takes/${takeId}`);
+}
+
+const appDeps = await getAppDeps();
+if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+  return new Response("Origin check failed.", { status: 403 });
+}
+
+const result = await setTakePublished(appDeps.db, appDeps.clock.now(), takeId, true);
+if (result.kind === "not_found") {
+  return new Response("Take not found.", { status: 404 });
+}
+// Not an error page: the member pressed a button that should not have been
+// there, which means the page was stale. Send them back to the take, where the
+// strip now says what is missing.
+if (result.kind === "nothing_to_play") {
+  return Astro.redirect(`/takes/${takeId}?nothing_to_play=1`);
+}
+return Astro.redirect(`/takes/${takeId}?published=1`);
+---

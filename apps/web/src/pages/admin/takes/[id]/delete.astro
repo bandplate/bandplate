@@ -1,0 +1,67 @@
+---
+// Delete a take and everything under it. Admin-only by path, and the same
+// dual-mode shape as the archive confirms: GET renders a real page, POST
+// answers `ok` to the ConfirmDialog island's fetch and redirects for a plain
+// form.
+//
+// A HARD delete, not the unused `purged` state — see `deleteTake`.
+import { assetsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { formatLongDate } from "../../../../server/format.js";
+import { deleteTake, deleteTakeConsequence } from "../../../../server/pages/takes.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/takes");
+}
+
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const result = await deleteTake(appDeps.db, appDeps.storage, id);
+  if (isFetch) {
+    return new Response(result.kind === "ok" ? "ok" : "not found", {
+      status: result.kind === "ok" ? 200 : 404,
+    });
+  }
+  if (result.kind !== "ok") {
+    return new Response("Take not found.", { status: 404 });
+  }
+  // Back to the event it came from — the page most likely to explain the gap
+  // where the take was.
+  return Astro.redirect(`/events/${result.take.eventId}?take_deleted=1`);
+}
+
+const take = await takesRepo.getById(appDeps.db, id);
+if (!take) {
+  return new Response("Take not found.", { status: 404 });
+}
+const [song, assets] = await Promise.all([
+  songsRepo.getById(appDeps.db, take.songId),
+  assetsRepo.listByTake(appDeps.db, id),
+]);
+const what = song ? song.title : `the take of ${formatLongDate(take.recordedAt)}`;
+const consequence = deleteTakeConsequence(assets, take.totalVotes);
+---
+
+<Layout title="Delete take">
+  <ConfirmActionPage
+    bannerTitle={`Delete this take of ${what}?`}
+    cta="Delete take"
+    cancelHref={`/takes/${take.id}`}
+  >
+    {consequence}
+  </ConfirmActionPage>
+</Layout>

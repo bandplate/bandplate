@@ -10,6 +10,7 @@
 // ~150ms bar for a Server Island, so nothing on this page is deferred. See
 // task-5-report.md for the full measurement.
 import { hasAllScopes } from "@bandplate/core";
+import { eventsRepo, instrumentsRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
@@ -18,12 +19,14 @@ import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
+import { eventLabel, formatShortDate } from "../../server/format.js";
 import {
   type SongField,
   archiveSongConsequence,
   getSongDetail,
   updateSong,
 } from "../../server/pages/songs.js";
+import { type TakeField, createTake } from "../../server/pages/takes.js";
 import { buildSongChart } from "../../server/song-text.js";
 
 const principal = Astro.locals.principal;
@@ -43,6 +46,8 @@ const appDeps = await getAppDeps();
 // `songsRepo.update`).
 let editError: string | undefined;
 let editErrorField: SongField | undefined;
+let takeError: string | undefined;
+let takeErrorField: TakeField | undefined;
 let formError: string | undefined;
 
 if (Astro.request.method === "POST") {
@@ -50,7 +55,19 @@ if (Astro.request.method === "POST") {
     formError = "Something about that request looked wrong. Reload the page and try again.";
   } else {
     const formData = await Astro.request.formData();
-    if (formData.get("intent") === "update") {
+    if (formData.get("intent") === "create-take") {
+      const result = await createTake(appDeps.db, appDeps.clock.now(), formData);
+      if (result.kind === "ok") {
+        return Astro.redirect(`/takes/${result.take.id}?created=1`);
+      }
+      if (result.kind === "unknown_parent") {
+        takeError = "That's no longer here — reload and try again.";
+        takeErrorField = result.field;
+      } else {
+        takeError = result.error;
+        takeErrorField = result.field;
+      }
+    } else if (formData.get("intent") === "update") {
       const id = String(formData.get("songId") ?? "");
       const result = await updateSong(appDeps.db, appDeps.clock.now(), id, formData);
       if (result.kind === "ok") {
@@ -90,6 +107,24 @@ const canArchive = hasAllScopes(principal, ["members:admin"]);
 const isArchived = song.archivedAt !== null;
 const justCreated = Astro.url.searchParams.get("created") === "1";
 const justSaved = Astro.url.searchParams.get("saved") === "1";
+
+// The take sheet's pickers. Newest event first, which is nearly always the one
+// being added to, so it is also the default.
+const [allEvents, allInstruments] = await Promise.all([
+  eventsRepo.listRecent(appDeps.db, { limit: 100 }),
+  instrumentsRepo.list(appDeps.db),
+]);
+const defaultEvent = allEvents[0];
+const takeDateValue = (() => {
+  const d = new Date(defaultEvent ? defaultEvent.heldAt : Date.now());
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+})();
+
+/** How an event reads in a picker: its name if it has one, else its date. */
+function eventOptionLabel(event: eventsRepo.Event): string {
+  const name = eventLabel({ title: event.title ?? null, venue: event.venue ?? null });
+  return name ? `${name} — ${formatShortDate(event.heldAt)}` : formatShortDate(event.heldAt);
+}
 ---
 
 <AppLayout title={song.title} principal={principal} current="songs">
@@ -149,6 +184,62 @@ const justSaved = Astro.url.searchParams.get("saved") === "1";
         </button>
       </p>
     </div>
+
+
+    <RecordSheet
+      id="add-take"
+      eyebrow="New take"
+      title="Add a take"
+      subtitle="It goes on this song; the audio comes afterwards."
+    >
+      <form method="post" class="bp-sheet-form" novalidate>
+        <input type="hidden" name="intent" value="create-take" />
+        <input type="hidden" name="songId" value={song.id} />
+        <div class="bp-sheet-body">
+          <div class="bp-sheet-field">
+            <label class="bp-eyebrow" for="take-event-pick">Session</label>
+            <select class="bp-select" id="take-event-pick" name="eventId">
+              {allEvents.map((option) => (
+                <option value={option.id}>{eventOptionLabel(option)}</option>
+              ))}
+            </select>
+          </div>
+          <Field
+            label="Recorded"
+            name="recordedAt"
+            type="date"
+            required
+            value={takeDateValue}
+            error={takeErrorField === "recordedAt" ? takeError : undefined}
+          />
+          <Field
+            label="Label"
+            name="label"
+            hint="Which pass it was — take 3, with the horns. Optional."
+            error={takeErrorField === "label" ? takeError : undefined}
+          />
+          <fieldset class="bp-sheet-field">
+            <legend class="bp-eyebrow">Instruments</legend>
+            <div class="bp-filter-pills">
+              {allInstruments.map((instrument) => (
+                <label class="bp-filter-pill-check">
+                  <input type="checkbox" name="instrumentIds" value={instrument.id} />
+                  <span class="bp-filter-pill">{instrument.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <p class="bp-sheet-hint bp-m0">
+            This makes the take; the audio goes on afterwards. If the bridge is going to upload
+            this session, let it create the takes instead.
+          </p>
+        </div>
+        <div class="bp-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary">Add take</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+        </div>
+      </form>
+    </RecordSheet>
 
     <RecordSheet
       id="edit-song"
@@ -310,7 +401,12 @@ const justSaved = Astro.url.searchParams.get("saved") === "1";
       </div>
 
       <div class="bp-song-detail-aside">
-        <h2 class="bp-section-title bp-m0">Takes</h2>
+        <div class="bp-title-row">
+          <h2 class="bp-section-title bp-m0">Takes</h2>
+          <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="add-take">
+            Add take
+          </button>
+        </div>
         {
           takes.length === 0 ? (
             <div class="bp-empty-state">

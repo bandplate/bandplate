@@ -9,6 +9,7 @@
 // ran at ~0.5-0.7ms against seeded data — see task-5-report.md. Nothing
 // here is deferred.
 import { hasAllScopes } from "@bandplate/core";
+import { instrumentsRepo, songsRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
@@ -24,6 +25,7 @@ import {
   getEventDetail,
   updateEvent,
 } from "../../server/pages/events.js";
+import { type TakeField, createTake } from "../../server/pages/takes.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -39,6 +41,8 @@ const appDeps = await getAppDeps();
 
 let editError: string | undefined;
 let editErrorField: EventField | undefined;
+let takeError: string | undefined;
+let takeErrorField: TakeField | undefined;
 let formError: string | undefined;
 
 if (Astro.request.method === "POST") {
@@ -46,7 +50,20 @@ if (Astro.request.method === "POST") {
     formError = "Something about that request looked wrong. Reload the page and try again.";
   } else {
     const formData = await Astro.request.formData();
-    if (formData.get("intent") === "update") {
+    if (formData.get("intent") === "create-take") {
+      const result = await createTake(appDeps.db, appDeps.clock.now(), formData);
+      if (result.kind === "ok") {
+        // Straight to the take: the next thing you do is put audio on it.
+        return Astro.redirect(`/takes/${result.take.id}?created=1`);
+      }
+      if (result.kind === "unknown_parent") {
+        takeError = "That's no longer here — reload and try again.";
+        takeErrorField = result.field;
+      } else {
+        takeError = result.error;
+        takeErrorField = result.field;
+      }
+    } else if (formData.get("intent") === "update") {
       const result = await updateEvent(appDeps.db, appDeps.clock.now(), id, formData);
       if (result.kind === "ok") {
         return Astro.redirect(`/events/${id}?saved=1`);
@@ -88,6 +105,14 @@ const justSaved = Astro.url.searchParams.get("saved") === "1";
 const sameDayWarning = Astro.url.searchParams.get("dup") === "1";
 const heldAtDate = new Date(event.heldAt);
 const heldAtValue = `${heldAtDate.getFullYear()}-${String(heldAtDate.getMonth() + 1).padStart(2, "0")}-${String(heldAtDate.getDate()).padStart(2, "0")}`;
+// A take added from an event's own page defaults to the day of the event —
+// which is what it was, nearly always.
+const takeDateValue = heldAtValue;
+const justTakeDeleted = Astro.url.searchParams.get("take_deleted") === "1";
+const [allSongs, allInstruments] = await Promise.all([
+  songsRepo.list(appDeps.db),
+  instrumentsRepo.list(appDeps.db),
+]);
 ---
 
 <AppLayout title={event.title ?? kindTitle} principal={principal} current="events">
@@ -117,6 +142,7 @@ const heldAtValue = `${heldAtDate.getFullYear()}-${String(heldAtDate.getMonth() 
       </Banner>
     )}
     {justSaved && <Banner kind="success">Saved.</Banner>}
+    {justTakeDeleted && <Banner kind="success">Take deleted, along with its files.</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <header class="bp-event-hero">
@@ -149,6 +175,62 @@ const heldAtValue = `${heldAtDate.getFullYear()}-${String(heldAtDate.getMonth() 
         </button>
       </p>
     </header>
+
+
+    <RecordSheet
+      id="add-take"
+      eyebrow="New take"
+      title="Add a take"
+      subtitle="It goes on this session; the audio comes afterwards."
+    >
+      <form method="post" class="bp-sheet-form" novalidate>
+        <input type="hidden" name="intent" value="create-take" />
+        <input type="hidden" name="eventId" value={event.id} />
+        <div class="bp-sheet-body">
+          <div class="bp-sheet-field">
+            <label class="bp-eyebrow" for="take-song-pick">Song</label>
+            <select class="bp-select" id="take-song-pick" name="songId">
+              {allSongs.map((option) => (
+                <option value={option.id}>{option.title}</option>
+              ))}
+            </select>
+          </div>
+          <Field
+            label="Recorded"
+            name="recordedAt"
+            type="date"
+            required
+            value={takeDateValue}
+            error={takeErrorField === "recordedAt" ? takeError : undefined}
+          />
+          <Field
+            label="Label"
+            name="label"
+            hint="Which pass it was — take 3, with the horns. Optional."
+            error={takeErrorField === "label" ? takeError : undefined}
+          />
+          <fieldset class="bp-sheet-field">
+            <legend class="bp-eyebrow">Instruments</legend>
+            <div class="bp-filter-pills">
+              {allInstruments.map((instrument) => (
+                <label class="bp-filter-pill-check">
+                  <input type="checkbox" name="instrumentIds" value={instrument.id} />
+                  <span class="bp-filter-pill">{instrument.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <p class="bp-sheet-hint bp-m0">
+            This makes the take; the audio goes on afterwards. If the bridge is going to upload
+            this session, let it create the takes instead.
+          </p>
+        </div>
+        <div class="bp-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary">Add take</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+        </div>
+      </form>
+    </RecordSheet>
 
     <RecordSheet
       id="edit-event"
@@ -219,7 +301,12 @@ const heldAtValue = `${heldAtDate.getFullYear()}-${String(heldAtDate.getMonth() 
     </RecordSheet>
 
     <section>
-      <h2 class="bp-section-title bp-m0">Takes</h2>
+      <div class="bp-title-row">
+        <h2 class="bp-section-title bp-m0">Takes</h2>
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="add-take">
+          Add take
+        </button>
+      </div>
       {takes.length > 0 && (
         <p class="bp-event-hero-hint bp-m0">
           {takes.length} {takes.length === 1 ? "take" : "takes"}, in the order they were played

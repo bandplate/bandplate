@@ -1,0 +1,39 @@
+---
+// POST-only: take a published take back out of the archive, to `new`.
+//
+// Admin-only — under `/admin/`, so `guardAdminPath` enforces it. Publishing is
+// a member's call because they made the take; UN-publishing removes something
+// everyone can already see, which is the same kind of act as archiving.
+//
+// Deliberately NOT automatic: deleting the last playable asset from a
+// published take does not silently unpublish it. One member's delete should
+// not change what everyone else sees without anyone saying so.
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { setTakePublished } from "../../../../server/pages/takes.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const takeId = Astro.params.id;
+if (!takeId) {
+  return Astro.redirect("/");
+}
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(`/takes/${takeId}`);
+}
+
+const appDeps = await getAppDeps();
+if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+  return new Response("Origin check failed.", { status: 403 });
+}
+
+const result = await setTakePublished(appDeps.db, appDeps.clock.now(), takeId, false);
+if (result.kind === "not_found") {
+  return new Response("Take not found.", { status: 404 });
+}
+return Astro.redirect(`/takes/${takeId}?unpublished=1`);
+---

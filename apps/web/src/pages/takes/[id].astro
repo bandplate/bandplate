@@ -1,5 +1,5 @@
 ---
-import { hasAllScopes } from "@bandplate/core";
+import { canPublish, hasAllScopes } from "@bandplate/core";
 // Take detail — the song (linked), the event and date (linked), duration,
 // label, instruments recorded, state, and the current vote tally. Then the
 // take's assets: the master, stems by instrument, and whether a lossless
@@ -27,12 +27,17 @@ import { hasAllScopes } from "@bandplate/core";
 // instead, so that one morphs a date into a title — still a smooth shared
 // transition, just not a pixel-identical one. See task-6-report.md.
 import type { assetsRepo } from "@bandplate/db";
+import { instrumentsRepo, songsRepo } from "@bandplate/db";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import InstrumentSet from "../../components/InstrumentSet.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
+import RecordSheet from "../../components/RecordSheet.astro";
 import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
+import { isSameOrigin } from "../../server/csrf.js";
 import {
   eventKindLabel,
   eventLabel,
@@ -42,7 +47,12 @@ import {
   formatShortDate,
   takeNote,
 } from "../../server/format.js";
-import { getTakeDetail } from "../../server/pages/takes.js";
+import {
+  type TakeField,
+  deleteTakeConsequence,
+  getTakeDetail,
+  updateTake,
+} from "../../server/pages/takes.js";
 import { TAKE_STATE_LABEL } from "../../server/take-state.js";
 
 const principal = Astro.locals.principal;
@@ -56,6 +66,34 @@ if (!id) {
 }
 
 const appDeps = await getAppDeps();
+
+let editError: string | undefined;
+let editErrorField: TakeField | undefined;
+let formError: string | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = "Something about that request looked wrong. Reload the page and try again.";
+  } else {
+    const formData = await Astro.request.formData();
+    if (formData.get("intent") === "update") {
+      const result = await updateTake(appDeps.db, appDeps.clock.now(), id, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect(`/takes/${id}?saved=1`);
+      }
+      if (result.kind === "not_found") {
+        formError = "That take is no longer here.";
+      } else if (result.kind === "unknown_parent") {
+        editError = "That song is no longer here — reload and pick another.";
+        editErrorField = result.field;
+      } else {
+        editError = result.error;
+        editErrorField = result.field;
+      }
+    }
+  }
+}
+
 const detail = await getTakeDetail(appDeps.db, id, principal.memberId);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
@@ -117,6 +155,32 @@ const heroLede = event
 const heroTitle = song ? song.title : `Take from ${formatLongDate(take.recordedAt)}`;
 const heroSubtitle = event ? `${kindLabel} — ${formatLongDate(event.heldAt)}` : (take.label ?? "");
 
+const canDelete = hasAllScopes(principal, ["members:admin"]);
+const justCreated = Astro.url.searchParams.get("created") === "1";
+const justSaved = Astro.url.searchParams.get("saved") === "1";
+const justPublished = Astro.url.searchParams.get("published") === "1";
+const justUnpublished = Astro.url.searchParams.get("unpublished") === "1";
+const publishBlocked = Astro.url.searchParams.get("nothing_to_play") === "1";
+
+// A take is a container: created empty, filled over as many visits as it
+// takes. So it sits outside the archive until someone says it is ready —
+// see `setTakePublished` for why that is a press rather than a side effect
+// of the first file landing.
+const isDraft = take.state === "uploading" || take.state === "new";
+const readyToPublish = canPublish(assets);
+const recordedAtDate = new Date(take.recordedAt);
+const recordedAtValue = `${recordedAtDate.getFullYear()}-${String(recordedAtDate.getMonth() + 1).padStart(2, "0")}-${String(recordedAtDate.getDate()).padStart(2, "0")}`;
+
+// The edit sheet's pickers. A band's repertoire is tens of songs, so the whole
+// list is one cheap query and a plain `<select>` — the same call `/takes`
+// already makes for its filter. Archived songs are excluded by the repo.
+const [allSongs, allInstruments] = await Promise.all([
+  songsRepo.list(appDeps.db),
+  instrumentsRepo.list(appDeps.db),
+]);
+const takeInstrumentIds = new Set(instruments.map((i) => i.id));
+const deleteConsequence = deleteTakeConsequence(assets, take.totalVotes);
+
 function assetLabel(asset: assetsRepo.Asset): string {
   if (asset.kind === "master") {
     return "Master";
@@ -136,6 +200,24 @@ function assetLabel(asset: assetsRepo.Asset): string {
       Facts collapse into one quiet run at the bottom; they are context for
       the decision, not the point of the page. */}
   <div class="bp-take-detail">
+    {justCreated && (
+      <Banner kind="success">
+        Take added. Nobody sees it in the archive until there's something to play and you publish
+        it.
+      </Banner>
+    )}
+    {justSaved && <Banner kind="success">Saved.</Banner>}
+    {justPublished && <Banner kind="success">Published. It's in the archive now.</Banner>}
+    {justUnpublished && (
+      <Banner kind="success">Taken back out of the archive. Only people with the link see it.</Banner>
+    )}
+    {publishBlocked && (
+      <Banner kind="error">
+        There's nothing on this take that can be played yet, so there's nothing to publish.
+      </Banner>
+    )}
+    {formError && <Banner kind="error">{formError}</Banner>}
+
     <div class="bp-take-detail-hero">
       {/* "Take of <song>", not the song's own title. The title WAS a link to
           the song — a page heading that quietly navigates somewhere else,
@@ -184,6 +266,34 @@ function assetLabel(asset: assetsRepo.Asset): string {
         }
         {noteText && <span class="bp-take-detail-note">&ldquo;{noteText}&rdquo;</span>}
       </p>
+
+      {/* A take created by hand starts empty and out of sight. This is where it
+          gets let out — an explicit press, not a side effect of the first file
+          landing: ingest publishes on commit because it declared a whole
+          manifest and can tell when it is complete, and nothing here can.
+
+          Dashed rather than a `.bp-banner`: this is not news that just
+          happened, it is a standing condition of the page for as long as the
+          take is a draft. */}
+      {
+        isDraft && (
+          <div class="bp-take-draft">
+            <div class="bp-take-draft-say">
+              <span class="bp-eyebrow">Not published yet</span>
+              <p class="bp-m0">
+                {readyToPublish
+                  ? "Nobody finds this take in the archive until you publish it."
+                  : "Put something on it that can be played, and you'll be able to publish it."}
+              </p>
+            </div>
+            {readyToPublish && (
+              <form method="post" action={`/takes/${take.id}/publish`}>
+                <button type="submit" class="bp-btn bp-btn-primary">Publish take</button>
+              </form>
+            )}
+          </div>
+        )
+      }
 
       {/* BOTH ways out, as a matched pair. A take belongs to a song and to an
           event equally, and the header used to reflect neither of those well:
@@ -238,7 +348,111 @@ function assetLabel(asset: assetsRepo.Asset): string {
           )
         }
       </div>
+
+      <p class="bp-hero-actions bp-m0">
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-take">
+          Edit
+        </button>
+      </p>
     </div>
+
+    <RecordSheet id="edit-take" eyebrow="Editing take" title={heroTitle} subtitle={heroSubtitle}>
+      {/* Empty, and targeted by `form=` above: HTML forbids a form inside a
+          form, and the same trick is what the admin member sheet uses for its
+          secondary POST. */}
+      <form method="post" id="unpublish-take" action={`/admin/takes/${take.id}/unpublish`} class="bp-sheet-aux"></form>
+      <form method="post" class="bp-sheet-form" novalidate>
+        <input type="hidden" name="intent" value="update" />
+        <div class="bp-sheet-body">
+          <div class="bp-sheet-field">
+            <label class="bp-eyebrow" for="take-song">Song</label>
+            <select class="bp-select" id="take-song" name="songId">
+              {allSongs.map((option) => (
+                <option value={option.id} selected={option.id === take.songId}>
+                  {option.title}
+                </option>
+              ))}
+            </select>
+            <p class="bp-sheet-hint bp-m0">
+              Filed under the wrong one? Moving it keeps the recording and its votes. Which session
+              it came from can't be changed here — that's a fact about the day.
+            </p>
+          </div>
+          <Field
+            label="Recorded"
+            name="recordedAt"
+            type="date"
+            required
+            value={recordedAtValue}
+            error={editErrorField === "recordedAt" ? editError : undefined}
+          />
+          <Field
+            label="Label"
+            name="label"
+            value={take.label ?? ""}
+            hint="Which pass it was — take 3, with the horns. Leave it empty if there's nothing to say."
+            error={editErrorField === "label" ? editError : undefined}
+          />
+          <fieldset class="bp-sheet-field">
+            <legend class="bp-eyebrow">Instruments</legend>
+            <div class="bp-filter-pills">
+              {allInstruments.map((instrument) => (
+                <label class="bp-filter-pill-check">
+                  <input
+                    type="checkbox"
+                    name="instrumentIds"
+                    value={instrument.id}
+                    checked={takeInstrumentIds.has(instrument.id)}
+                  />
+                  <span class="bp-filter-pill">{instrument.label}</span>
+                </label>
+              ))}
+            </div>
+            <p class="bp-sheet-hint bp-m0">
+              What was played — not the same as what has its own file, since a take can capture the
+              whole band in one mix.
+            </p>
+          </fieldset>
+          <Field
+            label="Notes"
+            name="notes"
+            as="textarea"
+            rows="4"
+            value={take.notes ?? ""}
+            error={editErrorField === "notes" ? editError : undefined}
+          />
+          {canDelete && !isDraft && (
+            <div class="bp-sheet-extras">
+              {/* Not automatic. Deleting the last playable asset does not
+                  silently unpublish — one member's delete should not change
+                  what everyone else sees without someone saying so. */}
+              <button type="submit" form="unpublish-take" class="bp-btn bp-btn-secondary bp-btn-sm">
+                Take it back out of the archive
+              </button>
+            </div>
+          )}
+          {canDelete && (
+            <div class="bp-sheet-extras">
+              <a
+                href={`/admin/takes/${take.id}/delete`}
+                class="bp-sheet-danger"
+                data-confirm
+                data-confirm-title={`Delete this take of ${heroTitle}?`}
+                data-confirm-body={deleteConsequence}
+                data-confirm-action={`/admin/takes/${take.id}/delete`}
+                data-confirm-cta="Delete take"
+              >
+                Delete this take
+              </a>
+            </div>
+          )}
+        </div>
+        <div class="bp-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+        </div>
+      </form>
+    </RecordSheet>
 
     {
       playableMaster && (

@@ -92,7 +92,6 @@ const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 36
           is exactly what `handleLoginPost`'s uniform response prevents. The
           copy must not give back what the server withholds. */}
       <p class="bp-auth-lede bp-m0">If that address is registered, a link is on its way.</p>
-      <p class="bp-auth-note bp-m0">single-use &middot; 15 minutes</p>
       <a href="/login" class="bp-btn bp-btn-quiet bp-auth-action">Use a different address</a>
     </AuthState>
   )}
@@ -118,7 +117,7 @@ const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 36
   {!showSent && slowSeconds === undefined && (
     <>
       <h1 class="bp-auth-title">Sign in</h1>
-      <p class="bp-auth-lede bp-m0">We'll email you a link — no password to remember.</p>
+      <p class="bp-auth-lede bp-m0">Enter your email. We'll send you a link.</p>
       <form method="post" class="bp-auth-form" novalidate>
         <Field
           label="Email address"
@@ -131,7 +130,6 @@ const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 36
         />
         <button type="submit" class="bp-btn bp-btn-primary">Send me a link</button>
       </form>
-      <p class="bp-auth-note bp-m0">single-use &middot; 15 minutes</p>
     </>
   )}
 </AuthLayout>

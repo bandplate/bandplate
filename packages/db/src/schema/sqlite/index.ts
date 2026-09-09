@@ -325,7 +325,11 @@ export const assets = sqliteTable(
       .notNull()
       .references(() => takes.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: ["master", "stem", "peaks"] }).notNull(),
-    // NULL unless kind = 'stem'.
+    // Which instrument this row is about. NULL for a 'master'. For a
+    // 'stem', the instrument played. For 'peaks', which SOURCE the waveform
+    // describes: NULL is the master's shape, an id is that stem's — peaks
+    // are per audio asset, so the picture can follow a solo (see
+    // `peaksStorageKey`). The slot index below already keeps those apart.
     instrumentId: text("instrument_id").references(() => instruments.id),
     tier: text("tier", { enum: ["lossy", "lossless"] }).notNull(),
     format: text("format", { enum: ["opus", "mp3", "flac", "wav", "json"] }).notNull(),

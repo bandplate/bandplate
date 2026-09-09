@@ -99,8 +99,9 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
     if (!asset || asset.status !== "ready") {
       return errorResponse(c, 404, "not_found", "Asset not found.");
     }
-    // `peaks` assets are waveform data, not audio — out of scope for this
-    // endpoint (and for the player entirely; see the brief).
+    // `peaks` assets are waveform data, not audio — they have their own
+    // route below. (This comment used to say peaks were out of scope for
+    // the player entirely; the player draws a waveform now.)
     if (asset.kind !== "master" && asset.kind !== "stem") {
       return errorResponse(c, 404, "not_found", "Asset not found.");
     }
@@ -115,6 +116,63 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
       headers: {
         location: url,
         "cache-control": "private, max-age=1800",
+      },
+    });
+  });
+
+  // `GET /assets/:id/peaks` — the waveform for an audio asset, where `:id` is
+  // the AUDIO asset, not the peaks row.
+  //
+  // Addressed that way on purpose. Every play/solo control on the site already
+  // carries the audio asset's id (`data-asset-id`), so the player can ask for a
+  // shape with what it already holds; the alternative was rendering a second id
+  // into every take row on every page against the chance someone presses play.
+  // The sibling lookup is one indexed read on a take that is already loaded.
+  //
+  // 404 when a take has no peaks yet, which is EVERY take until something
+  // computes them — the player treats that as "no picture", not as an error,
+  // and falls back to a plain rail.
+  router.get("/assets/:id/peaks", requireScopes("takes:read"), async (c) => {
+    const id = c.req.param("id");
+    if (!id) {
+      return errorResponse(c, 400, "invalid_request", "Missing id parameter.");
+    }
+
+    const audio = await assetsRepo.getById(deps.db, id);
+    if (!audio || audio.status !== "ready") {
+      return errorResponse(c, 404, "not_found", "Asset not found.");
+    }
+    if (audio.kind !== "master" && audio.kind !== "stem") {
+      return errorResponse(c, 404, "not_found", "Asset not found.");
+    }
+
+    // The peaks row describing THIS source: same take, and the same
+    // instrument (null for a master). Peaks are per audio asset — see
+    // `peaksStorageKey`'s comment for why that is not per take.
+    const siblings = await assetsRepo.listByTake(deps.db, audio.takeId);
+    const peaks = siblings.find(
+      (a) =>
+        a.kind === "peaks" &&
+        a.status === "ready" &&
+        (a.instrumentId ?? null) === (audio.kind === "stem" ? audio.instrumentId : null),
+    );
+    if (!peaks) {
+      return errorResponse(c, 404, "not_found", "No waveform for this asset.");
+    }
+
+    const url = await deps.storage.signedDownloadUrl(peaks.storageKey, {
+      expiresIn: DOWNLOAD_URL_MIN_VALIDITY_SECONDS,
+      responseContentType: peaks.contentType,
+    });
+
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: url,
+        // A waveform never changes once written — the same quantised signing
+        // window `/audio` relies on, and a full day of reuse on top, since
+        // this is fetched once per source switch rather than per seek.
+        "cache-control": "private, max-age=86400",
       },
     });
   });

@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "id": "page-17",
+      "name": "M6 \u2014 Player"
+    },
+    {
       "id": "page-16",
       "name": "M6 \u2014 Admin editing"
     },
@@ -66,6 +70,42 @@
     }
   ],
   "artboards": [
+    {
+      "file": "Player.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 2882,
+      "h": 700,
+      "page": "page-17",
+      "title": "P1 \u2014 The plate, with a source switch"
+    },
+    {
+      "file": "PlayerRail.dc.html",
+      "x": 3002,
+      "y": 0,
+      "w": 1678,
+      "h": 790,
+      "page": "page-17",
+      "title": "P2 \u2014 The rail"
+    },
+    {
+      "file": "PlayerDesk.dc.html",
+      "x": 4800,
+      "y": 0,
+      "w": 1678,
+      "h": 790,
+      "page": "page-17",
+      "title": "P3 \u2014 The desk"
+    },
+    {
+      "file": "WaveformStates.dc.html",
+      "x": 0,
+      "y": 860,
+      "w": 1812,
+      "h": 560,
+      "page": "page-17",
+      "title": "The waveform itself"
+    },
     {
       "file": "AdminEdit.dc.html",
       "x": 0,
@@ -466,6 +506,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-16"
+    "page": "page-17"
   }
 }

@@ -100,7 +100,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
         aria-invalid={createErrorField === "scopes" ? "true" : undefined}
         aria-describedby={createErrorField === "scopes" ? "scopes-error" : undefined}
       >
-        <legend class="bp-eyebrow">Scopes</legend>
+        <legend class="bp-field-label">Scopes</legend>
         {SCOPES.map((scope) => (
           <span class="bp-checkbox-item">
             <input type="checkbox" id={`scope-new-${scope}`} name="scopes" value={scope} />

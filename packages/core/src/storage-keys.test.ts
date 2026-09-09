@@ -15,8 +15,12 @@ describe("storage key layout", () => {
     );
   });
 
-  it("builds a deterministic peaks key from takeId alone", () => {
-    expect(peaksStorageKey("take-1")).toBe("takes/take-1/peaks.json");
+  it("builds a peaks key per audio asset — the master, and each stem's own", () => {
+    expect(peaksStorageKey("take-1")).toBe("takes/take-1/peaks/master.json");
+    expect(peaksStorageKey("take-1", "bass")).toBe("takes/take-1/peaks/stems/bass.json");
+    // The point of the change: two sources on one take no longer collide on
+    // a single file, which is what let a solo show the master's shape.
+    expect(peaksStorageKey("take-1", "bass")).not.toBe(peaksStorageKey("take-1", "drums"));
   });
 
   it("the same inputs always produce the same key — a retried upload overwrites, not orphans", () => {

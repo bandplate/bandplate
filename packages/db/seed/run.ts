@@ -762,6 +762,10 @@ async function main() {
       readyAt: daysAgo(90),
     });
   }
+  // One peaks file per SOURCE, not per take — the master's shape and each
+  // stem's own, so the player's waveform can follow a solo (see
+  // `peaksStorageKey`). `tier` is meaningless for a waveform and carries
+  // the slot index's required value rather than a claim about fidelity.
   await ensureAsset(peaksStorageKey(stemsTakeId), {
     takeId: stemsTakeId,
     kind: "peaks",
@@ -773,6 +777,20 @@ async function main() {
     createdAt: daysAgo(90),
     readyAt: daysAgo(90),
   });
+  for (const slug of ["drums", "bass", "guitar", "vocals"]) {
+    await ensureAsset(peaksStorageKey(stemsTakeId, slug), {
+      takeId: stemsTakeId,
+      kind: "peaks",
+      instrumentId: instrument(slug),
+      tier: "lossy",
+      format: "json",
+      contentType: "application/json",
+      bytes: 12_000,
+      status: "ready",
+      createdAt: daysAgo(90),
+      readyAt: daysAgo(90),
+    });
+  }
 
   const masterOnlyTakeId = take("seed-take-9");
   await ensureAsset(masterStorageKey(masterOnlyTakeId, "lossy", "mp3"), {

@@ -1,4 +1,12 @@
-import { assetsRepo, eventsRepo, membersRepo, songsRepo, takesRepo } from "@bandplate/db";
+import { peaksStorageKey, stemStorageKey } from "@bandplate/core";
+import {
+  assetsRepo,
+  eventsRepo,
+  instrumentsRepo,
+  membersRepo,
+  songsRepo,
+  takesRepo,
+} from "@bandplate/db";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   TEST_APP_ORIGIN,
@@ -275,6 +283,107 @@ describe("GET /assets/:id/audio", () => {
       expect(await fetched.text()).toBe("fake mp3 bytes");
     },
   );
+});
+
+describe("GET /assets/:id/peaks", () => {
+  let testApp: TestApp | undefined;
+
+  afterEach(async () => {
+    await testApp?.closeStorage();
+    testApp = undefined;
+  });
+
+  it("404s when the take has no waveform yet — which is every take until something computes one", async () => {
+    testApp = await buildTestApp();
+    const cookie = await loginAsMember(testApp);
+    const master = await seedReadyAsset(testApp, "No Peaks Song");
+
+    const res = await testApp.app.request(`/assets/${master.id}/peaks`, {
+      headers: { cookie: `bp_session=${cookie}` },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("presigns the peaks describing the requested SOURCE — a stem's own shape, not the master's", async () => {
+    // The whole reason peaks moved from one-file-per-take to one-per-asset:
+    // the player switches source while holding the playhead, so the picture
+    // has to switch with it. Seeds a master and a bass stem, each with its
+    // own peaks row, and asserts each id resolves to its own object.
+    testApp = await buildTestApp();
+    const cookie = await loginAsMember(testApp);
+    const master = await seedReadyAsset(testApp, "Two Sources Song");
+    const now = testApp.clock.now();
+    const bass = await instrumentsRepo.create(testApp.db, { slug: "bass", label: "Bass" });
+
+    const [stem, masterPeaks, bassPeaks] = await assetsRepo.createMany(testApp.db, [
+      {
+        takeId: master.takeId,
+        kind: "stem",
+        instrumentId: bass.id,
+        tier: "lossy",
+        format: "mp3",
+        storageKey: stemStorageKey(master.takeId, "bass", "lossy", "mp3"),
+        contentType: "audio/mpeg",
+        bytes: 900,
+        status: "ready",
+        createdAt: now,
+        readyAt: now,
+      },
+      {
+        takeId: master.takeId,
+        kind: "peaks",
+        tier: "lossy",
+        format: "json",
+        storageKey: peaksStorageKey(master.takeId),
+        contentType: "application/json",
+        bytes: 400,
+        status: "ready",
+        createdAt: now,
+        readyAt: now,
+      },
+      {
+        takeId: master.takeId,
+        kind: "peaks",
+        instrumentId: bass.id,
+        tier: "lossy",
+        format: "json",
+        storageKey: peaksStorageKey(master.takeId, "bass"),
+        contentType: "application/json",
+        bytes: 400,
+        status: "ready",
+        createdAt: now,
+        readyAt: now,
+      },
+    ]);
+    if (!stem || !masterPeaks || !bassPeaks) {
+      throw new Error("expected createMany to return every inserted asset");
+    }
+
+    const forMaster = await testApp.app.request(`/assets/${master.id}/peaks`, {
+      headers: { cookie: `bp_session=${cookie}` },
+      redirect: "manual",
+    });
+    expect(forMaster.status).toBe(302);
+    expect(forMaster.headers.get("location")).toContain(encodeURIComponent("peaks/master.json"));
+
+    const forStem = await testApp.app.request(`/assets/${stem.id}/peaks`, {
+      headers: { cookie: `bp_session=${cookie}` },
+      redirect: "manual",
+    });
+    expect(forStem.status).toBe(302);
+    expect(forStem.headers.get("location")).toContain(encodeURIComponent("peaks/stems/bass.json"));
+  });
+
+  it("rejects an anonymous caller", async () => {
+    testApp = await buildTestApp();
+    const master = await seedReadyAsset(testApp, "Anon Peaks Song");
+    const res = await testApp.app.request(`/assets/${master.id}/peaks`);
+    // 403, not 401 — a scoped route reports a missing scope, and an
+    // anonymous caller simply has none. See `requireServiceScopes`' comment
+    // for the one route that distinguishes the two.
+    expect(res.status).toBe(403);
+  });
 });
 
 describe("GET /assets/:id/download", () => {

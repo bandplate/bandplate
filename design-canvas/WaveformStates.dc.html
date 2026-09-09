@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;600;900&family=Spline+Sans+Mono:wght@400;600&family=Zilla+Slab:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    .S { --bg:#150c07; --border:#3a2413; --fg:#f2e8d8; --muted:#a9917a; --gold:#f6aa1c;
+         --display:'Zilla Slab',Georgia,serif; --body:'Chivo',Helvetica,sans-serif;
+         --mono:'Spline Sans Mono',ui-monospace,monospace; font-family:var(--body); color:var(--fg); }
+    .S a { color:var(--gold); text-decoration:none; }
+    .S a:hover { color:#f2e8d8; }
+    .S .cap { font-weight:900; font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+    .S .frame { border:1px solid var(--border); border-radius:5px; overflow:hidden;
+      background: repeating-radial-gradient(circle at 92% 0%, rgba(246,170,28,.05) 0 1px, transparent 1px 7px), var(--bg); }
+    .S .tc { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  </style>
+</helmet>
+
+<div class="S" style="width:1812px;box-sizing:border-box;padding:40px 42px 46px;background:repeating-radial-gradient(circle at 97% 2%, rgba(246,170,28,.04) 0 1px, transparent 1px 7px),radial-gradient(115% 20% at 97% 1%, rgba(246,170,28,.09), transparent 62%), #150c07;">
+
+  <div style="margin-bottom:26px;">
+    <div style="font-weight:900;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#a9917a;margin-bottom:10px;">Player — the waveform itself</div>
+    <div style="font-family:'Zilla Slab',Georgia,serif;font-weight:700;font-size:40px;line-height:1;">Three states, and one of them is today</div>
+    <div style="font-size:15px;line-height:1.55;color:#a9917a;margin-top:11px;max-width:104ch;text-wrap:pretty;">The peaks slot is <b style="color:#f2e8d8;">modelled but empty</b>: the schema has <span style="font-family:var(--mono);color:#f2e8d8;">kind: &#39;peaks&#39;</span> and the key <span style="font-family:var(--mono);color:#f2e8d8;">takes/&#123;id&#125;/peaks.json</span> is reserved, but nothing writes one — the Reaper bridge that was going to compute them is a separate project that has not been built, the dev upload script skips them, and <span style="font-family:var(--mono);color:#f2e8d8;">/audio</span> deliberately 404s them with a comment saying they are out of scope for the player. So the middle frame is not an edge case. It is <b style="color:#f2e8d8;">every take in the archive right now</b>, and every take recorded before the bridge ships.</div>
+  </div>
+
+  <div style="display:flex;gap:24px;align-items:flex-start;">
+    <div>
+      <div class="cap">With peaks</div>
+      <div class="frame" style="width:560px;height:150px;display:flex;flex-direction:column;justify-content:flex-end;">
+        <div style="border-top:1px solid #3a2413;background:#211408;padding:13px 20px 14px;display:flex;flex-direction:column;gap:11px;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <span style="width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:50%;background:#f6aa1c;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#150c07" aria-hidden="true"><rect x="7" y="5" width="3.6" height="14" rx="1.2"></rect><rect x="13.4" y="5" width="3.6" height="14" rx="1.2"></rect></svg>
+            </span>
+            <div style="min-width:0;flex-grow:1;">
+              <div style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Neon Skyline</div>
+              <div style="font-size:13px;color:#a9917a;margin-top:2px;">Live at The Attic</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;">
+            <span class="tc">1:04</span>
+<span style="flex-grow:1;display:flex;align-items:center;gap:1px;height:30px;"><span style="flex:1 1 0;min-width:2px;height:3px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:3px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:5px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:6px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:11px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:13px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:13px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:17px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:13px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:13px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:13px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:17px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:21px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:18px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:23px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:28px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:24px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:22px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:29px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:17px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:24px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:12px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:10px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:9px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:10px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:6px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:7px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:8px;border-radius:1px;background:#f6aa1c;"></span><span style="flex:1 1 0;min-width:2px;height:7px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:10px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:9px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:10px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:13px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:18px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:17px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:17px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:20px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:18px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:17px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:21px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:20px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:19px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:19px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:24px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:23px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:19px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:27px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:18px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:20px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:23px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:15px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:11px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:13px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:11px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:8px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:8px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:6px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:7px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:8px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:10px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:11px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:20px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:18px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:21px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:23px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:23px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:26px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:23px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:17px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:18px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:20px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:14px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:18px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:16px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:15px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:21px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:14px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:14px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:13px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:14px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:8px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:8px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:6px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:6px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:5px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:4px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:3px;border-radius:1px;background:rgba(242,232,216,.22);"></span><span style="flex:1 1 0;min-width:2px;height:4px;border-radius:1px;background:rgba(242,232,216,.22);"></span></span>
+            <span class="tc">3:18</span>
+          </div>
+        </div>
+      </div>
+      <div style="width:560px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">Played is gold, unplayed is the same 22&#37; wash the empty rail uses. No separate playhead line — the colour boundary IS the position, and a line on top of it would be the same fact drawn twice.</div>
+    </div>
+
+    <div>
+      <div class="cap">No peaks — the take you have today</div>
+      <div class="frame" style="width:560px;height:150px;display:flex;flex-direction:column;justify-content:flex-end;">
+        <div style="border-top:1px solid #3a2413;background:#211408;padding:13px 20px 14px;display:flex;flex-direction:column;gap:11px;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <span style="width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:50%;background:#f6aa1c;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#150c07" aria-hidden="true"><rect x="7" y="5" width="3.6" height="14" rx="1.2"></rect><rect x="13.4" y="5" width="3.6" height="14" rx="1.2"></rect></svg>
+            </span>
+            <div style="min-width:0;flex-grow:1;">
+              <div style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Neon Skyline</div>
+              <div style="font-size:13px;color:#a9917a;margin-top:2px;">Live at The Attic</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;">
+            <span class="tc">1:04</span>
+<span style="flex-grow:1;height:4px;border-radius:999px;background:rgba(242,232,216,.14);position:relative;"><span style="position:absolute;left:0;top:0;bottom:0;width:32%;border-radius:999px;background:#f6aa1c;"></span><span style="position:absolute;left:32%;top:50%;width:12px;height:12px;border-radius:50%;background:#f6aa1c;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(33,20,8,.9);"></span></span>
+            <span class="tc">3:18</span>
+          </div>
+        </div>
+      </div>
+      <div style="width:560px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">The flat rail, unchanged from what the bar draws now. Not an error and not an empty state: nothing is missing from the member&#39;s point of view, the take just has no picture yet. Say nothing about it.</div>
+    </div>
+
+    <div>
+      <div class="cap">Peaks still loading</div>
+      <div class="frame" style="width:560px;height:150px;display:flex;flex-direction:column;justify-content:flex-end;">
+        <div style="border-top:1px solid #3a2413;background:#211408;padding:13px 20px 14px;display:flex;flex-direction:column;gap:11px;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <span style="width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:50%;background:#f6aa1c;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#150c07" aria-hidden="true"><rect x="7" y="5" width="3.6" height="14" rx="1.2"></rect><rect x="13.4" y="5" width="3.6" height="14" rx="1.2"></rect></svg>
+            </span>
+            <div style="min-width:0;flex-grow:1;">
+              <div style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Neon Skyline</div>
+              <div style="font-size:13px;color:#a9917a;margin-top:2px;">Live at The Attic</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;">
+            <span class="tc">1:04</span>
+<span style="flex-grow:1;height:4px;border-radius:999px;background:rgba(242,232,216,.14);position:relative;"><span style="position:absolute;left:0;top:0;bottom:0;width:32%;border-radius:999px;background:#f6aa1c;"></span><span style="position:absolute;left:32%;top:50%;width:12px;height:12px;border-radius:50%;background:#f6aa1c;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(33,20,8,.9);"></span></span>
+            <span class="tc">3:18</span>
+          </div>
+        </div>
+      </div>
+      <div style="width:560px;font-size:13px;line-height:1.55;color:#a9917a;margin-top:12px;text-wrap:pretty;">The same flat rail, and it simply becomes the waveform when the JSON lands. No skeleton and no shimmer: peaks are a second request behind the audio, the rail is already a truthful control, and a placeholder that animates into a slightly different shape is worse than one that does not move.</div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:30px;padding-top:22px;border-top:1px solid #3a2413;font-size:14px;line-height:1.6;color:#a9917a;max-width:110ch;text-wrap:pretty;">
+    <span style="font-weight:900;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#f6aa1c;display:block;margin-bottom:9px;">What the waveform needs that does not exist</span>
+    An endpoint that serves a peaks file — <span style="font-family:var(--mono);color:#f2e8d8;">/audio</span> refuses them by design, so this is a new route and a reversal of that comment. Something that PRODUCES them: the bridge eventually, but until then either the dev upload script or a one-off pass over what is already in the bucket, or no take ever gets a picture. And a decision on <b style="color:#f2e8d8;">one peaks file per take or one per asset</b> — the reserved key takes only a take id, so as it stands a solo shows the master&#39;s shape.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

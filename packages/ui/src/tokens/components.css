@@ -4929,6 +4929,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
    real grooves do not scale with the record, and a 92px plate with 2px
    grooves reads as a target, not a disc. */
 .bp-plate {
+  /* The badge's diameter, named because its POSITION is derived from it. */
+  --bp-plate-badge: max(22px, calc(var(--bp-plate-size) * 0.28));
+
   position: relative;
   display: inline-flex;
   flex-direction: column;
@@ -5027,16 +5030,18 @@ html:has(dialog.bp-filter-sheet[open]) body {
    difference between a shelf and an index. `z-index` puts it above
    `.bp-plate-hit`, so the plate navigates and this one control does not. */
 .bp-plate-play {
+  /* Positioned against the PLATE, not the disc — see the component for why it
+     cannot live inside the disc. The disc is `--bp-plate-size` square at the
+     plate's top-left corner, so these resolve to exactly the `right: 2%;
+     bottom: 6%` of the disc this used to be. */
   position: absolute;
-  right: 2%;
-  bottom: 6%;
+  left: calc(var(--bp-plate-size) * 0.98 - var(--bp-plate-badge));
+  top: calc(var(--bp-plate-size) * 0.94 - var(--bp-plate-badge));
   z-index: 2;
   display: grid;
   place-items: center;
-  width: calc(var(--bp-plate-size) * 0.28);
-  height: calc(var(--bp-plate-size) * 0.28);
-  min-width: 22px;
-  min-height: 22px;
+  width: var(--bp-plate-badge);
+  height: var(--bp-plate-badge);
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -5046,11 +5051,34 @@ html:has(dialog.bp-filter-sheet[open]) body {
   cursor: pointer;
 }
 
-/* `.bp-play-toggle`'s own sizing rules assume a row control; the plate sets
-   its own geometry from `--bp-plate-size` and must win. */
-.bp-plate .bp-plate-play {
-  width: calc(var(--bp-plate-size) * 0.28);
-  height: calc(var(--bp-plate-size) * 0.28);
+/* The badge does NOT carry `.bp-play-toggle`, deliberately. That class is a
+   row control: a fixed 44px box with its own 34px accent disc drawn by
+   `::before` and a hover halo ringing that disc. The plate badge already IS an
+   accent disc, sized from `--bp-plate-size`, so borrowing the class drew a
+   second disc inside the first and a halo around a control that has a drop
+   shadow instead. Only the `data-*` contract is shared — that is what the
+   player's delegate reads, and it is not a class.
+   The icon swap therefore needs its own rules; they are the same three. */
+.bp-plate-play .bp-play-icon-pause {
+  display: none;
+}
+
+.bp-plate-play[aria-pressed="true"] .bp-play-icon-play {
+  display: none;
+}
+
+.bp-plate-play[aria-pressed="true"] .bp-play-icon-pause {
+  display: inline;
+}
+
+.bp-plate-play:hover,
+.bp-plate-play:focus-visible {
+  filter: brightness(1.08);
+}
+
+.bp-plate-play:focus-visible {
+  outline: 2px solid var(--bp-color-fg);
+  outline-offset: 2px;
 }
 
 .bp-plate--hero {
@@ -5100,6 +5128,28 @@ html:has(dialog.bp-filter-sheet[open]) body {
   transform: translateY(-3px);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent), 0 12px 26px
     rgb(0 0 0 / 0.5);
+}
+
+.bp-plate:hover .bp-plate-play,
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-play,
+.bp-pinned-hero:hover .bp-plate-play,
+.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-play {
+  transform: translateY(-3px);
+}
+
+.bp-plate-play {
+  transition: transform 0.18s ease, filter 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-plate-play {
+    transition: none;
+  }
+
+  .bp-plate:hover .bp-plate-play,
+  .bp-pinned-hero:hover .bp-plate-play {
+    transform: none;
+  }
 }
 
 .bp-plate:hover .bp-plate-label,
@@ -5226,6 +5276,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
   display: flex;
   gap: 1rem;
   overflow-x: auto;
+  /* Named so the wrapper's fades can bind to THIS scroller — see
+     `.bp-pinned-rail-wrap`'s `timeline-scope`. */
+  scroll-timeline: --bp-rail inline;
   scroll-snap-type: x proximity;
   /* Room for the plates' own drop shadow, which a tight scroll box clips. */
   padding-bottom: 0.5rem;
@@ -5250,6 +5303,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
    and without it the last plate in view would stop being clickable. */
 .bp-pinned-rail-wrap {
   position: relative;
+  /* Publishes the rail's own timeline to this element, so the fades below can
+     name it. `scroll(nearest)` does NOT work here: it searches ANCESTORS for a
+     scroll container, and the scroller is this element's CHILD — so both fades
+     ended up driven by the page's vertical scroll, which is why the leading
+     one never appeared. */
+  timeline-scope: --bp-rail;
 }
 
 .bp-pinned-rail-wrap::before,
@@ -5266,9 +5325,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-pinned-rail-wrap::before {
   left: 0;
   background: linear-gradient(to right, var(--bp-color-bg), transparent);
-  opacity: 0;
   animation: bp-fade-in-start linear both;
-  animation-timeline: scroll(nearest inline);
+  animation-timeline: --bp-rail;
   animation-range: 0 2.5rem;
 }
 
@@ -5276,7 +5334,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   right: 0;
   background: linear-gradient(to left, var(--bp-color-bg), transparent);
   animation: bp-fade-out-end linear both;
-  animation-timeline: scroll(nearest inline);
+  animation-timeline: --bp-rail;
   animation-range: calc(100% - 2.5rem) 100%;
 }
 
@@ -5328,6 +5386,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 @media (min-width: 64rem) {
   .bp-pinned-rail {
+    scroll-timeline: none;
     flex-wrap: wrap;
     /* Wide enough to breathe: at the old 92px five plates crammed into one row
        and the captions ran together into a single band of small caps. */

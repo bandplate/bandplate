@@ -87,14 +87,22 @@ const playSubtitle = item.kind === "take" ? (item.take.label ?? detail) : "";
       {label}
     </span>
     <span class="bp-plate-spindle" aria-hidden="true" />
-    {
+  </span>
+  {
       playable && (
-        /* Same `data-audio-source` contract `PlayToggleButton.astro` uses, so
+        /* A SIBLING of the disc, not a child of it.
+           Inside, it was unclickable: the disc takes a `transform` on hover,
+           a transform makes a stacking context, and the button's `z-index`
+           was trapped in it — so the whole disc, button included, fell under
+           the link overlay exactly whenever the pointer was on it. Out here
+           its `z-index` is measured against the same context as the link.
+
+           Same `data-audio-source` contract `PlayToggleButton.astro` uses, so
            the persistent player's one document-level click delegate picks this
            up with no island of its own — see `Player.tsx`'s header. */
         <button
           type="button"
-          class="bp-plate-play bp-play-toggle"
+          class="bp-plate-play"
           data-audio-source
           data-take-id={item.id}
           data-asset-id={playable}
@@ -126,7 +134,6 @@ const playSubtitle = item.kind === "take" ? (item.take.label ?? detail) : "";
         </button>
       )
     }
-  </span>
   {
     size === "rail" && (
       <span class="bp-plate-caption" aria-hidden="true">

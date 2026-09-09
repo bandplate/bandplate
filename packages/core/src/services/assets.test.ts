@@ -95,6 +95,17 @@ describe("assetStorageKey", () => {
     );
   });
 
+  it("keys a stem's waveform to that stem, not to the master", () => {
+    // Every peaks asset used to land on the master's key, so a take could
+    // hold only one waveform and soloing a stem drew the master's shape.
+    expect(assetStorageKey("t1", "peaks", "bass", "lossy", "json")).toBe(
+      "takes/t1/peaks/stems/bass.json",
+    );
+    expect(assetStorageKey("t1", "peaks", "bass", "lossy", "json")).not.toBe(
+      assetStorageKey("t1", "peaks", null, "lossy", "json"),
+    );
+  });
+
   it("refuses a stem with no instrument slug rather than writing a broken key", () => {
     expect(() => assetStorageKey("t1", "stem", null, "lossy", "mp3")).toThrow(
       /needs an instrument slug/,

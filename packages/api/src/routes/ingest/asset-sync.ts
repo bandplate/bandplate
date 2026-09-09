@@ -37,8 +37,15 @@ export async function syncDeclaredAssets(
   for (const item of declared) {
     const normalized: DeclaredAsset = {
       kind: item.kind,
-      instrumentId: item.kind === "stem" ? (instrumentBySlug.get(item.instrument) ?? null) : null,
-      instrumentSlug: item.kind === "stem" ? item.instrument : null,
+      // A `peaks` row is keyed to the source it describes, exactly as a stem
+      // is -- null meaning the master. `/assets/:id/peaks` finds a waveform by
+      // matching this against the audio asset's own instrument.
+      instrumentId:
+        item.kind === "stem" || item.kind === "peaks"
+          ? (instrumentBySlug.get(item.instrument ?? "") ?? null)
+          : null,
+      instrumentSlug:
+        item.kind === "stem" || item.kind === "peaks" ? (item.instrument ?? null) : null,
       tier: item.tier,
       format: item.format,
       bytes: item.bytes,

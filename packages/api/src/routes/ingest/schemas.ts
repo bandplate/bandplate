@@ -58,6 +58,11 @@ export const stemAssetSchema = z.object({
 export const peaksAssetSchema = z.object({
   kind: z.literal("peaks"),
   format: z.literal("json"),
+  // Which source this waveform describes: absent for the take's master,
+  // a stem's slug for that stem. `peaksStorageKey` and `/assets/:id/peaks`
+  // have always been per-source; without this field ingest had no way to say
+  // so, and a second peaks asset collided with the master's on one key.
+  instrument: instrumentSlugSchema.nullish(),
   tier: assetTierSchema.default("lossy"),
   bytes: z.number().int().positive(),
   sha256: z

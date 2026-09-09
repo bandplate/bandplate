@@ -93,7 +93,11 @@ export function assetStorageKey(
   format: AssetFormat,
 ): string {
   if (kind === "peaks") {
-    return peaksStorageKey(takeId);
+    // A waveform describes ONE source, so it is keyed like the source it
+    // belongs to: null for the take's master, a slug for that stem. Ignoring
+    // the slug here put every peaks file on the master's key, so a take could
+    // only ever hold one -- which is why a stem's waveform never drew.
+    return peaksStorageKey(takeId, instrumentSlug ?? undefined);
   }
   if (kind === "stem") {
     if (!instrumentSlug) {
@@ -165,7 +169,8 @@ export interface ResolveSlotOptions {
  * Decide what happens to one asset slot, and leave the DB reflecting it.
  *
  * Slot identity is `(takeId, kind, instrumentId, tier)` for a master or stem
- * and `(takeId, kind)` alone for peaks — `format` is NOT part of it. See
+ * and `(takeId, kind, instrumentId)` for peaks, whose tier never moves the
+ * key — `format` is NOT part of it either. See
  * `assetsRepo.getBySlot`'s own comment, which is the authority on why: the
  * format is a property of whatever currently occupies the slot, not part of
  * what names it, so re-rendering a lossy master as mp3 instead of opus lands

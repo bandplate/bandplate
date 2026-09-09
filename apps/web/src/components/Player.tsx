@@ -297,11 +297,16 @@ export default function Player() {
     setPeaks(null);
     fetch(peaksUrl(sourceAssetId))
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { peaks?: unknown } | null) => {
+      .then((body: { peaks?: unknown } | number[] | null) => {
         if (cancelled) {
           return;
         }
-        const raw = body?.peaks;
+        // The ingest contract §5 specifies the file as "a single array of 1000
+        // integers", and that is what the bridge writes. Reading only
+        // `body.peaks` meant every waveform ingested to spec silently drew a
+        // plain rail -- `[].peaks` is undefined, and the fallback below is
+        // indistinguishable from a 404. The wrapped shape stays accepted.
+        const raw = Array.isArray(body) ? body : body?.peaks;
         setPeaks(
           Array.isArray(raw) && raw.every((v) => typeof v === "number")
             ? downsample(raw as number[], WAVEFORM_BARS)

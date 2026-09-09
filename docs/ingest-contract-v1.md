@@ -90,7 +90,8 @@ rather than orphaning:
 ```
 takes/{takeId}/master/{tier}.{ext}
 takes/{takeId}/stems/{instrumentSlug}/{tier}.{ext}
-takes/{takeId}/peaks.json
+takes/{takeId}/peaks/master.json
+takes/{takeId}/peaks/stems/{instrumentSlug}.json
 ```
 
 ---
@@ -251,7 +252,17 @@ take was already published the whole time. Commit is safe to retry.
 ## 5. Waveform peaks
 
 Send a `kind: "peaks"` asset: JSON, a single array of **1000 integers in the
-range -128..127**, representing min/max-folded amplitude across the take.
+range -128..127**, representing min/max-folded amplitude across the take. The
+file is the bare array -- not an object wrapping one.
+
+A waveform describes **one source**, so a peaks asset carries the same
+`instrument` field a stem does: omit it for the take's master, or name a stem's
+slug for that stem's own shape. The slug is validated against the vocabulary
+like any other. One take may therefore hold several peaks assets, one per
+source; they occupy separate slots and separate storage keys
+(`takes/{takeId}/peaks/master.json`, `takes/{takeId}/peaks/stems/{slug}.json`).
+Sending only the master's is fine -- a source with no waveform simply draws
+without one.
 
 The bridge already has the decoded audio, so this costs it almost nothing. A
 browser computing the same thing would have to download and decode the whole

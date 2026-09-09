@@ -131,6 +131,28 @@ async function seedAndGetSessionCookie(): Promise<string> {
     instrumentIds: [bass.id],
   });
 
+  // Two more on the same CONCERT, for the note-suppression pair below. One is
+  // labelled with the word that event's kind renders as ("live"), the other
+  // with something a page cannot know.
+  await takesRepo.create(db, {
+    songId: songWithTakes.id,
+    eventId: eventWithTakes.id,
+    label: "live",
+    recordedAt: now - 1,
+    createdAt: now - 1,
+    updatedAt: now - 1,
+    instrumentIds: [bass.id],
+  });
+  await takesRepo.create(db, {
+    songId: songWithTakes.id,
+    eventId: eventWithTakes.id,
+    label: "second pass",
+    recordedAt: now - 2,
+    createdAt: now - 2,
+    updatedAt: now - 2,
+    instrumentIds: [bass.id],
+  });
+
   const token = generateToken();
   await loginTokensRepo.create(db, {
     memberId: member.id,
@@ -285,6 +307,20 @@ describe("member browsing routes over real HTTP", () => {
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toContain("No takes logged for this one yet");
+  });
+
+  it("drops a take label that only repeats its event's kind, on the event's own page", async () => {
+    const res = await fetch(`${ORIGIN}/events/${eventId}`, { headers: { cookie: sessionCookie } });
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    // A label the page cannot already be showing survives...
+    expect(body).toContain('class="bp-take-note bp-take-elastic">second pass');
+    // ...and one that only repeats the heading's own word does not. The event
+    // is a concert, which renders as "live", and one of its takes is labelled
+    // "live". That word legitimately appears elsewhere on the page — in the
+    // event's own kind label — so this asserts on the take row's NOTE slot
+    // rather than on the whole document.
+    expect(body).not.toContain('class="bp-take-note bp-take-elastic">live');
   });
 
   it("404s for an unknown event id", async () => {

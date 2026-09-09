@@ -34,5 +34,17 @@ export interface TakeRowSongRef {
 // original `event?`/`song?` props, which handled `undefined` the same way.
 export type TakeRowContext =
   | { kind: "song"; event: TakeRowEventRef | undefined }
-  | { kind: "event"; song: TakeRowSongRef | undefined }
+  /**
+   * `eventKind` is the RAW kind (`concert`, `rehearsal`, …), the same string
+   * `TakeRowEventRef.kind` carries, so the mapping to a displayed word happens
+   * in exactly one place. It is here even though this arm shows no event —
+   * the row still has to know what kind of event it is under, to suppress a
+   * take label that only repeats it. Without it a take labelled "live" printed
+   * "live" as its note on every row of a concert's page, directly under a
+   * heading already saying so.
+   *
+   * Required, not optional: it is always available on the page that renders
+   * this arm, and requiring it is what stops the bug coming back quietly.
+   */
+  | { kind: "event"; song: TakeRowSongRef | undefined; eventKind: string }
   | { kind: "full"; song: TakeRowSongRef | undefined; event: TakeRowEventRef | undefined };

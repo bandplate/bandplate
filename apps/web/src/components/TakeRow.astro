@@ -176,8 +176,19 @@ const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (
 const eventName = event
   ? eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
   : "";
-const eventKind = event ? eventKindLabel(event.kind) : "";
+// The kind of event this take came out of, WHENEVER the row can know it —
+// including on an event page, which shows no event of its own but is one.
+// Only used to decide whether the take's label says anything the page does
+// not already.
+const eventKind = event
+  ? eventKindLabel(event.kind)
+  : context.kind === "event"
+    ? eventKindLabel(context.eventKind)
+    : "";
 const noteText = takeNote(take.label, eventKind);
+// …and the badge is NOT that. An event page's own heading names the kind, so
+// repeating it on all of its rows is one word of noise per take.
+const kindBadge = context.kind === "event" ? "" : eventKind;
 ---
 
 <div class="bp-take-row">
@@ -225,7 +236,7 @@ const noteText = takeNote(take.label, eventKind);
     {/* The kind as small caps, not a pill. A pill is a thing you can press; a
         kind is a label on a fact, so it takes the same voice the event ledger
         on home uses. */}
-    {eventKind && <span class="bp-kind">{eventKind}</span>}
+    {kindBadge && <span class="bp-kind">{kindBadge}</span>}
   </div>
 
   <span class="bp-take-row-duration">{formatDuration(take.durationMs)}</span>

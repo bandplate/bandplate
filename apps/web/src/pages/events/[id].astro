@@ -89,7 +89,7 @@ const kindTitle = kindLabel.charAt(0).toUpperCase() + kindLabel.slice(1);
               <TakeRow
                 take={take}
                 instruments={take.instruments}
-                context={{ kind: "event", song: take.song }}
+                context={{ kind: "event", song: take.song, eventKind: event.kind }}
                 playableAssetId={take.playableAssetId}
                 favorited={take.favorited}
               />

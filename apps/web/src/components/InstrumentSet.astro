@@ -33,7 +33,24 @@
 // section reads at full size everywhere; a take with a horn section reads
 // small everywhere. `size` overrides it outright for callers that have their
 // own reason (the admin table's 18px rows).
+//
+// --- One mark per DRAWING, not one per instrument -----------------------
+//
+// Several instruments legitimately share a glyph: a band that records bass
+// twice — a DI take and a live amp, or an overdub done afterwards — keeps them
+// as separate instruments ("Bass", "Live Bass") because the stems are separate
+// files, and an admin quite reasonably gives both the bass glyph. Drawn
+// straight, that renders two identical basses in a row, which reads as a
+// mistake and tells the reader nothing the first one didn't.
+//
+// So the run is de-duplicated on `instrumentMark` — the glyph an admin CHOSE,
+// which is their statement that these two look alike. Instruments with no
+// glyph are never merged; see that function for why. Nothing is hidden
+// either way: the merged glyph's hover text names every instrument behind it,
+// and the group's `aria-label` still lists all of them in order, so the set
+// means exactly what it meant before and only stops repeating itself.
 import type { instrumentsRepo } from "@bandplate/db";
+import { instrumentMark } from "@bandplate/ui/icons/instruments.js";
 import InstrumentIcon from "./InstrumentIcon.astro";
 
 /** Above this count the set draws at `DENSE_SIZE`. See the header comment. */
@@ -64,7 +81,29 @@ export interface Props {
 
 const { instruments, verb = "Instruments", tone = "chip", size, emptyLabel = null } = Astro.props;
 
-const dense = size === undefined && instruments.length > DENSE_ABOVE;
+/** One entry per glyph actually drawn, in the order the set was given. */
+interface DrawnMark {
+  /** The first instrument to claim this mark — the one whose glyph is drawn. */
+  instrument: instrumentsRepo.Instrument;
+  /** Every instrument behind it, itself included. Becomes the hover text. */
+  labels: string[];
+}
+
+const marks = new Map<string, DrawnMark>();
+for (const instrument of instruments) {
+  const key = instrumentMark(instrument);
+  const existing = marks.get(key);
+  if (existing) {
+    existing.labels.push(instrument.label);
+  } else {
+    marks.set(key, { instrument, labels: [instrument.label] });
+  }
+}
+const drawn = [...marks.values()];
+
+// Density follows what is DRAWN, not what was passed: a set that collapses
+// from five glyphs to three is three glyphs wide and should read at full size.
+const dense = size === undefined && drawn.length > DENSE_ABOVE;
 const glyphSize = size ?? (dense ? DENSE_SIZE : BASE_SIZE);
 const classes = [
   "bp-instrument-set",
@@ -88,8 +127,13 @@ const classes = [
       role="img"
       aria-label={`${verb}: ${instruments.map((i) => i.label).join(", ")}`}
     >
-      {instruments.map((instrument) => (
-        <InstrumentIcon icon={instrument.icon} label={instrument.label} size={glyphSize} />
+      {drawn.map((mark) => (
+        <InstrumentIcon
+          icon={mark.instrument.icon}
+          label={mark.instrument.label}
+          title={mark.labels.join(", ")}
+          size={glyphSize}
+        />
       ))}
     </span>
   )

@@ -13,33 +13,35 @@
 //
 // Icons are `aria-hidden`; the group in `TakeRow` carries one label naming
 // every instrument, which reads better than seven separate announcements.
-import { INSTRUMENT_GLYPHS } from "@bandplate/ui/icons/instruments.js";
+import { INSTRUMENT_GLYPHS, instrumentInitials } from "@bandplate/ui/icons/instruments.js";
 
 export interface Props {
   label: string;
   /** Key into `INSTRUMENT_GLYPHS`. Null, or unknown, falls back to initials. */
   icon?: string | null;
   size?: number;
+  /**
+   * The hover text, when it is not just `label`.
+   *
+   * `InstrumentSet` draws ONE glyph for every instrument that would draw the
+   * same one, and names them all here ("Bass, Live Bass"). It stays separate
+   * from `label` because `label` is also what the initials fallback is built
+   * from, and "Bass, Live Bass" would initial as "BL".
+   */
+  title?: string;
 }
 
-const { label, icon, size = 20 } = Astro.props;
+const { label, icon, size = 20, title } = Astro.props;
 
 // An unknown key is treated exactly like no key. The column is free text at
 // the database level, and a glyph removed from the library in a later release
 // would otherwise render nothing at all.
 const glyph = icon ? INSTRUMENT_GLYPHS[icon] : undefined;
 
-/** First letter of each of the first two words — "Trombone" → "TR", "French Horn" → "FH". */
-const initials = label
-  .split(/\s+/)
-  .slice(0, 2)
-  .map((word) => word[0] ?? "")
-  .join("")
-  .toUpperCase()
-  .slice(0, 2);
+const initials = instrumentInitials(label);
 ---
 
-<span class="bp-instrument" style={`--bp-instrument-size:${size}px`} title={label}>
+<span class="bp-instrument" style={`--bp-instrument-size:${size}px`} title={title ?? label}>
   {
     glyph ? (
       <svg viewBox={glyph.viewBox} fill="currentColor" aria-hidden="true" set:html={glyph.body} />

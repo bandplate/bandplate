@@ -134,3 +134,41 @@ export const INSTRUMENT_GLYPH_CREDIT = {
   licence: "CC BY 3.0",
   licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
 } as const;
+
+/**
+ * First letter of each of the first two words — "French Horn" → "FH",
+ * "Trombone" → "T". What an instrument with no icon draws.
+ */
+export function instrumentInitials(label: string): string {
+  return label
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0] ?? "")
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+/**
+ * Identity of the mark an instrument draws, for de-duplicating a run of them
+ * (`InstrumentSet.astro`). Two instruments may be drawn as one glyph exactly
+ * when this matches.
+ *
+ * Not the `icon` column: an UNKNOWN key falls back to initials exactly as a
+ * null one does (see `InstrumentIcon.astro`), and two rows carrying different
+ * dead keys would otherwise be treated as different marks while drawing the
+ * same pad.
+ *
+ * Deliberately does NOT merge on the initials themselves, even though two
+ * icon-less instruments can genuinely draw the same pad. The initials are
+ * lossy — "Trombone", "Trumpet" and "Tuba" all render "T" — so merging on
+ * them would collapse three real instruments into one glyph on the strength
+ * of a shared first letter. A glyph an admin CHOSE for both is a statement
+ * that they look alike; a collision in a fallback is an accident. So the
+ * icon-less case keys on the label, which merges only an exact repeat.
+ */
+export function instrumentMark(instrument: { icon?: string | null; label: string }): string {
+  return instrument.icon && INSTRUMENT_GLYPHS[instrument.icon]
+    ? `glyph:${instrument.icon}`
+    : `label:${instrument.label.trim().toLowerCase()}`;
+}

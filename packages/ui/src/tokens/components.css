@@ -4375,25 +4375,52 @@ html:has(dialog.bp-filter-sheet[open]) body {
    aside, and splitting the votes again inside it made two short lists where the
    member is reading one history. */
 .bp-vote-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+  /* Grid, not flex, because the date changes PLACE rather than appearing: it
+     tucks under the title on a phone and steps out into its own column beside
+     it once there is room. Wrapping cannot express that — a wrapped flex item
+     goes below the badge as well, and the badge is what has to stay put. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main badge"
+    "when badge";
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.25rem 0.75rem;
   min-height: 44px;
   padding: 0.875rem 0.25rem;
   border-bottom: 1px solid var(--bp-color-border);
 }
 
 .bp-vote-row-main {
+  grid-area: main;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   min-width: 0;
-  /* Explicit basis (not just `min-width: 0`) so this shrinks predictably
-     against the verdict badge beside it, instead of the row wrapping the badge
-     onto a line of its own. */
-  flex: 1 1 12rem;
+}
+
+/* The date. Mono and tabular, so a run of them lines up down the list; muted,
+   because nobody scans this page BY date — it is there to place a call you
+   half remember, not to be read. */
+.bp-vote-row-when {
+  grid-area: when;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bp-vote-row > .bp-badge {
+  grid-area: badge;
+  justify-self: end;
+}
+
+@media (min-width: 40rem) {
+  .bp-vote-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "main when badge";
+    gap: 0.75rem 1rem;
+  }
 }
 
 /* No standing underline — a column of them reads as a list of links rather than
@@ -5613,27 +5640,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 }
 
-/* The unvoted count on `/me` — a fact with a number in front of it, not a
-   banner. It is information the member came looking for, so it does not take a
-   fill, an icon or a border; the numeral does all the signalling. */
-.bp-me-unvoted {
-  display: flex;
-  align-items: baseline;
-  gap: 0.625rem;
-  margin-bottom: 1rem;
-  font-size: var(--text-ui, 0.9375rem);
-  color: var(--bp-color-muted);
-}
-
-.bp-me-unvoted-count {
-  font-family: var(--bp-font-display);
-  font-weight: 700;
-  font-size: 1.75rem;
-  line-height: 1;
-  color: var(--bp-color-accent);
-  font-variant-numeric: tabular-nums;
-}
-
 /* Kind filter — toggleable pills, every kind on by default. It was a
    `<fieldset>` of drawn checkboxes plus an Apply button plus a Clear button: a
    three-control form to answer "hide the concerts", on a page with three
@@ -5727,140 +5733,292 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 /* ---------------------------------------------------------------------- */
-/* /me — what you have done on the left, who you are on the right.        */
+/* /me — a member's profile, built on the record plate.                   */
 /* ---------------------------------------------------------------------- */
 
-.bp-me {
+/* One column, not two. The old page put votes beside an aside holding
+   identity, instruments, the language setting and sign-out — a junk drawer,
+   because it held everything that was not a vote. With favourites gone (home
+   is already that shelf) there was nothing left for a rail to be. */
+.bp-profile {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 2.125rem;
 }
 
-/* Identity leads on a phone, where the aside would otherwise be a footer
-   nobody scrolls to; past `lg` it moves to the side and the votes lead. */
-.bp-me-aside {
-  order: -1;
+/* --- hero ---------------------------------------------------------------
+   Plate, identity, sign-out. On a phone the plate and the sign-out share the
+   first line: sign-out beside the NAME left a control stranded in dead space,
+   while beside the plate it fills the space that is actually empty. */
+.bp-profile-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "plate signout"
+    "identity identity";
+  align-items: start;
+  gap: 0.875rem 1.25rem;
 }
 
-@media (min-width: 64rem) {
-  .bp-me {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
-    gap: 0 2.875rem;
-    align-items: start;
+@media (min-width: 40rem) {
+  .bp-profile-hero {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "plate identity signout";
+    align-items: center;
+    gap: 1.75rem;
   }
-
-  .bp-me-aside {
-    order: 0;
-  }
 }
 
-.bp-me-heading {
-  font-family: var(--bp-font-display);
-  font-weight: 700;
-  font-size: var(--text-title, 1.6875rem);
-  line-height: 1.05;
-  margin: 0 0 0.875rem;
-}
-
-/* A line, not a card. It was the only `.bp-card` left in the member-facing
-   app, which made the one page that is ABOUT the member the one page with a
-   box on it. */
-.bp-me-identity {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-}
-
-.bp-me-avatar {
+/* The app's plate, at profile size. Same recipe as `.bp-plate-disc` — grooves
+   over vinyl — rather than a second way of drawing a record. */
+.bp-profile-plate {
+  grid-area: plate;
+  position: relative;
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 96px;
+  height: 96px;
   flex: none;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--bp-color-fg) 7%, transparent) 0 1px,
+      transparent 1px 4px
+    ), var(--bp-plate-vinyl);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 10%, transparent), 0 6px 18px
+    rgb(0 0 0 / 0.45);
+}
+
+@media (min-width: 40rem) {
+  .bp-profile-plate {
+    width: 128px;
+    height: 128px;
+  }
+}
+
+.bp-profile-plate-label {
+  display: grid;
+  place-items: center;
+  width: 54%;
+  height: 54%;
   border-radius: 50%;
   background: var(--bp-color-accent);
   color: var(--bp-color-on-accent);
   font-family: var(--bp-font-display);
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   line-height: 1;
 }
 
-.bp-me-identity-text {
-  min-width: 0;
+@media (min-width: 40rem) {
+  .bp-profile-plate-label {
+    font-size: 1.75rem;
+  }
 }
 
-.bp-me-name {
+.bp-profile-plate-spindle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--bp-color-bg);
+}
+
+.bp-profile-identity {
+  grid-area: identity;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+
+.bp-profile-name {
   font-family: var(--bp-font-display);
   font-weight: 700;
-  font-size: var(--text-section, 1.25rem);
-  line-height: 1.1;
+  font-size: var(--text-title, 1.6875rem);
+  line-height: 1.02;
 }
 
-.bp-me-contact {
+@media (min-width: 40rem) {
+  .bp-profile-name {
+    font-size: var(--text-hero, 2.75rem);
+  }
+}
+
+.bp-profile-contact {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 0.625rem;
-  margin-top: 0.25rem;
+  gap: 0.25rem 0.75rem;
   font-size: var(--text-meta, 0.78125rem);
   color: var(--bp-color-muted);
 }
 
-/* The same glyph run every take row uses, not the text tags this page had —
-   an instrument is an instrument wherever it appears. */
-/* Just the spacing now — the glyphs are an `InstrumentSet`, which owns its own
-   layout, pad and colour. */
-.bp-me-instruments {
-  margin-top: 1rem;
+.bp-profile-instruments {
+  margin-top: 0.125rem;
 }
 
-.bp-me-admin-link {
-  margin-top: 1.25rem;
-}
-
-/* The language picker sits between the instruments and the sign-out button:
-   a setting, in the column about you, above the one destructive thing.
-   `.bp-sheet-field` already supplies the label/control/hint stack — it is
-   written to work as a `<fieldset>`, which is what this is. */
-.bp-me-language {
-  margin-top: 1.25rem;
-}
-
-/* Last, and separated by more space than anything else in this column —
-   destructive, rarely wanted, and not something to land on by accident while
-   reaching for the admin link above it. */
-.bp-me-signout {
-  margin-top: 2rem;
-}
-
-/* The unvoted count: a fact with a number in front of it, not a banner. The
-   member came looking for it, so it takes no fill, no icon and no border. */
-.bp-me-unvoted {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.bp-me-unvoted-line {
-  display: flex;
-  align-items: baseline;
-  gap: 0.625rem;
+.bp-profile-noinstruments {
   font-size: var(--text-ui, 0.9375rem);
   color: var(--bp-color-muted);
 }
 
-.bp-me-unvoted-count {
-  font-family: var(--bp-font-display);
-  font-weight: 700;
-  font-size: 1.75rem;
+/* Top-aligned on a phone so it sits level with the plate's crown rather than
+   floating at its middle. */
+.bp-profile-signout {
+  grid-area: signout;
+  justify-self: end;
+}
+
+/* --- the ledger ----------------------------------------------------------
+   Four figures, ruled apart. Mono, because these are quantities to compare at
+   a glance and tabular figures line up; the rest of the page is not.
+
+   2x2 on a phone: four across 375px would shrink the numbers to the point
+   where they stop being the loudest thing in the row, which is their whole
+   job. */
+.bp-profile-ledger {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  border-top: 1px solid var(--bp-color-border);
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+@media (min-width: 48rem) {
+  .bp-profile-ledger {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.bp-profile-figure {
+  padding: 0.9375rem 0.875rem;
+}
+
+/* The first cell in each row loses its left padding so the figure sits on the
+   page's own margin — a number indented from the edge reads as a cell in a
+   table nobody drew. */
+.bp-profile-figure:nth-child(odd) {
+  padding-left: 0;
+}
+
+.bp-profile-figure:nth-child(n + 3) {
+  border-top: 1px solid var(--bp-color-border);
+}
+
+.bp-profile-figure:nth-child(even) {
+  border-left: 1px solid var(--bp-color-border);
+}
+
+@media (min-width: 48rem) {
+  .bp-profile-figure {
+    padding: 1.125rem 1.25rem;
+    border-left: 1px solid var(--bp-color-border);
+  }
+
+  .bp-profile-figure:nth-child(n + 3) {
+    border-top: none;
+  }
+
+  .bp-profile-figure:first-child {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .bp-profile-figure:nth-child(odd) {
+    padding-left: 1.25rem;
+  }
+
+  .bp-profile-figure:first-child {
+    padding-left: 0;
+  }
+
+  .bp-profile-figure:last-child {
+    padding-right: 0;
+  }
+}
+
+.bp-profile-figure-value {
+  font-family: var(--bp-font-mono);
+  font-weight: 600;
+  font-size: 1.625rem;
   line-height: 1;
-  color: var(--bp-color-accent);
   font-variant-numeric: tabular-nums;
 }
+
+@media (min-width: 48rem) {
+  .bp-profile-figure-value {
+    font-size: 1.875rem;
+  }
+}
+
+/* The one figure that is an invitation rather than a record. */
+.bp-profile-figure-live {
+  color: var(--bp-color-accent);
+}
+
+/* Nothing settled yet — a dash at the muted weight, so it reads as "no answer"
+   rather than as a small number. */
+.bp-profile-figure-none {
+  color: var(--bp-color-border);
+}
+
+.bp-profile-figure-unit {
+  font-size: 0.625em;
+  color: var(--bp-color-muted);
+}
+
+.bp-profile-figure-term {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.625rem;
+  margin-top: 0.4375rem;
+}
+
+.bp-profile-figure > .bp-eyebrow {
+  display: block;
+  margin-top: 0.4375rem;
+}
+
+.bp-profile-figure-term > .bp-eyebrow {
+  margin-top: 0;
+}
+
+.bp-profile-figure-go {
+  font-size: var(--text-note, 0.71875rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* --- sections ----------------------------------------------------------- */
+
+/* The language heading is a section heading like "Recent votes", in the same
+   display face — it names a part of the page, and an eyebrow made it read as
+   a field label attached to the row above. */
+.bp-profile-section {
+  margin: 0 0 0.75rem;
+}
+
+.bp-profile-language-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.bp-profile-language-select {
+  min-width: 11rem;
+}
+
+.bp-profile-language > .bp-field-hint {
+  margin-top: 0.5625rem;
+  max-width: 52ch;
+}
+
+/* The list's last row already draws the line that closes this section, so the
+   language block adds none of its own — two rules a gap apart with nothing
+   between them is the extraneous hairline this replaced. */
 
 .bp-vote-row-song--gone {
   color: var(--bp-color-muted);

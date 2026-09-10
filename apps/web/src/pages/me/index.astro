@@ -1,20 +1,36 @@
 ---
-// `/me` — who you are, and what you've done.
+// `/me` — the member's own profile.
 //
-// Direction M2 from the design canvas. Two things came off this page:
+// It used to be "your votes, plus whatever else had nowhere to live": a votes
+// column beside an aside holding identity, instruments, the language setting
+// and sign-out, in that order, with nothing saying where one ended and the
+// next began. The aside was a junk drawer because it held everything that was
+// not a vote.
 //
-//   - FAVOURITES. Home is now a shelf of exactly these things, so listing them
-//     again here was the same duplication we removed from home itself — and it
-//     was listing them under Songs / Events / Takes, the taxonomy home rejected.
-//   - SESSIONS. Raw user-agent strings and a status badge answered a question
-//     no member of a five-piece band asks; signing out lives in the shell,
-//     where it is reachable from every page. See `server/pages/me.ts` for the
-//     one capability that trade gives up.
+// The page has a subject now, and the subject is YOU. It is built on the
+// record plate the app already draws everywhere else (`.bp-plate` — grooves
+// over vinyl, a gold centre label, a spindle): your initials go on the label,
+// and what follows is what is pressed into it — the ledger of how you have
+// voted, then the calls themselves.
 //
-// What is left is the page's actual subject: the takes still waiting for your
-// ear, and the calls you have already made. Identity is a line at the top, not
-// a card — this is the one page where the app already knows who is looking.
-import { LANGUAGE_NAMES, LOCALES, formatShortDate, messages } from "@bandplate/i18n";
+// Four parts, one column, in this order:
+//   HERO      the plate, your name, since when, what you play. Sign out sits
+//             here rather than at the bottom of a rail — it is yours, it is
+//             destructive, and it should be where you look for it.
+//   LEDGER    four figures. `agreementPct` is the one worth having: it is
+//             something the archive knows about you that you do not.
+//   VOTES     the calls, with the comment you left, which was invisible before.
+//   LANGUAGE  the one setting that lives here.
+//
+// Deliberately NOT here: favourites. Home is already the shelf of exactly
+// those, and listing them twice is what this page was being cured of.
+import {
+  LANGUAGE_NAMES,
+  LOCALES,
+  formatLongDate,
+  formatShortDate,
+  messages,
+} from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
 import InstrumentSet from "../../components/InstrumentSet.astro";
@@ -72,7 +88,7 @@ if (!data) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { member, instruments, votes, voteTotal, unvotedCount } = data;
+const { member, instruments, votes, voteTotal, unvotedCount, keeperCount, agreementPct } = data;
 const pages = pageView({ url: Astro.url, page, perPage: VOTES_PER_PAGE, total: voteTotal });
 if (pages.redirectTo) {
   return Astro.redirect(pages.redirectTo);
@@ -88,62 +104,91 @@ const initials = member.displayName
 ---
 
 <AppLayout title={t.me.title} principal={principal} current="me">
-  <div class="bp-me">
-    <section class="bp-me-main">
-      <h1 class="bp-me-heading">{t.me.votesHeading}</h1>
+  <div class="bp-profile">
 
-      {languageSaved && <Banner kind="success">{t.me.languageSaved}</Banner>}
-      {localeError && <Banner kind="error">{localeError}</Banner>}
+    {/* ── Hero ───────────────────────────────────────────────────────── */}
+    <header class="bp-profile-hero">
+      {/* The same plate the archive is drawn from, with you on the label.
+          Decorative: the initials are already in the heading beside it. */}
+      <span class="bp-profile-plate" aria-hidden="true">
+        <span class="bp-profile-plate-label">{initials}</span>
+        <span class="bp-profile-plate-spindle"></span>
+      </span>
 
-      {/* The count home used to render as a queue of six rows. Here it is a
-          number you went looking for rather than one pushed at you, and its
-          link lands on the archive ALREADY FILTERED to exactly these takes —
-          `?unvoted=1` is the same question the number asks, so the member does
-          not have to reconstruct it from a filter panel. */}
-      {
-        unvotedCount > 0 ? (
-          <div class="bp-me-unvoted">
-            <p class="bp-me-unvoted-line bp-m0">
-              <span class="bp-me-unvoted-count">{unvotedCount}</span>
-              <span>
-                {t.me.unvotedAfterCount(unvotedCount)}
-              </span>
+      <div class="bp-profile-identity">
+        <p class="bp-eyebrow bp-m0">{t.me.memberSince(formatLongDate(locale, member.createdAt))}</p>
+        <h1 class="bp-profile-name bp-m0">{member.displayName}</h1>
+        <p class="bp-profile-contact bp-m0">
+          <span>{member.email}</span>
+          {member.role === "admin" && <span class="bp-kind">{t.me.admin}</span>}
+        </p>
+        {
+          instruments.length > 0 ? (
+            <p class="bp-profile-instruments bp-m0">
+              <InstrumentSet instruments={instruments} verb="plays" />
             </p>
-            {/* A button, like every other "go do the thing" in the app — the
-                same quiet pill home's "All events" and this page's admin link
-                use. It was an inline link inside a sentence, which is the one
-                shape a member does not read as an action. */}
-            <a href="/takes?unvoted=1" class="bp-btn bp-btn-quiet bp-btn-sm">
-              {t.me.hearThem(unvotedCount)}
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M5 12h13" />
-                <path d="M13 6l6 6-6 6" />
-              </svg>
-            </a>
-          </div>
-        ) : (
-          <p class="bp-me-unvoted-line bp-me-unvoted bp-m0">
-            <span>{t.me.allCaughtUp}</span>
-          </p>
-        )
-      }
+          ) : (
+            /* One quiet line, not an empty chip rail pretending to be full. */
+            <p class="bp-profile-noinstruments bp-m0">{t.me.noInstruments}</p>
+          )
+        }
+      </div>
 
+      {/* Sign out belongs to the person, so it lives on their own header —
+          and it stays outline-only, because it is the one destructive thing
+          on the page and must not compete with the plate for a thumb. */}
+      <form method="post" action="/logout" class="bp-profile-signout">
+        <button type="submit" class="bp-btn bp-btn-quiet bp-btn-sm">{t.me.signOut}</button>
+      </form>
+    </header>
+
+    {languageSaved && <Banner kind="success">{t.me.languageSaved}</Banner>}
+    {localeError && <Banner kind="error">{localeError}</Banner>}
+
+    {/* ── Ledger ─────────────────────────────────────────────────────── */}
+    <dl class="bp-profile-ledger">
+      <div class="bp-profile-figure">
+        <dd class="bp-profile-figure-value bp-m0">{voteTotal}</dd>
+        <dt class="bp-eyebrow">{t.me.ledgerVotes(voteTotal)}</dt>
+      </div>
+      <div class="bp-profile-figure">
+        <dd class="bp-profile-figure-value bp-m0">{keeperCount}</dd>
+        <dt class="bp-eyebrow">{t.me.ledgerKeepers(keeperCount)}</dt>
+      </div>
+      <div class="bp-profile-figure">
+        {/* A dash, not 0% — nothing this member voted on has been settled
+            yet, and those are different facts. See `getMeData`. */}
+        <dd class="bp-profile-figure-value bp-m0">
+          {agreementPct === null ? (
+            <span class="bp-profile-figure-none">{t.me.ledgerNoAnswer}</span>
+          ) : (
+            <>{agreementPct}<span class="bp-profile-figure-unit">%</span></>
+          )}
+        </dd>
+        <dt class="bp-eyebrow">{t.me.ledgerAgreement}</dt>
+      </div>
+      <div class="bp-profile-figure">
+        <dd class={`bp-profile-figure-value bp-m0 ${unvotedCount > 0 ? "bp-profile-figure-live" : ""}`}>
+          {unvotedCount}
+        </dd>
+        <dt class="bp-profile-figure-term">
+          <span class="bp-eyebrow">{t.me.ledgerWaiting}</span>
+          {/* The only link in the row, and it lands on the archive ALREADY
+              filtered to exactly these takes. */}
+          {unvotedCount > 0 && (
+            <a href="/takes?unvoted=1" class="bp-profile-figure-go">{t.me.hearThem(unvotedCount)} →</a>
+          )}
+        </dt>
+      </div>
+    </dl>
+
+    {/* ── The calls ──────────────────────────────────────────────────── */}
+    <section>
+      <h2 class="bp-section-title bp-profile-section">{t.me.votesHeading}</h2>
       {
         votes.length === 0 ? (
           <div class="bp-empty-state">
-            <p>
-              {t.me.emptyVotes}
-            </p>
+            <p>{t.me.emptyVotes}</p>
           </div>
         ) : (
           <ul class="bp-vote-list">
@@ -166,15 +211,20 @@ const initials = member.displayName
                   ) : (
                     <span class="bp-vote-row-song bp-vote-row-song--gone">{t.me.takeRemoved}</span>
                   )}
-                  <p class="bp-vote-row-meta bp-m0">
-                    {take?.event && <span>{formatShortDate(locale, take.recordedAt)}</span>}
-                    {vote.comment && <span class="bp-vote-row-comment">{vote.comment}</span>}
-                  </p>
+                  {/* Your own words, which the old row threw away into a
+                      metadata line beside the date. */}
+                  {vote.comment && <p class="bp-vote-row-comment bp-m0">{vote.comment}</p>}
                 </div>
-                {/* The call, not a control. This is a record of what you decided,
-                    and changing your mind happens on the take's own page where
-                    you can hear it again first — a toggle here would let you
-                    flip a verdict on a recording you are not listening to. */}
+                {/* Rendered only when there is a date: an empty span would
+                    still claim its grid row and open a gap under the title. */}
+                {take?.event && (
+                  <span class="bp-vote-row-when bp-mono">
+                    {formatShortDate(locale, take.recordedAt)}
+                  </span>
+                )}
+                {/* The call, not a control. This is a record of what you
+                    decided; changing your mind happens on the take's own page,
+                    where you can hear it again first. */}
                 <span class={`bp-badge ${vote.keeper ? "bp-badge-keeper" : ""}`}>
                   {vote.keeper ? t.me.verdictKeeper : t.me.verdictNotKeeper}
                 </span>
@@ -183,117 +233,41 @@ const initials = member.displayName
           </ul>
         )
       }
-
       <Pagination {...pages} labels={paginationLabels(pages, "vote")} />
     </section>
 
-    <aside class="bp-me-aside">
-      <div class="bp-me-identity">
-        <span class="bp-me-avatar" aria-hidden="true">{initials}</span>
-        <div class="bp-me-identity-text">
-          <p class="bp-me-name bp-m0">{member.displayName}</p>
-          <p class="bp-me-contact bp-m0">
-            <span>{member.email}</span>
-            {member.role === "admin" && <span class="bp-kind">{t.me.admin}</span>}
-          </p>
-        </div>
-      </div>
+    {/* ── Language ───────────────────────────────────────────────────── */}
+    {/* A SELECT, not a row of pills. The list of languages grows, and a row of
+        pills stops being a row at five of them.
 
-      {
-        instruments.length > 0 && (
-          <p class="bp-me-instruments bp-m0">
-            <InstrumentSet instruments={instruments} verb="plays" />
-          </p>
-        )
-      }
+        The submit button beside it is what keeps this working with no JS: a
+        select's `change` is not a submission, and nothing else in this app has
+        a JS-only path. The language switch is a poor place to start one.
 
-      {/* The language picker.
-
-          TWO SUBMIT BUTTONS, not a radio group and a Save. A radio group needs
-          a second click on a button that says nothing about what it does; two
-          buttons make the choice and the action the same gesture, which is one
-          tap on a phone and works with no JS at all. The current one is
-          `aria-pressed` and disabled — it is a statement, not an offer.
-
-          Selection carries the tick as well as the accent fill, because this
-          app's rule is that it never rests on colour alone.
-
-          The language NAMES are autonyms — "English", "Čeština" — identical in
-          both catalogs on purpose. Someone who picked Czech by accident has to
-          be able to read their way back out. See `LANGUAGE_NAMES`.
-
-          `data-astro-reload` is load-bearing, not caution: `<ClientRouter />`
-          intercepts every same-origin form submission for its own soft
-          navigation, and `Player`, `VoteFavorite` and `ConfirmDialog` are
-          `transition:persist` — Astro MOVES those islands to the new page
-          rather than remounting them, so their already-rendered text would
-          stay in the old language. Forcing a real document load is the only
-          fix, and its cost (playback stops) is stated on the control rather
-          than discovered. */}
-      <form
-        method="post"
-        class="bp-me-language"
-        data-astro-reload
-      >
+        `data-astro-reload` is load-bearing, not caution — `<ClientRouter />`
+        intercepts same-origin form posts, and `Player`, `VoteFavorite` and
+        `ConfirmDialog` are `transition:persist`, so a soft navigation would
+        MOVE them across with their old language still rendered. */}
+    <section class="bp-profile-language">
+      <h2 class="bp-section-title bp-profile-section">{t.me.languageLegend}</h2>
+      <form method="post" class="bp-profile-language-form" data-astro-reload>
         <input type="hidden" name="intent" value="locale" />
-        <fieldset class="bp-sheet-field">
-          <legend class="bp-eyebrow">{t.me.languageLegend}</legend>
-          <div class="bp-filter-pills">
-            {
-              LOCALES.map((option) => {
-                const name = LANGUAGE_NAMES[option];
-                const current = option === locale;
-                return current ? (
-                  <span class="bp-filter-pill" aria-pressed="true" aria-label={t.me.languageCurrent(name)}>
-                    <svg
-                      class="bp-filter-pill-mark"
-                      viewBox="0 0 24 24"
-                      width="14"
-                      height="14"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="3"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 12.5l5.5 5.5L20 6.5" />
-                    </svg>
-                    {name}
-                  </span>
-                ) : (
-                  <button
-                    type="submit"
-                    name="locale"
-                    value={option}
-                    class="bp-filter-pill"
-                    aria-pressed="false"
-                    aria-label={t.me.languageSwitch(name)}
-                  >
-                    {name}
-                  </button>
-                );
-              })
-            }
-          </div>
-          <p class="bp-sheet-hint bp-m0">{t.me.languageHint}</p>
-          <p class="bp-sheet-hint bp-m0">{t.me.languageStopsPlayback}</p>
-        </fieldset>
+        <label class="bp-visually-hidden" for="me-locale">{t.me.languageLegend}</label>
+        <select class="bp-select bp-profile-language-select" id="me-locale" name="locale">
+          {
+            LOCALES.map((option) => (
+              /* Autonyms — "English", "Čeština" — never translated. Somebody
+                 who picked a language they cannot read has to be able to find
+                 their way back out, and only a name in its own language does
+                 that for them. */
+              <option value={option} selected={option === locale}>{LANGUAGE_NAMES[option]}</option>
+            ))
+          }
+        </select>
+        <button type="submit" class="bp-btn bp-btn-quiet bp-btn-sm">{t.me.switchLanguage}</button>
       </form>
+      <p class="bp-field-hint bp-m0">{t.me.languageHint} {t.me.languageStopsPlayback}</p>
+    </section>
 
-      {/* Signing out lives here, not in the shell. It was a button in the
-          sidebar and another in the phone header — permanent chrome on every
-          page for something a member does a handful of times a year, sitting
-          where a mis-tap costs them their session. `/me` is the page about
-          them, and this is the one destructive thing on it, so it takes the
-          danger treatment and sits last.
-
-          The "Go to admin" link that used to sit above it is gone: Admin is a
-          nav item now, reachable from every page, so a second door to it on
-          this one page was chrome that had to be maintained twice. */}
-      <form method="post" action="/logout" class="bp-me-signout">
-        <button type="submit" class="bp-btn bp-btn-danger bp-btn-sm">{t.me.signOut}</button>
-      </form>
-    </aside>
   </div>
 </AppLayout>

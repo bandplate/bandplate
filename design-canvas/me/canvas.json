@@ -1,0 +1,14 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1120, "h": 880, "title": "Profile — full" },
+    { "file": "DayOne.dc.html", "x": 1240, "y": 0, "w": 1120, "h": 640, "title": "Profile — week one" },
+    { "file": "Mobile.dc.html", "x": 2480, "y": 0, "w": 390, "h": 1080, "title": "Phone" }
+  ],
+  "annotations": [
+    { "id": "idea", "x": 0, "y": -230, "w": 700, "text": "The profile IS your dubplate.\n\nThe app already draws records — grooves over vinyl, a gold centre label, a spindle. Your initial goes on the label, and the page is what is pressed into it.\n\nFour parts now: who you are, the ledger, what you have called, and the one setting that lives here. Pins went (home is already that shelf) and the keeper shelf went with them — the ledger's \"Držáků\" carries that idea without spending half a screen on it." },
+    { "id": "lang", "x": 760, "y": -230, "w": 360, "text": "Language is a SELECT, not pills: the list will grow, and a row of pills stops being a row at five languages.\n\nThe submit beside it is what keeps it working with no JS. Nothing else in this app is JS-only and this must not be the first thing that is." },
+    { "id": "sparse", "x": 1240, "y": -230, "w": 620, "text": "The same page with one vote and no instruments yet — the state you are actually in today.\n\nWith the shelf gone this is now a short, honest page rather than a long one padded with outlines. Agreement still reads \"—\" rather than a dishonest 0%." },
+    { "id": "phone", "x": 2480, "y": -230, "w": 390, "text": "Sign out rides the PLATE's line — beside the name it was a chip stranded in dead space. Ledger goes 2×2 so no figure shrinks." }
+  ],
+  "launch": { "view": "canvas" }
+}

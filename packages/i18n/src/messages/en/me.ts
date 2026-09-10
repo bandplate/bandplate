@@ -23,7 +23,26 @@ export const LANGUAGE_NAMES: Record<Locale, string> = {
 
 export const me = {
   title: "Me",
-  votesHeading: "Your votes",
+  votesHeading: "Recent votes",
+
+  /** The hero's eyebrow — `members.createdAt`, which the row already carries. */
+  memberSince: (date: string): string => `Member since ${date}`,
+  /** A member an admin has not given instruments to yet. */
+  noInstruments: "An admin assigns your instruments.",
+
+  /**
+   * The ledger. Four figures, and each label agrees with its own number —
+   * "1 vote" / "12 votes" — so they are functions, not fixed words.
+   */
+  ledgerVotes: (count: number): string => (count === 1 ? "Vote" : "Votes"),
+  ledgerKeepers: (count: number): string => (count === 1 ? "Keeper" : "Keepers"),
+  ledgerAgreement: "With the band",
+  ledgerWaiting: "Waiting on you",
+  /** What agreement shows before anything has been settled. NOT 0%. */
+  ledgerNoAnswer: "—",
+
+  allVotes: (total: number): string => `All ${total} votes →`,
+  switchLanguage: "Switch",
   allCaughtUp: "You've had your say on every published take.",
   /** A vote whose take has since been deleted. */
   untitledTake: "Untitled take",
@@ -48,7 +67,7 @@ export const me = {
   signOut: "Sign out",
 
   languageLegend: "Language",
-  languageHint: "Applies everywhere, on every device you're signed in on.",
+  languageHint: "Applies on every device.",
   /** The button that is already the current language, for screen readers. */
   languageCurrent: (name: string): string => `${name}, current language`,
   /** The one that isn't. */
@@ -63,5 +82,5 @@ export const me = {
    * already-rendered text cannot re-translate itself. A soft navigation would
    * leave half the furniture in the old language.
    */
-  languageStopsPlayback: "Changing this reloads the page, so anything playing will stop.",
+  languageStopsPlayback: "Switching reloads the page, so anything playing stops.",
 };

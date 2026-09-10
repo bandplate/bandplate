@@ -136,6 +136,49 @@ export async function countByMember(db: Db, memberId: string): Promise<number> {
 }
 
 /**
+ * What one member's voting record looks like, in one round trip.
+ *
+ * `keepers` is how many of their votes were a keeper call.
+ *
+ * `agreed` / `resolved` are the two halves of "how often you were with the
+ * band". RESOLVED means the take has been settled by an explicit admin
+ * action — `state` is `keeper` or `rejected` — because that, not the running
+ * tally, is the band's verdict. AGREED means their call matched it: they
+ * voted keeper on something promoted, or not-a-keeper on something rejected.
+ *
+ * `resolved` is returned rather than just a percentage so the caller can tell
+ * "0 of 4" from "nothing settled yet" — those render differently, and a page
+ * that showed 0% for the second would be lying.
+ */
+export interface VotingRecord {
+  keepers: number;
+  agreed: number;
+  resolved: number;
+}
+
+export async function votingRecord(db: Db, memberId: string): Promise<VotingRecord> {
+  const rows = await db
+    .select({
+      keepers: sql<number>`sum(case when ${votes.keeper} then 1 else 0 end)`,
+      resolved: sql<number>`sum(case when ${takes.state} in ('keeper', 'rejected') then 1 else 0 end)`,
+      agreed: sql<number>`sum(case
+        when ${takes.state} = 'keeper' and ${votes.keeper} then 1
+        when ${takes.state} = 'rejected' and not ${votes.keeper} then 1
+        else 0 end)`,
+    })
+    .from(votes)
+    .innerJoin(takes, eq(takes.id, votes.takeId))
+    .where(eq(votes.memberId, memberId));
+  const row = rows[0];
+  // `sum()` over no rows is NULL, not 0.
+  return {
+    keepers: row?.keepers ?? 0,
+    agreed: row?.agreed ?? 0,
+    resolved: row?.resolved ?? 0,
+  };
+}
+
+/**
  * One member's vote (if any) on each of the given takes, as a `Map` keyed
  * by take id — the initial `aria-pressed` state `VoteToggle.astro` needs
  * for every take row it renders, batch-fetched the same way

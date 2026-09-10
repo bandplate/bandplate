@@ -15,7 +15,23 @@ import type { me as enMe } from "../en/me.js";
 
 export const me = {
   title: "Já", // en: Me
-  votesHeading: "Tvoje hlasy", // en: Your votes
+  votesHeading: "Poslední hlasy", // en: Recent votes
+
+  memberSince: (date: string): string => `Člen od ${date}`, // en: `Member since ${date}`
+  noInstruments: "Nástroje ti přiřadí správce.", // en: An admin assigns your instruments.
+
+  // en: "Vote" / "Votes" — the label agrees with its own number.
+  // 1 hlas · 2–4 hlasy · 5+ hlasů.
+  ledgerVotes: (count: number): string => (count === 1 ? "Hlas" : count < 5 ? "Hlasy" : "Hlasů"),
+  // 1 držák · 2–4 držáky · 5+ držáků
+  ledgerKeepers: (count: number): string =>
+    count === 1 ? "Držák" : count < 5 ? "Držáky" : "Držáků",
+  ledgerAgreement: "Shoda s kapelou", // en: With the band
+  ledgerWaiting: "Čeká na tebe", // en: Waiting on you
+  ledgerNoAnswer: "—", // en: —
+
+  allVotes: (total: number): string => `Všech ${total} hlasů →`, // en: `All ${total} votes →`
+  switchLanguage: "Přepnout", // en: Switch
   // en: You've had your say on every published take.
   allCaughtUp: "Ke všem zveřejněným nahrávkám ses vyjádřil.",
   untitledTake: "Nahrávka bez názvu", // en: Untitled take
@@ -40,10 +56,10 @@ export const me = {
   signOut: "Odhlásit se", // en: Sign out
 
   languageLegend: "Jazyk", // en: Language
-  languageHint: "Platí všude a na všech zařízeních, kde jsi přihlášený.", // en: Applies everywhere, on every device you're signed in on.
+  languageHint: "Platí na všech zařízeních.", // en: Applies on every device.
   languageCurrent: (name: string): string => `${name}, současný jazyk`, // en: `${name}, current language`
   languageSwitch: (name: string): string => `Přepnout na ${name}`, // en: `Switch to ${name}`
   languageSaved: "Jazyk je změněný.", // en: Language changed.
   // en: Changing this reloads the page, so anything playing will stop.
-  languageStopsPlayback: "Přepnutí načte stránku znovu, takže se zastaví přehrávání.",
+  languageStopsPlayback: "Přepnutí zastaví přehrávání.",
 } satisfies typeof enMe;

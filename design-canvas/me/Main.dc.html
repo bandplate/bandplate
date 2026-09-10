@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Chivo:wght@400;600;900&family=Spline+Sans+Mono:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; background: #150c07; color: #f2e8d8;
+           font-family: "Chivo", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+    a { color: #f6aa1c; text-decoration: none; } a:hover { color: #ffc350; }
+    .disp { font-family: "Zilla Slab", Georgia, serif; }
+    .mono { font-family: "Spline Sans Mono", ui-monospace, Menlo, monospace; }
+    .eyebrow { font-weight: 900; font-size: 11px; letter-spacing: 0.22em;
+               text-transform: uppercase; color: #a9917a; }
+    .kind { font-weight: 900; font-size: 10px; letter-spacing: 0.16em;
+            text-transform: uppercase; color: #a9917a; white-space: nowrap; }
+    .chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px;
+            border-radius: 999px; background: rgba(242,232,216,0.12); font-size: 13px;
+            font-weight: 600; }
+    /* The app's own plate: grooves over vinyl, gold centre label, spindle. */
+    .disc { position: relative; display: grid; place-items: center; border-radius: 50%;
+            background: repeating-radial-gradient(circle at 50% 50%,
+                          rgba(242,232,216,0.07) 0 1px, transparent 1px 4px), #2a1a0e;
+            box-shadow: inset 0 1px 0 rgba(242,232,216,0.10), 0 6px 18px rgba(0,0,0,0.45); }
+    .disc-label { display: grid; place-items: center; width: 54%; height: 54%;
+                  border-radius: 50%; background: #f6aa1c; color: #150c07;
+                  text-align: center; line-height: 1.05; }
+    .spindle { position: absolute; width: 4px; height: 4px; border-radius: 50%;
+               background: #150c07; }
+    .sec { font-family: "Zilla Slab", Georgia, serif; font-weight: 700;
+           font-size: 21px; margin: 0; }
+    /* The app's own select: filled, edgeless, our caret rather than the UA's. */
+    .sel { appearance: none; -webkit-appearance: none; font-family: inherit;
+           font-size: 15px; min-height: 44px; padding: 8px 40px 8px 12px;
+           border: none; border-radius: 3px; background-color: rgba(242,232,216,0.12);
+           color: #f2e8d8; background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2714%27%20height%3D%2714%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23a9917a%27%20stroke-width%3D%272.4%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M6%209l6%206%206-6%27%2F%3E%3C%2Fsvg%3E");
+           background-repeat: no-repeat; background-position: right 14px center;
+           background-size: 14px 14px; }
+    .btn-quiet { display: inline-flex; align-items: center; justify-content: center;
+                 min-height: 44px; padding: 10px 20px; border-radius: 999px;
+                 background: rgba(242,232,216,0.12); color: #f2e8d8;
+                 font-weight: 600; font-size: 15px; }
+    .rule { border-top: 1px solid #3a2413; }
+  </style>
+</helmet>
+
+<div style="padding: 30px 34px; display: flex; flex-direction: column; gap: 34px;">
+
+  <!-- ── Hero: you, as a plate ─────────────────────────────────────── -->
+  <div style="display: flex; align-items: center; gap: 28px;">
+    <div class="disc" style="width: 132px; height: 132px; flex: none;">
+      <div class="disc-label">
+        <span class="disp" style="font-weight: 700; font-size: 30px;">V</span>
+      </div>
+      <span class="spindle"></span>
+    </div>
+
+    <div style="min-width: 0; display: flex; flex-direction: column; gap: 9px;">
+      <span class="eyebrow">Člen od 8. února 2026</span>
+      <h1 class="disp" style="font-weight: 700; font-size: 42px; line-height: 1; margin: 0;">Vařič</h1>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 7px 12px;
+                  font-size: 13.5px; color: #a9917a;">
+        <span>xaralis93@gmail.com</span>
+        <span style="width: 3px; height: 3px; border-radius: 50%; background: #3a2413;"></span>
+        <span class="kind">Admin</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;">
+        <span class="chip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f6aa1c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4l5 5"/><path d="M17.5 6.5L9 15"/><circle cx="7" cy="17" r="4"/></svg>
+          Baskytara
+        </span>
+        <span class="chip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f6aa1c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>
+          Zpěv
+        </span>
+      </div>
+    </div>
+
+    <span style="margin-left: auto; align-self: flex-start; flex: none;
+                 display: inline-flex; align-items: center; min-height: 44px;
+                 padding: 6px 16px; border-radius: 999px; background: transparent;
+                 border: 1px solid #3a2413; color: #a9917a; font-weight: 600;
+                 font-size: 14px;">Odhlásit se</span>
+  </div>
+
+  <!-- ── The ledger: four numbers, mono, ruled apart ──────────────── -->
+  <div class="rule" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+              border-bottom: 1px solid #3a2413;">
+    <div style="padding: 18px 20px 18px 0;">
+      <div class="mono" style="font-weight: 600; font-size: 30px; line-height: 1;">12</div>
+      <div class="eyebrow" style="margin-top: 7px;">Hlasů</div>
+    </div>
+    <div style="padding: 18px 20px; border-left: 1px solid #3a2413;">
+      <div class="mono" style="font-weight: 600; font-size: 30px; line-height: 1;">7</div>
+      <div class="eyebrow" style="margin-top: 7px;">Držáků</div>
+    </div>
+    <div style="padding: 18px 20px; border-left: 1px solid #3a2413;">
+      <div class="mono" style="font-weight: 600; font-size: 30px; line-height: 1;">83<span style="font-size: 18px; color: #a9917a;">%</span></div>
+      <div class="eyebrow" style="margin-top: 7px;">Shoda s kapelou</div>
+    </div>
+    <div style="padding: 18px 0 18px 20px; border-left: 1px solid #3a2413;">
+      <div class="mono" style="font-weight: 600; font-size: 30px; line-height: 1; color: #f6aa1c;">1</div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
+        <span class="eyebrow">Čeká na tebe</span>
+        <a href="#" style="font-size: 13px; font-weight: 600;">Poslechnout →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Votes, full width now that the rail is gone. -->
+  <div>
+    <h2 class="sec" style="margin-bottom: 14px;">Poslední hlasy</h2>
+    <div class="rule">
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 88px;
+                  align-items: center; gap: 16px; min-height: 44px; padding: 15px 4px;
+                  border-bottom: 1px solid #3a2413;">
+        <div style="min-width: 0;">
+          <div class="disp" style="font-weight: 600; font-size: 18px;">Čoudy</div>
+          <div style="margin-top: 3px; font-size: 12.5px; color: #a9917a;">„Ten bas na konci je super."</div>
+        </div>
+        <div class="mono" style="font-size: 12px; color: #a9917a;">27. 8. 2026</div>
+        <div style="text-align: right;">
+          <span style="display: inline-flex; padding: 4px 12px; border-radius: 999px;
+                       background: #f6aa1c; color: #150c07; font-weight: 600; font-size: 12px;">držák</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 88px;
+                  align-items: center; gap: 16px; min-height: 44px; padding: 15px 4px;
+                  border-bottom: 1px solid #3a2413;">
+        <div style="min-width: 0;">
+          <div class="disp" style="font-weight: 600; font-size: 18px;">Nemám plán</div>
+        </div>
+        <div class="mono" style="font-size: 12px; color: #a9917a;">1. 9. 2026</div>
+        <div style="text-align: right;">
+          <span style="display: inline-flex; padding: 4px 12px; border-radius: 999px;
+                       background: rgba(242,232,216,0.12); color: #f2e8d8;
+                       font-weight: 600; font-size: 12px;">odpad</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 88px;
+                  align-items: center; gap: 16px; min-height: 44px; padding: 15px 4px;
+                  border-bottom: 1px solid #3a2413;">
+        <div style="min-width: 0;">
+          <div class="disp" style="font-weight: 600; font-size: 18px;">Dub Corner</div>
+          <div style="margin-top: 3px; font-size: 12.5px; color: #a9917a;">„Tempo sedí, dechy trochu napřed."</div>
+        </div>
+        <div class="mono" style="font-size: 12px; color: #a9917a;">26. 2. 2026</div>
+        <div style="text-align: right;">
+          <span style="display: inline-flex; padding: 4px 12px; border-radius: 999px;
+                       background: #f6aa1c; color: #150c07; font-weight: 600; font-size: 12px;">držák</span>
+        </div>
+      </div>
+
+    </div>
+    <a href="#" style="display: inline-block; margin-top: 14px; font-size: 13.5px; font-weight: 600;">Všech 12 hlasů →</a>
+  </div>
+
+  <!-- Language on its own line. A SELECT, not pills: this list grows, and a
+       row of pills stops being a row at five languages. The submit beside it
+       is what keeps the control working with no JS — the rest of the app has
+       no JS-only path and this must not be the first. -->
+  <div style="padding-top: 4px;
+              display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px;">
+    <span class="eyebrow" style="flex: none;">Jazyk</span>
+    <select class="sel" style="flex: none; min-width: 180px;">
+      <option>English</option>
+      <option selected>Čeština</option>
+      <option>Deutsch</option>
+      <option>Polski</option>
+    </select>
+    <span class="btn-quiet" style="flex: none;">Přepnout</span>
+    <p style="margin: 0; font-size: 12.5px; color: #a9917a; line-height: 1.45;">
+      Platí na všech zařízeních. Přepnutí zastaví přehrávání.
+    </p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

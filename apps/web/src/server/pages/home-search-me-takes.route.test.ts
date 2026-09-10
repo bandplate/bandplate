@@ -744,14 +744,24 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
 
     it("renders /me and its language picker in Czech", async () => {
       const body = await (await fetch(`${ORIGIN}/me`, { headers: signedIn() })).text();
-      expect(body).toContain("Tvoje hlasy");
+      expect(body).toContain("Poslední hlasy");
       expect(body).toContain("Jazyk");
       // Autonyms: whoever set Czech by accident has to be able to read their
       // way back out, so the language NAMES stay in their own language.
       expect(body).toContain("English");
       expect(body).toContain("Čeština");
-      expect(body).not.toContain("Your votes");
+      expect(body).not.toContain("Recent votes");
       expect(body).not.toContain("Sign out");
+    });
+
+    it("shows the profile ledger, and a dash where nothing is settled yet", async () => {
+      const body = await (await fetch(`${ORIGIN}/me`, { headers: signedIn() })).text();
+      // The seeded member has votes but nothing the band has promoted or
+      // rejected, so agreement has no answer — and a dash is not 0%.
+      expect(body).toContain("Shoda s kapelou");
+      // The dash element itself is the assertion. NOT `not.toContain("0%")`:
+      // the player's rail ships `style="width:0%"` on every page.
+      expect(body).toContain("bp-profile-figure-none");
     });
 
     it("declines the take count rather than bolting an s on", async () => {

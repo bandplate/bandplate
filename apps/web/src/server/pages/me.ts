@@ -39,6 +39,16 @@ export interface MeData {
    * where it is something you went looking for. A number, not a list.
    */
   unvotedCount: number;
+  /**
+   * The four figures the profile ledger shows, beside `voteTotal` and
+   * `unvotedCount`.
+   *
+   * `agreementPct` is `null` when nothing this member voted on has been
+   * settled yet — which is NOT the same as 0% and must not render as one. The
+   * page shows a dash for it.
+   */
+  keeperCount: number;
+  agreementPct: number | null;
 }
 
 /**
@@ -73,10 +83,11 @@ export async function getMeData(
     return undefined;
   }
 
-  const [instruments, votes, unvoted] = await Promise.all([
+  const [instruments, votes, unvoted, record] = await Promise.all([
     membersRepo.listInstrumentsForMember(db, memberId),
     getVotes(db, memberId, votesPage),
     takesRepo.listUnvotedByMember(db, memberId),
+    votesRepo.votingRecord(db, memberId),
   ]);
 
   return {
@@ -85,6 +96,12 @@ export async function getMeData(
     votes: votes.votes,
     voteTotal: votes.total,
     unvotedCount: unvoted.length,
+    keeperCount: record.keepers,
+    // Rounded here, once, rather than in the template: the page renders a
+    // number, and the decision about what "no answer yet" looks like belongs
+    // with the data rather than with the markup.
+    agreementPct:
+      record.resolved === 0 ? null : Math.round((record.agreed / record.resolved) * 100),
   };
 }
 

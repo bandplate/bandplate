@@ -64,7 +64,17 @@ describe("rowsToText", () => {
     );
   });
 
-  it("drops an empty row and a row with no name", () => {
+  // A row with no name CANNOT be written: both conventions begin with the
+  // label (`Verse: Am Dm7`, and the label alone above its words), so there is
+  // nowhere to put its text. That is correct and deliberate.
+  //
+  // What it costs is the whole point of `ChartEditor`'s submit guard: dropping
+  // row 3 here means a member who typed a verse into the row the editor opens
+  // with, and did not name it, loses every word on Save with nothing said —
+  // which is exactly what was reported. If this test is ever relaxed so a
+  // nameless row survives, that guard is the thing to revisit; if it stays,
+  // the guard is what keeps the loss from being silent.
+  it("drops an empty row and a row with no name — the guarded case", () => {
     expect(
       rowsToText([
         { id: "1", label: "Verse", chords: "Am", lyrics: "" },
@@ -72,6 +82,16 @@ describe("rowsToText", () => {
         { id: "3", label: "", chords: "F", lyrics: "orphan" },
       ]),
     ).toEqual({ chords: "Verse: Am", lyrics: "" });
+  });
+
+  // The reported case in its narrowest form: words, no chords, a named
+  // section. This one MUST survive — it is the row the guard exists to let
+  // through once the member has named it.
+  it("keeps a named section that has only words", () => {
+    expect(rowsToText([{ id: "1", label: "Verse", chords: "", lyrics: "the words" }])).toEqual({
+      chords: "",
+      lyrics: "Verse\nthe words",
+    });
   });
 });
 

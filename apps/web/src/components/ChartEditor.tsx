@@ -52,6 +52,11 @@ interface Props {
   vocabulary: string[];
 }
 
+/** Whether a row holds anything a save would carry. */
+function hasContent(row: EditorRow): boolean {
+  return row.chords.trim() !== "" || row.lyrics.trim() !== "";
+}
+
 function ArrowIcon({ up }: { up: boolean }) {
   return (
     <svg
@@ -87,6 +92,7 @@ export default function ChartEditor({
   // is the one thing this editor must not do.
   const chordsRef = useRef<HTMLTextAreaElement>(null);
   const lyricsRef = useRef<HTMLTextAreaElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const text = useMemo(() => rowsToText(rows), [rows]);
 
@@ -105,6 +111,62 @@ export default function ChartEditor({
     }
   }, [text, freeform]);
 
+  /**
+   * Stop a save that would throw words away.
+   *
+   * `rowsToText` skips a row with no name, because both output conventions
+   * begin with the label — there is nowhere to put the words. It did that
+   * SILENTLY, so typing a verse into the row the editor opens with and pressing
+   * Save discarded it with nothing said, and the song came back unchanged.
+   *
+   * The guard lives here rather than on the server because by the time a POST
+   * arrives the words are already gone: the island writes the textareas, and it
+   * wrote them empty. And it is a listener rather than `required` because every
+   * form in this app is `novalidate` — see the input above.
+   *
+   * It reads the DOM rather than `rows`, deliberately. `<ClientRouter />`
+   * replaces the document on navigation, and an island torn out that way never
+   * unmounts — so this effect's cleanup never runs and its listener stays on
+   * the form. Instrumenting an earlier version caught exactly that: a stale
+   * instance answered first, holding rows from its own mount whose ids matched
+   * nothing on screen. Reading the fields the member is actually looking at
+   * cannot go stale, and the `document.contains` check below stands a detached
+   * copy down before it can block a save the live editor has already fixed.
+   */
+  useEffect(() => {
+    if (freeform) {
+      return;
+    }
+    const root = rootRef.current;
+    const form = root?.closest("form");
+    if (!root || !form) {
+      return;
+    }
+    const onSubmit = (event: Event) => {
+      if (!document.contains(root)) {
+        return;
+      }
+      for (const row of root.querySelectorAll(".bp-chart-row")) {
+        const name = row.querySelector<HTMLInputElement>(".bp-chart-row-name");
+        const chords = row.querySelector<HTMLTextAreaElement>(".bp-chart-row-chords");
+        const words = row.querySelector<HTMLTextAreaElement>(".bp-chart-row-lyrics");
+        if (!name || name.value.trim() !== "") {
+          continue;
+        }
+        if (chords?.value.trim() === "" && words?.value.trim() === "") {
+          continue;
+        }
+        event.preventDefault();
+        // The row already says why; this puts the cursor where the fix is.
+        name.focus();
+        name.scrollIntoView({ block: "center" });
+        return;
+      }
+    };
+    form.addEventListener("submit", onSubmit);
+    return () => form.removeEventListener("submit", onSubmit);
+  }, [freeform]);
+
   const update = useCallback((id: string, patch: Partial<EditorRow>) => {
     setRows((current) => current.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }, []);
@@ -114,7 +176,7 @@ export default function ChartEditor({
   );
 
   return (
-    <div class={`bp-chart-editor${freeform ? " bp-chart-editor--text" : ""}`}>
+    <div class={`bp-chart-editor${freeform ? " bp-chart-editor--text" : ""}`} ref={rootRef}>
       <div class="bp-chart-rows-pane">
         <div class="bp-sheet-field">
           <span class="bp-eyebrow">Chords &amp; lyrics</span>
@@ -126,6 +188,13 @@ export default function ChartEditor({
         <ul class="bp-chart-rows">
           {rows.map((row, index) => {
             const known = row.label.trim() === "" || isKnownSection(row.label, vocabulary);
+            // A row with words but no name cannot be WRITTEN: both output
+            // conventions start with the label (`Verse: Am Dm7`, and the label
+            // alone above its words), so `rowsToText` skips it — and used to
+            // skip it silently, which meant typing a verse into the section
+            // the editor opens with and pressing Save threw the words away
+            // with nothing said. See the `required` below.
+            const needsName = row.label.trim() === "" && hasContent(row);
             return (
               <li class="bp-chart-row" key={row.id}>
                 <div class="bp-chart-row-head">
@@ -135,9 +204,22 @@ export default function ChartEditor({
                     list="bp-section-names"
                     placeholder="Verse"
                     aria-label={`Section ${index + 1} name`}
-                    aria-invalid={known ? undefined : "true"}
+                    /* One attribute, both reasons: the name is unusable
+                       either because the parser will not recognise it or
+                       because there isn't one and the row has words to lose. */
+                    aria-invalid={!known || needsName ? "true" : undefined}
                     value={row.label}
                     onInput={(e) => update(row.id, { label: e.currentTarget.value })}
+                    id={`chart-name-${row.id}`}
+                    /* SEMANTICS, not enforcement: every form in this app is
+                       `novalidate` (the server's zod schemas are the one source
+                       of truth, and errors render in the page rather than as
+                       browser bubbles), so this never stops a submit on its
+                       own. It is here so a screen reader announces the field as
+                       required the moment the row has something to lose; the
+                       stopping is done by the submit handler below. */
+                    required={!freeform && needsName}
+                    aria-describedby={needsName ? `${row.id}-needs-name` : undefined}
                   />
                   <div class="bp-chart-row-actions">
                     <button
@@ -173,6 +255,16 @@ export default function ChartEditor({
                     </button>
                   </div>
                 </div>
+
+                {/* Said as soon as there is something to lose, not held back
+                    until Save — the point is that nobody reaches Save with a
+                    row that cannot be written. */}
+                {needsName && (
+                  <p class="bp-field-error bp-m0" id={`${row.id}-needs-name`}>
+                    Give this section a name and its words will be kept — the song page files words
+                    under the part they belong to, so a nameless one has nowhere to go.
+                  </p>
+                )}
 
                 {!known && (
                   <p class="bp-field-error bp-m0">

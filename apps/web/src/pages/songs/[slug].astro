@@ -1,4 +1,6 @@
 ---
+import { hasAllScopes } from "@bandplate/core";
+import { assetsRepo, eventsRepo, instrumentsRepo } from "@bandplate/db";
 // The song page. Its metadata, chord progression, lyrics, per-instrument
 // notes, known aliases, and every take newest first (each linking to its
 // event) — see TakeRow.astro for why that link is separate from the take's
@@ -9,8 +11,7 @@
 // events, all batch-fetched) runs in ~0.5-1.3ms locally — nowhere near the
 // ~150ms bar for a Server Island, so nothing on this page is deferred. See
 // task-5-report.md for the full measurement.
-import { hasAllScopes } from "@bandplate/core";
-import { assetsRepo, eventsRepo, instrumentsRepo } from "@bandplate/db";
+import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
@@ -50,6 +51,9 @@ const appDeps = await getAppDeps();
 // The edit sheet posts here. On success we redirect to the song's own URL —
 // which is UNCHANGED by a rename, since the slug never moves (see
 // `songsRepo.update`).
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
 let editError: string | undefined;
 let editErrorField: SongField | undefined;
 let takeError: string | undefined;
@@ -58,7 +62,7 @@ let formError: string | undefined;
 
 if (Astro.request.method === "POST") {
   if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
-    formError = "Something about that request looked wrong. Reload the page and try again.";
+    formError = t.common.originError;
   } else {
     const formData = await Astro.request.formData();
     if (formData.get("intent") === "create-take") {
@@ -67,7 +71,7 @@ if (Astro.request.method === "POST") {
         return Astro.redirect(`/takes/${result.take.id}?created=1`);
       }
       if (result.kind === "unknown_parent") {
-        takeError = "That's no longer here — reload and try again.";
+        takeError = t.songs.takeGone;
         takeErrorField = result.field;
       } else {
         takeError = result.error;
@@ -80,7 +84,7 @@ if (Astro.request.method === "POST") {
         return Astro.redirect(`/songs/${slug}?saved=1`);
       }
       if (result.kind === "not_found") {
-        formError = "That song is no longer here.";
+        formError = t.songs.gone;
       } else if (result.kind === "duplicate") {
         editError = `${result.existing.title} already has that title.`;
         editErrorField = "title";
@@ -120,7 +124,7 @@ if (pages.redirectTo) {
  */
 const TAKES_BEFORE_FOLD = 3;
 const foldedTakes = takes.slice(TAKES_BEFORE_FOLD);
-const metaParts = [song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined].filter(
+const metaParts = [song.musicalKey, song.tempoBpm ? t.songs.bpm(song.tempoBpm) : undefined].filter(
   Boolean,
 );
 // An interleaved chart (chords above their matching lyric section) when a
@@ -181,7 +185,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
         every take of it links here, and a working link that answers "not
         found" is worse than one that says why. */}
     {isArchived && (
-      <Banner kind="info" title="Archived">
+      <Banner kind="info" title={t.songs.archivedBanner}>
         Out of the library and off the form when you add a take. Its takes are untouched and still
         play.
         {canArchive && (
@@ -190,10 +194,10 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             href={`/admin/songs/${song.id}/archive?unarchive=1`}
             class="bp-btn bp-btn-secondary bp-btn-sm"
             data-confirm
-            data-confirm-title={`Put ${song.title} back?`}
-            data-confirm-body="It returns to the song library and to the picker when you add a take."
+            data-confirm-title={t.songs.unarchiveConfirmTitle(song.title)}
+            data-confirm-body={t.songs.unarchiveConfirmBody}
             data-confirm-action={`/admin/songs/${song.id}/archive?unarchive=1`}
-            data-confirm-cta="Unarchive song"
+            data-confirm-cta={t.songs.unarchiveCta}
             data-confirm-tone="neutral"
           >
             Put it back
@@ -201,8 +205,8 @@ function eventOptionLabel(event: eventsRepo.Event): string {
         )}
       </Banner>
     )}
-    {justCreated && <Banner kind="success">Added. Fill in the rest whenever you like.</Banner>}
-    {justSaved && <Banner kind="success">Saved.</Banner>}
+    {justCreated && <Banner kind="success">{t.songs.created}</Banner>}
+    {justSaved && <Banner kind="success">{t.songs.saved}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <div>
@@ -240,9 +244,9 @@ function eventOptionLabel(event: eventsRepo.Event): string {
 
     <RecordSheet
       id="add-take"
-      eyebrow="New take"
-      title="Add a take"
-      subtitle="It goes on this song; the audio comes afterwards."
+      eyebrow={t.songs.addTakeEyebrow}
+      title={t.songs.addTakeTitle}
+      subtitle={t.songs.addTakeSubtitle}
     >
       <form method="post" class="bp-sheet-form" novalidate>
         <input type="hidden" name="intent" value="create-take" />
@@ -257,7 +261,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             </select>
           </div>
           <Field
-            label="Recorded"
+            label={t.songs.recordedLabel}
             name="recordedAt"
             type="date"
             required
@@ -265,9 +269,9 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             error={takeErrorField === "recordedAt" ? takeError : undefined}
           />
           <Field
-            label="Label"
+            label={t.songs.takeLabelLabel}
             name="label"
-            hint="Which pass it was — take 3, with the horns. Optional."
+            hint={t.songs.takeLabelHint}
             error={takeErrorField === "label" ? takeError : undefined}
           />
           <fieldset class="bp-sheet-field">
@@ -295,32 +299,32 @@ function eventOptionLabel(event: eventsRepo.Event): string {
 
     <RecordSheet
       id="edit-song"
-      eyebrow="Editing song"
+      eyebrow={t.songs.editEyebrow}
       title={song.title}
-      subtitle="Everything here is optional except the title."
+      subtitle={t.songs.editSubtitle}
     >
       <form method="post" class="bp-sheet-form" novalidate>
         <input type="hidden" name="intent" value="update" />
         <input type="hidden" name="songId" value={song.id} />
         <div class="bp-sheet-body">
           <Field
-            label="Title"
+            label={t.songs.titleLabel}
             name="title"
             required
             value={song.title}
             autocomplete="off"
-            hint="The web address stays as it is — renaming won't break links anyone has."
+            hint={t.songs.slugHint}
             error={editErrorField === "title" ? editError : undefined}
           />
           <div class="bp-admin-add">
             <Field
-              label="Key"
+              label={t.songs.keyLabel}
               name="musicalKey"
               value={song.musicalKey ?? ""}
               error={editErrorField === "musicalKey" ? editError : undefined}
             />
             <Field
-              label="Tempo"
+              label={t.songs.tempoLabel}
               name="tempoBpm"
               type="number"
               inputmode="numeric"
@@ -343,12 +347,12 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             vocabulary={[...KNOWN_SECTION_WORDS]}
           />
           <Field
-            label="Notes"
+            label={t.songs.notesLabel}
             name="notes"
             as="textarea"
             rows="4"
             value={song.notes ?? ""}
-            hint="Anything the band needs to remember about playing it."
+            hint={t.songs.notesHint}
             error={editErrorField === "notes" ? editError : undefined}
           />
           {/* One extras block: `.bp-sheet-extras` draws its own top rule, and
@@ -361,10 +365,10 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                   href={`/admin/songs/${song.id}/archive`}
                   class="bp-sheet-danger"
                   data-confirm
-                  data-confirm-title={`Archive ${song.title}?`}
-                  data-confirm-body={archiveSongConsequence(takeTotal)}
+                  data-confirm-title={t.songs.archiveConfirmTitle(song.title)}
+                  data-confirm-body={archiveSongConsequence(takeTotal, locale)}
                   data-confirm-action={`/admin/songs/${song.id}/archive`}
-                  data-confirm-cta="Archive song"
+                  data-confirm-cta={t.songs.archiveCta}
                 >
                   Archive this song
                 </a>
@@ -373,10 +377,10 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                 href={`/admin/songs/${song.id}/delete`}
                 class="bp-sheet-danger"
                 data-confirm
-                data-confirm-title={`Delete ${song.title} and everything under it?`}
-                data-confirm-body={deleteSongConsequence(takeTotal, songFileCount, songByteTotal)}
+                data-confirm-title={t.songs.deleteConfirmTitle(song.title)}
+                data-confirm-body={deleteSongConsequence(takeTotal, songFileCount, songByteTotal, locale)}
                 data-confirm-action={`/admin/songs/${song.id}/delete`}
-                data-confirm-cta="Delete song"
+                data-confirm-cta={t.songs.deleteCta}
                 data-confirm-redirect="/songs?song_deleted=1"
               >
                 Delete this song for good
@@ -409,7 +413,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
       <div class="bp-song-detail-chart" transition:animate="none">
         {chart.kind === "sections" && (
           <section>
-            <h2 class="bp-section-title">Chords &amp; lyrics</h2>
+            <h2 class="bp-section-title">{t.songs.chartHeading}</h2>
             <div class="bp-song-chart">
               {chart.sections.map((section) => (
                 <div
@@ -445,13 +449,13 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             lyrics, blank lines (stanza breaks) intact. */}
             {chart.chordText && (
               <section>
-                <h2 class="bp-section-title">Chords</h2>
+                <h2 class="bp-section-title">{t.songs.chordsHeading}</h2>
                 <pre class="bp-chords">{chart.chordText}</pre>
               </section>
             )}
             {chart.lyricsText && (
               <section>
-                <h2 class="bp-section-title">Lyrics</h2>
+                <h2 class="bp-section-title">{t.songs.lyricsHeading}</h2>
                 <pre class="bp-lyrics">{chart.lyricsText}</pre>
               </section>
             )}
@@ -464,9 +468,9 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             takes and made the page look broken rather than empty. */}
         {chart.kind === "none" && (
           <section>
-            <h2 class="bp-section-title">Chords &amp; lyrics</h2>
+            <h2 class="bp-section-title">{t.songs.chartHeading}</h2>
             <div class="bp-empty-state">
-              <p>Nobody's written these down yet.</p>
+              <p>{t.songs.chartEmpty}</p>
             </div>
           </section>
         )}
@@ -474,15 +478,15 @@ function eventOptionLabel(event: eventsRepo.Event): string {
 
       <div class="bp-song-detail-aside">
         <div class="bp-title-row">
-          <h2 class="bp-section-title bp-m0">Takes</h2>
+          <h2 class="bp-section-title bp-m0">{t.songs.takesHeading}</h2>
           <button type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="add-take">
-            Add take
+            {t.songs.addTake}
           </button>
         </div>
         {
           takes.length === 0 ? (
             <div class="bp-empty-state">
-              <p>No takes of this one yet — record a rehearsal and it'll show up here.</p>
+              <p>{t.songs.takesEmpty}</p>
             </div>
           ) : (
             <div class="bp-take-list">
@@ -507,7 +511,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                       Show {foldedTakes.length} more{" "}
                       {foldedTakes.length === 1 ? "take" : "takes"}
                     </span>
-                    <span class="bp-take-fold-close">Show fewer</span>
+                    <span class="bp-take-fold-close">{t.songs.showFewer}</span>
                   </summary>
                   <div class="bp-take-list">
                     {foldedTakes.map((take) => (
@@ -543,14 +547,14 @@ function eventOptionLabel(event: eventsRepo.Event): string {
 
         {song.notes && (
           <section class="bp-song-aside-section">
-            <h2 class="bp-section-title bp-m0">General notes</h2>
+            <h2 class="bp-section-title bp-m0">{t.songs.generalNotesHeading}</h2>
             <p class="bp-m0">{song.notes}</p>
           </section>
         )}
 
         {aliases.length > 0 && (
           <section class="bp-song-aside-section">
-            <h2 class="bp-section-title bp-m0">Also known as</h2>
+            <h2 class="bp-section-title bp-m0">{t.songs.aliasesHeading}</h2>
             <ul class="bp-stack bp-stack-tight list-none">
               {aliases.map((alias) => (
                 <li class={alias.source === "ingest" ? "bp-mono" : ""}>{alias.aliasNorm}</li>

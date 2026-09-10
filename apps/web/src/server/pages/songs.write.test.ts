@@ -380,11 +380,11 @@ describe("deleteSong", () => {
 
 describe("deleteSongConsequence", () => {
   it("says plainly when nothing recorded is lost", () => {
-    expect(deleteSongConsequence(0, 0, 0)).toContain("no takes, so nothing recorded is lost");
+    expect(deleteSongConsequence(0, 0, 0, "en")).toContain("no takes, so nothing recorded is lost");
   });
 
   it("leads with the recordings, and points at archiving instead", () => {
-    const text = deleteSongConsequence(3, 14, 212_000_000);
+    const text = deleteSongConsequence(3, 14, 212_000_000, "en");
     expect(text).toContain("3 takes");
     expect(text).toContain("14 audio files");
     expect(text).toContain("Archive it instead");

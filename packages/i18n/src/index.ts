@@ -29,4 +29,5 @@ export { homeMessages } from "./messages/home.js";
 export { type Messages, messages } from "./messages/index.js";
 export { LANGUAGE_NAMES, meMessages } from "./messages/me.js";
 export { shellMessages } from "./messages/shell.js";
+export { songsMessages } from "./messages/songs.js";
 export { type VoteTally, votingMessages } from "./messages/voting.js";

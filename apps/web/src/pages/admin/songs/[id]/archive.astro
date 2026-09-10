@@ -50,7 +50,7 @@ if (!song) {
   return new Response("Song not found.", { status: 404 });
 }
 const takeCount = await takesRepo.countBySong(appDeps.db, song.id);
-const consequence = archiveSongConsequence(takeCount);
+const consequence = archiveSongConsequence(takeCount, Astro.locals.locale);
 ---
 
 <Layout title={archiving ? "Archive song" : "Unarchive song"}>

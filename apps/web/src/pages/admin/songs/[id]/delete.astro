@@ -57,7 +57,7 @@ for (const take of takes) {
     byteTotal += asset.bytes;
   }
 }
-const consequence = deleteSongConsequence(takes.length, fileCount, byteTotal);
+const consequence = deleteSongConsequence(takes.length, fileCount, byteTotal, Astro.locals.locale);
 ---
 
 <Layout title="Delete song">

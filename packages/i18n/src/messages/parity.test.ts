@@ -43,6 +43,10 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // An event plate's name is already its own label plus its own count —
   // there is no English word in it to translate.
   "home.plateEventName(parts)",
+  // "bpm" is the same symbol in both languages, and the number is the value.
+  "songs.bpm(n)",
+  // "Tempo" is the same word in Czech.
+  "songs.tempoLabel",
 ]);
 
 /** Arguments to call a function-valued entry with, keyed by its dotted path. */
@@ -60,6 +64,33 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "other", args: [7] },
   ],
   "home.heroName": [{ label: "parts", args: [{ name: "Čoudy", kind: "take" }] }],
+  "songs.countPlain": [
+    { label: "one", args: [1] },
+    { label: "few", args: [3] },
+    { label: "other", args: [7] },
+  ],
+  "songs.countMatching": [
+    { label: "one", args: [1] },
+    { label: "other", args: [7] },
+  ],
+  "songs.countArchived": [
+    { label: "one", args: [1] },
+    { label: "other", args: [7] },
+  ],
+  "songs.bpm": [{ label: "n", args: [120] }],
+  "songs.unarchiveConfirmTitle": [{ label: "t", args: ["Čoudy"] }],
+  "songs.archiveConfirmTitle": [{ label: "t", args: ["Čoudy"] }],
+  "songs.deleteConfirmTitle": [{ label: "t", args: ["Čoudy"] }],
+  "songs.showMore": [{ label: "n", args: [4] }],
+  "songs.archiveConsequence": [
+    { label: "none", args: [{ takeCount: 0 }] },
+    { label: "one", args: [{ takeCount: 1 }] },
+    { label: "many", args: [{ takeCount: 6 }] },
+  ],
+  "songs.deleteConsequence": [
+    { label: "none", args: [{ takeCount: 0, fileCount: 0, byteTotal: "0 B" }] },
+    { label: "some", args: [{ takeCount: 3, fileCount: 5, byteTotal: "312.0 MB" }] },
+  ],
   "home.plateTakeName": [{ label: "parts", args: [{ name: "Čoudy", date: "8. 7. 2026" }] }],
   "home.plateSongName": [{ label: "parts", args: [{ name: "Čoudy", detail: "3 taky" }] }],
   "home.plateEventName": [{ label: "parts", args: [{ name: "Zkouška", detail: "3 taky" }] }],

@@ -1,4 +1,6 @@
 ---
+import { hasAllScopes } from "@bandplate/core";
+import { favoritesRepo } from "@bandplate/db";
 // The song library — a repertoire index, direction S1 from the canvas.
 //
 // A song row uses the take row's grammar, which is the argument for it: every
@@ -11,8 +13,7 @@
 // Search and sort are the whole toolbar now: a field and three pills, no Apply,
 // no Clear — the same treatment `/events` got, and for the same reason. The
 // instrument filter is gone entirely (see `server/pages/songs.ts`).
-import { hasAllScopes } from "@bandplate/core";
-import { favoritesRepo } from "@bandplate/db";
+import { formatShortDate, messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
@@ -21,7 +22,7 @@ import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import { formatShortDate } from "../../server/format.js";
+
 import {
   SONGS_PER_PAGE,
   type SongField,
@@ -42,6 +43,9 @@ const appDeps = await getAppDeps();
 // M8 — adding a song. The POST comes back to this same URL and re-renders on
 // failure (which loses what was typed, the same trade the admin add forms
 // already make) or redirects on success, so a reload never re-posts.
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
 let createError: string | undefined;
 let createErrorField: SongField | undefined;
 let formError: string | undefined;
@@ -49,7 +53,7 @@ let duplicateSlug: string | undefined;
 
 if (Astro.request.method === "POST") {
   if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
-    formError = "Something about that request looked wrong. Reload the page and try again.";
+    formError = t.common.originError;
   } else {
     const formData = await Astro.request.formData();
     if (formData.get("intent") === "create") {
@@ -96,17 +100,16 @@ const viewingArchive = query.archived === true;
 // Counted from the TOTAL, not from this page: "25 songs" under a library of
 // 60 would be the page's length wearing the library's name.
 const songCount = songs.total;
-const noun = songCount === 1 ? "song" : "songs";
 const resultsLabel = query.search
-  ? `${songCount} ${songCount === 1 ? "song matches" : "songs match"}`
+  ? t.songs.countMatching(songCount)
   : viewingArchive
-    ? `${songCount} archived ${noun}`
-    : `${songCount} ${noun}`;
+    ? t.songs.countArchived(songCount)
+    : t.songs.countPlain(songCount);
 
 const SORT_OPTIONS = [
-  { value: "title", label: "A to Z" },
-  { value: "recent", label: "Recently played" },
-  { value: "takes", label: "Most takes" },
+  { value: "title", label: t.songs.sortTitle },
+  { value: "recent", label: t.songs.sortRecent },
+  { value: "takes", label: t.songs.sortTakes },
 ] as const;
 
 /** A sort pill's href: this sort, keeping whatever search is in force. Plain
@@ -143,32 +146,32 @@ function archivedHref(): string {
 }
 ---
 
-<AppLayout title="Songs" principal={principal} current="songs">
+<AppLayout title={t.songs.title} principal={principal} current="songs">
   <div class="bp-stack">
     {/* Direction B from the canvas: the write affordance is a primary button
         in the title row, opening the record sheet the admin pages already
         use. It shortens to "Add" on a phone so the title keeps its room. */}
     <div class="bp-title-row">
-      <h1 class="bp-page-title">Songs</h1>
+      <h1 class="bp-page-title">{t.songs.title}</h1>
       <button type="button" class="bp-btn bp-btn-primary" data-sheet-open="add-song">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
         </svg>
-        Add song
+        {t.songs.addSong}
       </button>
     </div>
 
-    {justArchived && <Banner kind="success">Archived. It's out of the library; its takes are untouched.</Banner>}
-    {justUnarchived && <Banner kind="success">Back in the library.</Banner>}
-    {justDeleted && <Banner kind="success">Song deleted, along with its takes and their files.</Banner>}
+    {justArchived && <Banner kind="success">{t.songs.archivedBannerDone}</Banner>}
+    {justUnarchived && <Banner kind="success">{t.songs.unarchivedDone}</Banner>}
+    {justDeleted && <Banner kind="success">{t.songs.deletedDone}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
-    <RecordSheet id="add-song" eyebrow="New song" title="Add a song" subtitle="A title is all you need — the rest can wait until someone knows it.">
+    <RecordSheet id="add-song" eyebrow={t.songs.addSongEyebrow} title={t.songs.addSongTitle} subtitle={t.songs.addSongSubtitle}>
       <form method="post" class="bp-sheet-form" novalidate>
         <input type="hidden" name="intent" value="create" />
         <div class="bp-sheet-body">
           <Field
-            label="Title"
+            label={t.songs.titleLabel}
             name="title"
             required
             autocomplete="off"
@@ -181,26 +184,26 @@ function archivedHref(): string {
           )}
           <div class="bp-admin-add">
             <Field
-              label="Key"
+              label={t.songs.keyLabel}
               name="musicalKey"
-              hint="However you say it — Am, F# dorian."
+              hint={t.songs.keyHint}
               error={createErrorField === "musicalKey" ? createError : undefined}
             />
             <Field
-              label="Tempo"
+              label={t.songs.tempoLabel}
               name="tempoBpm"
               type="number"
               inputmode="numeric"
               min="1"
               max="400"
-              hint="Beats per minute."
+              hint={t.songs.tempoHint}
               error={createErrorField === "tempoBpm" ? createError : undefined}
             />
           </div>
         </div>
         <div class="bp-sheet-foot">
-          <button type="submit" class="bp-btn bp-btn-primary">Add song</button>
-          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+          <button type="submit" class="bp-btn bp-btn-primary">{t.songs.addSong}</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.songs.cancel}</button>
         </div>
       </form>
     </RecordSheet>
@@ -220,7 +223,7 @@ function archivedHref(): string {
       transition:persist="songs-search"
       data-songs-search
     >
-      <label class="bp-visually-hidden" for="song-search">Search song titles</label>
+      <label class="bp-visually-hidden" for="song-search">{t.songs.searchLabel}</label>
       <span class="bp-songs-search-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="7" />
@@ -233,13 +236,13 @@ function archivedHref(): string {
         id="song-search"
         name="q"
         value={query.search ?? ""}
-        placeholder="Search titles"
+        placeholder={t.songs.searchPlaceholder}
       />
       {sort !== "title" && <input type="hidden" name="sort" value={sort} />}
       {/* Submits the form for anyone with no JS, and is the keyboard's Enter
           target for everyone else. Hidden, because with the debounce running
           there is nothing to press. */}
-      <button type="submit" class="bp-visually-hidden">Search</button>
+      <button type="submit" class="bp-visually-hidden">{t.songs.searchSubmit}</button>
     </form>
 
     <div class="bp-filter-pills">
@@ -264,7 +267,7 @@ function archivedHref(): string {
             class="bp-filter-pill bp-filter-pill--set-apart"
             aria-pressed={viewingArchive ? "true" : "false"}
           >
-            Archived
+            {t.songs.archived}
           </a>
         )
       }
@@ -277,10 +280,10 @@ function archivedHref(): string {
         <div class="bp-empty-state">
           <p>
             {query.search
-              ? "No songs match that search."
+              ? t.songs.emptySearch
               : viewingArchive
-                ? "Nothing archived."
-                : "No songs yet. Add one, or wait for the first takes to come in."}
+                ? t.songs.emptyArchive
+                : t.songs.empty}
           </p>
         </div>
       ) : (
@@ -296,9 +299,9 @@ function archivedHref(): string {
                       is case-significant: "Em" is E minor, "EM" is nothing.
                       Same size and colour, no transform and no extra tracking. */}
                   <span class="bp-song-row-meta">
-                    {[song.musicalKey, song.tempoBpm ? `${song.tempoBpm} bpm` : undefined]
+                    {[song.musicalKey, song.tempoBpm ? t.songs.bpm(song.tempoBpm) : undefined]
                       .filter(Boolean)
-                      .join(" · ") || "No key or tempo"}
+                      .join(" · ") || t.songs.noKeyOrTempo}
                   </span>
                 </span>
                 {/* Two numbers, in the note size the rest of the app uses for an
@@ -306,9 +309,9 @@ function archivedHref(): string {
                     numbers ARE is obvious from the words beside them. */}
                 <span class="bp-song-row-stats">
                   <span>
-                    {song.takeCount} {song.takeCount === 1 ? "take" : "takes"}
+                    {t.events.takeCount(song.takeCount)}
                   </span>
-                  <span class="bp-song-row-last">{formatShortDate(song.lastPlayedAt)}</span>
+                  <span class="bp-song-row-last">{formatShortDate(locale, song.lastPlayedAt)}</span>
                 </span>
               </a>
               <FavoriteToggle

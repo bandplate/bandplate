@@ -1,3 +1,13 @@
+import { type Storage, allocateSongSlug, normalizeTitle } from "@bandplate/core";
+import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
+import {
+  eventsRepo,
+  favoritesRepo,
+  type instrumentsRepo,
+  songsRepo,
+  takesRepo,
+  votesRepo,
+} from "@bandplate/db";
 // `/songs` and `/songs/[slug]` page logic — the reads that back both pages,
 // and (since M8) the form handlers that write them. The library list's search
 // and sort are a plain GET form (works with JS off — see
@@ -17,18 +27,8 @@
 // `/search` filters takes and keeps it. On a page listing songs it was a
 // dozen checkboxes answering a question about a different object, and on a
 // phone it pushed the songs themselves below the fold.
-import { type Storage, allocateSongSlug, normalizeTitle } from "@bandplate/core";
-import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
-import {
-  eventsRepo,
-  favoritesRepo,
-  type instrumentsRepo,
-  songsRepo,
-  takesRepo,
-  votesRepo,
-} from "@bandplate/db";
+import { type Locale, formatBytes, messages } from "@bandplate/i18n";
 import { z } from "zod";
-import { formatBytes } from "../format.js";
 
 export type SongListItem = songsRepo.SongWithStats;
 
@@ -375,17 +375,8 @@ export async function setSongArchived(
  * A song with no takes says nothing about takes. "Its 0 takes stay" is
  * technically true and reads like a bug.
  */
-export function archiveSongConsequence(takeCount: number): string {
-  const head = "It disappears from the song library and from the picker when you add a take.";
-  const takes =
-    takeCount === 0
-      ? ""
-      : takeCount === 1
-        ? " Its one take stays, keeps playing, and still turns up in search."
-        : ` Its ${takeCount} takes stay, keep playing, and still turn up in search.`;
-  const tail =
-    " If the bridge uploads a take of it again it comes back on its own, and you can put it back by hand any time.";
-  return `${head}${takes}${tail}`;
+export function archiveSongConsequence(takeCount: number, locale: Locale): string {
+  return messages(locale).songs.archiveConsequence({ takeCount });
 }
 
 export type DeleteSongResult =
@@ -455,14 +446,14 @@ export function deleteSongConsequence(
   takeCount: number,
   fileCount: number,
   byteTotal: number,
+  locale: Locale,
 ): string {
-  if (takeCount === 0) {
-    return "This can't be undone. It has no takes, so nothing recorded is lost — the song itself goes, along with its aliases and notes.";
-  }
-  const takes = `${takeCount} ${takeCount === 1 ? "take" : "takes"}`;
-  const files =
-    fileCount === 0
-      ? ""
-      : ` and ${fileCount} audio ${fileCount === 1 ? "file" : "files"} (${formatBytes(byteTotal)})`;
-  return `This can't be undone. It permanently removes ${takes}${files}, every vote cast on them, and anyone's pin. Archive it instead if you only want it out of the library — that keeps every recording.`;
+  return messages(locale).songs.deleteConsequence({
+    takeCount,
+    fileCount,
+    // Formatted here, where the locale is known — `packages/i18n`'s catalog
+    // takes primitives only, so it never sees a byte count it would have to
+    // format itself.
+    byteTotal: formatBytes(locale, byteTotal),
+  });
 }

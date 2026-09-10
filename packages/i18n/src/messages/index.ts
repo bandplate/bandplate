@@ -15,6 +15,7 @@ import { eventsByLocale } from "./events.js";
 import { homeByLocale } from "./home.js";
 import { meByLocale } from "./me.js";
 import { shellByLocale } from "./shell.js";
+import { songsByLocale } from "./songs.js";
 import { votingByLocale } from "./voting.js";
 
 const CATALOG = {
@@ -25,6 +26,7 @@ const CATALOG = {
     home: homeByLocale.en,
     me: meByLocale.en,
     shell: shellByLocale.en,
+    songs: songsByLocale.en,
     voting: votingByLocale.en,
   },
   cs: {
@@ -34,6 +36,7 @@ const CATALOG = {
     home: homeByLocale.cs,
     me: meByLocale.cs,
     shell: shellByLocale.cs,
+    songs: songsByLocale.cs,
     voting: votingByLocale.cs,
   },
 } as const;

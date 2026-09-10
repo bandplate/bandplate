@@ -518,7 +518,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                   data-asset-id={playableMaster.id}
                   data-title={heroTitle}
                   data-subtitle={heroSubtitle}
-                  data-source-label="Master"
+                  data-source-kind="master"
                   data-role="source-select"
                   aria-pressed="false"
                 >
@@ -536,7 +536,8 @@ function assetLabel(asset: assetsRepo.Asset): string {
                       data-asset-id={stem.id}
                       data-title={heroTitle}
                       data-subtitle={heroSubtitle}
-                      data-source-label={`Solo: ${instrumentLabel}`}
+                      data-source-kind="stem"
+                      data-source-name={instrumentLabel}
                       data-role="source-select"
                       aria-pressed="false"
                     >

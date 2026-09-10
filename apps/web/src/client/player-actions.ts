@@ -29,7 +29,8 @@ export interface ClickedSource {
   assetId: string;
   title: string;
   subtitle: string;
-  sourceLabel: string;
+  sourceKind: "master" | "stem";
+  sourceName: string;
   /** "source-select" (the Solo drawer's chips) vs. the default "toggle" play/pause control — see the module comment, case 1. */
   role: string;
 }
@@ -57,7 +58,8 @@ export function decidePlayerClickAction(
       track: {
         ...active,
         sourceAssetId: clicked.assetId,
-        sourceLabel: clicked.sourceLabel,
+        sourceKind: clicked.sourceKind,
+        sourceName: clicked.sourceName,
       },
       preservePosition: true,
     };
@@ -70,7 +72,8 @@ export function decidePlayerClickAction(
       title: clicked.title,
       subtitle: clicked.subtitle,
       sourceAssetId: clicked.assetId,
-      sourceLabel: clicked.sourceLabel,
+      sourceKind: clicked.sourceKind,
+      sourceName: clicked.sourceName,
     },
   };
 }

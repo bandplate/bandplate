@@ -57,16 +57,25 @@ function readFavoriteForm(form: HTMLFormElement): { targetType: string; targetId
  *  optimistic update's starting point. Falls back to all-zero if no tally
  *  element is on the page for this take (a caller that renders `VoteToggle`
  *  without also rendering `[data-vote-tally-for]`, which doesn't happen
- *  today, but this keeps the function total rather than throwing). */
+ *  today, but this keeps the function total rather than throwing).
+ *
+ *  The counts come off `data-*`, NOT out of the rendered sentence. This used
+ *  to run `/(\d+) of (\d+).*\((\d+)%\)/` over `textContent`, which meant the
+ *  optimistic-vote path only worked while `formatVoteTally` kept saying
+ *  "3 of 5 votes say keeper (60%)" in that exact English shape. Translate the
+ *  sentence and voting would have broken in the browser with every test still
+ *  green. Numbers are the contract; the sentence is presentation.
+ *
+ *  `ratingScore` is derived rather than read for the same reason it isn't
+ *  rendered as an attribute — it is a function of the other two, and storing
+ *  it would let the two disagree. */
 function readCurrentTally(takeId: string): Tally {
   const el = document.querySelector<HTMLElement>(`[data-vote-tally-for="${CSS.escape(takeId)}"]`);
-  const text = el?.textContent ?? "";
-  const match = text.match(/(\d+) of (\d+).*\((\d+)%\)/);
-  if (!match) {
+  const keeperVotes = Number(el?.dataset.keeperVotes);
+  const totalVotes = Number(el?.dataset.totalVotes);
+  if (!Number.isFinite(keeperVotes) || !Number.isFinite(totalVotes)) {
     return { keeperVotes: 0, totalVotes: 0, ratingScore: 0 };
   }
-  const keeperVotes = Number(match[1]);
-  const totalVotes = Number(match[2]);
   return { keeperVotes, totalVotes, ratingScore: totalVotes > 0 ? keeperVotes / totalVotes : 0 };
 }
 
@@ -103,6 +112,12 @@ function applyVoteState(takeId: string, myVote: boolean | undefined, tally: Tall
   for (const el of document.querySelectorAll<HTMLElement>(
     `[data-vote-tally-for="${CSS.escape(takeId)}"]`,
   )) {
+    // Both halves, together: the sentence a member reads and the counts the
+    // NEXT optimistic update reads back. Writing only the text would leave
+    // `readCurrentTally` seeing the pre-vote numbers, so a second vote on the
+    // same take would compute its optimistic tally from a stale base.
+    el.dataset.keeperVotes = String(tally.keeperVotes);
+    el.dataset.totalVotes = String(tally.totalVotes);
     el.textContent = formatVoteTallyClient(tally.keeperVotes, tally.totalVotes, tally.ratingScore);
   }
 }

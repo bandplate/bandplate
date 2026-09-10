@@ -67,6 +67,20 @@ const MAX_WAVEFORM_BARS = 1000;
 /** What the skip controls move by. Not a preference — "play that bit again" is the move this app is for, and there is no queue to skip through. */
 const SKIP_SECONDS = 10;
 
+/**
+ * The two words the player says about a source, in one place each.
+ *
+ * They used to live in the `data-source-label` of every button that could
+ * start audio — six call sites across three components and a page — and the
+ * player then string-matched them back to work out what it was playing. Now
+ * the buttons carry `data-source-kind` (the fact) and, for a stem,
+ * `data-source-name` (the instrument), and these supply the wording. When the
+ * message catalog lands they become catalog lookups; until then they are
+ * exactly what they always rendered.
+ */
+const MASTER_LABEL = "Master";
+const SOLO_PREFIX = "Solo: ";
+
 /** mm:ss. Chivo's tabular figures (see `.bp-player-time`) keep it from shifting as it ticks. */
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {
@@ -81,7 +95,8 @@ interface SourceButtonData {
   assetId: string;
   title: string;
   subtitle: string;
-  sourceLabel: string;
+  sourceKind: "master" | "stem";
+  sourceName: string;
   /** "source-select" (the stems drawer) gets different aria-label phrasing than the default play/pause toggle. */
   role: string;
 }
@@ -96,7 +111,10 @@ function readButtonData(el: HTMLElement): SourceButtonData | null {
     assetId,
     title,
     subtitle: el.dataset.subtitle ?? "",
-    sourceLabel: el.dataset.sourceLabel ?? "Master",
+    // A control that says nothing about its source is the master — that is
+    // what every plain play button on a row or a plate is.
+    sourceKind: el.dataset.sourceKind === "stem" ? "stem" : "master",
+    sourceName: el.dataset.sourceName ?? "",
     role: el.dataset.role ?? "toggle",
   };
 }
@@ -419,12 +437,11 @@ export default function Player() {
     };
   }, []);
 
-  const announced =
-    track && track.sourceLabel !== "Master"
-      ? `Now playing: ${track.title} — ${track.sourceLabel}`
-      : track
-        ? `Now playing: ${track.title}`
-        : "";
+  const announced = !track
+    ? ""
+    : track.sourceKind === "stem"
+      ? `Now playing: ${track.title} — ${SOLO_PREFIX}${track.sourceName}`
+      : `Now playing: ${track.title}`;
 
   // One bar per `BAR_PITCH_PX` of actual rail. Observed rather than read once:
   // the player is persistent, so it outlives rotations, window drags and the
@@ -458,9 +475,11 @@ export default function Player() {
     [peaks, barCount],
   );
   const progress = duration > 0 ? position / duration : 0;
-  // The source label without its "Solo: " prefix — the chip has a caret and
-  // names a source; the prefix would be a third thing on screen saying so.
-  const sourceName = track ? track.sourceLabel.replace(/^Solo:\s*/, "") : "";
+  // The chip has a caret and names a source, so it shows the bare name — no
+  // "Solo: " prefix, which would be a third thing on screen saying so. This
+  // used to strip that prefix back off with `/^Solo:\s*/`, which only worked
+  // while the prefix was that English word.
+  const sourceName = !track ? "" : track.sourceKind === "stem" ? track.sourceName : MASTER_LABEL;
 
   return (
     <div class="bp-player" hidden={!track} data-testid="bp-player" ref={playerRef}>
@@ -617,7 +636,8 @@ export default function Player() {
                     data-asset-id={source.assetId}
                     data-title={track.title}
                     data-subtitle={track.subtitle}
-                    data-source-label={source.kind === "stem" ? `Solo: ${source.label}` : "Master"}
+                    data-source-kind={source.kind}
+                    data-source-name={source.kind === "stem" ? source.label : ""}
                     data-role="source-select"
                     onClick={() => setSwitcherOpen(false)}
                   >

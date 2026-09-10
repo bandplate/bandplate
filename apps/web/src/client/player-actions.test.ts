@@ -7,7 +7,8 @@ const master: PlayerTrack = {
   title: "Neon Skyline",
   subtitle: "rehearsal — Aug 12",
   sourceAssetId: "asset-master",
-  sourceLabel: "Master",
+  sourceKind: "master",
+  sourceName: "",
 };
 
 describe("decidePlayerClickAction", () => {
@@ -17,7 +18,8 @@ describe("decidePlayerClickAction", () => {
       assetId: "asset-master",
       title: "Neon Skyline",
       subtitle: "rehearsal — Aug 12",
-      sourceLabel: "Master",
+      sourceKind: "master",
+      sourceName: "",
       role: "toggle",
     });
     expect(action).toEqual({
@@ -32,7 +34,8 @@ describe("decidePlayerClickAction", () => {
       assetId: "asset-master",
       title: "Neon Skyline",
       subtitle: "rehearsal — Aug 12",
-      sourceLabel: "Master",
+      sourceKind: "master",
+      sourceName: "",
       role: "toggle",
     });
     expect(action).toEqual({ kind: "toggle-playback" });
@@ -44,7 +47,8 @@ describe("decidePlayerClickAction", () => {
       assetId: "asset-master",
       title: "Neon Skyline",
       subtitle: "rehearsal — Aug 12",
-      sourceLabel: "Master",
+      sourceKind: "master",
+      sourceName: "",
       role: "source-select",
     });
     expect(action).toEqual({ kind: "noop" });
@@ -56,7 +60,8 @@ describe("decidePlayerClickAction", () => {
       assetId: "asset-bass-stem",
       title: "Neon Skyline",
       subtitle: "rehearsal — Aug 12",
-      sourceLabel: "Solo: Bass",
+      sourceKind: "stem",
+      sourceName: "Bass",
       role: "source-select",
     });
     expect(action).toEqual({
@@ -67,7 +72,8 @@ describe("decidePlayerClickAction", () => {
         title: "Neon Skyline",
         subtitle: "rehearsal — Aug 12",
         sourceAssetId: "asset-bass-stem",
-        sourceLabel: "Solo: Bass",
+        sourceKind: "stem",
+        sourceName: "Bass",
       },
     });
   });
@@ -78,7 +84,8 @@ describe("decidePlayerClickAction", () => {
       assetId: "asset-bass-stem",
       title: "Stale Title From A Different Render",
       subtitle: "stale subtitle",
-      sourceLabel: "Solo: Bass",
+      sourceKind: "stem",
+      sourceName: "Bass",
       role: "source-select",
     });
     expect(action.kind).toBe("switch-source");
@@ -94,7 +101,8 @@ describe("decidePlayerClickAction", () => {
       assetId: "asset-2-master",
       title: "Basement Tapes",
       subtitle: "concert — Sep 1",
-      sourceLabel: "Master",
+      sourceKind: "master",
+      sourceName: "",
       role: "toggle",
     });
     expect(action).toEqual({
@@ -104,7 +112,8 @@ describe("decidePlayerClickAction", () => {
         title: "Basement Tapes",
         subtitle: "concert — Sep 1",
         sourceAssetId: "asset-2-master",
-        sourceLabel: "Master",
+        sourceKind: "master",
+        sourceName: "",
       },
     });
   });

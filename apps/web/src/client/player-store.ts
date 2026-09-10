@@ -21,8 +21,22 @@ export interface PlayerTrack {
   subtitle: string;
   /** The asset id of the currently selected source (the master, or one stem). */
   sourceAssetId: string;
-  /** "Master" or "Solo: <instrument>" — announced alongside the title on every source switch, since that IS a track change from a listening (and accessibility) standpoint. */
-  sourceLabel: string;
+  /**
+   * Which KIND of source is playing. This used to be inferred by comparing a
+   * display label against the literal `"Master"`, which made an English word
+   * load-bearing: the player decided how to phrase its announcement, and which
+   * name to show on the switcher chip, by string-matching copy. Translate the
+   * copy and the announcement would silently start naming the master as if it
+   * were a stem. The kind is the fact; the label is presentation.
+   */
+  sourceKind: "master" | "stem";
+  /**
+   * The instrument a stem isolates — `""` for a master, whose name the player
+   * supplies itself so the word lives in exactly one place. Announced
+   * alongside the title on every source switch, since that IS a track change
+   * from a listening (and accessibility) standpoint.
+   */
+  sourceName: string;
 }
 
 /** `null` when nothing has ever been played this session. */

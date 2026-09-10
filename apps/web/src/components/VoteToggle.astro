@@ -63,5 +63,16 @@ const tallyText = formatVoteTally(keeperVotes, totalVotes, ratingScore);
       Not a keeper
     </button>
   </form>
-  <span class="bp-vote-tally" data-vote-tally-for={takeId}>{tallyText}</span>
+  {/* The counts ride as data, not only as prose. `VoteFavorite.tsx` needs the
+      CURRENT tally to compute an optimistic one, and it used to get it by
+      running a regex over this element's text — which silently tied the
+      optimistic-vote path to the English wording of `formatVoteTally`. The
+      numbers are the contract; the sentence is presentation. `ratingScore`
+      is deliberately absent: it is `keeperVotes / totalVotes`, and a third
+      attribute would be a second source of truth for the same fact. */}
+  <span
+    class="bp-vote-tally"
+    data-vote-tally-for={takeId}
+    data-keeper-votes={keeperVotes}
+    data-total-votes={totalVotes}>{tallyText}</span>
 </div>

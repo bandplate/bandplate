@@ -68,6 +68,7 @@ let takeWithAssetsId: string;
 let takeWithNoAssetsId: string;
 let bassInstrumentId: string;
 let searchableSongId: string;
+let memberId: string;
 
 async function waitForServer(url: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -203,6 +204,8 @@ async function seedAndGetSessionCookie(): Promise<string> {
     updatedAt: now,
   });
   takeWithNoAssetsId = takeWithNoAssets.id;
+
+  memberId = member.id;
 
   await votesRepo.castVote(db, {
     takeId: takeWithAssets.id,
@@ -650,6 +653,113 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       const body = await res.text();
       expect(body).toContain(`data-take-id="${favoriteTakeId}"`);
       expect(body).not.toContain(TAKE_TRANSITION_RETARGET_MARKER);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Czech
+  // -------------------------------------------------------------------------
+
+  describe("rendering in Czech", () => {
+    // Against the BUILT server, like everything else in this file — which is
+    // the point. Locale resolution runs in middleware, `<html lang>` is set in
+    // the layout, and the islands render server-side before they hydrate;
+    // none of that is exercised by a unit test of the catalog.
+    //
+    // Each assertion is a PAIR: something Czech is present, and a distinctive
+    // English string is absent. Positive alone would pass a page that renders
+    // both; negative alone would pass a blank page. The absent strings are
+    // chosen to be distinctive — a sentinel like " of " appears in URLs and
+    // attributes and would false-positive forever.
+    // Built per request, not once at describe time: `sessionCookie` is
+    // assigned in `beforeAll`, which runs AFTER the describe body.
+    const signedIn = () => ({ cookie: sessionCookie });
+
+    // A signed-in member's OWN setting outranks the cookie — that is the
+    // documented precedence — so a `bp_locale` header would be ignored here.
+    // The row is what has to change.
+    beforeAll(async () => {
+      const client = createClient({ url: `file:${dbPath}` });
+      await membersRepo.update(createDb(client), memberId, { locale: "cs" });
+      client.close();
+    });
+
+    afterAll(async () => {
+      const client = createClient({ url: `file:${dbPath}` });
+      await membersRepo.update(createDb(client), memberId, { locale: "en" });
+      client.close();
+    });
+
+    it("negotiates from Accept-Language when nothing else is known", async () => {
+      const res = await fetch(`${ORIGIN}/login`, {
+        headers: { "accept-language": "cs-CZ,cs;q=0.9,en;q=0.8" },
+      });
+      const body = await res.text();
+      expect(body).toContain('<html lang="cs"');
+      expect(body).toContain("Zadej e-mail.");
+      expect(body).not.toContain("Enter your email.");
+    });
+
+    it("lets a bp_locale cookie outrank the browser's preference", async () => {
+      const res = await fetch(`${ORIGIN}/login`, {
+        headers: { "accept-language": "en-US,en;q=0.9", cookie: "bp_locale=cs" },
+      });
+      expect(await res.text()).toContain('<html lang="cs"');
+    });
+
+    it("ignores a bp_locale naming a language we do not speak", async () => {
+      const res = await fetch(`${ORIGIN}/login`, { headers: { cookie: "bp_locale=sk" } });
+      expect(await res.text()).toContain('<html lang="en"');
+    });
+
+    it("renders home in Czech", async () => {
+      const res = await fetch(`${ORIGIN}/`, { headers: signedIn() });
+      const body = await res.text();
+      expect(body).toContain('<html lang="cs"');
+      expect(body).toContain("Oblíbené");
+      expect(body).toContain("Poslední akce");
+      expect(body).not.toContain("Recent events");
+      expect(body).not.toContain("Nothing pinned yet.");
+    });
+
+    it("renders the shell nav in Czech, on both layouts", async () => {
+      const body = await (await fetch(`${ORIGIN}/songs`, { headers: signedIn() })).text();
+      for (const label of ["Domů", "Skladby", "Akce", "Nahrávky", "Já"]) {
+        expect(body).toContain(label);
+      }
+      // "Taky" was the first draft of the Takes label and is unusable — it
+      // reads as Czech *taky*, "also". This is the regression guard.
+      expect(body).not.toContain(">Taky<");
+      expect(body).not.toContain(">Songs<");
+    });
+
+    it("renders /takes and its filter sheet in Czech", async () => {
+      const body = await (await fetch(`${ORIGIN}/takes`, { headers: signedIn() })).text();
+      expect(body).toContain("Filtry");
+      expect(body).toContain("Poslední týden");
+      expect(body).toContain("Nejnovější");
+      expect(body).not.toContain("Past week");
+      expect(body).not.toContain("Most recent");
+    });
+
+    it("renders /me and its language picker in Czech", async () => {
+      const body = await (await fetch(`${ORIGIN}/me`, { headers: signedIn() })).text();
+      expect(body).toContain("Tvoje hlasy");
+      expect(body).toContain("Jazyk");
+      // Autonyms: whoever set Czech by accident has to be able to read their
+      // way back out, so the language NAMES stay in their own language.
+      expect(body).toContain("English");
+      expect(body).toContain("Čeština");
+      expect(body).not.toContain("Your votes");
+      expect(body).not.toContain("Sign out");
+    });
+
+    it("declines the take count rather than bolting an s on", async () => {
+      const body = await (await fetch(`${ORIGIN}/takes`, { headers: signedIn() })).text();
+      // 1 nahrávka · 2–4 nahrávky · 5+ nahrávek — whichever the seed produces,
+      // it must be one of those and never the English form.
+      expect(body).toMatch(/\d+ nahráv(ka|ky|ek)/);
+      expect(body).not.toMatch(/\d+ takes?\b/);
     });
   });
 });

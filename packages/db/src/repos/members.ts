@@ -1,4 +1,5 @@
 import { uuidv7 } from "@bandplate/core";
+import { DEFAULT_LOCALE, type Locale } from "@bandplate/i18n";
 import { eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { instruments, memberInstruments, members } from "../schema/sqlite/index.js";
@@ -68,6 +69,16 @@ export async function setStatus(db: Db, id: string, status: MemberStatus): Promi
 export interface UpdateMemberInput {
   status?: MemberStatus;
   role?: MemberRole;
+  /**
+   * The language this member reads the app in.
+   *
+   * Folded in here rather than given its own `setLocale` function, following
+   * `instrumentsRepo.UpdateInstrumentInput`'s settled precedent. Note that it
+   * is NOT an admin concern like `status` and `role` are: a member sets their
+   * own on `/me`, which is why that path deliberately does not go through
+   * `updateMemberWithGuards` — see that function.
+   */
+  locale?: Locale;
 }
 
 /**
@@ -98,6 +109,13 @@ export interface CreateIfEmptyInput {
   email: string;
   createdAt: number;
   emailVerifiedAt?: number | null;
+  /**
+   * The bootstrap admin's language. `/setup` passes what the request's
+   * `Accept-Language` asked for, so the very first member is not handed
+   * English merely because English is the default — they can still change it
+   * on `/me` afterwards.
+   */
+  locale?: Locale;
 }
 
 /**
@@ -126,14 +144,15 @@ export interface CreateIfEmptyInput {
  * `SQLiteInsertBuilder.select`'s `select(selectQuery: SQL)` signature.
  */
 export function buildCreateIfEmptyStatement(db: Db, input: CreateIfEmptyInput) {
-  // 8 values below (id, displayName, slug, email, role, status, createdAt,
-  // emailVerifiedAt) must match `members`' column count and order — see
-  // `column-order-guard.ts` for why this is checked explicitly rather
-  // than left implicit.
-  assertColumnCount(members, 8);
+  // 9 values below (id, displayName, slug, email, role, status, createdAt,
+  // emailVerifiedAt, locale) must match `members`' column count and order —
+  // see `column-order-guard.ts` for why this is checked explicitly rather
+  // than left implicit. `locale` is last because drizzle emits columns in
+  // schema DECLARATION order and it was declared last.
+  assertColumnCount(members, 9);
   const id = uuidv7();
   const statement = db.insert(members).select(sql`
-    select ${id}, ${input.displayName}, ${input.slug}, ${normalizeEmail(input.email)}, 'admin', 'active', ${input.createdAt}, ${input.emailVerifiedAt ?? null}
+    select ${id}, ${input.displayName}, ${input.slug}, ${normalizeEmail(input.email)}, 'admin', 'active', ${input.createdAt}, ${input.emailVerifiedAt ?? null}, ${input.locale ?? DEFAULT_LOCALE}
     where not exists (select 1 from members)
   `);
   return { id, statement };

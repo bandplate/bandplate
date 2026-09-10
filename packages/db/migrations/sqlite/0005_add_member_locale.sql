@@ -1,0 +1,14 @@
+-- Internationalisation: which language a member reads the app in, set by
+-- them on `/me`. Its own typed column, the shape `role` and `status` already
+-- use, rather than a preferences blob — it is a scalar enum and it is read on
+-- every request through `resolveSession`.
+--
+-- `DEFAULT 'en'` is what makes this a no-backfill migration: every existing
+-- member keeps reading exactly what they read yesterday, and the column is
+-- NOT NULL from the first row.
+--
+-- Declared LAST on the table on purpose. `membersRepo.buildCreateIfEmptyStatement`
+-- writes a positional `insert ... select`, drizzle emits columns in schema
+-- declaration order, and `assertColumnCount(members, 9)` is what fails loudly
+-- if the two ever drift. See `packages/db/src/repos/column-order-guard.ts`.
+ALTER TABLE `members` ADD `locale` text DEFAULT 'en' NOT NULL;

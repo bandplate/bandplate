@@ -1,3 +1,4 @@
+import { defineMiddleware } from "astro:middleware";
 // Resolves the session cookie to a principal on every request and puts it
 // on `Astro.locals` (typed in `env.d.ts`) — anonymous requests get
 // `undefined`, not an error. Also guards `/admin/*`: anonymous visitors are
@@ -17,15 +18,15 @@
 // unguarded even by accident. The ten existing pages' own `isSameOrigin`
 // calls are left exactly as they were (redundant with this, not replaced
 // by it) — see the task-4 handoff's "do not disturb" list.
-import { defineMiddleware } from "astro:middleware";
+import { DEFAULT_LOCALE, type Locale, negotiateLocale } from "@bandplate/i18n";
 import { getAppDeps, getAuthDeps, initWorkersRuntime } from "./server/app.js";
-import { SESSION_COOKIE_NAME } from "./server/cookies.js";
+import { SESSION_COOKIE_NAME, readLocaleCookie, setLocaleCookie } from "./server/cookies.js";
 import { isSameOrigin } from "./server/csrf.js";
 import { guardAdminPath, guardMemberPath, normalizePathname } from "./server/guard.js";
 import { resolvePrincipalFromCookie } from "./server/principal.js";
 
-const FORBIDDEN_HTML = `<!doctype html>
-<html lang="en">
+const forbiddenHtml = (locale: Locale) => `<!doctype html>
+<html lang="${locale}">
 <head><meta charset="utf-8"><title>Forbidden | bandplate</title>
 <style>
   /* Hardcoded rather than tokenised on purpose: this page is a string in
@@ -93,6 +94,34 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const principal = await resolvePrincipalFromCookie(authDeps, cookieValue);
   context.locals.principal = principal;
 
+  // --- Which language this request is rendered in -------------------------
+  //
+  // In order: the member's own setting, then the cookie recording an earlier
+  // choice, then what the browser asked for, then English. Each step is a
+  // stronger statement of intent than the one after it, and only the first is
+  // a decision the member made INSIDE the app.
+  //
+  // The member's locale is read fresh on every request — `resolveSession`
+  // already loads the row — so changing it takes effect immediately on every
+  // device that member is signed in on, with no session revocation.
+  const cookieLocale = readLocaleCookie(context.cookies);
+  const locale: Locale =
+    principal?.locale ??
+    cookieLocale ??
+    negotiateLocale(context.request.headers.get("accept-language"));
+  context.locals.locale = locale;
+
+  // Keep the cookie in step with the member, so the NEXT signed-out page they
+  // see — the sign-in screen after a logout, or on a device where the session
+  // has expired — is in the language they chose rather than whatever their
+  // browser happens to ask for. Only written when it actually differs, so this
+  // is not a Set-Cookie on every request.
+  if (principal && cookieLocale !== principal.locale) {
+    setLocaleCookie(context.cookies, principal.locale, {
+      cookieSecure: appDeps.config.cookieSecure,
+    });
+  }
+
   if (
     MUTATING_METHODS.has(context.request.method) &&
     !isApiRoute(context.url.pathname) &&
@@ -109,7 +138,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect(adminDecision.to);
   }
   if (adminDecision.kind === "forbidden") {
-    return new Response(FORBIDDEN_HTML, {
+    return new Response(forbiddenHtml(locale), {
       status: 403,
       headers: { "content-type": "text/html; charset=utf-8" },
     });

@@ -42,7 +42,7 @@ const canonical = new URL(Astro.url.pathname, Astro.url);
 const shareImage = new URL("/og-image.png", Astro.url);
 ---
 
-<html lang="en">
+<html lang={Astro.locals.locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

@@ -1,10 +1,11 @@
-// `/setup` page logic — bootstraps the first admin. The page itself 404s
-// once any member exists (checked by the page directly via `membersRepo`,
-// same as the API's `GET /setup`); this module only handles the POST.
 import type { AuthDeps } from "@bandplate/core";
 import { bootstrapAdmin } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
 import { membersRepo } from "@bandplate/db";
+// `/setup` page logic — bootstraps the first admin. The page itself 404s
+// once any member exists (checked by the page directly via `membersRepo`,
+// same as the API's `GET /setup`); this module only handles the POST.
+import type { Locale } from "@bandplate/i18n";
 import { z } from "zod";
 
 export async function isBootstrapAvailable(db: Db): Promise<boolean> {
@@ -31,6 +32,13 @@ export type BootstrapPostResult =
 export async function handleSetupPost(
   auth: AuthDeps,
   formData: FormData,
+  /**
+   * The language this request resolved to. The bootstrap admin is created with
+   * it, so a Czech deployer's own account starts in Czech rather than being
+   * handed English and having to go and change it — there is nowhere for the
+   * setting to have come from yet except the browser.
+   */
+  locale: Locale,
 ): Promise<BootstrapPostResult> {
   const raw = {
     bootstrapToken: formData.get("bootstrapToken"),
@@ -53,7 +61,7 @@ export async function handleSetupPost(
     return { kind: "invalid", errors };
   }
 
-  const result = await bootstrapAdmin(auth, parsed.data);
+  const result = await bootstrapAdmin(auth, { ...parsed.data, locale });
   if (!result.ok || !result.sessionToken) {
     if (result.reason === "already-bootstrapped") {
       return { kind: "already_bootstrapped" };

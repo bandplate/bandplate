@@ -62,20 +62,38 @@ interface MakeContextOptions {
   cookieValue?: string;
   method?: string;
   origin?: string;
+  /** `Accept-Language`, for the locale-negotiation cases. */
+  acceptLanguage?: string;
+  /** An existing `bp_locale` cookie value. */
+  localeCookie?: string;
 }
 
 function makeContext(pathname: string, options: MakeContextOptions = {}) {
-  const { cookieValue, method = "GET", origin } = options;
+  const { cookieValue, method = "GET", origin, acceptLanguage, localeCookie } = options;
   const locals: Record<string, unknown> = {};
   const headers: Record<string, string> = {};
   if (origin !== undefined) {
     headers.origin = origin;
   }
+  if (acceptLanguage !== undefined) {
+    headers["accept-language"] = acceptLanguage;
+  }
+  /** Every `cookies.set` the middleware made, so the locale cookie is assertable. */
+  const cookiesSet: { name: string; value: string }[] = [];
   return {
     url: new URL(`http://localhost${pathname}`),
     request: new Request(`http://localhost${pathname}`, { method, headers }),
+    cookiesSet,
     cookies: {
-      get: (_name: string) => (cookieValue === undefined ? undefined : { value: cookieValue }),
+      get: (name: string) => {
+        if (name === "bp_locale") {
+          return localeCookie === undefined ? undefined : { value: localeCookie };
+        }
+        return cookieValue === undefined ? undefined : { value: cookieValue };
+      },
+      set: (name: string, value: string) => {
+        cookiesSet.push({ name, value });
+      },
     },
     locals,
     redirect: (to: string, status?: number) =>
@@ -88,11 +106,23 @@ const nextResponse = new Response("next-called");
 const next = vi.fn(async () => nextResponse);
 
 function admin(): MemberPrincipal {
-  return { kind: "member", memberId: "admin-1", role: "admin", scopes: ["members:admin"] };
+  return {
+    kind: "member",
+    locale: "en",
+    memberId: "admin-1",
+    role: "admin",
+    scopes: ["members:admin"],
+  };
 }
 
 function member(): MemberPrincipal {
-  return { kind: "member", memberId: "member-1", role: "member", scopes: ["songs:read"] };
+  return {
+    kind: "member",
+    locale: "en",
+    memberId: "member-1",
+    role: "member",
+    scopes: ["songs:read"],
+  };
 }
 
 describe("middleware onRequest", () => {
@@ -275,5 +305,63 @@ describe("middleware onRequest — structural CSRF backstop", () => {
 
     expect(next).toHaveBeenCalledTimes(1);
     expect(response).toBe(nextResponse);
+  });
+});
+
+describe("middleware onRequest — which language the request renders in", () => {
+  // The order is: the member's own setting, then the cookie recording an
+  // earlier choice, then what the browser asked for, then English. Each step
+  // is a weaker statement of intent than the one before it.
+
+  it("falls back to English when there is nothing at all to go on", async () => {
+    const context = makeContext("/login");
+    await onRequest(context, next);
+    expect(context.locals.locale).toBe("en");
+  });
+
+  it("takes the browser's preference when there is no member and no cookie", async () => {
+    const context = makeContext("/login", { acceptLanguage: "cs-CZ,cs;q=0.9,en;q=0.8" });
+    await onRequest(context, next);
+    expect(context.locals.locale).toBe("cs");
+  });
+
+  it("prefers a remembered choice over the browser's preference", async () => {
+    const context = makeContext("/login", {
+      localeCookie: "cs",
+      acceptLanguage: "en-US,en;q=0.9",
+    });
+    await onRequest(context, next);
+    expect(context.locals.locale).toBe("cs");
+  });
+
+  it("ignores a cookie naming a language we do not speak", async () => {
+    const context = makeContext("/login", { localeCookie: "sk" });
+    await onRequest(context, next);
+    expect(context.locals.locale).toBe("en");
+  });
+
+  it("a signed-in member's own setting beats both cookie and browser", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue({ ...member(), locale: "cs" });
+    const context = makeContext("/songs", {
+      cookieValue: "session-token",
+      localeCookie: "en",
+      acceptLanguage: "en-US",
+    });
+    await onRequest(context, next);
+    expect(context.locals.locale).toBe("cs");
+  });
+
+  it("writes the member's language back to the cookie, so the sign-in page matches next time", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue({ ...member(), locale: "cs" });
+    const context = makeContext("/songs", { cookieValue: "session-token", localeCookie: "en" });
+    await onRequest(context, next);
+    expect(context.cookiesSet).toContainEqual({ name: "bp_locale", value: "cs" });
+  });
+
+  it("does not re-set a cookie that already agrees — no Set-Cookie on every request", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue({ ...member(), locale: "cs" });
+    const context = makeContext("/songs", { cookieValue: "session-token", localeCookie: "cs" });
+    await onRequest(context, next);
+    expect(context.cookiesSet).toEqual([]);
   });
 });

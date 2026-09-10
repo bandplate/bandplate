@@ -1,6 +1,3 @@
-// Auth domain services — orchestrate the `members`/`login_tokens`/
-// `auth_sessions`/`service_tokens` repos from `@bandplate/db` behind the
-// behaviors the HTTP layer needs. No `node:*` imports; Web Crypto only.
 import {
   type Db,
   authSessionsRepo,
@@ -8,6 +5,10 @@ import {
   membersRepo,
   serviceTokensRepo,
 } from "@bandplate/db";
+// Auth domain services — orchestrate the `members`/`login_tokens`/
+// `auth_sessions`/`service_tokens` repos from `@bandplate/db` behind the
+// behaviors the HTTP layer needs. No `node:*` imports; Web Crypto only.
+import type { Locale } from "@bandplate/i18n";
 import type { MemberPrincipal, MemberRole, Scope, ServicePrincipal } from "../auth/index.js";
 import { scopesForRole } from "../auth/index.js";
 import { generateToken, hashToken, timingSafeEqualHex } from "../crypto.js";
@@ -146,8 +147,8 @@ function sessionTtl(deps: AuthDeps): number {
   return deps.sessionTtlMs ?? DEFAULT_SESSION_TTL_MS;
 }
 
-function principalForMember(memberId: string, role: MemberRole): MemberPrincipal {
-  return { kind: "member", memberId, role, scopes: scopesForRole(role) };
+function principalForMember(memberId: string, role: MemberRole, locale: Locale): MemberPrincipal {
+  return { kind: "member", memberId, role, scopes: scopesForRole(role), locale };
 }
 
 // ---------------------------------------------------------------------------
@@ -332,7 +333,7 @@ export async function consumeLoginToken(
   return {
     ok: true,
     sessionToken: rawSessionToken,
-    principal: principalForMember(member.id, member.role),
+    principal: principalForMember(member.id, member.role, member.locale),
   };
 }
 
@@ -376,7 +377,7 @@ export async function resolveSession(
       });
   }
 
-  return principalForMember(member.id, member.role);
+  return principalForMember(member.id, member.role, member.locale);
 }
 
 export async function revokeSession(deps: AuthDeps, rawCookie: string): Promise<void> {
@@ -491,6 +492,12 @@ export interface BootstrapAdminInput {
   bootstrapToken: string;
   displayName: string;
   email: string;
+  /**
+   * The language for the very first member. `/setup` passes what the request's
+   * `Accept-Language` asked for, so a Czech deployer is not handed English
+   * merely because English is the fallback. Omitted means the default.
+   */
+  locale?: Locale;
 }
 
 export interface BootstrapAdminResult {
@@ -546,6 +553,7 @@ export async function bootstrapAdmin(
       email: input.email,
       createdAt: now,
       emailVerifiedAt: now,
+      locale: input.locale,
     },
   );
 
@@ -585,7 +593,7 @@ export async function bootstrapAdmin(
   return {
     ok: true,
     sessionToken: rawSessionToken,
-    principal: principalForMember(member.id, member.role),
+    principal: principalForMember(member.id, member.role, member.locale),
     testEmailSent,
   };
 }

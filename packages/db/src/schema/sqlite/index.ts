@@ -56,6 +56,21 @@ export const members = sqliteTable("members", {
     .default("invited"),
   createdAt: ts("created_at").notNull(),
   emailVerifiedAt: ts("email_verified_at"),
+  // Which language this member reads the app in — the setting they change on
+  // `/me`. Its own typed column, the shape `role` and `status` already use,
+  // rather than a preferences blob: it is a scalar enum, it is read on every
+  // single request through `resolveSession`, and a JSON column would make that
+  // a parse instead of a column read.
+  //
+  // The values are spelled out rather than imported from `@bandplate/i18n`'s
+  // `LOCALES`, which is where they are really defined. `drizzle-kit generate`
+  // loads THIS FILE through a CJS require, and chokes on that package's
+  // ESM-style `./locale.js` specifiers — so importing here would trade a
+  // duplicated two-item list for a broken migration command. `locale.test.ts`
+  // asserts the two lists agree, which is the guarantee the import was for.
+  locale: text("locale", { enum: ["en", "cs"] })
+    .notNull()
+    .default("en"),
 });
 
 export const loginTokens = sqliteTable(

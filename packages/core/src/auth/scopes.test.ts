@@ -53,6 +53,8 @@ describe("hasAllScopes", () => {
       memberId: "m1",
       role: "member" as const,
       scopes: scopesForRole("member"),
+      // Presentation, not authorization — `hasAllScopes` never reads it.
+      locale: "en" as const,
     };
     expect(hasAllScopes(principal, ["songs:read", "votes:write"])).toBe(true);
   });
@@ -63,6 +65,8 @@ describe("hasAllScopes", () => {
       memberId: "m1",
       role: "member" as const,
       scopes: scopesForRole("member"),
+      // Presentation, not authorization — `hasAllScopes` never reads it.
+      locale: "en" as const,
     };
     expect(hasAllScopes(principal, ["songs:read", "members:admin"])).toBe(false);
   });

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { guardAdminPath, guardMemberPath, isAdminPath, isPublicPath } from "./guard.js";
 
 function member(scopes: Scope[]): MemberPrincipal {
-  return { kind: "member", memberId: "m1", role: "member", scopes };
+  return { kind: "member", locale: "en", memberId: "m1", role: "member", scopes };
 }
 
 describe("guardAdminPath", () => {

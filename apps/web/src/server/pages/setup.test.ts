@@ -30,6 +30,7 @@ describe("setup page logic", () => {
     const result = await handleSetupPost(
       auth,
       formData({ bootstrapToken: "", displayName: "Alex", email: "alex@example.com" }),
+      "en",
     );
     expect(result.kind).toBe("invalid");
     if (result.kind === "invalid") {
@@ -41,6 +42,7 @@ describe("setup page logic", () => {
     const result = await handleSetupPost(
       auth,
       formData({ bootstrapToken: "wrong", displayName: "Alex", email: "alex@example.com" }),
+      "en",
     );
     expect(result.kind).toBe("bad_token");
 
@@ -52,6 +54,7 @@ describe("setup page logic", () => {
     const result = await handleSetupPost(
       auth,
       formData({ bootstrapToken: "correct-token", displayName: "Alex", email: "alex@example.com" }),
+      "en",
     );
     expect(result.kind).toBe("ok");
     if (result.kind === "ok") {
@@ -64,10 +67,12 @@ describe("setup page logic", () => {
     await handleSetupPost(
       auth,
       formData({ bootstrapToken: "correct-token", displayName: "Alex", email: "alex@example.com" }),
+      "en",
     );
     const second = await handleSetupPost(
       auth,
       formData({ bootstrapToken: "correct-token", displayName: "Sam", email: "sam@example.com" }),
+      "en",
     );
     expect(second.kind).toBe("already_bootstrapped");
   });

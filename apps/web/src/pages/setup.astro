@@ -31,7 +31,7 @@ if (Astro.request.method === "POST") {
     originError = true;
   } else {
     const formData = await Astro.request.formData();
-    result = await handleSetupPost(authDeps, formData);
+    result = await handleSetupPost(authDeps, formData, Astro.locals.locale);
     if (result.kind === "ok") {
       setSessionCookie(Astro.cookies, result.sessionToken, {
         cookieSecure: appDeps.config.cookieSecure,

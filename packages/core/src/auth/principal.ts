@@ -1,3 +1,4 @@
+import type { Locale } from "@bandplate/i18n";
 import type { MemberRole, Scope } from "./scopes.js";
 
 export interface MemberPrincipal {
@@ -5,6 +6,20 @@ export interface MemberPrincipal {
   memberId: string;
   role: MemberRole;
   scopes: Scope[];
+  /**
+   * Which language to render for this member.
+   *
+   * Presentation, NOT authorization — `hasAllScopes` remains the single check
+   * and does not look at this. It rides on the principal because
+   * `resolveSession` already loads the full member row to check
+   * `status !== "disabled"`, so carrying the locale costs zero extra queries
+   * and puts it wherever a request is already resolved: Astro pages via
+   * `Astro.locals`, and Hono routes via the same shared resolution path.
+   *
+   * `ServicePrincipal` has none. A service token has no member and therefore
+   * no language; anything it renders is a machine contract and stays English.
+   */
+  locale: Locale;
 }
 
 export interface ServicePrincipal {

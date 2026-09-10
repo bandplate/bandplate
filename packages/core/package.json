@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@bandplate/db": "workspace:*",
+    "@bandplate/i18n": "workspace:*",
     "zod": "^3.24.1"
   },
   "devDependencies": {

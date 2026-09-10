@@ -16,6 +16,7 @@ import {
   formatDuration as i18nFormatDuration,
   formatLongDate as i18nFormatLongDate,
   formatShortDate as i18nFormatShortDate,
+  messages,
   votingMessages,
 } from "@bandplate/i18n";
 
@@ -68,14 +69,17 @@ export function eventLabel(event: { title: string | null; venue: string | null }
 }
 
 /**
- * The one word a row shows for an event's kind. `concert` reads as "live"
- * because that is what the band calls it; the other two are already the word
- * they'd use. Kind is a plain `string` in the schema (an admin-editable
- * vocabulary was always the intent), so anything unrecognised passes through
- * as itself rather than being mapped to a fallback that would hide it.
+ * The one word a row shows for an event's kind.
+ *
+ * The words themselves live in the catalog now (`events.kindLabel`), including
+ * the pass-through for kinds it has never heard of — `events.kind` is a plain
+ * `string` in the schema because an admin-editable vocabulary was always the
+ * intent. This wrapper stays English-bound like the date formatters above, for
+ * the pages that have not been translated yet; each drops it for
+ * `t.events.kindLabel` as its own area lands.
  */
 export function eventKindLabel(kind: string): string {
-  return kind === "concert" ? "live" : kind;
+  return messages(DEFAULT_LOCALE).events.kindLabel(kind);
 }
 
 /**

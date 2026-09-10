@@ -1,3 +1,12 @@
+import { type Db, assetsRepo } from "@bandplate/db";
+import {
+  eventsRepo,
+  favoritesRepo,
+  type instrumentsRepo,
+  songsRepo,
+  takesRepo,
+  votesRepo,
+} from "@bandplate/db";
 // Home's data. Two questions only: what has this member PINNED, and what
 // has the band recorded lately.
 //
@@ -13,16 +22,7 @@
 // opening one is how you reach its takes; fetching every take of the three
 // newest events to render a list nobody was reading cost four extra queries
 // per page load.
-import { type Db, assetsRepo } from "@bandplate/db";
-import {
-  eventsRepo,
-  favoritesRepo,
-  type instrumentsRepo,
-  songsRepo,
-  takesRepo,
-  votesRepo,
-} from "@bandplate/db";
-import { eventKindLabel } from "../format.js";
+import { type Locale, messages } from "@bandplate/i18n";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
 /** How many events the ledger lists before pointing at `/events` for the rest. */
@@ -118,14 +118,15 @@ export type PinnedItem =
  * hero's meta line show it and they must never disagree; the last time a label
  * rule lived in two places it drifted.
  */
-export function pinnedKindWord(item: PinnedItem): string {
+export function pinnedKindWord(item: PinnedItem, locale: Locale): string {
+  const t = messages(locale);
   if (item.kind === "take") {
-    return "Take";
+    return t.home.takeWord;
   }
   if (item.kind === "song") {
-    return "Song";
+    return t.home.songWord;
   }
-  return eventKindLabel(item.event.kind);
+  return t.events.kindLabel(item.event.kind);
 }
 
 /**

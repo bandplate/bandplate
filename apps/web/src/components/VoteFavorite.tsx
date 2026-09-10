@@ -23,7 +23,6 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import {
   type Tally,
-  UNVOTED_LIST_EMPTY_STATE_HTML,
   computeOptimisticTally,
   formatVoteTallyClient,
 } from "../client/vote-favorite-actions.js";
@@ -122,53 +121,6 @@ function applyVoteState(takeId: string, myVote: boolean | undefined, tally: Tall
   }
 }
 
-/**
- * Home's "needs your vote" section reads as an achievement once it's empty
- * (brief §3) — the natural extension is that a take LEAVES that section
- * the moment this member votes on it, not just on the next full page load.
- * `[data-unvoted-list]` marks that one container (`index.astro`); a take
- * row inside it fades out and is removed on a successful vote. Only ever
- * called after the server confirms success — never as part of the
- * optimistic step itself, so a rollback never has to "un-remove" a row
- * that's already gone from the DOM.
- *
- * If this was the LAST row, removing it bare would leave a `<h2>` over an
- * empty container — exactly the blank panel §3 forbids, and wrong until
- * the next reload. So when the container is about to become empty, the
- * container itself is swapped for the same `.bp-empty-state` markup
- * `index.astro` renders server-side for `unvotedTakes.length === 0`
- * (`UNVOTED_LIST_EMPTY_STATE_HTML`), not just left behind empty.
- */
-function removeFromUnvotedList(takeId: string): void {
-  const list = document.querySelector<HTMLElement>("[data-unvoted-list]");
-  const row = list
-    ?.querySelector<HTMLElement>(`[data-vote-form][data-take-id="${CSS.escape(takeId)}"]`)
-    ?.closest<HTMLElement>(".bp-take-row");
-  if (!list || !row) {
-    return;
-  }
-  const isLastRow = list.querySelectorAll(".bp-take-row").length === 1;
-
-  function finish(): void {
-    row?.remove();
-    if (isLastRow && list) {
-      const emptyState = document.createElement("div");
-      emptyState.className = "bp-empty-state";
-      emptyState.innerHTML = UNVOTED_LIST_EMPTY_STATE_HTML;
-      list.replaceWith(emptyState);
-    }
-  }
-
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduceMotion) {
-    finish();
-    return;
-  }
-  row.style.transition = "opacity 0.2s ease";
-  row.style.opacity = "0";
-  setTimeout(finish, 200);
-}
-
 /** Applies a favorite state to EVERY occurrence of this target on the page. */
 function applyFavoriteState(targetType: string, targetId: string, favorited: boolean): void {
   const selector = `[data-favorite-form][data-target-type="${CSS.escape(targetType)}"][data-target-id="${CSS.escape(targetId)}"]`;
@@ -252,7 +204,6 @@ export default function VoteFavorite() {
           // concurrent vote from someone else landing between the
           // optimistic guess and this response).
           applyVoteState(takeId, body.keeper, body.tally);
-          removeFromUnvotedList(takeId);
         } catch {
           applyVoteState(takeId, previousMyVote, previousTally);
           showToast("Couldn't save your vote. Try again.");

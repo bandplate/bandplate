@@ -23,11 +23,12 @@
 //     aborts the transition for the WHOLE page. With one pinned list and no
 //     take rows, a take cannot appear twice, so the problem and its two
 //     workarounds are gone together.
+import { formatShortDate, messages } from "@bandplate/i18n";
 import EventLedger from "../components/EventLedger.astro";
 import PinnedPlate from "../components/PinnedPlate.astro";
 import AppLayout from "../layouts/AppLayout.astro";
 import { getAppDeps } from "../server/app.js";
-import { eventLabel, formatShortDate } from "../server/format.js";
+import { eventLabel } from "../server/format.js";
 import { getHomeData, pinnedKindWord } from "../server/pages/home.js";
 
 const principal = Astro.locals.principal;
@@ -40,16 +41,22 @@ const { pinned, recentEvents } = await getHomeData(appDeps.db, principal.memberI
 
 // The most recently pinned thing leads the page — "back to" whatever you were
 // last on. The rest follow in the rail beneath it.
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
 const [hero, ...rail] = pinned;
 
 // The hero's link is now an overlay with no text inside it, so it has to name
 // itself. Built from the same parts the visible heading and meta line show.
 const heroAccessibleName = hero
   ? hero.kind === "take"
-    ? `${hero.song?.title ?? "Untitled take"} — take`
+    ? t.home.heroName({ name: hero.song?.title ?? t.home.untitledTake, kind: t.home.takeWord })
     : hero.kind === "song"
-      ? `${hero.song.title} — song`
-      : `${formatShortDate(hero.event.heldAt)} — ${pinnedKindWord(hero)}`
+      ? t.home.heroName({ name: hero.song.title, kind: t.home.songWord })
+      : t.home.heroName({
+          name: formatShortDate(locale, hero.event.heldAt),
+          kind: pinnedKindWord(hero, locale),
+        })
   : "";
 
 /** What the hero says under its title: the event it came from, then the date,
@@ -61,28 +68,28 @@ function heroLines(item: typeof hero): string[] {
   }
   if (item.kind === "take") {
     const name = item.event ? eventLabel(item.event) : "";
-    return [name, formatShortDate(item.take.recordedAt)].filter(Boolean);
+    return [name, formatShortDate(locale, item.take.recordedAt)].filter(Boolean);
   }
   if (item.kind === "song") {
-    return [`${item.takeCount} ${item.takeCount === 1 ? "take" : "takes"}`];
+    return [t.events.takeCount(item.takeCount)];
   }
   // An untitled event IS its date — that is what the plate's label and the
   // title both say — so repeating it underneath told the member nothing twice.
   // What it has instead is a count.
   const name = eventLabel(item.event);
-  const count = `${item.takeCount} ${item.takeCount === 1 ? "take" : "takes"}`;
-  return name ? [name, formatShortDate(item.event.heldAt)] : [count];
+  const count = t.events.takeCount(item.takeCount);
+  return name ? [name, formatShortDate(locale, item.event.heldAt)] : [count];
 }
 ---
 
-<AppLayout title="Home" principal={principal} current="home">
+<AppLayout title={t.home.title} principal={principal} current="home">
   <div class="bp-home">
     <section class="bp-home-pinned">
       {/* The page's h1. The shelf had no name at all — the hero title named
           the ONE thing on it, which left the rail beside it looking like
           loose stock rather than the rest of a list. "Favorites" is the word
           the star means everywhere else in the app. */}
-      <h1 class="bp-section-title">Favorites</h1>
+      <h1 class="bp-section-title">{t.home.favorites}</h1>
       {
         hero ? (
           <>
@@ -100,20 +107,20 @@ function heroLines(item: typeof hero): string[] {
               />
               <PinnedPlate item={hero} size="hero" interactive={false} />
               <div class="bp-pinned-hero-text">
-                <p class="bp-eyebrow bp-pinned-hero-eyebrow bp-m0">Back to</p>
+                <p class="bp-eyebrow bp-pinned-hero-eyebrow bp-m0">{t.home.backTo}</p>
                 <h2 class="bp-pinned-hero-title bp-m0">
                   {hero.kind === "take"
-                    ? (hero.song?.title ?? "Untitled take")
+                    ? (hero.song?.title ?? t.home.untitledTake)
                     : hero.kind === "song"
                       ? hero.song.title
-                      : formatShortDate(hero.event.heldAt)}
+                      : formatShortDate(locale, hero.event.heldAt)}
                 </h2>
                 {/* The kind leads the meta line, exactly as it does on the
                     rail plates below — the hero was the one pinned thing on the
                     page that never said whether it was a song, a take or an
                     event. */}
                 <p class="bp-pinned-hero-meta bp-m0">
-                  <span class="bp-kind">{pinnedKindWord(hero)}</span>
+                  <span class="bp-kind">{pinnedKindWord(hero, locale)}</span>
                   <span class="bp-pinned-hero-sep" aria-hidden="true" />
                   <span>
                     {heroLines(hero).map((line, i) => (
@@ -142,9 +149,8 @@ function heroLines(item: typeof hero): string[] {
         ) : (
           <div class="bp-empty-state">
             <p>
-              <strong>Nothing pinned yet.</strong> Tap the star on a song, take or event and it
-              lands here — this is the shelf you reach for. <a href="/takes">Browse the archive</a>{" "}
-              to find something.
+              <strong>{t.home.emptyPinnedLead}</strong> {t.home.emptyPinnedBody}{" "}
+              <a href="/takes">{t.home.emptyPinnedLink}</a> {t.home.emptyPinnedTail}
             </p>
           </div>
         )
@@ -152,14 +158,11 @@ function heroLines(item: typeof hero): string[] {
     </section>
 
     <section class="bp-home-ledger">
-      <h2 class="bp-section-title">Recent events</h2>
+      <h2 class="bp-section-title">{t.home.recentEvents}</h2>
       {
         recentEvents.length === 0 ? (
           <div class="bp-empty-state">
-            <p>
-              No events yet. Ask whoever's running the session to log the next rehearsal or show —
-              it'll show up here as soon as they do.
-            </p>
+            <p>{t.home.emptyEvents}</p>
           </div>
         ) : (
           <EventLedger events={recentEvents} footerHref="/events" />

@@ -31,11 +31,38 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // The bootstrap token is called that in both languages — it is the name of
   // an environment variable the deployer already typed.
   "auth.setupTokenLabel",
+  // An event kind this map has never heard of passes straight through in
+  // every language — that is the point. See `en/events.ts`.
+  "events.kindLabel(unknown)",
+  // "Take" is the loanword the band already uses, and 1 of them is spelled
+  // the same either way.
+  "events.takeCount(one)",
+  "home.takeWord",
+  // Both languages join a name and a kind with an em dash here.
+  "home.heroName(parts)",
+  // An event plate's name is already its own label plus its own count —
+  // there is no English word in it to translate.
+  "home.plateEventName(parts)",
 ]);
 
 /** Arguments to call a function-valued entry with, keyed by its dotted path. */
 const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "auth.slowLede": [{ label: "seconds", args: ["45"] }],
+  "events.kindLabel": [
+    { label: "rehearsal", args: ["rehearsal"] },
+    { label: "concert", args: ["concert"] },
+    { label: "session", args: ["session"] },
+    { label: "unknown", args: ["jam"] },
+  ],
+  "events.takeCount": [
+    { label: "one", args: [1] },
+    { label: "few", args: [3] },
+    { label: "other", args: [7] },
+  ],
+  "home.heroName": [{ label: "parts", args: [{ name: "Čoudy", kind: "take" }] }],
+  "home.plateTakeName": [{ label: "parts", args: [{ name: "Čoudy", date: "8. 7. 2026" }] }],
+  "home.plateSongName": [{ label: "parts", args: [{ name: "Čoudy", detail: "3 taky" }] }],
+  "home.plateEventName": [{ label: "parts", args: [{ name: "Zkouška", detail: "3 taky" }] }],
   "me.languageCurrent": [{ label: "name", args: ["English"] }],
   "me.languageSwitch": [{ label: "name", args: ["Čeština"] }],
   "voting.tally": [

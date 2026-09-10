@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  UNVOTED_LIST_EMPTY_STATE_HTML,
-  computeOptimisticTally,
-  formatVoteTallyClient,
-} from "./vote-favorite-actions.js";
+import { computeOptimisticTally, formatVoteTallyClient } from "./vote-favorite-actions.js";
 
 describe("computeOptimisticTally", () => {
   it("a fresh keeper vote (no previous vote) increments both keeperVotes and totalVotes", () => {
@@ -76,19 +72,5 @@ describe("formatVoteTallyClient", () => {
     // Empty rather than a sentence — `.bp-vote-tally:empty` is what hides the
     // element, so this must stay exactly "".
     expect(formatVoteTallyClient(0, 0, 0)).toBe("");
-  });
-});
-
-describe("UNVOTED_LIST_EMPTY_STATE_HTML", () => {
-  it("matches index.astro's `unvotedTakes.length === 0` copy exactly — see this module's own comment on why it's duplicated, not imported", () => {
-    expect(UNVOTED_LIST_EMPTY_STATE_HTML).toBe(
-      "<p><strong>You're all caught up.</strong> Every published take has your vote — check back once the band records something new.</p>",
-    );
-  });
-
-  it("is a single <p>, matching the shape `.bp-empty-state > p` styling in components.css expects", () => {
-    expect(UNVOTED_LIST_EMPTY_STATE_HTML.match(/<p>/g)).toHaveLength(1);
-    expect(UNVOTED_LIST_EMPTY_STATE_HTML.startsWith("<p>")).toBe(true);
-    expect(UNVOTED_LIST_EMPTY_STATE_HTML.endsWith("</p>")).toBe(true);
   });
 });

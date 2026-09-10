@@ -12,8 +12,8 @@
 // One component rather than three copies, because it now renders on home, on
 // `/events` and in the gallery — and the last label rule that lived in three
 // places drifted in two of them.
-import { DEFAULT_LOCALE, formatMonthShort } from "@bandplate/i18n";
-import { eventKindLabel, eventLabel } from "../server/format.js";
+import { formatMonthShort, messages } from "@bandplate/i18n";
+import { eventLabel } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
 
 import type { eventsRepo } from "@bandplate/db";
@@ -31,7 +31,8 @@ export interface Props {
   footerLabel?: string;
 }
 
-const { events, favoritedIds, footerHref, footerLabel = "All events" } = Astro.props;
+const t = messages(Astro.locals.locale);
+const { events, favoritedIds, footerHref, footerLabel = t.events.allEvents } = Astro.props;
 
 // The month abbreviation follows the reader's language like every other date.
 //
@@ -47,9 +48,9 @@ const rows = events.map((event) => {
   return {
     event,
     day: String(held.getDate()),
-    month: formatMonthShort(DEFAULT_LOCALE, held.getTime()),
+    month: formatMonthShort(Astro.locals.locale, held.getTime()),
     venue: eventLabel(event),
-    kind: eventKindLabel(event.kind),
+    kind: t.events.kindLabel(event.kind),
   };
 });
 ---
@@ -69,12 +70,12 @@ const rows = events.map((event) => {
                 punctuation mark where a name goes reads as missing data rather
                 than as a fact about the event. */}
             <span class={`bp-ledger-venue${venue ? "" : " bp-ledger-venue--none"}`}>
-              {venue || "Unnamed"}
+              {venue || t.events.unnamed}
             </span>
             <span class="bp-kind">{kind}</span>
           </span>
           <span class="bp-ledger-count">
-            {event.takeCount} {event.takeCount === 1 ? "take" : "takes"}
+            {t.events.takeCount(event.takeCount)}
           </span>
         </a>
         {favoritedIds && (

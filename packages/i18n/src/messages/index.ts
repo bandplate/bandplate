@@ -11,6 +11,8 @@
 import type { Locale } from "../locale.js";
 import { authByLocale } from "./auth.js";
 import { commonByLocale } from "./common.js";
+import { eventsByLocale } from "./events.js";
+import { homeByLocale } from "./home.js";
 import { meByLocale } from "./me.js";
 import { shellByLocale } from "./shell.js";
 import { votingByLocale } from "./voting.js";
@@ -19,6 +21,8 @@ const CATALOG = {
   en: {
     auth: authByLocale.en,
     common: commonByLocale.en,
+    events: eventsByLocale.en,
+    home: homeByLocale.en,
     me: meByLocale.en,
     shell: shellByLocale.en,
     voting: votingByLocale.en,
@@ -26,6 +30,8 @@ const CATALOG = {
   cs: {
     auth: authByLocale.cs,
     common: commonByLocale.cs,
+    events: eventsByLocale.cs,
+    home: homeByLocale.cs,
     me: meByLocale.cs,
     shell: shellByLocale.cs,
     voting: votingByLocale.cs,

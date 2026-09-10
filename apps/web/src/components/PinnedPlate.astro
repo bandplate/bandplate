@@ -10,7 +10,8 @@
 // play) and bone for a song or an event (a container, not a recording). The
 // caption under the plate says it in words too — colour alone is never the only
 // carrier of meaning here, same rule the vote buttons follow.
-import { eventLabel, formatShortDate } from "../server/format.js";
+import { formatShortDate, messages } from "@bandplate/i18n";
+import { eventLabel } from "../server/format.js";
 import { type PinnedItem, pinnedKindWord } from "../server/pages/home.js";
 
 export interface Props {
@@ -36,40 +37,43 @@ const href =
       ? `/songs/${item.song.slug}`
       : `/events/${item.id}`;
 
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
 // What goes on the centre label. A take borrows its song's name — a take has no
 // name of its own, and "9 Dec 2025" on the label of a record is what an event
 // is actually called.
 const label =
   item.kind === "take"
-    ? (item.song?.title ?? "Untitled")
+    ? (item.song?.title ?? t.home.untitled)
     : item.kind === "song"
       ? item.song.title
-      : formatShortDate(item.event.heldAt);
+      : formatShortDate(locale, item.event.heldAt);
 
 // The caption: what this IS, then what it has. A member scanning the rail
 // should not have to work out from a row's shape whether they pinned the song
 // or one take of it.
-const kindWord = pinnedKindWord(item);
+const kindWord = pinnedKindWord(item, locale);
 
 const detail =
   item.kind === "take"
-    ? formatShortDate(item.take.recordedAt)
+    ? formatShortDate(locale, item.take.recordedAt)
     : item.kind === "song"
-      ? `${item.takeCount} ${item.takeCount === 1 ? "take" : "takes"}`
-      : `${item.takeCount} ${item.takeCount === 1 ? "take" : "takes"}`;
+      ? t.events.takeCount(item.takeCount)
+      : t.events.takeCount(item.takeCount);
 
 const accessibleName =
   item.kind === "take"
-    ? `${label} — take from ${detail}`
+    ? t.home.plateTakeName({ name: label, date: detail })
     : item.kind === "song"
-      ? `${label} — song, ${detail}`
-      : `${eventLabel(item.event) || kindWord} — ${detail}`;
+      ? t.home.plateSongName({ name: label, detail })
+      : t.home.plateEventName({ name: eventLabel(item.event) || kindWord, detail });
 
 // Gold for a take, bone for a container. See the header comment.
 const labelTone = item.kind === "take" ? "take" : "container";
 // Only a take can be played, and only when it has a ready master.
 const playable = item.kind === "take" ? item.playableAssetId : undefined;
-const playTitle = item.kind === "take" ? (item.song?.title ?? "Untitled") : "";
+const playTitle = item.kind === "take" ? (item.song?.title ?? t.home.untitled) : "";
 const playSubtitle = item.kind === "take" ? (item.take.label ?? detail) : "";
 ---
 

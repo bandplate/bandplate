@@ -35,10 +35,27 @@ export function registerIngestEventRoutes(router: GuardedRouter, deps: IngestEve
     // the insert below and throw on the constraint.
     const existing = await eventsRepo.getByClientRef(deps.db, parsed.data.clientRef);
     if (existing) {
-      if (existing.archivedAt !== null) {
-        await eventsRepo.update(deps.db, existing.id, { archivedAt: null, updatedAt: now });
+      const unarchiving = existing.archivedAt !== null;
+      // Asked for explicitly, never inferred: a re-post is a lookup by
+      // default (contract v1 §3), and a bridge re-running over an old session
+      // must not quietly revert a correction somebody made here.
+      const correcting = parsed.data.updateMetadata;
+      if (unarchiving || correcting) {
+        await eventsRepo.update(deps.db, existing.id, {
+          ...(unarchiving ? { archivedAt: null } : {}),
+          ...(correcting
+            ? {
+                kind: parsed.data.kind,
+                title: parsed.data.title ?? null,
+                heldAt: parseIsoToEpochMs(parsed.data.heldAt),
+                venue: parsed.data.venue ?? null,
+                notes: parsed.data.notes ?? null,
+              }
+            : {}),
+          updatedAt: now,
+        });
       }
-      return c.json({ eventId: existing.id, created: false }, 200);
+      return c.json({ eventId: existing.id, created: false, updated: correcting }, 200);
     }
 
     try {

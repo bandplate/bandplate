@@ -111,7 +111,9 @@ persists next to the Reaper project, and reuses forever.
   reordering regions then re-identifies takes.
 
 Both are unique server-side. Re-posting an existing `clientRef` returns the
-existing row with `created: false` — it is a lookup, not an error.
+existing row with `created: false` — it is a lookup, not an error. An event
+re-post may additionally carry `updateMetadata` to correct its descriptive
+fields; see §4. A take's song and instruments are never re-derived (§6).
 
 Storage keys are derived from the take id, so a re-uploaded file **overwrites**
 rather than orphaning:
@@ -146,6 +148,20 @@ Content-Type: application/json
 ```json
 200 { "eventId": "0192f...", "created": true }
 ```
+
+Re-posting a known `clientRef` is a **lookup**: the body's other fields are
+ignored and the existing row comes back with `created: false`. Send
+`"updateMetadata": true` to make it a **correction** instead — `kind`,
+`title`, `heldAt`, `venue` and `notes` are then written to the existing event,
+and the response carries `updated: true`.
+
+Off by default on purpose, so a bridge re-running over an old session cannot
+quietly revert something a person fixed here. On, the whole record is applied:
+a field omitted is **cleared**, not kept, because the bridge sends the session
+as it stands and a note deleted there has to disappear here too.
+
+`clientRef` is never touched either way. Which row the bridge writes to is
+identity, not metadata.
 
 `kind` is one of `rehearsal | concert | session`. It matters: concerts are
 surfaced differently in the UI and are excluded from automatic retention culling.

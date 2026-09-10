@@ -17,6 +17,18 @@ export const eventKindSchema = z.enum(["rehearsal", "concert", "session"]);
 
 export const createEventSchema = z.object({
   clientRef: z.string().trim().min(1),
+  /**
+   * Apply this body's descriptive fields to an event that already exists.
+   *
+   * Off by default, so a re-post stays the pure lookup contract v1 §3
+   * describes. On, it is a correction: the bridge's own record is the one a
+   * person edits, and without this a venue fixed there could never reach the
+   * library, since every field below is read only when the row is created.
+   *
+   * Never `clientRef` -- which row the bridge writes to is identity, not
+   * metadata (see `eventsRepo.setClientRef`).
+   */
+  updateMetadata: z.boolean().default(false),
   kind: eventKindSchema,
   heldAt: isoDatetimeWithOffset,
   venue: z.string().trim().min(1).max(500).nullish(),

@@ -1289,11 +1289,115 @@ describe("ingest API", () => {
       const body = await again.json();
 
       expect(again.status).toBe(200);
-      expect(body).toEqual({ eventId, created: false });
+      // `updated: false` -- un-archiving is not a metadata correction, and a
+      // re-post that did not ask for one must not become one.
+      expect(body).toEqual({ eventId, created: false, updated: false });
       // Back on the archive page: the band has just recorded at it.
       expect((await eventsRepo.getById(testApp.db, eventId))?.archivedAt).toBeNull();
       // And exactly ONE event, not a second one beside the archived first.
       expect(await eventsRepo.listRecent(testApp.db, { includeArchived: true })).toHaveLength(1);
+    });
+
+    it("leaves an existing event's metadata alone unless asked", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      const declare = (body: Record<string, unknown>) =>
+        testApp.app.request("/ingest/v1/events", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify(body),
+        });
+
+      const first = await declare({
+        clientRef: "reaper-meta",
+        kind: "rehearsal",
+        heldAt: "2026-07-08T18:00:00+02:00",
+        venue: "Zkusebna",
+      });
+      const { eventId } = await first.json();
+
+      // A re-run of the bridge over the same session, saying nothing about
+      // wanting to correct anything.
+      const again = await declare({
+        clientRef: "reaper-meta",
+        kind: "concert",
+        heldAt: "2026-07-08T18:00:00+02:00",
+        venue: "Somewhere else",
+      });
+      expect((await again.json()).updated).toBe(false);
+
+      const untouched = await eventsRepo.getById(testApp.db, eventId);
+      expect(untouched?.venue).toBe("Zkusebna");
+      expect(untouched?.kind).toBe("rehearsal");
+    });
+
+    it("applies the metadata when the caller asks for a correction", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      const declare = (body: Record<string, unknown>) =>
+        testApp.app.request("/ingest/v1/events", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify(body),
+        });
+
+      const first = await declare({
+        clientRef: "reaper-fix",
+        kind: "rehearsal",
+        heldAt: "2026-07-08T18:00:00+02:00",
+        venue: "Zkusebna",
+        notes: "first pass",
+      });
+      const { eventId } = await first.json();
+
+      const corrected = await declare({
+        clientRef: "reaper-fix",
+        kind: "concert",
+        heldAt: "2026-07-09T20:00:00+02:00",
+        title: "Nota",
+        venue: "Kavarna Nota",
+        updateMetadata: true,
+      });
+      const body = await corrected.json();
+      expect(body).toEqual({ eventId, created: false, updated: true });
+
+      const row = await eventsRepo.getById(testApp.db, eventId);
+      expect(row?.kind).toBe("concert");
+      expect(row?.title).toBe("Nota");
+      expect(row?.venue).toBe("Kavarna Nota");
+      // Omitted means cleared, not kept: the bridge sends the whole record,
+      // so a note deleted there has to disappear here too.
+      expect(row?.notes).toBeNull();
+      expect(row?.heldAt).toBe(Date.parse("2026-07-09T20:00:00+02:00"));
+    });
+
+    it("never lets a correction move the clientRef", async () => {
+      // Which row the bridge writes to is identity, not metadata.
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      const first = await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "reaper-keep",
+          kind: "rehearsal",
+          heldAt: "2026-07-08T18:00:00+02:00",
+        }),
+      });
+      const { eventId } = await first.json();
+
+      await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "reaper-keep",
+          kind: "concert",
+          heldAt: "2026-07-08T18:00:00+02:00",
+          updateMetadata: true,
+        }),
+      });
+
+      expect((await eventsRepo.getById(testApp.db, eventId))?.clientRef).toBe("reaper-keep");
     });
 
     it("un-archives a song it matches by title", async () => {

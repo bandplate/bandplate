@@ -1,12 +1,13 @@
 ---
 import { eventsRepo, takesRepo } from "@bandplate/db";
+import { formatLongDate, messages } from "@bandplate/i18n";
 // Archive (or unarchive) an event — the sibling of the song confirm page next
 // door, with the same guard and the same dual-mode POST.
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
 import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
-import { eventKindLabel, formatLongDate } from "../../../../server/format.js";
+
 import { archiveEventConsequence, setEventArchived } from "../../../../server/pages/events.js";
 
 const principal = Astro.locals.principal;
@@ -46,8 +47,16 @@ if (!event) {
   return new Response("Event not found.", { status: 404 });
 }
 const takeCount = await takesRepo.countByEvent(appDeps.db, event.id);
-const consequence = archiveEventConsequence(takeCount);
-const what = `the ${eventKindLabel(event.kind)} of ${formatLongDate(event.heldAt)}`;
+const locale = Astro.locals.locale;
+const consequence = archiveEventConsequence(takeCount, locale);
+// Named the same way the dialog names it, so the two doors to this action
+// read alike — see `events.unarchiveConfirmTitle` on why the kind and the
+// date travel as separate parts.
+const t = messages(locale);
+const what = t.events.archiveConfirmWhat({
+  kind: t.events.kindLabel(event.kind),
+  date: formatLongDate(locale, event.heldAt),
+});
 ---
 
 <Layout title={archiving ? "Archive event" : "Unarchive event"}>

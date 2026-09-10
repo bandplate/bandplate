@@ -1,7 +1,3 @@
-// `/events` and `/events/[id]` page logic — reads, and (since M8) the form
-// handlers that write them. Same shape as `server/pages/songs.ts`, including
-// the note there about why the write half lives in `apps/web` rather than in
-// `@bandplate/core`.
 import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
@@ -11,6 +7,11 @@ import {
   takesRepo,
   votesRepo,
 } from "@bandplate/db";
+// `/events` and `/events/[id]` page logic — reads, and (since M8) the form
+// handlers that write them. Same shape as `server/pages/songs.ts`, including
+// the note there about why the write half lives in `apps/web` rather than in
+// `@bandplate/core`.
+import { type Locale, messages } from "@bandplate/i18n";
 import { z } from "zod";
 
 export type EventListItem = eventsRepo.EventWithTakeCount;
@@ -301,15 +302,8 @@ export async function setEventArchived(
  * `archiveSongConsequence` next door, shared by the confirm dialog and the
  * confirm page for the same reason.
  */
-export function archiveEventConsequence(takeCount: number): string {
-  const head = "It disappears from the event archive and from home.";
-  const takes =
-    takeCount === 0
-      ? ""
-      : takeCount === 1
-        ? " Its one take stays and keeps playing — you'll reach it from its song."
-        : ` Its ${takeCount} takes stay and keep playing — you'll reach them from their songs.`;
-  return `${head}${takes} You can put it back any time.`;
+export function archiveEventConsequence(takeCount: number, locale: Locale): string {
+  return messages(locale).events.archiveConsequence({ takeCount });
 }
 
 /**

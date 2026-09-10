@@ -8,10 +8,11 @@
 // │ bar five across. Short wins over precise.                               │
 // │                                                                        │
 // │ GLOSSARY DECISIONS MADE HERE — all of them worth a second look:         │
-// │   Takes → "Nahrávky", NOT "Taky".                                       │
-// │       "Taky" is the correct plural of the loanword and completely       │
-// │       unusable as a label: it reads as Czech *taky*, "also". Body copy  │
-// │       elsewhere still says "take / takeů", which is fine in a sentence. │
+// │   Takes → "Nahrávky"                                                    │
+// │       The loanword "take" was the first draft and was overruled: its    │
+// │       plural "taky" is identical to Czech *taky*, "also". "nahrávka" is │
+// │       a regular feminine noun, declines cleanly, and is now used in     │
+// │       body copy too — so the label and the prose finally agree.         │
 // │   Events → "Akce"                                                       │
 // │       "Události" reads like a calendar app. "Akce" is what a band says, │
 // │       and it covers zkouška + koncert + studio alike.                   │

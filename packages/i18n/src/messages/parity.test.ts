@@ -34,10 +34,6 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // An event kind this map has never heard of passes straight through in
   // every language — that is the point. See `en/events.ts`.
   "events.kindLabel(unknown)",
-  // "Take" is the loanword the band already uses, and 1 of them is spelled
-  // the same either way.
-  "events.takeCount(one)",
-  "home.takeWord",
   // Both languages join a name and a kind with an em dash here.
   "home.heroName(parts)",
   // An event plate's name is already its own label plus its own count —
@@ -62,6 +58,26 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "one", args: [1] },
     { label: "few", args: [3] },
     { label: "other", args: [7] },
+  ],
+  "events.takesInOrder": [
+    { label: "one", args: [1] },
+    { label: "other", args: [7] },
+  ],
+  "events.unarchiveConfirmTitle": [
+    { label: "p", args: [{ kind: "rehearsal", date: "8 July 2026" }] },
+  ],
+  "events.archiveConfirmTitle": [
+    { label: "p", args: [{ kind: "rehearsal", date: "8 July 2026" }] },
+  ],
+  "events.archiveConfirmWhat": [{ label: "p", args: [{ kind: "rehearsal", date: "8 July 2026" }] }],
+  "events.duplicateWarnBody": [{ label: "p", args: [{ kind: "rehearsal", date: "8 July 2026" }] }],
+  "events.duplicateFiledTwiceBody": [
+    { label: "p", args: [{ kind: "rehearsal", date: "8 July 2026" }] },
+  ],
+  "events.archiveConsequence": [
+    { label: "none", args: [{ takeCount: 0 }] },
+    { label: "one", args: [{ takeCount: 1 }] },
+    { label: "many", args: [{ takeCount: 6 }] },
   ],
   "home.heroName": [{ label: "parts", args: [{ name: "Čoudy", kind: "take" }] }],
   "songs.countPlain": [

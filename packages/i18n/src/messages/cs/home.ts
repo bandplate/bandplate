@@ -5,7 +5,7 @@
 // │ fix. Register is INFORMAL (tykání) — this is the page the band opens    │
 // │ one-handed while holding a nástroj, so short and warm beats correct.    │
 // │                                                                        │
-// │ GLOSSARY: favorites → oblíbené · take → take · song → skladba           │
+// │ GLOSSARY: favorites → oblíbené · take → NAHRÁVKA · song → skladba       │
 // │                                                                        │
 // │ WORTH CHECKING: `backTo` → "Zpátky k". It sits above a title in the     │
 // │ nominative ("Zpátky k / Čoudy"), so it does not govern the case of what │
@@ -19,10 +19,10 @@ export const home = {
   favorites: "Oblíbené", // en: Favorites
   backTo: "Zpátky k", // en: Back to
 
-  untitledTake: "Take bez názvu", // en: Untitled take
+  untitledTake: "Nahrávka bez názvu", // en: Untitled take
   untitled: "Bez názvu", // en: Untitled
 
-  takeWord: "Take", // en: Take
+  takeWord: "Nahrávka", // en: Take
   songWord: "Skladba", // en: Song
 
   // en: `${name} — ${kind}`
@@ -30,7 +30,7 @@ export const home = {
 
   // en: `${name} — take from ${date}`
   plateTakeName: ({ name, date }: { name: string; date: string }): string =>
-    `${name} — take z ${date}`,
+    `${name} — nahrávka z ${date}`,
   // en: `${name} — song, ${detail}`
   plateSongName: ({ name, detail }: { name: string; detail: string }): string =>
     `${name} — skladba, ${detail}`,
@@ -41,7 +41,7 @@ export const home = {
   emptyPinnedLead: "Zatím nic připnutého.", // en: Nothing pinned yet.
   // en: Tap the star on a song, take or event and it lands here — this is the shelf you reach for.
   emptyPinnedBody:
-    "Klepni na hvězdičku u skladby, taku nebo akce a objeví se to tady — tohle je police, po které saháš.",
+    "Klepni na hvězdičku u skladby, nahrávky nebo akce a objeví se to tady — tohle je police, po které saháš.",
   emptyPinnedLink: "Projdi archiv", // en: Browse the archive
   emptyPinnedTail: "a něco si najdi.", // en: to find something.
 

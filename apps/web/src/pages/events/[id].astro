@@ -1,4 +1,6 @@
 ---
+import { hasAllScopes } from "@bandplate/core";
+import { instrumentsRepo, songsRepo } from "@bandplate/db";
 // One event: kind, date, venue, notes, and the takes recorded that day in
 // recorded order (not newest-first — `getEventDetail` asks
 // `takesRepo.listByEvent` for `{ order: "asc" }`, reconstructing what
@@ -8,8 +10,7 @@
 // event plus every take that day, with instruments and songs batch-fetched)
 // ran at ~0.5-0.7ms against seeded data — see task-5-report.md. Nothing
 // here is deferred.
-import { hasAllScopes } from "@bandplate/core";
-import { instrumentsRepo, songsRepo } from "@bandplate/db";
+import { formatLongDate, messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
@@ -19,7 +20,7 @@ import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import { eventKindLabel, eventLabel, formatLongDate } from "../../server/format.js";
+import { eventLabel } from "../../server/format.js";
 import {
   EVENT_TAKES_PER_PAGE,
   type EventField,
@@ -43,6 +44,9 @@ if (!id) {
 
 const appDeps = await getAppDeps();
 
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
 let editError: string | undefined;
 let editErrorField: EventField | undefined;
 let takeError: string | undefined;
@@ -51,7 +55,7 @@ let formError: string | undefined;
 
 if (Astro.request.method === "POST") {
   if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
-    formError = "Something about that request looked wrong. Reload the page and try again.";
+    formError = t.common.originError;
   } else {
     const formData = await Astro.request.formData();
     if (formData.get("intent") === "create-take") {
@@ -61,7 +65,7 @@ if (Astro.request.method === "POST") {
         return Astro.redirect(`/takes/${result.take.id}?created=1`);
       }
       if (result.kind === "unknown_parent") {
-        takeError = "That's no longer here — reload and try again.";
+        takeError = t.events.takeGone;
         takeErrorField = result.field;
       } else {
         takeError = result.error;
@@ -73,7 +77,7 @@ if (Astro.request.method === "POST") {
         return Astro.redirect(`/events/${id}?saved=1`);
       }
       if (result.kind === "not_found") {
-        formError = "That event is no longer here.";
+        formError = t.events.gone;
       } else {
         editError = result.error;
         editErrorField = result.field;
@@ -104,7 +108,7 @@ if (pages.redirectTo) {
 // a three-value vocabulary and fell back to "Session" for anything else, which
 // silently mislabels a kind an admin adds later; the helper passes an
 // unrecognised value through as itself.
-const kindLabel = eventKindLabel(event.kind);
+const kindLabel = t.events.kindLabel(event.kind);
 // Title-case for the browser tab, which is the one place this word is a name
 // rather than a label — `.bp-kind` uppercases it everywhere it is shown.
 const kindTitle = kindLabel.charAt(0).toUpperCase() + kindLabel.slice(1);
@@ -137,7 +141,7 @@ const [allSongs, allInstruments] = await Promise.all([
 <AppLayout title={event.title ?? kindTitle} principal={principal} current="events">
   <div class="bp-stack">
     {isArchived && (
-      <Banner kind="info" title="Archived">
+      <Banner kind="info" title={t.events.archivedBanner}>
         Out of the event archive and off home. Its takes are untouched and still play.
         {canArchive && (
           <a
@@ -145,10 +149,10 @@ const [allSongs, allInstruments] = await Promise.all([
             href={`/admin/events/${event.id}/archive?unarchive=1`}
             class="bp-btn bp-btn-secondary bp-btn-sm"
             data-confirm
-            data-confirm-title={`Put the ${kindLabel} of ${formatLongDate(event.heldAt)} back?`}
-            data-confirm-body="It returns to the event archive and to home."
+            data-confirm-title={t.events.unarchiveConfirmTitle({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })}
+            data-confirm-body={t.events.unarchiveConfirmBody}
             data-confirm-action={`/admin/events/${event.id}/archive?unarchive=1`}
-            data-confirm-cta="Unarchive event"
+            data-confirm-cta={t.events.unarchiveCta}
             data-confirm-tone="neutral"
           >
             Put it back
@@ -156,28 +160,24 @@ const [allSongs, allInstruments] = await Promise.all([
         )}
       </Banner>
     )}
-    {justCreated && <Banner kind="success">Added. Takes recorded that day go here.</Banner>}
+    {justCreated && <Banner kind="success">{t.events.created}</Banner>}
     {sameDayWarning && (
-      <Banner kind="info" title="There was already one that day">
+      <Banner kind="info" title={t.events.duplicateWarnTitle}>
         <p class="bp-m0">
-          Another {kindLabel} is filed on {formatLongDate(event.heldAt)}. That's fine if you really
-          played twice — but if this is the same session, use the one that was already there, or
-          the bridge will file its takes against it and leave this one empty.
+          {t.events.duplicateWarnBody({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })}
         </p>
       </Banner>
     )}
-    {justSaved && <Banner kind="success">Saved.</Banner>}
-    {justTakeDeleted && <Banner kind="success">Take deleted, along with its files.</Banner>}
-    {justMerged && <Banner kind="success">Merged. Everything is on this one now.</Banner>}
+    {justSaved && <Banner kind="success">{t.events.saved}</Banner>}
+    {justTakeDeleted && <Banner kind="success">{t.events.takeDeleted}</Banner>}
+    {justMerged && <Banner kind="success">{t.events.merged}</Banner>}
     {sameDay.length > 0 && (
-      <Banner kind="info" title="This day is filed twice">
-        Another {kindLabel} sits on {formatLongDate(event.heldAt)}. If you both played twice that's
-        right — but if it's the same session, the takes are split between them and the bridge will
-        keep filing against whichever one holds its key.
+      <Banner kind="info" title={t.events.duplicateFiledTwiceTitle}>
+        {t.events.duplicateFiledTwiceBody({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })}
         <Fragment slot="action">
           {sameDay.map((other) => (
             <a href={`/events/${other.id}`} class="bp-btn bp-btn-secondary bp-btn-sm">
-              Open the other one
+              {t.events.openTheOther}
             </a>
           ))}
           {canArchive &&
@@ -186,13 +186,13 @@ const [allSongs, allInstruments] = await Promise.all([
                 href={`/admin/events/${event.id}/merge?into=${other.id}`}
                 class="bp-btn bp-btn-secondary bp-btn-sm"
                 data-confirm
-                data-confirm-title="Move the other one's takes here?"
-                data-confirm-body="Its takes move across, keeping their songs, their files and their votes. The emptied event is archived rather than deleted, and this one takes over the key the bridge files against."
+                data-confirm-title={t.events.mergeConfirmTitle}
+                data-confirm-body={t.events.mergeConfirmBody}
                 data-confirm-action={`/admin/events/${event.id}/merge?into=${other.id}`}
-                data-confirm-cta="Merge them"
+                data-confirm-cta={t.events.mergeCta}
                 data-confirm-tone="neutral"
               >
-                Move its takes here
+                {t.events.moveTakesHere}
               </a>
             ))}
         </Fragment>
@@ -211,7 +211,7 @@ const [allSongs, allInstruments] = await Promise.all([
       </div>
       <div class="bp-title-row">
       <h1 class="bp-hero-date">
-        {formatLongDate(event.heldAt)}
+        {formatLongDate(locale, event.heldAt)}
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
             targetType="event"
@@ -234,9 +234,9 @@ const [allSongs, allInstruments] = await Promise.all([
 
     <RecordSheet
       id="add-take"
-      eyebrow="New take"
-      title="Add a take"
-      subtitle="It goes on this session; the audio comes afterwards."
+      eyebrow={t.events.addTakeEyebrow}
+      title={t.events.addTakeTitle}
+      subtitle={t.events.addTakeSubtitle}
     >
       <form method="post" class="bp-sheet-form" novalidate>
         <input type="hidden" name="intent" value="create-take" />
@@ -251,7 +251,7 @@ const [allSongs, allInstruments] = await Promise.all([
             </select>
           </div>
           <Field
-            label="Recorded"
+            label={t.events.recordedLabel}
             name="recordedAt"
             type="date"
             required
@@ -259,9 +259,9 @@ const [allSongs, allInstruments] = await Promise.all([
             error={takeErrorField === "recordedAt" ? takeError : undefined}
           />
           <Field
-            label="Label"
+            label={t.events.takeLabelLabel}
             name="label"
-            hint="Which pass it was — take 3, with the horns. Optional."
+            hint={t.events.takeLabelHint}
             error={takeErrorField === "label" ? takeError : undefined}
           />
           <fieldset class="bp-sheet-field">
@@ -282,16 +282,16 @@ const [allSongs, allInstruments] = await Promise.all([
         </div>
         <div class="bp-sheet-foot">
           <button type="submit" class="bp-btn bp-btn-primary">Add take</button>
-          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.events.cancel}</button>
         </div>
       </form>
     </RecordSheet>
 
     <RecordSheet
       id="edit-event"
-      eyebrow="Editing event"
-      title={eventLabel(event) || formatLongDate(event.heldAt)}
-      subtitle="Only the date and the kind are required."
+      eyebrow={t.events.editEyebrow}
+      title={eventLabel(event) || formatLongDate(locale, event.heldAt)}
+      subtitle={t.events.editSubtitle}
     >
       <form method="post" class="bp-sheet-form" novalidate>
         <input type="hidden" name="intent" value="update" />
@@ -299,13 +299,13 @@ const [allSongs, allInstruments] = await Promise.all([
           <div class="bp-sheet-field">
             <label class="bp-eyebrow" for="edit-event-kind">What was it</label>
             <select class="bp-select" id="edit-event-kind" name="kind">
-              <option value="rehearsal" selected={event.kind === "rehearsal"}>Rehearsal</option>
-              <option value="concert" selected={event.kind === "concert"}>Concert</option>
-              <option value="session" selected={event.kind === "session"}>Session</option>
+              <option value="rehearsal" selected={event.kind === "rehearsal"}>{t.events.kindRehearsal}</option>
+              <option value="concert" selected={event.kind === "concert"}>{t.events.kindConcert}</option>
+              <option value="session" selected={event.kind === "session"}>{t.events.kindSession}</option>
             </select>
           </div>
           <Field
-            label="Date"
+            label={t.events.dateLabel}
             name="heldAt"
             type="date"
             required
@@ -313,19 +313,19 @@ const [allSongs, allInstruments] = await Promise.all([
             error={editErrorField === "heldAt" ? editError : undefined}
           />
           <Field
-            label="Venue"
+            label={t.events.venueLabel}
             name="venue"
             value={event.venue ?? ""}
             error={editErrorField === "venue" ? editError : undefined}
           />
           <Field
-            label="Title"
+            label={t.events.titleLabel}
             name="title"
             value={event.title ?? ""}
             error={editErrorField === "title" ? editError : undefined}
           />
           <Field
-            label="Notes"
+            label={t.events.notesLabel}
             name="notes"
             as="textarea"
             rows="4"
@@ -338,10 +338,10 @@ const [allSongs, allInstruments] = await Promise.all([
                 href={`/admin/events/${event.id}/archive`}
                 class="bp-sheet-danger"
                 data-confirm
-                data-confirm-title={`Archive the ${kindLabel} of ${formatLongDate(event.heldAt)}?`}
-                data-confirm-body={archiveEventConsequence(takeTotal)}
+                data-confirm-title={t.events.archiveConfirmTitle({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })}
+                data-confirm-body={archiveEventConsequence(takeTotal, locale)}
                 data-confirm-action={`/admin/events/${event.id}/archive`}
-                data-confirm-cta="Archive event"
+                data-confirm-cta={t.events.archiveCta}
               >
                 Archive this event
               </a>
@@ -349,28 +349,28 @@ const [allSongs, allInstruments] = await Promise.all([
           )}
         </div>
         <div class="bp-sheet-foot">
-          <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
-          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+          <button type="submit" class="bp-btn bp-btn-primary">{t.events.saveChanges}</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.events.cancel}</button>
         </div>
       </form>
     </RecordSheet>
 
     <section>
       <div class="bp-title-row">
-        <h2 class="bp-section-title bp-m0">Takes</h2>
+        <h2 class="bp-section-title bp-m0">{t.events.takesHeading}</h2>
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="add-take">
           Add take
         </button>
       </div>
       {takeTotal > 0 && (
         <p class="bp-event-hero-hint bp-m0">
-          {takeTotal} {takeTotal === 1 ? "take" : "takes"}, in the order they were played
+          {t.events.takesInOrder(takeTotal)}
         </p>
       )}
       {
         takes.length === 0 ? (
           <div class="bp-empty-state">
-            <p>No takes logged for this one yet.</p>
+            <p>{t.events.takesEmpty}</p>
           </div>
         ) : (
           <div class="bp-take-list bp-take-list--wide">

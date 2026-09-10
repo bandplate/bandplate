@@ -1,4 +1,5 @@
 ---
+import { adminMessages } from "@bandplate/i18n";
 // No-JS fallback confirm page for promoting a take to `state='keeper'` —
 // same pattern as `admin/instruments/[id]/archive.astro` (see that file's
 // header comment). `?reject=1` reverses the direction, reached from the
@@ -17,6 +18,8 @@ import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import { formatLongDate } from "../../../../server/format.js";
 import { getTakeForAdminAction, setTakeState } from "../../../../server/pages/admin-takes.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -49,30 +52,28 @@ if (!detail) {
   return new Response("Take not found.", { status: 404 });
 }
 const { take, song } = detail;
-const takeLabel = `${song ? song.title : "Untitled take"} — ${formatLongDate(take.recordedAt)}${take.label ? ` (${take.label})` : ""}`;
+const takeLabel = `${song ? song.title : ta.untitledTake} — ${formatLongDate(take.recordedAt)}${take.label ? ` (${take.label})` : ""}`;
 ---
 
 {/* Neither one destroys anything — both are a state the band can change back.
     Reject in the danger colour would spend it on a reversible call and leave
     nothing louder for an actual delete. */}
-<Layout title={rejecting ? "Reject take" : "Promote to keeper"}>
+<Layout title={rejecting ? ta.rejectTake : ta.promoteToKeeper}>
   <ConfirmActionPage
     bannerTitle={rejecting ? `Reject ${takeLabel}?` : `Promote ${takeLabel} to keeper?`}
-    cta={rejecting ? "Reject" : "Promote to keeper"}
+    cta={rejecting ? "Reject" : ta.promoteToKeeper}
     cancelHref={`/takes/${id}`}
-    cancelLabel="Cancel"
+    cancelLabel={ta.cancel}
     tone="neutral"
   >
     {
       rejecting ? (
-        <>
-          This take will be marked <strong>rejected</strong> and dropped from "needs your vote" —
+        <>{ta.takeWillBeMarked}<strong>rejected</strong> and dropped from "needs your vote" —
           the band has decided it isn't the one. It stays in the archive and can still be found by
           search.
         </>
       ) : (
-        <>
-          This take will be marked <strong>keeper</strong> — the band's pick for this song at this
+        <>{ta.takeWillBeMarked}<strong>keeper</strong> — the band's pick for this song at this
           event. That's a real decision the votes only inform, not an automatic threshold.
         </>
       )

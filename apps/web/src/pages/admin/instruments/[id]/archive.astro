@@ -1,8 +1,9 @@
 ---
+import { adminMessages } from "@bandplate/i18n";
 // No-JS fallback confirm page for archiving an instrument (see the members
 // revoke-sessions confirm page for the same pattern). `?unarchive=1`
 // reverses the direction — reached directly from the list's one-click
-// "Unarchive" button, which isn't destructive and so doesn't need a
+// ta.unarchive button, which isn't destructive and so doesn't need a
 // confirmation step at all.
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
 import Layout from "../../../../layouts/Layout.astro";
@@ -12,6 +13,8 @@ import {
   getInstrument,
   setInstrumentArchived,
 } from "../../../../server/pages/admin-instruments.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -44,12 +47,12 @@ if (!instrument) {
 }
 ---
 
-<Layout title="Archive instrument">
+<Layout title={ta.archiveInstrument}>
   <ConfirmActionPage
     bannerTitle={`Archive ${instrument.label}?`}
-    cta="Archive"
+    cta={ta.archive}
     cancelHref="/admin/instruments"
-    cancelLabel="Cancel"
+    cancelLabel={ta.cancel}
   >
     {instrument.label} won't be selectable for new takes. Past takes that used it keep
     rendering fine.

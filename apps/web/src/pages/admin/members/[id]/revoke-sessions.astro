@@ -1,5 +1,6 @@
 ---
-// The no-JS fallback destination for the "Revoke sessions" trigger on the
+import { adminMessages } from "@bandplate/i18n";
+// The no-JS fallback destination for the ta.revokeSessions trigger on the
 // members list: GET renders a real confirmation page (names the member,
 // states the consequence), and this page's own `<form method="post">`
 // performs the action — no JavaScript required. When JS is available, the
@@ -11,6 +12,8 @@ import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps, getAuthDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import { getMember, revokeMemberSessions } from "../../../../server/pages/admin-members.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -42,12 +45,12 @@ if (!member) {
 }
 ---
 
-<Layout title="Revoke sessions">
+<Layout title={ta.revokeSessions}>
   <ConfirmActionPage
     bannerTitle={`Revoke sessions for ${member.displayName}?`}
-    cta="Revoke sessions"
+    cta={ta.revokeSessions}
     cancelHref="/admin/members"
-    cancelLabel="Cancel"
+    cancelLabel={ta.cancel}
   >
     {member.displayName} will be signed out everywhere and will need a new login link to get
     back in.

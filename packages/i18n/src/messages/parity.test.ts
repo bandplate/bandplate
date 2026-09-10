@@ -31,6 +31,10 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // The bootstrap token is called that in both languages — it is the name of
   // an environment variable the deployer already typed.
   "auth.setupTokenLabel",
+  // Developer vocabulary the person reading this screen already uses: they
+  // set up the server. Same word in Czech.
+  "admin.colSlug",
+  "admin.colRole",
   // An event kind this map has never heard of passes straight through in
   // every language — that is the point. See `en/events.ts`.
   "events.kindLabel(unknown)",

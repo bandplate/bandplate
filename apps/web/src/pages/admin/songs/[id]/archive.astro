@@ -1,5 +1,6 @@
 ---
 import { songsRepo, takesRepo } from "@bandplate/db";
+import { adminMessages } from "@bandplate/i18n";
 // Archive (or unarchive) a song. Under `/admin/` so `guardAdminPath` in
 // `middleware.ts` enforces `members:admin` structurally — members can create
 // and edit songs, but only an admin retires one. Same dual-mode shape as the
@@ -10,6 +11,8 @@ import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import { archiveSongConsequence, setSongArchived } from "../../../../server/pages/songs.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -53,27 +56,25 @@ const takeCount = await takesRepo.countBySong(appDeps.db, song.id);
 const consequence = archiveSongConsequence(takeCount, Astro.locals.locale);
 ---
 
-<Layout title={archiving ? "Archive song" : "Unarchive song"}>
+<Layout title={archiving ? ta.archiveSong : ta.unarchiveSong}>
   {
     archiving ? (
       <ConfirmActionPage
         bannerTitle={`Archive ${song.title}?`}
-        cta="Archive song"
+        cta={ta.archiveSong}
         cancelHref={`/songs/${song.slug}`}
-        cancelLabel="Cancel"
+        cancelLabel={ta.cancel}
       >
         {consequence} Archiving is a decision about the repertoire, not about the recordings.
       </ConfirmActionPage>
     ) : (
       <ConfirmActionPage
         bannerTitle={`Put ${song.title} back?`}
-        cta="Unarchive song"
+        cta={ta.unarchiveSong}
         cancelHref={`/songs/${song.slug}`}
-        cancelLabel="Cancel"
+        cancelLabel={ta.cancel}
         tone="neutral"
-      >
-        It returns to the song library and to the picker when you add a take.
-      </ConfirmActionPage>
+      >{ta.unarchiveSongBody}</ConfirmActionPage>
     )
   }
 </Layout>

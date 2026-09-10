@@ -6,11 +6,14 @@
 // been here" — a stub the bridge invented from a mis-typed title, a duplicate,
 // a test song. See `deleteSong` for why both exist.
 import { assetsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import { adminMessages } from "@bandplate/i18n";
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
 import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import { deleteSong, deleteSongConsequence } from "../../../../server/pages/songs.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -60,12 +63,12 @@ for (const take of takes) {
 const consequence = deleteSongConsequence(takes.length, fileCount, byteTotal, Astro.locals.locale);
 ---
 
-<Layout title="Delete song">
+<Layout title={ta.deleteSong}>
   <ConfirmActionPage
     bannerTitle={`Delete ${song.title} and everything under it?`}
-    cta="Delete song"
+    cta={ta.deleteSong}
     cancelHref={`/songs/${song.slug}`}
-    cancelLabel="Cancel"
+    cancelLabel={ta.cancel}
   >
     {consequence}
   </ConfirmActionPage>

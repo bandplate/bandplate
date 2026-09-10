@@ -6,12 +6,15 @@
 // kind, which is the shape the duplicate always takes: a member created the
 // rehearsal before the bridge pushed its own.
 import { eventsRepo, takesRepo } from "@bandplate/db";
+import { adminMessages } from "@bandplate/i18n";
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
 import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import { eventKindLabel, eventLabel, formatLongDate } from "../../../../server/format.js";
 import { mergeEvents } from "../../../../server/pages/events.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -58,16 +61,16 @@ const takeNoun = movingCount === 1 ? "take" : "takes";
 const inheritsKey = !keep.clientRef && merge.clientRef !== null;
 ---
 
-<Layout title="Merge events">
+<Layout title={ta.mergeEvents}>
   <ConfirmActionPage
     bannerTitle={`Move everything from ${name(merge)} into ${name(keep)}?`}
-    cta="Merge them"
+    cta={ta.mergeThem}
     cancelHref={`/events/${keep.id}`}
-    cancelLabel="Cancel"
+    cancelLabel={ta.cancel}
     tone="neutral"
   >
     {movingCount === 0
-      ? "It has no takes, so nothing moves — it is just archived."
+      ? ta.mergeNoTakes
       : `Its ${movingCount} ${takeNoun} move across, keeping their songs, their files and their votes.`}
     {" "}The emptied event is archived rather than deleted, so anything pinned to it still resolves.
     {inheritsKey

@@ -1,4 +1,5 @@
 ---
+import { adminMessages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AdminHeader from "../../../components/AdminHeader.astro";
@@ -16,6 +17,8 @@ import {
   updateMember,
   updateMemberInstruments,
 } from "../../../server/pages/admin-members.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -48,7 +51,7 @@ if (Astro.request.method === "POST") {
         );
       }
       if (result.kind === "email_taken") {
-        createError = "A member with this email already exists.";
+        createError = ta.duplicateEmail;
         createErrorField = "email";
       } else {
         createError = result.error;
@@ -62,9 +65,9 @@ if (Astro.request.method === "POST") {
 
       const instruments = await updateMemberInstruments(appDeps.db, id, formData);
       if (instruments.kind === "not_found") {
-        formError = "Couldn't find that member — reload and try again.";
+        formError = ta.memberNotFound;
       } else if (instruments.kind !== "ok") {
-        formError = "That instrument selection didn't look right — reload and try again.";
+        formError = ta.instrumentsInvalid;
       } else if (!formData.has("role")) {
         // Your own row renders no role/status controls (see the sheet), so
         // there is nothing else to write.
@@ -75,18 +78,18 @@ if (Astro.request.method === "POST") {
           return Astro.redirect("/admin/members?updated=1");
         }
         if (result.kind === "self") {
-          formError = "You can't change your own role or status — ask another admin to do it.";
+          formError = ta.selfError;
         } else if (result.kind === "last_admin") {
-          formError = "That would leave the band with no active admin. Promote someone else first.";
+          formError = ta.lastAdmin;
         } else {
-          formError = "Couldn't update that member — reload and try again.";
+          formError = ta.memberUpdateFailed;
         }
       }
     } else if (intent === "invite") {
       const id = String(formData.get("memberId") ?? "");
       const result = await resendMemberInvite(appDeps.db, id, invite);
       if (result.kind === "not_found") {
-        formError = "Couldn't find that member — reload and try again.";
+        formError = ta.memberNotFound;
       } else {
         return Astro.redirect(
           result.invited ? "/admin/members?invited=1" : "/admin/members?nomail=1",
@@ -107,23 +110,23 @@ const justInvited = Astro.url.searchParams.get("invited") === "1";
 const mailFailed = Astro.url.searchParams.get("nomail") === "1";
 ---
 
-<AppLayout title="Admin — Members" principal={principal} current="admin" adminSection="members">
+<AppLayout title={ta.membersTitle} principal={principal} current="admin" adminSection="members">
   <div class="bp-stack">
-    <AdminHeader title="Members" current="members" />
+    <AdminHeader title={ta.members} current="members" />
 
     {justCreated && !mailFailed && (
-      <Banner kind="success">Member added, and their invitation is on its way.</Banner>
+      <Banner kind="success">{ta.memberAddedInvited}</Banner>
     )}
-    {justCreated && mailFailed && <Banner kind="success">Member added.</Banner>}
-    {justInvited && <Banner kind="success">Invitation sent again.</Banner>}
+    {justCreated && mailFailed && <Banner kind="success">{ta.memberAdded}</Banner>}
+    {justInvited && <Banner kind="success">{ta.inviteResent}</Banner>}
     {mailFailed && (
-      <Banner kind="error" title="The invitation email didn't send">
+      <Banner kind="error" title={ta.inviteFailedTitle}>
         They're on the whitelist and can still sign in from the login page themselves — but check
         your mail configuration, because login links go out the same way.
       </Banner>
     )}
-    {justUpdated && <Banner kind="success">Member updated.</Banner>}
-    {justRevoked && <Banner kind="success">Sessions revoked. They'll need a new login link.</Banner>}
+    {justUpdated && <Banner kind="success">{ta.memberUpdated}</Banner>}
+    {justRevoked && <Banner kind="success">{ta.sessionsRevoked}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     {/* One inline row of fields, not a bordered panel with its own "Add a
@@ -133,41 +136,39 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
     <form method="post" class="bp-admin-add" novalidate>
       <input type="hidden" name="intent" value="create" />
       <Field
-        label="Name"
+        label={ta.colName}
         name="displayName"
         required
         autocomplete="name"
         error={createErrorField === "displayName" ? createError : undefined}
       />
       <Field
-        label="Email"
+        label={ta.colEmail}
         name="email"
         type="email"
         required
         autocomplete="email"
         error={createErrorField === "email" ? createError : undefined}
       />
-      <button type="submit" class="bp-btn bp-btn-primary">Add member</button>
+      <button type="submit" class="bp-btn bp-btn-primary">{ta.addMember}</button>
     </form>
 
     {members.length === 0 ? (
       <div class="bp-empty-state">
-        <p>No members yet — add the first one above.</p>
+        <p>{ta.emptyMembers}</p>
       </div>
     ) : (
       <div class="bp-table-wrap">
         <table class="bp-table">
-          <caption class="sr-only">
-            Band members
-          </caption>
+          <caption class="sr-only">{ta.bandMembers}</caption>
           <thead>
             <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Email</th>
-              <th scope="col">Role</th>
-              <th scope="col">Instruments</th>
-              <th scope="col">Last seen</th>
-              <th scope="col">Actions</th>
+              <th scope="col">{ta.colName}</th>
+              <th scope="col">{ta.colEmail}</th>
+              <th scope="col">{ta.colRole}</th>
+              <th scope="col">{ta.colInstruments}</th>
+              <th scope="col">{ta.colLastSeen}</th>
+              <th scope="col">{ta.colActions}</th>
             </tr>
           </thead>
           <tbody>
@@ -177,7 +178,7 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
               );
               return (
               <tr>
-                <td data-label="Name">
+                <td data-label={ta.colName}>
                   <span class="bp-table-name">{member.displayName}</span>
                   {/* Status rides under the name rather than taking a column
                       of its own: "active" is the answer for nearly every row,
@@ -187,15 +188,15 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                       about. */}
                   {member.status !== "active" && <span class="bp-kind">{member.status}</span>}
                 </td>
-                <td data-label="Email" class="bp-table-quiet">{member.email}</td>
-                <td data-label="Role">
+                <td data-label={ta.colEmail} class="bp-table-quiet">{member.email}</td>
+                <td data-label={ta.colRole}>
                   {member.role === "admin" ? (
                     <span class="bp-badge bp-badge-admin">admin</span>
                   ) : (
                     <span class="bp-kind">member</span>
                   )}
                 </td>
-                <td data-label="Instruments">
+                <td data-label={ta.colInstruments}>
                   <InstrumentSet
                     instruments={memberInstruments}
                     verb="plays"
@@ -204,20 +205,18 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                     emptyLabel="none"
                   />
                 </td>
-                <td data-label="Last seen" class="bp-table-quiet bp-table-when">{formatTimestamp(member.lastSeenAt)}</td>
+                <td data-label={ta.colLastSeen} class="bp-table-quiet bp-table-when">{formatTimestamp(member.lastSeenAt)}</td>
                 {/* The row carries no controls at all now — one trigger, and
                     everything you can do to the record lives in its sheet. */}
-                <td data-label="Actions">
+                <td data-label={ta.colActions}>
                   <button
                     type="button"
                     class="bp-btn bp-btn-secondary bp-btn-sm"
                     data-sheet-open={`member-${member.id}`}
-                  >
-                    Edit
-                  </button>
+                  >{ta.edit}</button>
                   <RecordSheet
                     id={`member-${member.id}`}
-                    eyebrow="Editing member"
+                    eyebrow={ta.editingMember}
                     title={member.displayName}
                     subtitle={member.email}
                   >
@@ -240,20 +239,18 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                           // all means there is no dead end to press and no way
                           // to lock yourself out from this row. Instruments
                           // are not a self-demotion concern, so they stay.
-                          <p class="bp-sheet-hint bp-m0">
-                            This is you — another admin has to change your role or status.
-                          </p>
+                          <p class="bp-sheet-hint bp-m0">{ta.selfRowNote}</p>
                         ) : (
                           <>
                             <div class="bp-sheet-field">
-                              <label class="bp-eyebrow" for={`role-${member.id}`}>Role</label>
+                              <label class="bp-eyebrow" for={`role-${member.id}`}>{ta.colRole}</label>
                               <select class="bp-select" id={`role-${member.id}`} name="role">
                                 <option value="member" selected={member.role === "member"}>member</option>
                                 <option value="admin" selected={member.role === "admin"}>admin</option>
                               </select>
                             </div>
                             <div class="bp-sheet-field">
-                              <label class="bp-eyebrow" for={`status-${member.id}`}>Status</label>
+                              <label class="bp-eyebrow" for={`status-${member.id}`}>{ta.colStatus}</label>
                               <select class="bp-select" id={`status-${member.id}`} name="status">
                                 <option value="invited" selected={member.status === "invited"}>invited</option>
                                 <option value="active" selected={member.status === "active"}>active</option>
@@ -264,7 +261,7 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                         )}
 
                         <fieldset class="bp-sheet-field">
-                          <legend class="bp-eyebrow">Instruments</legend>
+                          <legend class="bp-eyebrow">{ta.colInstruments}</legend>
                           <div class="bp-filter-pills">
                             {allInstruments.map((instrument) => (
                               <label class="bp-filter-pill-check">
@@ -288,9 +285,7 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                             type="submit"
                             form={`invite-${member.id}`}
                             class="bp-btn bp-btn-quiet bp-btn-sm"
-                          >
-                            Send the invitation again
-                          </button>
+                          >{ta.resendInvite}</button>
                           <a
                             href={`/admin/members/${member.id}/revoke-sessions`}
                             class="bp-sheet-danger"
@@ -298,20 +293,16 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                             data-confirm-title={`Revoke sessions for ${member.displayName}?`}
                             data-confirm-body={`${member.displayName} will be signed out everywhere and will need a new login link to get back in.`}
                             data-confirm-action={`/admin/members/${member.id}/revoke-sessions`}
-                            data-confirm-cta="Revoke sessions"
-                          >
-                            Revoke sessions
-                          </a>
+                            data-confirm-cta={ta.revokeSessions}
+                          >{ta.revokeSessions}</a>
                         </div>
                       </div>
                       <div class="bp-sheet-foot">
-                        <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
+                        <button type="submit" class="bp-btn bp-btn-primary">{ta.saveChanges}</button>
                         {/* The way out. There wasn't one before — the only
                             escape from an open editor was Escape, which is
                             not a control anybody can see. */}
-                        <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>
-                          Cancel
-                        </button>
+                        <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{ta.cancel}</button>
                       </div>
                     </form>
                   </RecordSheet>

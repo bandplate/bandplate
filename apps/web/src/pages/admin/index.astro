@@ -1,10 +1,13 @@
 ---
+import { adminMessages } from "@bandplate/i18n";
 import AdminHeader from "../../components/AdminHeader.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { listInstruments } from "../../server/pages/admin-instruments.js";
 import { listMembers } from "../../server/pages/admin-members.js";
 import { listTokens } from "../../server/pages/admin-tokens.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -22,9 +25,9 @@ const activeInstruments = instruments.filter((i) => i.archivedAt === null);
 const activeTokens = tokens.filter((t) => t.revokedAt === null);
 ---
 
-<AppLayout title="Admin" principal={principal} current="admin" adminSection="overview">
+<AppLayout title={ta.title} principal={principal} current="admin" adminSection="overview">
   <div class="bp-stack">
-    <AdminHeader title="Admin" current="overview" />
+    <AdminHeader title={ta.title} current="overview" />
 
     {/* Not `.bp-card`s. A count with a label under it is the thinnest content
         there is, and wrapping each in a bordered, filled panel with its own
@@ -33,19 +36,19 @@ const activeTokens = tokens.filter((t) => t.revokedAt === null);
         the plates and rows use, at tile proportions. */}
     <div class="bp-admin-tiles">
       <a href="/admin/members" class="bp-admin-tile">
-        <span class="bp-eyebrow">Members</span>
+        <span class="bp-eyebrow">{ta.members}</span>
         <span class="bp-admin-tile-value">{members.length}</span>
-        <span class="bp-admin-tile-note">The band roster, roles and status.</span>
+        <span class="bp-admin-tile-note">{ta.membersBlurb}</span>
       </a>
       <a href="/admin/instruments" class="bp-admin-tile">
-        <span class="bp-eyebrow">Instruments</span>
+        <span class="bp-eyebrow">{ta.colInstruments}</span>
         <span class="bp-admin-tile-value">{activeInstruments.length}</span>
         <span class="bp-admin-tile-note">
           {instruments.length - activeInstruments.length} archived.
         </span>
       </a>
       <a href="/admin/tokens" class="bp-admin-tile">
-        <span class="bp-eyebrow">Service tokens</span>
+        <span class="bp-eyebrow">{ta.serviceTokens}</span>
         <span class="bp-admin-tile-value">{activeTokens.length}</span>
         <span class="bp-admin-tile-note">{tokens.length - activeTokens.length} revoked.</span>
       </a>

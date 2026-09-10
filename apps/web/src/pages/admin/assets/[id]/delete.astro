@@ -4,11 +4,14 @@
 // uploading is the app's one JS-only capability, so the half that DESTROYS
 // something must not also depend on script.
 import { assetsRepo, instrumentsRepo, takesRepo } from "@bandplate/db";
+import { adminMessages } from "@bandplate/i18n";
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
 import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import { deleteAsset, deleteAssetConsequence } from "../../../../server/pages/takes.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -56,12 +59,12 @@ const isLastPlayable = !remaining.some(
 const take = await takesRepo.getById(appDeps.db, asset.takeId);
 ---
 
-<Layout title="Delete file">
+<Layout title={ta.deleteFile}>
   <ConfirmActionPage
     bannerTitle={`Delete the ${label} from this take?`}
-    cta="Delete file"
+    cta={ta.deleteFile}
     cancelHref={take ? `/takes/${take.id}` : "/takes"}
-    cancelLabel="Cancel"
+    cancelLabel={ta.cancel}
   >
     {deleteAssetConsequence(label, asset, isLastPlayable, Astro.locals.locale)}
   </ConfirmActionPage>

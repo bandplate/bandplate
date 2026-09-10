@@ -1,4 +1,5 @@
 ---
+import { adminMessages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import { INSTRUMENT_GLYPHS, INSTRUMENT_GLYPH_CREDIT } from "@bandplate/ui/icons/instruments.js";
@@ -13,6 +14,8 @@ import {
   listInstruments,
   updateInstrument,
 } from "../../../server/pages/admin-instruments.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -45,7 +48,7 @@ if (Astro.request.method === "POST") {
       if (result.kind === "ok") {
         return Astro.redirect("/admin/instruments?updated=1");
       }
-      formError = "Couldn't update that instrument — reload and try again.";
+      formError = ta.instrumentUpdateFailed;
     }
   }
 }
@@ -56,32 +59,32 @@ const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justArchived = Astro.url.searchParams.get("archived") === "1";
 ---
 
-<AppLayout title="Admin — Instruments" principal={principal} current="admin" adminSection="instruments">
+<AppLayout title={ta.instrumentsTitle} principal={principal} current="admin" adminSection="instruments">
   <div class="bp-stack">
-    <AdminHeader title="Instruments" current="instruments" />
+    <AdminHeader title={ta.colInstruments} current="instruments" />
 
-    {justCreated && <Banner kind="success">Instrument added.</Banner>}
-    {justUpdated && <Banner kind="success">Instrument updated.</Banner>}
-    {justArchived && <Banner kind="success">Instrument archived. Its past takes still render fine.</Banner>}
+    {justCreated && <Banner kind="success">{ta.instrumentAdded}</Banner>}
+    {justUpdated && <Banner kind="success">{ta.instrumentUpdated}</Banner>}
+    {justArchived && <Banner kind="success">{ta.instrumentArchived}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <form method="post" class="bp-admin-add" novalidate>
       <input type="hidden" name="intent" value="create" />
       <Field
-        label="Slug"
+        label={ta.colSlug}
         name="slug"
         required
-        hint="Lowercase, no spaces — e.g. rhythm-guitar"
+        hint={ta.slugHint}
         error={createErrorField === "slug" ? createError : undefined}
       />
       <Field
-        label="Label"
+        label={ta.colLabel}
         name="label"
         required
-        hint="What members see — e.g. Rhythm guitar"
+        hint={ta.labelHint}
         error={createErrorField === "label" ? createError : undefined}
       />
-      <button type="submit" class="bp-btn bp-btn-primary">Add instrument</button>
+      <button type="submit" class="bp-btn bp-btn-primary">{ta.addInstrument}</button>
     </form>
 
     <p class="bp-field-hint bp-m0">
@@ -90,25 +93,25 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
     </p>
     {instruments.length === 0 ? (
       <div class="bp-empty-state">
-        <p>No instruments yet — add the first one above.</p>
+        <p>{ta.emptyInstruments}</p>
       </div>
     ) : (
       <div class="bp-table-wrap">
         <table class="bp-table">
           <thead>
             <tr>
-              <th scope="col">Icon</th>
-              <th scope="col">Label</th>
-              <th scope="col">Slug</th>
-              <th scope="col">Order</th>
-              <th scope="col">Status</th>
-              <th scope="col">Actions</th>
+              <th scope="col">{ta.colIcon}</th>
+              <th scope="col">{ta.colLabel}</th>
+              <th scope="col">{ta.colSlug}</th>
+              <th scope="col">{ta.colOrder}</th>
+              <th scope="col">{ta.colStatus}</th>
+              <th scope="col">{ta.colActions}</th>
             </tr>
           </thead>
           <tbody>
             {instruments.map((instrument) => (
               <tr>
-                <td data-label="Icon">
+                <td data-label={ta.colIcon}>
                   <InstrumentIcon icon={instrument.icon} label={instrument.label} size={24} />
                 </td>
                 {/* The label reads as a label; editing it lives behind the
@@ -116,29 +119,27 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                     and the destructive action. Inline, the four of them wrapped
                     every row to three lines — a table of hairline rows you can
                     scan a column of cannot afford that. */}
-                <td data-label="Label">
+                <td data-label={ta.colLabel}>
                   <span class="bp-table-name">{instrument.label}</span>
                 </td>
-                <td data-label="Slug" class="bp-table-quiet">{instrument.slug}</td>
-                <td data-label="Order" class="bp-table-quiet">{instrument.sortOrder}</td>
+                <td data-label={ta.colSlug} class="bp-table-quiet">{instrument.slug}</td>
+                <td data-label={ta.colOrder} class="bp-table-quiet">{instrument.sortOrder}</td>
                 {/* Archived is the exception worth seeing; "active" as a badge
                     on every other row was a column of decoration. */}
                 {/* One line, no surrounding whitespace: an unarchived
                     instrument must leave this cell with NO child nodes so the
                     phone layout's `td:empty` rule can drop it, rather than
                     rendering a STATUS label with a blank beside it. */}
-                <td data-label="Status">{instrument.archivedAt && <span class="bp-kind">archived</span>}</td>
-                <td data-label="Actions">
+                <td data-label={ta.colStatus}>{instrument.archivedAt && <span class="bp-kind">archived</span>}</td>
+                <td data-label={ta.colActions}>
                   <button
                     type="button"
                     class="bp-btn bp-btn-secondary bp-btn-sm"
                     data-sheet-open={`instrument-${instrument.id}`}
-                  >
-                    Edit
-                  </button>
+                  >{ta.edit}</button>
                   <RecordSheet
                     id={`instrument-${instrument.id}`}
-                    eyebrow="Editing instrument"
+                    eyebrow={ta.editingInstrument}
                     title={instrument.label}
                     subtitle={instrument.slug}
                   >
@@ -147,18 +148,18 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                       <input type="hidden" name="instrumentId" value={instrument.id} />
                       <div class="bp-sheet-body">
                         <div class="bp-sheet-field">
-                          <label class="bp-eyebrow" for={`label-${instrument.id}`}>Label</label>
+                          <label class="bp-eyebrow" for={`label-${instrument.id}`}>{ta.colLabel}</label>
                           <input
                             class="bp-input"
                             id={`label-${instrument.id}`}
                             name="label"
                             value={instrument.label}
                           />
-                          <p class="bp-sheet-hint bp-m0">What members see on a take.</p>
+                          <p class="bp-sheet-hint bp-m0">{ta.sortOrderHint}</p>
                         </div>
 
                         <div class="bp-sheet-field">
-                          <label class="bp-eyebrow" for={`order-${instrument.id}`}>Sort order</label>
+                          <label class="bp-eyebrow" for={`order-${instrument.id}`}>{ta.sortOrder}</label>
                           <input
                             class="bp-input bp-input-inline-number"
                             id={`order-${instrument.id}`}
@@ -172,11 +173,11 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                             tiles had to be collapsed inside a table cell; in
                             a panel this wide they are just the field. */}
                         <fieldset class="bp-sheet-field">
-                          <legend class="bp-eyebrow">Icon</legend>
+                          <legend class="bp-eyebrow">{ta.colIcon}</legend>
                           <div class="bp-icon-grid">
-                            <label class="bp-icon-choice" title="No icon — show initials">
+                            <label class="bp-icon-choice" title={ta.iconNoneHint}>
                               <input type="radio" name="icon" value="" checked={!instrument.icon} />
-                              <span class="bp-icon-choice-face bp-icon-choice-none">None</span>
+                              <span class="bp-icon-choice-face bp-icon-choice-none">{ta.iconNone}</span>
                             </label>
                             {Object.entries(INSTRUMENT_GLYPHS).map(([key, glyph]) => (
                               <label class="bp-icon-choice" title={glyph.label}>
@@ -200,9 +201,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                               type="submit"
                               form={`unarchive-${instrument.id}`}
                               class="bp-btn bp-btn-quiet bp-btn-sm"
-                            >
-                              Unarchive
-                            </button>
+                            >{ta.unarchive}</button>
                           ) : (
                             <a
                               href={`/admin/instruments/${instrument.id}/archive`}
@@ -211,18 +210,14 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                               data-confirm-title={`Archive ${instrument.label}?`}
                               data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}
                               data-confirm-action={`/admin/instruments/${instrument.id}/archive`}
-                              data-confirm-cta="Archive"
-                            >
-                              Archive
-                            </a>
+                              data-confirm-cta={ta.archive}
+                            >{ta.archive}</a>
                           )}
                         </div>
                       </div>
                       <div class="bp-sheet-foot">
-                        <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
-                        <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>
-                          Cancel
-                        </button>
+                        <button type="submit" class="bp-btn bp-btn-primary">{ta.saveChanges}</button>
+                        <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{ta.cancel}</button>
                       </div>
                     </form>
                     {instrument.archivedAt && (

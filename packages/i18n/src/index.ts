@@ -22,6 +22,7 @@ export {
   formatShortDate,
 } from "./format.js";
 
+export { adminMessages } from "./messages/admin.js";
 export { authMessages } from "./messages/auth.js";
 export { commonMessages } from "./messages/common.js";
 export { eventsMessages } from "./messages/events.js";

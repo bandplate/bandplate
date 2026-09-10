@@ -1,4 +1,5 @@
 ---
+import { adminMessages } from "@bandplate/i18n";
 // No-JS fallback confirm page for revoking a service token (see the
 // members revoke-sessions confirm page for the same pattern).
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
@@ -6,6 +7,8 @@ import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import { getToken, revokeToken } from "../../../../server/pages/admin-tokens.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -37,12 +40,12 @@ if (!token) {
 }
 ---
 
-<Layout title="Revoke token">
+<Layout title={ta.revokeToken}>
   <ConfirmActionPage
     bannerTitle={`Revoke the token ${token.label}?`}
-    cta="Revoke token"
+    cta={ta.revokeToken}
     cancelHref="/admin/tokens"
-    cancelLabel="Cancel"
+    cancelLabel={ta.cancel}
   >
     Anything using {token.label} will stop being able to authenticate immediately. This can't
     be undone.

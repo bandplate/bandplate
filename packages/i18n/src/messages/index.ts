@@ -9,6 +9,7 @@
 // Areas are added here as they are extracted, one commit per area, so this
 // list doubles as the record of how far the translation has got.
 import type { Locale } from "../locale.js";
+import { adminByLocale } from "./admin.js";
 import { authByLocale } from "./auth.js";
 import { commonByLocale } from "./common.js";
 import { eventsByLocale } from "./events.js";
@@ -24,6 +25,7 @@ import { votingByLocale } from "./voting.js";
 
 const CATALOG = {
   en: {
+    admin: adminByLocale.en,
     auth: authByLocale.en,
     common: commonByLocale.en,
     events: eventsByLocale.en,
@@ -38,6 +40,7 @@ const CATALOG = {
     voting: votingByLocale.en,
   },
   cs: {
+    admin: adminByLocale.cs,
     auth: authByLocale.cs,
     common: commonByLocale.cs,
     events: eventsByLocale.cs,

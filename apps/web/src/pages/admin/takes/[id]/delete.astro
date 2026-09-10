@@ -6,12 +6,15 @@
 //
 // A HARD delete, not the unused `purged` state — see `deleteTake`.
 import { assetsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import { adminMessages } from "@bandplate/i18n";
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
 import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import { formatLongDate } from "../../../../server/format.js";
 import { deleteTake, deleteTakeConsequence } from "../../../../server/pages/takes.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -56,12 +59,12 @@ const what = song ? song.title : `the take of ${formatLongDate(take.recordedAt)}
 const consequence = deleteTakeConsequence(assets, take.totalVotes, Astro.locals.locale);
 ---
 
-<Layout title="Delete take">
+<Layout title={ta.deleteTake}>
   <ConfirmActionPage
     bannerTitle={`Delete this take of ${what}?`}
-    cta="Delete take"
+    cta={ta.deleteTake}
     cancelHref={`/takes/${take.id}`}
-    cancelLabel="Cancel"
+    cancelLabel={ta.cancel}
   >
     {consequence}
   </ConfirmActionPage>

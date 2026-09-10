@@ -1,5 +1,6 @@
 ---
 import { SCOPES } from "@bandplate/core";
+import { adminMessages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AdminHeader from "../../../components/AdminHeader.astro";
@@ -15,6 +16,8 @@ import {
   listTokens,
   updateTokenScopes,
 } from "../../../server/pages/admin-tokens.js";
+
+const ta = adminMessages(Astro.locals.locale);
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -52,7 +55,7 @@ if (Astro.request.method === "POST") {
       if (result.kind === "ok") {
         return Astro.redirect("/admin/tokens?updated=1");
       }
-      formError = "Couldn't update that token's scopes — choose at least one and try again.";
+      formError = ta.scopesInvalid;
     }
   }
 }
@@ -62,24 +65,24 @@ const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justRevoked = Astro.url.searchParams.get("revoked") === "1";
 ---
 
-<AppLayout title="Admin — Tokens" principal={principal} current="admin" adminSection="tokens">
+<AppLayout title={ta.tokensTitle} principal={principal} current="admin" adminSection="tokens">
   <div class="bp-stack">
-    <AdminHeader title="Tokens" current="tokens" />
+    <AdminHeader title={ta.tokens} current="tokens" />
 
-    {justUpdated && <Banner kind="success">Scopes updated.</Banner>}
-    {justRevoked && <Banner kind="success">Token revoked. Anything using it will stop working immediately.</Banner>}
+    {justUpdated && <Banner kind="success">{ta.scopesUpdated}</Banner>}
+    {justRevoked && <Banner kind="success">{ta.tokenRevoked}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     {created && (
-      <Banner kind="success" title="Token created">
+      <Banner kind="success" title={ta.tokenCreatedTitle}>
         <p class="bp-m0">
-          <strong>Copy this secret now — it will not be shown again.</strong>
+          <strong>{ta.copySecretNow}</strong>
         </p>
         {/* The one place mono earns its keep on these pages: a random secret
             is read a character at a time, and that is exactly what a
             fixed-width face is for. Email addresses and labels are words. */}
         <p class="bp-mono">{created.rawToken}</p>
-        <CopyButton client:load value={created.rawToken} label="Copy secret" locale={Astro.locals.locale} />
+        <CopyButton client:load value={created.rawToken} label={ta.copySecret} locale={Astro.locals.locale} />
       </Banner>
     )}
 
@@ -89,10 +92,10 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
     <form method="post" class="bp-admin-add bp-admin-add--stacked" novalidate>
       <input type="hidden" name="intent" value="create" />
       <Field
-        label="Label"
+        label={ta.colLabel}
         name="label"
         required
-        hint="What this token is for — e.g. reaper-bridge"
+        hint={ta.tokenLabelHint}
         error={createErrorField === "label" ? createError : undefined}
       />
       <fieldset
@@ -100,7 +103,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
         aria-invalid={createErrorField === "scopes" ? "true" : undefined}
         aria-describedby={createErrorField === "scopes" ? "scopes-error" : undefined}
       >
-        <legend class="bp-field-label">Scopes</legend>
+        <legend class="bp-field-label">{ta.colScopes}</legend>
         {SCOPES.map((scope) => (
           <span class="bp-checkbox-item">
             <input type="checkbox" id={`scope-new-${scope}`} name="scopes" value={scope} />
@@ -111,48 +114,46 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
           <p class="bp-field-error" id="scopes-error" role="alert">{createError}</p>
         )}
       </fieldset>
-      <button type="submit" class="bp-btn bp-btn-primary">Create token</button>
+      <button type="submit" class="bp-btn bp-btn-primary">{ta.createToken}</button>
     </form>
 
     {tokens.length === 0 ? (
       <div class="bp-empty-state">
-        <p>No service tokens yet — create one above.</p>
+        <p>{ta.emptyTokens}</p>
       </div>
     ) : (
       <div class="bp-table-wrap">
         <table class="bp-table">
           <thead>
             <tr>
-              <th scope="col">Label</th>
-              <th scope="col">Scopes</th>
-              <th scope="col">Created</th>
-              <th scope="col">Last used</th>
-              <th scope="col">Actions</th>
+              <th scope="col">{ta.colLabel}</th>
+              <th scope="col">{ta.colScopes}</th>
+              <th scope="col">{ta.colCreated}</th>
+              <th scope="col">{ta.colLastUsed}</th>
+              <th scope="col">{ta.colActions}</th>
             </tr>
           </thead>
           <tbody>
             {tokens.map((token) => (
               <tr>
-                <td data-label="Label">
+                <td data-label={ta.colLabel}>
                   <span class="bp-table-name">{token.label}</span>
                   {token.revokedAt && <span class="bp-kind">revoked</span>}
                 </td>
-                <td data-label="Scopes" class="bp-table-quiet">{token.scopes.join(", ")}</td>
-                <td data-label="Created" class="bp-table-quiet bp-table-when">{formatTimestamp(token.createdAt)}</td>
-                <td data-label="Last used" class="bp-table-quiet bp-table-when">{formatTimestamp(token.lastUsedAt)}</td>
-                <td data-label="Actions">
+                <td data-label={ta.colScopes} class="bp-table-quiet">{token.scopes.join(", ")}</td>
+                <td data-label={ta.colCreated} class="bp-table-quiet bp-table-when">{formatTimestamp(token.createdAt)}</td>
+                <td data-label={ta.colLastUsed} class="bp-table-quiet bp-table-when">{formatTimestamp(token.lastUsedAt)}</td>
+                <td data-label={ta.colActions}>
                   {!token.revokedAt && (
                     <>
                       <button
                         type="button"
                         class="bp-btn bp-btn-secondary bp-btn-sm"
                         data-sheet-open={`token-${token.id}`}
-                      >
-                        Edit
-                      </button>
+                      >{ta.edit}</button>
                       <RecordSheet
                         id={`token-${token.id}`}
-                        eyebrow="Editing token"
+                        eyebrow={ta.editingToken}
                         title={token.label}
                         subtitle={token.scopes.join(", ")}
                       >
@@ -165,7 +166,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                                 They are the only decision this record carries,
                                 so here they are the body of the panel. */}
                             <fieldset class="bp-sheet-field">
-                              <legend class="bp-eyebrow">Scopes</legend>
+                              <legend class="bp-eyebrow">{ta.colScopes}</legend>
                               <div class="bp-checkbox-group">
                                 {SCOPES.map((scope) => (
                                   <span class="bp-checkbox-item">
@@ -194,17 +195,13 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
                                 data-confirm-title={`Revoke the token ${token.label}?`}
                                 data-confirm-body={`Anything using ${token.label} will stop being able to authenticate immediately. This can't be undone.`}
                                 data-confirm-action={`/admin/tokens/${token.id}/revoke`}
-                                data-confirm-cta="Revoke token"
-                              >
-                                Revoke this token
-                              </a>
+                                data-confirm-cta={ta.revokeToken}
+                              >{ta.revokeThisToken}</a>
                             </div>
                           </div>
                           <div class="bp-sheet-foot">
-                            <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
-                            <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>
-                              Cancel
-                            </button>
+                            <button type="submit" class="bp-btn bp-btn-primary">{ta.saveChanges}</button>
+                            <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{ta.cancel}</button>
                           </div>
                         </form>
                       </RecordSheet>

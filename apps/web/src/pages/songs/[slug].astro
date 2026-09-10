@@ -398,7 +398,15 @@ function eventOptionLabel(event: eventsRepo.Event): string {
     rather than two markup blocks: one DOM order, one source of truth, and the
     reading order for a screen reader follows the visual one at both sizes. */}
     <div class="bp-song-detail-grid">
-      <div class="bp-song-detail-chart">
+      {/* NO view transition on the chart.
+          `<ClientRouter />` cross-fades the page root by default, which is
+          fine for a heading or a row and wrong here: a dense block of
+          monospace chords fading through ANOTHER dense block of monospace
+          chords is two songs' text overlaid and legible as neither, for the
+          length of the fade, on the one part of the page you actually read.
+          `animate="none"` gives it its own transition scope with no animation,
+          so it swaps at once while the rest of the page still crossfades. */}
+      <div class="bp-song-detail-chart" transition:animate="none">
         {chart.kind === "sections" && (
           <section>
             <h2 class="bp-section-title">Chords &amp; lyrics</h2>

@@ -53,7 +53,7 @@ const [song, assets] = await Promise.all([
   assetsRepo.listByTake(appDeps.db, id),
 ]);
 const what = song ? song.title : `the take of ${formatLongDate(take.recordedAt)}`;
-const consequence = deleteTakeConsequence(assets, take.totalVotes);
+const consequence = deleteTakeConsequence(assets, take.totalVotes, Astro.locals.locale);
 ---
 
 <Layout title="Delete take">

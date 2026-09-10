@@ -10,7 +10,7 @@
 // play) and bone for a song or an event (a container, not a recording). The
 // caption under the plate says it in words too — colour alone is never the only
 // carrier of meaning here, same rule the vote buttons follow.
-import { formatShortDate, messages } from "@bandplate/i18n";
+import { formatShortDate, messages, playerMessages } from "@bandplate/i18n";
 import { eventLabel } from "../server/format.js";
 import { type PinnedItem, pinnedKindWord } from "../server/pages/home.js";
 
@@ -115,7 +115,7 @@ const playSubtitle = item.kind === "take" ? (item.take.label ?? detail) : "";
           data-source-kind="master"
           data-role="toggle"
           aria-pressed="false"
-          aria-label={`Play ${playTitle}`}
+          aria-label={playerMessages(locale).play(playTitle)}
         >
           <svg
             class="bp-play-icon-play"

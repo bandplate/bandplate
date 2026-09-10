@@ -50,4 +50,16 @@ export const voting = {
 
   /** When the optimistic update had to be rolled back. */
   saveFailed: "Couldn't save your vote. Try again.",
+
+  /**
+   * The favorite star's accessible label, said in TWO places that must agree:
+   * `FavoriteToggle.astro` renders it and `VoteFavorite.tsx` rewrites it after
+   * an optimistic toggle. It was assembled from four fragments at both, which
+   * fixed the word order in English — "Remove X from favorites" and "Přidat X
+   * do oblíbených" put the verb, the object and the preposition in different
+   * places.
+   */
+  favoriteAdd: (name: string): string => `Add ${name} to favorites`,
+  favoriteRemove: (name: string): string => `Remove ${name} from favorites`,
+  favoriteFailed: "Couldn't update your favorites. Try again.",
 };

@@ -1,4 +1,5 @@
 ---
+import { votingMessages } from "@bandplate/i18n";
 // The favorite/pin toggle — one tap, a single `<form method="post">`
 // posting to `/favorites` (works with no JS at all; `VoteFavorite.tsx`
 // intercepts it once hydrated for an optimistic update). Extends the gold
@@ -27,7 +28,8 @@ export interface Props {
 }
 
 const { targetType, targetId, favorited, label, size = "sm" } = Astro.props;
-const actionLabel = `${favorited ? "Remove" : "Add"} ${label} ${favorited ? "from" : "to"} favorites`;
+const tv = votingMessages(Astro.locals.locale);
+const actionLabel = favorited ? tv.favoriteRemove(label) : tv.favoriteAdd(label);
 ---
 
 <form

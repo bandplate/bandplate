@@ -1,3 +1,4 @@
+import { type Locale, playerMessages } from "@bandplate/i18n";
 // The persistent player — one `<audio>` element, rendered once in
 // `AppLayout.astro` and kept alive across navigation via
 // `transition:persist` on its usage there. Astro persists an island's DOM
@@ -33,6 +34,7 @@
 import { useStore } from "@nanostores/preact";
 import { Fragment } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { currentLocale } from "../client/locale.js";
 import { decidePlayerClickAction } from "../client/player-actions.js";
 import {
   AUDIO_SOURCE_ATTR,
@@ -68,18 +70,16 @@ const MAX_WAVEFORM_BARS = 1000;
 const SKIP_SECONDS = 10;
 
 /**
- * The two words the player says about a source, in one place each.
+ * Everything the player says, in the language of the page it is standing in.
  *
- * They used to live in the `data-source-label` of every button that could
- * start audio — six call sites across three components and a page — and the
- * player then string-matched them back to work out what it was playing. Now
- * the buttons carry `data-source-kind` (the fact) and, for a stem,
- * `data-source-name` (the instrument), and these supply the wording. When the
- * message catalog lands they become catalog lookups; until then they are
- * exactly what they always rendered.
+ * Read at RENDER time from `<html lang>`, not captured at module load: this
+ * island is `transition:persist`, so it is moved between pages rather than
+ * remounted, and a value frozen at hydration would be whatever the first page
+ * happened to say. `currentLocale()` explains the rest.
  */
-const MASTER_LABEL = "Master";
-const SOLO_PREFIX = "Solo: ";
+function playerText(fallback?: Locale) {
+  return playerMessages(currentLocale(fallback));
+}
 
 /**
  * mm:ss. Chivo's tabular figures (see `.bp-player-time`) keep it from shifting
@@ -153,12 +153,15 @@ function syncButtons(track: PlayerTrack | null, playing: boolean): void {
     el.classList.toggle("is-active", isActiveSource);
     el.classList.toggle("is-playing", isActivePlaying);
     if (data.role !== "source-select") {
-      el.setAttribute("aria-label", `${isActivePlaying ? "Pause" : "Play"} ${data.title}`);
+      el.setAttribute(
+        "aria-label",
+        isActivePlaying ? playerText().pause(data.title) : playerText().play(data.title),
+      );
     }
   }
 }
 
-export default function Player() {
+export default function Player({ locale }: { locale?: Locale } = {}) {
   const track = useStore(currentTrack);
   const playing = useStore(isPlaying);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -447,11 +450,12 @@ export default function Player() {
     };
   }, []);
 
+  const t = playerText(locale);
   const announced = !track
     ? ""
     : track.sourceKind === "stem"
-      ? `Now playing: ${track.title} — ${SOLO_PREFIX}${track.sourceName}`
-      : `Now playing: ${track.title}`;
+      ? t.nowPlayingSource({ title: track.title, source: t.solo(track.sourceName) })
+      : t.nowPlaying(track.title);
 
   // One bar per `BAR_PITCH_PX` of actual rail. Observed rather than read once:
   // the player is persistent, so it outlives rotations, window drags and the
@@ -489,7 +493,7 @@ export default function Player() {
   // "Solo: " prefix, which would be a third thing on screen saying so. This
   // used to strip that prefix back off with `/^Solo:\s*/`, which only worked
   // while the prefix was that English word.
-  const sourceName = !track ? "" : track.sourceKind === "stem" ? track.sourceName : MASTER_LABEL;
+  const sourceName = !track ? "" : track.sourceKind === "stem" ? track.sourceName : t.master;
 
   return (
     <div class="bp-player" hidden={!track} data-testid="bp-player" ref={playerRef}>
@@ -510,7 +514,7 @@ export default function Player() {
             type="button"
             class="bp-player-skip"
             onClick={() => seekBy(-SKIP_SECONDS)}
-            aria-label={`Back ${SKIP_SECONDS} seconds`}
+            aria-label={t.back(SKIP_SECONDS)}
           >
             <svg
               viewBox="0 0 24 24"
@@ -538,7 +542,7 @@ export default function Player() {
             type="button"
             class="bp-player-play"
             aria-pressed={playing}
-            aria-label={playing ? `Pause ${track?.title ?? ""}` : `Play ${track?.title ?? ""}`}
+            aria-label={playing ? t.pause(track?.title ?? "") : t.play(track?.title ?? "")}
             onClick={() => {
               const audio = audioRef.current;
               if (!audio) {
@@ -578,7 +582,7 @@ export default function Player() {
             type="button"
             class="bp-player-skip"
             onClick={() => seekBy(SKIP_SECONDS)}
-            aria-label={`Forward ${SKIP_SECONDS} seconds`}
+            aria-label={t.forward(SKIP_SECONDS)}
           >
             <svg
               viewBox="0 0 24 24"
@@ -614,7 +618,7 @@ export default function Player() {
               aria-haspopup="true"
               onClick={() => setSwitcherOpen((open) => !open)}
             >
-              <span class="bp-visually-hidden">Change source, currently</span>
+              <span class="bp-visually-hidden">{t.changeSource}</span>
               {sourceName}
               <svg
                 viewBox="0 0 24 24"
@@ -631,7 +635,7 @@ export default function Player() {
               </svg>
             </button>
             {switcherOpen && (
-              <div class="bp-player-sources" role="group" aria-label="Source">
+              <div class="bp-player-sources" role="group" aria-label={t.sourceGroup}>
                 {sources.map((source) => (
                   // A plain `[data-audio-source]` control, exactly like the
                   // stems drawer on a take's own page — so switching from here
@@ -667,7 +671,7 @@ export default function Player() {
         <button
           type="button"
           class="bp-player-close"
-          aria-label="Stop and close the player"
+          aria-label={t.close}
           onClick={() => {
             const audio = audioRef.current;
             if (audio) {
@@ -731,7 +735,7 @@ export default function Player() {
             step={0.01}
             value={position}
             disabled={duration <= 0}
-            aria-label="Seek"
+            aria-label={t.seek}
             aria-valuetext={`${formatTime(position)} of ${formatTime(duration)}`}
             onInput={(event) => {
               const audio = audioRef.current;

@@ -43,6 +43,12 @@ const IDENTICAL_IS_FINE = new Set<string>([
   "songs.bpm(n)",
   // "Tempo" is the same word in Czech.
   "songs.tempoLabel",
+  // The word every studio in the country uses for the file. The player says
+  // it beside "stopa" for the stems, which is translated.
+  "takes.masterLabel",
+  // Same word in a Czech studio, and the player says it beside "stopa".
+  "player.master",
+  "takes.masterMix",
 ]);
 
 /** Arguments to call a function-valued entry with, keyed by its dotted path. */
@@ -80,6 +86,58 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "many", args: [{ takeCount: 6 }] },
   ],
   "home.heroName": [{ label: "parts", args: [{ name: "Čoudy", kind: "take" }] }],
+  "common.editingSheet": [{ label: "n", args: ["Čoudy"] }],
+  "voting.favoriteAdd": [{ label: "n", args: ["Čoudy"] }],
+  "voting.favoriteRemove": [{ label: "n", args: ["Čoudy"] }],
+  "player.solo": [{ label: "i", args: ["Bass"] }],
+  "player.nowPlaying": [{ label: "t", args: ["Čoudy"] }],
+  "player.nowPlayingSource": [{ label: "p", args: [{ title: "Čoudy", source: "Solo: Bass" }] }],
+  "player.play": [{ label: "t", args: ["Čoudy"] }],
+  "player.pause": [{ label: "t", args: ["Čoudy"] }],
+  "player.back": [{ label: "s", args: [10] }],
+  "player.forward": [{ label: "s", args: [10] }],
+  "takes.count": [
+    { label: "one", args: [1] },
+    { label: "few", args: [3] },
+    { label: "other", args: [9] },
+  ],
+  "takes.pageTitle": [{ label: "t", args: ["Čoudy"] }],
+  "takes.downloadAsset": [
+    { label: "p", args: [{ label: "Master", format: "flac", size: "84.0 MB" }] },
+  ],
+  "takes.deleteAsset": [{ label: "l", args: ["Master"] }],
+  "takes.deleteAssetConfirmTitle": [{ label: "l", args: ["master"] }],
+  "takes.deleteConsequence": [
+    { label: "none", args: [{ fileCount: 0, byteTotal: "0 B", totalVotes: 0 }] },
+    { label: "some", args: [{ fileCount: 5, byteTotal: "312.0 MB", totalVotes: 3 }] },
+    { label: "many", args: [{ fileCount: 9, byteTotal: "1.2 GB", totalVotes: 7 }] },
+  ],
+  "takes.deleteAssetConsequence": [
+    {
+      label: "keeps",
+      args: [
+        {
+          label: "Master",
+          format: "flac",
+          tier: "lossless",
+          bytes: "84.0 MB",
+          isLastPlayable: false,
+        },
+      ],
+    },
+    {
+      label: "last",
+      args: [
+        {
+          label: "Master",
+          format: "flac",
+          tier: "lossless",
+          bytes: "84.0 MB",
+          isLastPlayable: true,
+        },
+      ],
+    },
+  ],
   "songs.countPlain": [
     { label: "one", args: [1] },
     { label: "few", args: [3] },

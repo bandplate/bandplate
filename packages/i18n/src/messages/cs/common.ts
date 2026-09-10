@@ -11,4 +11,9 @@ export const common = {
   originError: "Na tom požadavku bylo něco špatně. Načti stránku znovu a zkus to zas.",
 
   genericError: "Nepovedlo se. Zkus to znovu.", // en: That didn't work. Try again.
+
+  instrumentsVerb: "Nástroje", // en: Instruments
+  playsVerb: "Hraje na", // en: Plays
+
+  editingSheet: (name: string): string => `Úprava: ${name}`, // en: `Editing ${name}`
 } satisfies typeof enCommon;

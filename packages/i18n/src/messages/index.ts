@@ -14,8 +14,10 @@ import { commonByLocale } from "./common.js";
 import { eventsByLocale } from "./events.js";
 import { homeByLocale } from "./home.js";
 import { meByLocale } from "./me.js";
+import { playerByLocale } from "./player.js";
 import { shellByLocale } from "./shell.js";
 import { songsByLocale } from "./songs.js";
+import { takesByLocale } from "./takes.js";
 import { votingByLocale } from "./voting.js";
 
 const CATALOG = {
@@ -25,8 +27,10 @@ const CATALOG = {
     events: eventsByLocale.en,
     home: homeByLocale.en,
     me: meByLocale.en,
+    player: playerByLocale.en,
     shell: shellByLocale.en,
     songs: songsByLocale.en,
+    takes: takesByLocale.en,
     voting: votingByLocale.en,
   },
   cs: {
@@ -35,8 +39,10 @@ const CATALOG = {
     events: eventsByLocale.cs,
     home: homeByLocale.cs,
     me: meByLocale.cs,
+    player: playerByLocale.cs,
     shell: shellByLocale.cs,
     songs: songsByLocale.cs,
+    takes: takesByLocale.cs,
     voting: votingByLocale.cs,
   },
 } as const;

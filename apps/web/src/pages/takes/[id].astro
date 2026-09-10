@@ -28,6 +28,7 @@ import { canPublish, hasAllScopes } from "@bandplate/core";
 // transition, just not a pixel-identical one. See task-6-report.md.
 import type { assetsRepo } from "@bandplate/db";
 import { instrumentsRepo, songsRepo } from "@bandplate/db";
+import { formatBytes, messages, playerMessages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AssetUploader from "../../components/AssetUploader.tsx";
@@ -42,7 +43,6 @@ import { isSameOrigin } from "../../server/csrf.js";
 import {
   eventKindLabel,
   eventLabel,
-  formatBytes,
   formatDuration,
   formatLongDate,
   formatShortDate,
@@ -69,13 +69,17 @@ if (!id) {
 
 const appDeps = await getAppDeps();
 
+const locale = Astro.locals.locale;
+const t = messages(locale);
+const tPlayer = playerMessages(locale);
+
 let editError: string | undefined;
 let editErrorField: TakeField | undefined;
 let formError: string | undefined;
 
 if (Astro.request.method === "POST") {
   if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
-    formError = "Something about that request looked wrong. Reload the page and try again.";
+    formError = t.common.originError;
   } else {
     const formData = await Astro.request.formData();
     if (formData.get("intent") === "update") {
@@ -84,9 +88,9 @@ if (Astro.request.method === "POST") {
         return Astro.redirect(`/takes/${id}?saved=1`);
       }
       if (result.kind === "not_found") {
-        formError = "That take is no longer here.";
+        formError = t.takes.gone;
       } else if (result.kind === "unknown_parent") {
-        editError = "That song is no longer here — reload and pick another.";
+        editError = t.takes.songGone;
         editErrorField = result.field;
       } else {
         editError = result.error;
@@ -181,7 +185,7 @@ const [allSongs, allInstruments] = await Promise.all([
   instrumentsRepo.list(appDeps.db),
 ]);
 const takeInstrumentIds = new Set(instruments.map((i) => i.id));
-const deleteConsequence = deleteTakeConsequence(assets, take.totalVotes);
+const deleteConsequence = deleteTakeConsequence(assets, take.totalVotes, locale);
 const justFileDeleted = Astro.url.searchParams.get("file_deleted") === "1";
 // A published take with nothing playable left: deleting the last file does not
 // unpublish it (one member's delete must not change what everyone sees), so
@@ -197,13 +201,13 @@ function isLastPlayableAsset(asset: assetsRepo.Asset): boolean {
 
 function assetLabel(asset: assetsRepo.Asset): string {
   if (asset.kind === "master") {
-    return "Master";
+    return t.takes.masterLabel;
   }
-  return instrumentLabelById.get(asset.instrumentId ?? "") ?? "Unknown instrument";
+  return instrumentLabelById.get(asset.instrumentId ?? "") ?? t.takes.unknownInstrument;
 }
 ---
 
-<AppLayout title={song ? `Take of ${song.title}` : "Take"} principal={principal} current="home">
+<AppLayout title={song ? t.takes.pageTitle(song.title) : t.takes.pageTitleUnknown} principal={principal} current="home">
   {/* Direction T3 from the design canvas: labelled STRIPS hanging off one
       edge, divided by rules, no cards. It is the same grammar the song page
       uses, which is the whole argument for it — a member moving between the
@@ -219,20 +223,18 @@ function assetLabel(asset: assetsRepo.Asset): string {
         Take added. Nobody will find it until there's something to play and you publish it.
       </Banner>
     )}
-    {justSaved && <Banner kind="success">Saved.</Banner>}
-    {justFileDeleted && <Banner kind="success">File deleted.</Banner>}
+    {justSaved && <Banner kind="success">{t.takes.saved}</Banner>}
+    {justFileDeleted && <Banner kind="success">{t.takes.fileDeleted}</Banner>}
     {publishedButEmpty && (
-      <Banner kind="error" title="Nothing left to play">
-        This take is published but has no playable file. Add one, or unpublish it.
-      </Banner>
+      <Banner kind="error" title={t.takes.nothingToPlayTitle}>{t.takes.nothingToPlayBody}</Banner>
     )}
-    {justPublished && <Banner kind="success">Published. The band can find it now.</Banner>}
+    {justPublished && <Banner kind="success">{t.takes.published}</Banner>}
     {justUnpublished && (
-      <Banner kind="success">Unpublished. Only someone with the link will find it.</Banner>
+      <Banner kind="success">{t.takes.unpublished}</Banner>
     )}
     {publishBlocked && (
       <Banner kind="error">
-        There's nothing on this take that can be played yet, so there's nothing to publish.
+        {t.takes.publishBlocked}
       </Banner>
     )}
     {formError && <Banner kind="error">{formError}</Banner>}
@@ -266,7 +268,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
         </span>
       </h1>
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-take">
-          Edit
+          {t.takes.edit}
         </button>
       </div>
 
@@ -303,16 +305,14 @@ function assetLabel(asset: assetsRepo.Asset): string {
         isDraft && (
           <div class="bp-take-draft">
             <div class="bp-take-draft-say">
-              <span class="bp-eyebrow">Not published yet</span>
+              <span class="bp-eyebrow">{t.takes.draftEyebrow}</span>
               <p class="bp-m0">
-                {readyToPublish
-                  ? "Nobody will find this take until you publish it."
-                  : "Put something on it that can be played, and you'll be able to publish it."}
+                {readyToPublish ? t.takes.draftReady : t.takes.draftNotReady}
               </p>
             </div>
             {readyToPublish && (
               <form method="post" action={`/takes/${take.id}/publish`}>
-                <button type="submit" class="bp-btn bp-btn-primary">Publish take</button>
+                <button type="submit" class="bp-btn bp-btn-primary">{t.takes.publishTake}</button>
               </form>
             )}
           </div>
@@ -330,7 +330,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
         {
           song && (
             <a href={`/songs/${song.slug}`} class="bp-take-way">
-              <span class="bp-take-way-kind">Song</span>
+              <span class="bp-take-way-kind">{t.takes.songHeading}</span>
               <span class="bp-take-way-name">{song.title}</span>
               <svg
             class="bp-take-way-arrow"
@@ -375,7 +375,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
 
     </div>
 
-    <RecordSheet id="edit-take" eyebrow="Editing take" title={heroTitle} subtitle={heroSubtitle}>
+    <RecordSheet id="edit-take" eyebrow={t.takes.editEyebrow} title={heroTitle} subtitle={heroSubtitle}>
       {/* Empty, and targeted by `form=` above: HTML forbids a form inside a
           form, and the same trick is what the admin member sheet uses for its
           secondary POST. */}
@@ -384,7 +384,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
         <input type="hidden" name="intent" value="update" />
         <div class="bp-sheet-body">
           <div class="bp-sheet-field">
-            <label class="bp-eyebrow" for="take-song">Song</label>
+            <label class="bp-eyebrow" for="take-song">{t.takes.songHeading}</label>
             <select class="bp-select" id="take-song" name="songId">
               {allSongs.map((option) => (
                 <option value={option.id} selected={option.id === take.songId}>
@@ -398,7 +398,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
             </p>
           </div>
           <Field
-            label="Recorded"
+            label={t.takes.recordedLabel}
             name="recordedAt"
             type="date"
             required
@@ -406,14 +406,14 @@ function assetLabel(asset: assetsRepo.Asset): string {
             error={editErrorField === "recordedAt" ? editError : undefined}
           />
           <Field
-            label="Label"
+            label={t.takes.takeLabelLabel}
             name="label"
             value={take.label ?? ""}
-            hint="Which pass it was — take 3, with the horns. Leave it empty if there's nothing to say."
+            hint={t.takes.takeLabelHint}
             error={editErrorField === "label" ? editError : undefined}
           />
           <fieldset class="bp-sheet-field">
-            <legend class="bp-eyebrow">Instruments</legend>
+            <legend class="bp-eyebrow">{t.takes.instrumentsHeading}</legend>
             <div class="bp-filter-pills">
               {allInstruments.map((instrument) => (
                 <label class="bp-filter-pill-check">
@@ -433,7 +433,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
             </p>
           </fieldset>
           <Field
-            label="Notes"
+            label={t.takes.notesLabel}
             name="notes"
             as="textarea"
             rows="4"
@@ -459,7 +459,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                   form="unpublish-take"
                   class="bp-btn bp-btn-secondary bp-btn-sm"
                 >
-                  Unpublish this take
+                  {t.takes.unpublishThisTake}
                 </button>
               )}
               <a
@@ -469,17 +469,17 @@ function assetLabel(asset: assetsRepo.Asset): string {
                 data-confirm-title={`Delete this take of ${heroTitle}?`}
                 data-confirm-body={deleteConsequence}
                 data-confirm-action={`/admin/takes/${take.id}/delete`}
-                data-confirm-cta="Delete take"
+                data-confirm-cta={t.takes.deleteTake}
                 data-confirm-redirect={`/events/${take.eventId}?take_deleted=1`}
               >
-                Delete this take
+                {t.takes.deleteThisTake}
               </a>
             </div>
           )}
         </div>
         <div class="bp-sheet-foot">
-          <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
-          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+          <button type="submit" class="bp-btn bp-btn-primary">{t.takes.saveChanges}</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.takes.cancel}</button>
         </div>
       </form>
     </RecordSheet>
@@ -487,7 +487,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
     {
       playableMaster && (
         <section class="bp-take-strip">
-          <h2 class="bp-strip-label">Listen</h2>
+          <h2 class="bp-strip-label">{t.takes.listenHeading}</h2>
           <div class="bp-take-play-section">
             <div class="bp-take-play-lead">
               <PlayToggleButton
@@ -498,18 +498,18 @@ function assetLabel(asset: assetsRepo.Asset): string {
                 size="lg"
               />
               <div class="bp-take-play-lead-text">
-                <p class="bp-take-play-title">Play this take</p>
+                <p class="bp-take-play-title">{t.takes.playThisTake}</p>
                 {/* Names the SOURCE, not the length. The duration lives one strip
                     down in "This take", where it is still there for a take that
                     has no playable asset and so renders no play control at all —
                     saying it in both places put the same number on screen twice. */}
                 <p class="bp-take-play-sub">
-                  <span>{playableMaster.tier === "lossless" ? "lossless master" : "master mix"}</span>
+                  <span>{playableMaster.tier === "lossless" ? t.takes.losslessMaster : t.takes.masterMix}</span>
                 </p>
               </div>
             </div>
             {playableStems.length > 0 && (
-              <div class="bp-solo-drawer" role="group" aria-label="Solo an instrument">
+              <div class="bp-solo-drawer" role="group" aria-label={t.takes.soloAnInstrument}>
                 <button
                   type="button"
                   class="bp-solo-chip"
@@ -522,11 +522,11 @@ function assetLabel(asset: assetsRepo.Asset): string {
                   data-role="source-select"
                   aria-pressed="false"
                 >
-                  Full mix
+                  {t.takes.fullMix}
                 </button>
                 {playableStems.map((stem) => {
                   const instrumentLabel =
-                    instrumentLabelById.get(stem.instrumentId ?? "") ?? "Unknown instrument";
+                    instrumentLabelById.get(stem.instrumentId ?? "") ?? t.takes.unknownInstrument;
                   return (
                     <button
                       type="button"
@@ -541,7 +541,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                       data-role="source-select"
                       aria-pressed="false"
                     >
-                      Solo: {instrumentLabel}
+                      {tPlayer.solo(instrumentLabel)}
                     </button>
                   );
                 })}
@@ -553,7 +553,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
     }
 
     <section class="bp-take-strip">
-      <h2 class="bp-strip-label">Your vote</h2>
+      <h2 class="bp-strip-label">{t.takes.yourVoteHeading}</h2>
       <VoteToggle
         takeId={take.id}
         keeperVotes={take.keeperVotes}
@@ -567,7 +567,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
     {
       isAdmin && (take.state === "published" || take.state === "new") && (
         <section class="bp-take-strip">
-          <h2 class="bp-strip-label">Admin</h2>
+          <h2 class="bp-strip-label">{t.takes.adminHeading}</h2>
           <p class="bp-field-hint bp-m0">
             Votes only inform this — promoting or rejecting is a deliberate call, not automatic.
           </p>
@@ -577,24 +577,24 @@ function assetLabel(asset: assetsRepo.Asset): string {
               class="bp-btn bp-btn-primary bp-btn-sm"
               data-confirm
               data-confirm-title={`Promote ${heroTitle} to keeper?`}
-              data-confirm-body="This take will be marked keeper — the band's pick for this song at this event."
+              data-confirm-body={t.takes.keeperBody}
               data-confirm-action={`/admin/takes/${take.id}/keeper`}
-              data-confirm-cta="Promote to keeper"
+              data-confirm-cta={t.takes.keeperCta}
               data-confirm-tone="neutral"
             >
-              Promote to keeper
+              {t.takes.keeperCta}
             </a>
             <a
               href={`/admin/takes/${take.id}/keeper?reject=1`}
               class="bp-btn bp-btn-danger bp-btn-sm"
               data-confirm
               data-confirm-title={`Reject ${heroTitle}?`}
-              data-confirm-body="This take will be marked rejected and dropped from 'needs your vote'. It stays in the archive."
+              data-confirm-body={t.takes.rejectBody}
               data-confirm-action={`/admin/takes/${take.id}/keeper?reject=1`}
-              data-confirm-cta="Reject"
+              data-confirm-cta={t.takes.rejectCta}
               data-confirm-tone="neutral"
             >
-              Reject
+              {t.takes.rejectCta}
             </a>
           </div>
         </section>
@@ -620,7 +620,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
       {
         displayableAssets.length === 0 ? (
           <div class="bp-empty-state">
-            <p>No assets uploaded for this take yet.</p>
+            <p>{t.takes.noAssets}</p>
           </div>
         ) : (
           <div class="bp-stack bp-stack-tight">
@@ -634,7 +634,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                   <span class="bp-asset-row-meta bp-mono">
                     <span class="bp-asset-row-meta-item">{asset.format}</span>
                     <span class="bp-asset-row-meta-item">{asset.tier}</span>
-                    <span class="bp-asset-row-meta-item">{formatBytes(asset.bytes)}</span>
+                    <span class="bp-asset-row-meta-item">{formatBytes(locale, asset.bytes)}</span>
                     {asset.status !== "ready" && (
                       <span class="bp-asset-row-meta-item">{asset.status}</span>
                     )}
@@ -652,7 +652,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                       href={`/api/assets/${asset.id}/download`}
                       download
                       data-astro-reload
-                      aria-label={`Download ${assetLabel(asset)} (${asset.format}, ${formatBytes(asset.bytes)})`}
+                      aria-label={t.takes.downloadAsset({ label: assetLabel(asset), format: asset.format, size: formatBytes(locale, asset.bytes) })}
                     >
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 3v12" />
@@ -670,15 +670,18 @@ function assetLabel(asset: assetsRepo.Asset): string {
                       class="bp-asset-row-delete"
                       href={`/admin/assets/${asset.id}/delete`}
                       data-confirm
-                      data-confirm-title={`Delete the ${assetLabel(asset).toLowerCase()} from this take?`}
+                      data-confirm-title={t.takes.deleteAssetConfirmTitle(
+                        assetLabel(asset).toLowerCase(),
+                      )}
                       data-confirm-body={deleteAssetConsequence(
                         assetLabel(asset).toLowerCase(),
                         asset,
                         isLastPlayableAsset(asset),
+                        locale,
                       )}
                       data-confirm-action={`/admin/assets/${asset.id}/delete`}
-                      data-confirm-cta="Delete file"
-                      aria-label={`Delete ${assetLabel(asset)}`}
+                      data-confirm-cta={t.takes.deleteFile}
+                      aria-label={t.takes.deleteAsset(assetLabel(asset))}
                     >
                       <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M4 7h16" />

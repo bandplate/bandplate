@@ -1,3 +1,14 @@
+import { type Storage, canPublish } from "@bandplate/core";
+import type { Db } from "@bandplate/db";
+import {
+  assetsRepo,
+  eventsRepo,
+  favoritesRepo,
+  instrumentsRepo,
+  songsRepo,
+  takesRepo,
+  votesRepo,
+} from "@bandplate/db";
 // `/takes/[id]` — take detail. Read-only: the song, the event, duration,
 // label, instruments, state, the current vote tally (already-stored
 // aggregates on the take row itself — no separate query), and the take's
@@ -10,19 +21,8 @@
 // is or isn't one of their favorites), unlike the decorative heading star
 // this same review round removed. See `TakeRow`'s own `favorited` prop for
 // the rest of this marker's use.
-import { type Storage, canPublish } from "@bandplate/core";
-import type { Db } from "@bandplate/db";
-import {
-  assetsRepo,
-  eventsRepo,
-  favoritesRepo,
-  instrumentsRepo,
-  songsRepo,
-  takesRepo,
-  votesRepo,
-} from "@bandplate/db";
+import { type Locale, formatBytes, messages } from "@bandplate/i18n";
 import { z } from "zod";
-import { formatBytes } from "../format.js";
 
 export interface TakeDetail {
   take: takesRepo.Take;
@@ -363,18 +363,21 @@ export async function deleteTake(db: Db, storage: Storage, id: string): Promise<
  * makes someone stop and check, and it names the votes because those are the
  * band's work, not the uploader's.
  */
-export function deleteTakeConsequence(assets: assetsRepo.Asset[], totalVotes: number): string {
-  const files =
-    assets.length === 0
-      ? "It has no files yet."
-      : `It permanently removes ${assets.length} ${assets.length === 1 ? "file" : "files"} (${formatBytes(
-          assets.reduce((sum, a) => sum + a.bytes, 0),
-        )}).`;
-  const votes =
-    totalVotes === 0
-      ? ""
-      : ` The ${totalVotes} ${totalVotes === 1 ? "vote" : "votes"} cast on it ${totalVotes === 1 ? "goes" : "go"} too.`;
-  return `This can't be undone. ${files}${votes} The song and the event stay.`;
+export function deleteTakeConsequence(
+  assets: assetsRepo.Asset[],
+  totalVotes: number,
+  locale: Locale,
+): string {
+  return messages(locale).takes.deleteConsequence({
+    fileCount: assets.length,
+    // Summed and formatted here: the catalog takes primitives, so it never
+    // sees a repo type or a byte count it would have to format itself.
+    byteTotal: formatBytes(
+      locale,
+      assets.reduce((sum, a) => sum + a.bytes, 0),
+    ),
+    totalVotes,
+  });
 }
 
 export type DeleteAssetResult =
@@ -421,9 +424,13 @@ export function deleteAssetConsequence(
   label: string,
   asset: assetsRepo.Asset,
   isLastPlayable: boolean,
+  locale: Locale,
 ): string {
-  const head = `This can't be undone. It removes the ${label} (${asset.format}, ${asset.tier}, ${formatBytes(asset.bytes)}) from storage.`;
-  return isLastPlayable
-    ? `${head} It is the only thing this take can be played from, so the take will have nothing to play.`
-    : `${head} The take keeps its other files.`;
+  return messages(locale).takes.deleteAssetConsequence({
+    label,
+    format: asset.format,
+    tier: asset.tier,
+    bytes: formatBytes(locale, asset.bytes),
+    isLastPlayable,
+  });
 }

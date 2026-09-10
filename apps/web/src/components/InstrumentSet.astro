@@ -50,6 +50,7 @@
 // and the group's `aria-label` still lists all of them in order, so the set
 // means exactly what it meant before and only stops repeating itself.
 import type { instrumentsRepo } from "@bandplate/db";
+import { type Locale, commonMessages } from "@bandplate/i18n";
 import { instrumentMark } from "@bandplate/ui/icons/instruments.js";
 import InstrumentIcon from "./InstrumentIcon.astro";
 
@@ -60,11 +61,11 @@ const DENSE_SIZE = 16;
 
 type VerbKey = "instruments" | "plays";
 
-/** The word each case opens with. Becomes a catalog lookup when one exists. */
-const VERB_LABELS: Record<VerbKey, string> = {
-  instruments: "Instruments",
-  plays: "Plays",
-};
+/** The word each case opens with. */
+function verbLabel(key: VerbKey, locale: Locale): string {
+  const t = commonMessages(locale);
+  return key === "plays" ? t.playsVerb : t.instrumentsVerb;
+}
 
 export interface Props {
   instruments: instrumentsRepo.Instrument[];
@@ -138,7 +139,7 @@ const classes = [
     <span
       class={classes}
       role="img"
-      aria-label={`${VERB_LABELS[verb]}: ${instruments.map((i) => i.label).join(", ")}`}
+      aria-label={`${verbLabel(verb, Astro.locals.locale)}: ${instruments.map((i) => i.label).join(", ")}`}
     >
       {drawn.map((mark) => (
         <InstrumentIcon

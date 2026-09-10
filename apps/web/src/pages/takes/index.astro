@@ -1,4 +1,5 @@
 ---
+import { instrumentsRepo, songsRepo } from "@bandplate/db";
 // The takes archive: every take the band has, narrowed by song, instrument,
 // date, rating and "not voted by me".
 //
@@ -23,7 +24,7 @@
 // hidden, the dialog renders as a plain block (a `<dialog>` with no `open` is
 // `display: none`, which the no-JS rule below overrides), and the form's own
 // submit button applies the filters.
-import { instrumentsRepo, songsRepo } from "@bandplate/db";
+import { messages } from "@bandplate/i18n";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -72,6 +73,9 @@ const activeFilterCount = [
 // implying they still have to fill something in.
 const usingExactDates = Boolean(query.dateFrom) || Boolean(query.dateTo);
 
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
 const pages = pageView({ url: Astro.url, page, perPage: TAKES_PER_PAGE, total });
 // A filtered link whose page has since fallen off the end lands on the last
 // real one rather than on an empty result set that looks like a bad filter.
@@ -82,13 +86,13 @@ if (pages.redirectTo) {
 // The real count, not a hedge. This read `${results.length}+ takes` when the
 // old hard cap truncated — "200+" said nothing a member could act on, and was
 // indistinguishable from an archive that held exactly 200.
-const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
+const countLabel = t.takes.count(total);
 ---
 
-<AppLayout title="Takes" principal={principal} current="takes">
+<AppLayout title={t.takes.title} principal={principal} current="takes">
   <div class="bp-takes">
     <div class="bp-takes-bar">
-      <h1 class="bp-page-title bp-m0 bp-takes-bar-title">Takes</h1>
+      <h1 class="bp-page-title bp-m0 bp-takes-bar-title">{t.takes.title}</h1>
       <button type="button" class="bp-filter-trigger" data-filter-open>
         <svg
           viewBox="0 0 24 24"
@@ -102,7 +106,7 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
         >
           <path d="M3 6h18M7 12h10M11 18h2" />
         </svg>
-        Filters
+        {t.takes.filters}
         {activeFilterCount > 0 && <span class="bp-badge bp-badge-keeper">{activeFilterCount}</span>}
       </button>
       {/* Clearing without opening the sheet first. It only appears when there
@@ -111,26 +115,26 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
           duplicate we just removed from the sheet's header. */}
       {filtersApplied && (
         <a href="/takes" class="bp-btn bp-btn-secondary bp-btn-sm bp-takes-bar-clear">
-          Clear
+          {t.takes.clear}
         </a>
       )}
     </div>
 
-    <dialog class="bp-filter-sheet" data-filter-sheet aria-label="Filters">
+    <dialog class="bp-filter-sheet" data-filter-sheet aria-label={t.takes.filters}>
       <form method="get" class="bp-filter-form" data-filter-form>
         <div class="bp-filter-sheet-head">
           {/* A real button, not decoration. On a phone the grip is the thing a
               thumb reaches for to dismiss a sheet, so it has to be tappable and
               it has to say what it does to anything that isn't looking. */}
           <button type="button" class="bp-filter-sheet-grip" data-filter-close>
-            <span class="bp-visually-hidden">Close filters</span>
+            <span class="bp-visually-hidden">{t.takes.filtersClose}</span>
           </button>
           {/* No "Clear all" here. Clearing lives next to the confirm at the
               bottom, where the member's thumb already is and where the two
               things you can do with a set of filters — apply them or drop them
               — sit together. Two clears meant two places to look. */}
           <div class="bp-filter-sheet-head-row">
-            <h2 class="bp-filter-sheet-title bp-m0">Filters</h2>
+            <h2 class="bp-filter-sheet-title bp-m0">{t.takes.filters}</h2>
           </div>
         </div>
 
@@ -141,9 +145,9 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
               take belongs to exactly one song, so picking one is exact where
               typing was a guess. */}
           <div class="bp-filter-group">
-            <label class="bp-eyebrow bp-filter-legend" for="search-song">Song</label>
+            <label class="bp-eyebrow bp-filter-legend" for="search-song">{t.takes.songLabel}</label>
             <select class="bp-select" id="search-song" name="song">
-              <option value="">Any song</option>
+              <option value="">{t.takes.anySong}</option>
               {songs.map((song) => (
                 <option value={song.id} selected={query.songId === song.id}>
                   {song.title}
@@ -159,9 +163,9 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
                 it would be a control whose pressed state means the same thing
                 as every other pill being unpressed. */}
             <legend class="bp-eyebrow bp-filter-legend">
-              Instruments
+              {t.takes.instrumentsLegend}
               {query.instrumentIds.length > 1 && (
-                <span class="bp-filter-legend-note">— all of these</span>
+                <span class="bp-filter-legend-note">{t.takes.instrumentsAll}</span>
               )}
             </legend>
             <div class="bp-filter-pills">
@@ -190,7 +194,7 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
               option rather than an absent state, so the group always has a
               selected member and a member can get back to it. */}
           <fieldset class="bp-filter-group">
-            <legend class="bp-eyebrow bp-filter-legend">Recorded</legend>
+            <legend class="bp-eyebrow bp-filter-legend">{t.takes.recordedLegend}</legend>
             <div class="bp-filter-pills">
               <label class="bp-filter-pill-check">
                 <input
@@ -199,12 +203,12 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
                   value=""
                   checked={!query.since && !usingExactDates}
                 />
-                <span class="bp-filter-pill">Any time</span>
+                <span class="bp-filter-pill">{t.takes.anyTime}</span>
               </label>
-              {Object.entries(RECORDED_WINDOWS).map(([value, { label }]) => (
+              {Object.entries(RECORDED_WINDOWS).map(([value, { labelKey }]) => (
                 <label class="bp-filter-pill-check">
                   <input type="radio" name="since" value={value} checked={query.since === value} />
-                  <span class="bp-filter-pill">{label}</span>
+                  <span class="bp-filter-pill">{t.takes[labelKey]}</span>
                 </label>
               ))}
             </div>
@@ -213,9 +217,9 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
                 open with no JS, and open by default only when it is what the
                 member is actually using. */}
             <details class="bp-filter-dates-fold" open={usingExactDates}>
-              <summary class="bp-filter-dates-toggle">Exact dates</summary>
+              <summary class="bp-filter-dates-toggle">{t.takes.exactDates}</summary>
               <div class="bp-filter-dates">
-                <label class="bp-visually-hidden" for="search-date-from">Recorded from</label>
+                <label class="bp-visually-hidden" for="search-date-from">{t.takes.recordedFrom}</label>
                 <input
                   class="bp-input"
                   type="date"
@@ -224,7 +228,7 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
                   value={query.dateFrom ?? ""}
                 />
                 <span class="bp-filter-dates-sep" aria-hidden="true">to</span>
-                <label class="bp-visually-hidden" for="search-date-to">Recorded to</label>
+                <label class="bp-visually-hidden" for="search-date-to">{t.takes.recordedTo}</label>
                 <input
                   class="bp-input"
                   type="date"
@@ -233,7 +237,7 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
                   value={query.dateTo ?? ""}
                 />
               </div>
-              <p class="bp-field-hint bp-m0">A date here is used instead of the choice above.</p>
+              <p class="bp-field-hint bp-m0">{t.takes.exactDatesNote}</p>
             </details>
           </fieldset>
 
@@ -241,7 +245,7 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
               view, so it stacks with everything else here — "what haven't I
               judged from last month, with horns on it" is one query. */}
           <fieldset class="bp-filter-group">
-            <legend class="bp-eyebrow bp-filter-legend">Yours</legend>
+            <legend class="bp-eyebrow bp-filter-legend">{t.takes.yoursLegend}</legend>
             <div class="bp-filter-pills">
               <label class="bp-filter-pill-check">
                 <input
@@ -251,16 +255,16 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
                   value="1"
                   checked={query.unvotedOnly}
                 />
-                <span class="bp-filter-pill">Not voted by me</span>
+                <span class="bp-filter-pill">{t.takes.notVotedByMe}</span>
               </label>
             </div>
           </fieldset>
 
           <div class="bp-filter-group">
-            <label class="bp-eyebrow bp-filter-legend" for="search-sort">Sort by</label>
+            <label class="bp-eyebrow bp-filter-legend" for="search-sort">{t.takes.sortLabel}</label>
             <select class="bp-select" id="search-sort" name="sort">
-              <option value="recent" selected={query.sort === "recent"}>Most recent</option>
-              <option value="rating" selected={query.sort === "rating"}>Most keeper votes</option>
+              <option value="recent" selected={query.sort === "recent"}>{t.takes.sortRecent}</option>
+              <option value="rating" selected={query.sort === "rating"}>{t.takes.sortRating}</option>
             </select>
           </div>
         </div>
@@ -270,11 +274,11 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
             is worse than one extra press. */}
         <div class="bp-filter-sheet-foot">
           <button type="submit" class="bp-btn bp-btn-primary bp-filter-apply">
-            Show takes
+            {t.takes.showTakes}
           </button>
           {filtersApplied && (
             <a href="/takes" class="bp-btn bp-btn-secondary bp-btn-sm bp-filter-reset">
-              Clear
+              {t.takes.clear}
             </a>
           )}
         </div>
@@ -284,15 +288,15 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
     <div class="bp-search-results">
       <p class="bp-takes-count bp-m0">
         {countLabel}
-        {filtersApplied && <span class="bp-kind">filtered</span>}
+        {filtersApplied && <span class="bp-kind">{t.takes.filtered}</span>}
       </p>
       {
         results.length === 0 ? (
           <div class="bp-empty-state">
             <p>
               {filtersApplied
-                ? "No takes match those filters — try turning one off."
-                : "No takes in the archive yet."}
+                ? t.takes.emptyFiltered
+                : t.takes.empty}
             </p>
           </div>
         ) : (

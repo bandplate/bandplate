@@ -61,4 +61,9 @@ export const voting = {
   notKeeper: "Odpad", // en: Not a keeper
 
   saveFailed: "Hlas se neuložil. Zkus to znovu.", // en: Couldn't save your vote. Try again.
+
+  favoriteAdd: (name: string): string => `Přidat ${name} do oblíbených`, // en: `Add ${name} to favorites`
+  favoriteRemove: (name: string): string => `Odebrat ${name} z oblíbených`, // en: `Remove ${name} from favorites`
+  // en: Couldn't update your favorites. Try again.
+  favoriteFailed: "Oblíbené se neuložily. Zkus to znovu.",
 } satisfies typeof enVoting;

@@ -63,6 +63,6 @@ const take = await takesRepo.getById(appDeps.db, asset.takeId);
     cancelHref={take ? `/takes/${take.id}` : "/takes"}
     cancelLabel="Cancel"
   >
-    {deleteAssetConsequence(label, asset, isLastPlayable)}
+    {deleteAssetConsequence(label, asset, isLastPlayable, Astro.locals.locale)}
   </ConfirmActionPage>
 </Layout>

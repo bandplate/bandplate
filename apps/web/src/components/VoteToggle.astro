@@ -33,7 +33,7 @@
 // (same attribute `<a>` uses) telling `<ClientRouter />` to leave this
 // element's submissions alone; `VoteFavorite.tsx`'s listener is registered
 // directly on `document`, independent of ClientRouter, so it still runs.
-import { formatVoteTally } from "../server/format.js";
+import { votingMessages } from "@bandplate/i18n";
 
 export interface Props {
   takeId: string;
@@ -47,20 +47,22 @@ export interface Props {
 }
 
 const { takeId, keeperVotes, totalVotes, ratingScore, myVote, size = "sm" } = Astro.props;
-const tallyText = formatVoteTally(keeperVotes, totalVotes, ratingScore);
+const locale = Astro.locals.locale;
+const t = votingMessages(locale);
+const tallyText = t.tally({ keeperVotes, totalVotes, ratingScore });
 ---
 
-<div class={`bp-vote-toggle ${size === "lg" ? "bp-vote-toggle-lg" : ""}`} role="group" aria-label="Your vote">
+<div class={`bp-vote-toggle ${size === "lg" ? "bp-vote-toggle-lg" : ""}`} role="group" aria-label={t.groupLabel}>
   <form method="post" action={`/takes/${takeId}/vote`} class="bp-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
     <input type="hidden" name="keeper" value="true" />
     <button type="submit" class="bp-vote-btn bp-vote-btn-keeper" aria-pressed={myVote === true ? "true" : "false"}>
-      Keeper
+      {t.keeper}
     </button>
   </form>
   <form method="post" action={`/takes/${takeId}/vote`} class="bp-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
     <input type="hidden" name="keeper" value="false" />
     <button type="submit" class="bp-vote-btn bp-vote-btn-not-keeper" aria-pressed={myVote === false ? "true" : "false"}>
-      Not a keeper
+      {t.notKeeper}
     </button>
   </form>
   {/* The counts ride as data, not only as prose. `VoteFavorite.tsx` needs the

@@ -161,7 +161,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
         ))
       }
     </nav>
-    <Player client:load transition:persist="bp-player" />
+    <Player client:load transition:persist="bp-player" locale={Astro.locals.locale} />
     <VoteFavorite client:load transition:persist="bp-vote-favorite" />
     {/* One per document, in the shell — it listens on `document` for any
         `[data-confirm]` click, so a second copy would open two dialogs. It

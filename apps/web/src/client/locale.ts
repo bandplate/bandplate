@@ -18,10 +18,21 @@
 // cannot re-translate itself. That is a separate problem from this one.)
 import { DEFAULT_LOCALE, type Locale, isLocale } from "@bandplate/i18n";
 
-export function currentLocale(): Locale {
+/**
+ * @param fallback What to use when there is no document to read.
+ *
+ * An island with `client:load` is SERVER-rendered before it hydrates, and
+ * there is no `document` on the server — so without a fallback that first
+ * pass is always English, and a Czech reader gets an English `aria-label`
+ * baked into the HTML until hydration replaces it. Islands that render text
+ * server-side therefore take a `locale` prop and pass it here; the live
+ * `<html lang>` still wins in the browser, which is what keeps a persisted
+ * island correct after the language changes.
+ */
+export function currentLocale(fallback: Locale = DEFAULT_LOCALE): Locale {
   if (typeof document === "undefined") {
-    return DEFAULT_LOCALE;
+    return fallback;
   }
   const lang = document.documentElement.lang;
-  return isLocale(lang) ? lang : DEFAULT_LOCALE;
+  return isLocale(lang) ? lang : fallback;
 }

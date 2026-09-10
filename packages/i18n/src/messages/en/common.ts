@@ -17,4 +17,11 @@ export const common = {
 
   /** The last resort, when a write failed for a reason the page cannot name. */
   genericError: "That didn't work. Try again.",
+
+  /** How an instrument set names itself. See `InstrumentSet.astro`. */
+  instrumentsVerb: "Instruments",
+  playsVerb: "Plays",
+
+  /** The edit sheet's accessible name, built from whatever it is editing. */
+  editingSheet: (name: string): string => `Editing ${name}`,
 };

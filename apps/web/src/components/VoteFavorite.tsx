@@ -20,7 +20,9 @@
 // a toast if the request fails. Forcing a failure to prove this is real
 // (not just "looks right because it usually succeeds"): see
 // task-8-report.md for how it was tested against the built server.
+import { votingMessages } from "@bandplate/i18n";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { currentLocale } from "../client/locale.js";
 import {
   type Tally,
   computeOptimisticTally,
@@ -131,7 +133,8 @@ function applyFavoriteState(targetType: string, targetId: string, favorited: boo
     }
     button.setAttribute("aria-pressed", String(favorited));
     const label = button.dataset.label ?? "";
-    const actionLabel = `${favorited ? "Remove" : "Add"} ${label} ${favorited ? "from" : "to"} favorites`;
+    const tv = votingMessages(currentLocale());
+    const actionLabel = favorited ? tv.favoriteRemove(label) : tv.favoriteAdd(label);
     button.setAttribute("aria-label", actionLabel);
     button.setAttribute("title", actionLabel);
   }
@@ -206,7 +209,7 @@ export default function VoteFavorite() {
           applyVoteState(takeId, body.keeper, body.tally);
         } catch {
           applyVoteState(takeId, previousMyVote, previousTally);
-          showToast("Couldn't save your vote. Try again.");
+          showToast(votingMessages(currentLocale()).saveFailed);
         }
         return;
       }
@@ -247,7 +250,7 @@ export default function VoteFavorite() {
         applyFavoriteState(targetType, targetId, responseBody.favorited);
       } catch {
         applyFavoriteState(targetType, targetId, previousFavorited);
-        showToast("Couldn't update your favorites. Try again.");
+        showToast(votingMessages(currentLocale()).favoriteFailed);
       }
     }
 

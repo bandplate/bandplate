@@ -61,10 +61,12 @@ export interface SearchQuery {
  * and one that means a calendar month needs a timezone and a rule for the 31st.
  */
 export const RECORDED_WINDOWS = {
-  "7d": { label: "Past week", days: 7 },
-  "30d": { label: "Past month", days: 30 },
-  "90d": { label: "Past 3 months", days: 90 },
-  "365d": { label: "Past year", days: 365 },
+  // A KEY, not a label. The words live in the message catalog; what belongs
+  // here is how long each window is, which is the same in every language.
+  "7d": { labelKey: "pastWeek", days: 7 },
+  "30d": { labelKey: "pastMonth", days: 30 },
+  "90d": { labelKey: "past3Months", days: 90 },
+  "365d": { labelKey: "pastYear", days: 365 },
 } as const;
 
 export type RecordedWindow = keyof typeof RECORDED_WINDOWS;

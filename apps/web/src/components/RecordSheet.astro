@@ -1,4 +1,5 @@
 ---
+import { commonMessages } from "@bandplate/i18n";
 // One admin record, opened for editing — direction E2, "the record sheet".
 //
 // The editors used to be `<details>` disclosures inside a table cell: raw
@@ -28,7 +29,7 @@ export interface Props {
 const { id, eyebrow, title, subtitle } = Astro.props;
 ---
 
-<dialog class="bp-sheet" id={`sheet-${id}`} data-sheet aria-label={`Editing ${title}`}>
+<dialog class="bp-sheet" id={`sheet-${id}`} data-sheet aria-label={commonMessages(Astro.locals.locale).editingSheet(title)}>
   <div class="bp-sheet-head">
     {/* The phone's grip. A button with a 44px target and a 4px bar drawn
         inside it — a bare 4px strip is the right shape and an impossible

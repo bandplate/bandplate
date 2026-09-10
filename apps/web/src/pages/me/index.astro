@@ -14,7 +14,7 @@
 // What is left is the page's actual subject: the takes still waiting for your
 // ear, and the calls you have already made. Identity is a line at the top, not
 // a card — this is the one page where the app already knows who is looking.
-import { LANGUAGE_NAMES, LOCALES, messages } from "@bandplate/i18n";
+import { LANGUAGE_NAMES, LOCALES, formatShortDate, messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
 import InstrumentSet from "../../components/InstrumentSet.astro";
@@ -22,7 +22,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { setLocaleCookie } from "../../server/cookies.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import { formatShortDate } from "../../server/format.js";
+
 import { VOTES_PER_PAGE, getMeData, setLocaleFromForm } from "../../server/pages/me.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
@@ -106,7 +106,7 @@ const initials = member.displayName
             <p class="bp-me-unvoted-line bp-m0">
               <span class="bp-me-unvoted-count">{unvotedCount}</span>
               <span>
-                {unvotedCount === 1 ? "take is" : "takes are"} still waiting for your ear.
+                {t.me.unvotedAfterCount(unvotedCount)}
               </span>
             </p>
             {/* A button, like every other "go do the thing" in the app — the
@@ -114,7 +114,7 @@ const initials = member.displayName
                 use. It was an inline link inside a sentence, which is the one
                 shape a member does not read as an action. */}
             <a href="/takes?unvoted=1" class="bp-btn bp-btn-quiet bp-btn-sm">
-              {unvotedCount === 1 ? "Hear it" : "Hear them"}
+              {t.me.hearThem(unvotedCount)}
               <svg
                 width="14"
                 height="14"
@@ -142,8 +142,7 @@ const initials = member.displayName
         votes.length === 0 ? (
           <div class="bp-empty-state">
             <p>
-              Nothing yet. Open a take and the keeper / not-a-keeper choice is right under the
-              player.
+              {t.me.emptyVotes}
             </p>
           </div>
         ) : (
@@ -162,13 +161,13 @@ const initials = member.displayName
                       transition:name={`take-${take.id}`}
                       data-take-id={take.id}
                     >
-                      {take.song?.title ?? "Untitled take"}
+                      {take.song?.title ?? t.me.untitledTake}
                     </a>
                   ) : (
                     <span class="bp-vote-row-song bp-vote-row-song--gone">{t.me.takeRemoved}</span>
                   )}
                   <p class="bp-vote-row-meta bp-m0">
-                    {take?.event && <span>{formatShortDate(take.recordedAt)}</span>}
+                    {take?.event && <span>{formatShortDate(locale, take.recordedAt)}</span>}
                     {vote.comment && <span class="bp-vote-row-comment">{vote.comment}</span>}
                   </p>
                 </div>
@@ -177,7 +176,7 @@ const initials = member.displayName
                     you can hear it again first — a toggle here would let you
                     flip a verdict on a recording you are not listening to. */}
                 <span class={`bp-badge ${vote.keeper ? "bp-badge-keeper" : ""}`}>
-                  {vote.keeper ? "keeper" : "not a keeper"}
+                  {vote.keeper ? t.me.verdictKeeper : t.me.verdictNotKeeper}
                 </span>
               </li>
             ))}

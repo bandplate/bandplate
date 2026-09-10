@@ -189,6 +189,14 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "home.plateTakeName": [{ label: "parts", args: [{ name: "Čoudy", date: "8. 7. 2026" }] }],
   "home.plateSongName": [{ label: "parts", args: [{ name: "Čoudy", detail: "3 taky" }] }],
   "home.plateEventName": [{ label: "parts", args: [{ name: "Zkouška", detail: "3 taky" }] }],
+  "me.unvotedAfterCount": [
+    { label: "one", args: [1] },
+    { label: "many", args: [3] },
+  ],
+  "me.hearThem": [
+    { label: "one", args: [1] },
+    { label: "many", args: [3] },
+  ],
   "me.languageCurrent": [{ label: "name", args: ["English"] }],
   "me.languageSwitch": [{ label: "name", args: ["Čeština"] }],
   "voting.tally": [

@@ -111,6 +111,14 @@ export const takes = {
   saveChanges: "Uložit změny", // en: Save changes
   cancel: "Zrušit", // en: Cancel
 
+  // en: Take added. Nobody will find it until there's something to play and you publish it.
+  takeAdded: "Nahrávka přidaná. Nikdo ji nenajde, dokud na ní nebude co pustit a nezveřejníš ji.",
+  thisTake: "tuhle nahrávku", // en: this take
+  // en: Votes only inform this — promoting or rejecting is a deliberate call, not automatic.
+  votesInform: "Hlasy jsou jen vodítko — označit za držák nebo odmítnout je vědomé rozhodnutí.",
+  losslessYes: "Bezztrátový master je k dispozici.", // en: A lossless master is available.
+  losslessNo: "Bezztrátový master zatím není.", // en: No lossless master available yet.
+
   noAssets: "K téhle nahrávce zatím nejsou žádné soubory.", // en: No assets uploaded for this take yet.
   deleteFile: "Smazat soubor", // en: Delete file
   // en: `Download ${label} (${format}, ${size})`

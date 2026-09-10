@@ -26,7 +26,24 @@ export const me = {
   votesHeading: "Your votes",
   allCaughtUp: "You've had your say on every published take.",
   /** A vote whose take has since been deleted. */
+  untitledTake: "Untitled take",
   takeRemoved: "A take that's since been removed",
+  /**
+   * The unvoted count and its button.
+   *
+   * The number is rendered in its own element (it is set in the display face),
+   * so the sentence takes the count only to agree with it, not to print it —
+   * hence a function whose text starts after the number.
+   */
+  unvotedAfterCount: (count: number): string =>
+    count === 1 ? "take is still waiting for your ear." : "takes are still waiting for your ear.",
+  hearThem: (count: number): string => (count === 1 ? "Hear it" : "Hear them"),
+  emptyVotes:
+    "Nothing yet. Open a take and the keeper / not-a-keeper choice is right under the player.",
+  /** The recorded verdict on a past vote — a record, not a control. */
+  verdictKeeper: "keeper",
+  verdictNotKeeper: "not a keeper",
+
   admin: "Admin",
   signOut: "Sign out",
 

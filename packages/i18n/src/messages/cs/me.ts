@@ -18,7 +18,24 @@ export const me = {
   votesHeading: "Tvoje hlasy", // en: Your votes
   // en: You've had your say on every published take.
   allCaughtUp: "Ke všem zveřejněným nahrávkám ses vyjádřil.",
+  untitledTake: "Nahrávka bez názvu", // en: Untitled take
   takeRemoved: "Nahrávka, která už byla smazaná", // en: A take that's since been removed
+  // en: "take is still waiting for your ear." / "takes are …"
+  //
+  // The number sits in its own element, so this starts after it and only has
+  // to agree: 1 nahrávka čeká · 2–4 nahrávky čekají · 5+ nahrávek čeká.
+  unvotedAfterCount: (count: number): string =>
+    count === 1
+      ? "nahrávka čeká na tvoje ucho."
+      : count < 5
+        ? "nahrávky čekají na tvoje ucho."
+        : "nahrávek čeká na tvoje ucho.",
+  hearThem: (count: number): string => (count === 1 ? "Poslechnout" : "Poslechnout je"), // en: Hear it / Hear them
+  // en: Nothing yet. Open a take and the keeper / not-a-keeper choice is right under the player.
+  emptyVotes: "Zatím nic. Otevři nahrávku a volba držák / odpad je hned pod přehrávačem.",
+  verdictKeeper: "držák", // en: keeper
+  verdictNotKeeper: "odpad", // en: not a keeper
+
   admin: "Správa", // en: Admin
   signOut: "Odhlásit se", // en: Sign out
 

@@ -220,7 +220,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
   <div class="bp-take-detail">
     {justCreated && (
       <Banner kind="success">
-        Take added. Nobody will find it until there's something to play and you publish it.
+        {t.takes.takeAdded}
       </Banner>
     )}
     {justSaved && <Banner kind="success">{t.takes.saved}</Banner>}
@@ -262,7 +262,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
             targetType="take"
             targetId={take.id}
             favorited={favorited}
-            label={song ? song.title : "this take"}
+            label={song ? song.title : t.takes.thisTake}
             size="lg"
           />
         </span>
@@ -569,7 +569,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
         <section class="bp-take-strip">
           <h2 class="bp-strip-label">{t.takes.adminHeading}</h2>
           <p class="bp-field-hint bp-m0">
-            Votes only inform this — promoting or rejecting is a deliberate call, not automatic.
+            {t.takes.votesInform}
           </p>
           <div class="bp-dialog-actions bp-admin-take-actions">
             <a
@@ -626,7 +626,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
         ) : (
           <div class="bp-stack bp-stack-tight">
             <p class="bp-field-hint bp-m0">
-              {hasLossless ? "A lossless master is available." : "No lossless master available yet."}
+              {hasLossless ? t.takes.losslessYes : t.takes.losslessNo}
             </p>
             <ul class="bp-asset-list">
               {displayableAssets.map((asset) => (

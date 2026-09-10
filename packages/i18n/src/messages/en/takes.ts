@@ -88,6 +88,14 @@ export const takes = {
   saveChanges: "Save changes",
   cancel: "Cancel",
 
+  takeAdded: "Take added. Nobody will find it until there's something to play and you publish it.",
+  /** The favorite star's object name when the take has no song title. */
+  thisTake: "this take",
+  votesInform:
+    "Votes only inform this — promoting or rejecting is a deliberate call, not automatic.",
+  losslessYes: "A lossless master is available.",
+  losslessNo: "No lossless master available yet.",
+
   noAssets: "No assets uploaded for this take yet.",
   deleteFile: "Delete file",
   /** The download and delete controls on one asset row, which have no visible text. */

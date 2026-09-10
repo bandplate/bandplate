@@ -7,6 +7,7 @@
 // it is specific to this one shell, not a primitive other pages compose.
 export interface Props {
   name:
+    | "home"
     | "songs"
     | "events"
     | "takes"
@@ -23,6 +24,19 @@ export interface Props {
 const { name } = Astro.props;
 ---
 
+{
+  /* A house, not a plate or a star. The page holds the member's pins and the
+     recent events, and no one drawing groups them — "the page you start on" is
+     what the tab means, and the house is the one glyph that says it without
+     claiming to be about records. */
+  name === "home" && (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-5.5H9V20H5a1 1 0 0 1-1-1z" />
+      </g>
+    </svg>
+  )
+}
 {
   name === "songs" && (
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">

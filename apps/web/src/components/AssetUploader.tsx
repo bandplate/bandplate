@@ -20,9 +20,13 @@
 // plain notice in its place under `@media (scripting: none)` — and deleting a
 // file stays an ordinary confirm page precisely so the destructive half never
 // depends on script.
+import { type Locale, islandsMessages } from "@bandplate/i18n";
 import { formatBytes as i18nFormatBytes } from "@bandplate/i18n";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
+
+/** Read at call time — see `client/locale.ts`. */
+const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
 import {
   type AssetKind,
   type UploadEvent,
@@ -43,6 +47,17 @@ interface InstrumentOption {
 }
 
 interface Props {
+  /**
+   * The page's language, for the SERVER render.
+   *
+   * `client:load` renders on the server, where there is no `document` to read
+   * `<html lang>` from — and Preact's `hydrate()` does NOT patch an attribute
+   * that differs, so an English server pass STICKS in the DOM rather than
+   * being corrected on the client. The prop is the fallback only; the live
+   * `lang` still wins in the browser, which is what keeps this right after a
+   * language change.
+   */
+  locale?: Locale;
   takeId: string;
   takeHasMaster: boolean;
   instruments: InstrumentOption[];
@@ -122,16 +137,21 @@ function putWithProgress(
       }
       // The bucket signs the exact content-length and type, so a wrong-sized
       // or wrong-typed body is refused here rather than stored badly.
-      reject(new Error(`The file was refused (${xhr.status}).`));
+      reject(new Error(ti().uploadErrRefused(xhr.status)));
     });
-    xhr.addEventListener("error", () => reject(new Error("The connection dropped.")));
-    xhr.addEventListener("abort", () => reject(new Error("The upload was stopped.")));
+    // No locale fallback needed in here: an XHR only ever runs in the
+    // browser, so `<html lang>` is always readable.
+    xhr.addEventListener("error", () => reject(new Error(ti().uploadErrConnection)));
+    xhr.addEventListener("abort", () => reject(new Error(ti().uploadErrStopped)));
     // The browser sets Content-Length itself and forbids overriding it.
     xhr.send(file);
   });
 }
 
-export default function AssetUploader({ takeId, takeHasMaster, instruments }: Props) {
+export default function AssetUploader({ takeId, takeHasMaster, instruments, locale }: Props) {
+  // `locale` is the SSR fallback for the markup. The upload callbacks below
+  // only ever run after a click, in the browser, so they read `<html lang>`
+  // directly and stay out of the dependency arrays.
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -155,7 +175,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
           rejected.push({
             ...makeItem(id, file.name, file.size, { format: "mp3", tier: "lossy" }, "master"),
             phase: "failed",
-            message: "Not audio this app stores — mp3, opus, flac or wav.",
+            message: ti().uploadErrNotAudio,
           });
           continue;
         }
@@ -178,7 +198,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
     async (item: UploadItem, replace: boolean) => {
       const file = filesRef.current.get(item.id);
       if (!file) {
-        dispatch(item.id, { type: "failed", message: "That file is no longer available." });
+        dispatch(item.id, { type: "failed", message: ti().uploadErrGone });
         return;
       }
       try {
@@ -212,7 +232,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
           const body = await declared.json().catch(() => null);
           dispatch(item.id, {
             type: "failed",
-            message: body?.error?.message ?? "The server wouldn't take that file.",
+            message: body?.error?.message ?? ti().uploadErrRejected,
           });
           return;
         }
@@ -235,9 +255,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
           const body = await verified.json().catch(() => null);
           dispatch(item.id, {
             type: "failed",
-            message:
-              body?.error?.message ??
-              "The upload didn't finish. Nothing was saved — it starts again from the beginning.",
+            message: body?.error?.message ?? ti().uploadErrUnfinished,
           });
           return;
         }
@@ -245,7 +263,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
       } catch (err) {
         dispatch(item.id, {
           type: "failed",
-          message: err instanceof Error ? err.message : "Something went wrong.",
+          message: err instanceof Error ? err.message : ti().uploadErrGeneric,
         });
       }
     },
@@ -315,10 +333,10 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
     items.length === 0
       ? ""
       : moving > 0
-        ? `Adding ${moving} ${moving === 1 ? "file" : "files"}.`
+        ? ti(locale).uploadAdding(moving)
         : waiting > 0
           ? `${waiting} ${waiting === 1 ? "file needs" : "files need"} your attention.`
-          : "Files added.";
+          : ti(locale).uploadFilesAdded;
 
   return (
     <div
@@ -340,7 +358,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
         {/* The heading is rendered HERE, not by the page, so it and the action
             share one row and cannot drift apart. It is server-rendered like the
             rest of the island, so it survives a failure to hydrate. */}
-        <h2 class="bp-strip-label">Files</h2>
+        <h2 class="bp-strip-label">{ti(locale).uploadFilesHeading}</h2>
         <button
           type="button"
           class="bp-btn bp-btn-secondary bp-btn-sm"
@@ -358,7 +376,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
           >
             <path d="M12 5v14M5 12h14" />
           </svg>
-          Add files
+          {ti(locale).uploadAddFiles}
         </button>
         <input
           ref={inputRef}
@@ -393,14 +411,17 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
                 <div class="bp-uploader-item-top">
                   <span class="bp-uploader-name">{item.fileName}</span>
                   <span class="bp-uploader-state">
-                    {item.phase === "measuring" && "Reading it"}
-                    {item.phase === "declaring" && "Starting"}
+                    {item.phase === "measuring" && ti(locale).uploadPhaseReading}
+                    {item.phase === "declaring" && ti(locale).uploadPhaseStarting}
                     {item.phase === "uploading" && `${item.progress}%`}
-                    {item.phase === "verifying" && "Checking it arrived"}
-                    {item.phase === "ready" && "Done"}
-                    {item.phase === "slot-occupied" && "Already there"}
-                    {item.phase === "failed" && "Didn't finish"}
-                    {item.phase === "queued" && (blocked ? "Waiting on you" : "Waiting")}
+                    {item.phase === "verifying" && ti(locale).uploadPhaseChecking}
+                    {item.phase === "ready" && ti(locale).uploadPhaseDone}
+                    {item.phase === "slot-occupied" && ti(locale).uploadPhaseAlreadyThere}
+                    {item.phase === "failed" && ti(locale).uploadPhaseUnfinished}
+                    {item.phase === "queued" &&
+                      (blocked
+                        ? ti(locale).uploadPhaseWaitingOnYou
+                        : ti(locale).uploadPhaseWaiting)}
                   </span>
                 </div>
 
@@ -437,7 +458,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
                     {item.kind === "stem" && (
                       <select
                         class="bp-select bp-uploader-select"
-                        aria-label={`Instrument for ${item.fileName}`}
+                        aria-label={ti(locale).uploadInstrumentFor(item.fileName)}
                         value={item.instrumentId ?? ""}
                         disabled={item.phase !== "queued" && item.phase !== "slot-occupied"}
                         onChange={(event) =>
@@ -447,7 +468,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
                           })
                         }
                       >
-                        <option value="">Which instrument?</option>
+                        <option value="">{ti(locale).uploadWhichInstrument}</option>
                         {instruments.map((instrument) => (
                           <option value={instrument.id} key={instrument.id}>
                             {instrument.label}
@@ -478,7 +499,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
                         class="bp-btn bp-btn-secondary bp-btn-sm"
                         onClick={() => retry(item, true)}
                       >
-                        Replace it
+                        {ti(locale).uploadReplace}
                       </button>
                       <button
                         type="button"
@@ -487,7 +508,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
                           setItems((current) => current.filter((i) => i.id !== item.id))
                         }
                       >
-                        Skip
+                        {ti(locale).uploadSkip}
                       </button>
                     </div>
                   </>
@@ -503,7 +524,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
                           class="bp-btn bp-btn-secondary bp-btn-sm"
                           onClick={() => retry(item, false)}
                         >
-                          Try again
+                          {ti(locale).uploadRetry}
                         </button>
                       )}
                       <button
@@ -513,7 +534,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments }: Pr
                           setItems((current) => current.filter((i) => i.id !== item.id))
                         }
                       >
-                        Remove
+                        {ti(locale).uploadRemove}
                       </button>
                     </div>
                   </>

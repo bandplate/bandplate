@@ -340,6 +340,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
               the no-JS path is the editor that exists today. */}
           <ChartEditor
             client:load
+            locale={locale}
             initialRows={chartRows}
             freeform={chartIsFreeform}
             chordText={song.chordProgression ?? ""}

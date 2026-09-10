@@ -13,6 +13,7 @@ import { authByLocale } from "./auth.js";
 import { commonByLocale } from "./common.js";
 import { eventsByLocale } from "./events.js";
 import { homeByLocale } from "./home.js";
+import { islandsByLocale } from "./islands.js";
 import { meByLocale } from "./me.js";
 import { playerByLocale } from "./player.js";
 import { shellByLocale } from "./shell.js";
@@ -26,6 +27,7 @@ const CATALOG = {
     common: commonByLocale.en,
     events: eventsByLocale.en,
     home: homeByLocale.en,
+    islands: islandsByLocale.en,
     me: meByLocale.en,
     player: playerByLocale.en,
     shell: shellByLocale.en,
@@ -38,6 +40,7 @@ const CATALOG = {
     common: commonByLocale.cs,
     events: eventsByLocale.cs,
     home: homeByLocale.cs,
+    islands: islandsByLocale.cs,
     me: meByLocale.cs,
     player: playerByLocale.cs,
     shell: shellByLocale.cs,

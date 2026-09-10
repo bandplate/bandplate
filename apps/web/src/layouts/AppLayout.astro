@@ -168,7 +168,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
         lived in `AdminLayout` only, which meant the keeper/reject confirms on
         a take's own page never got the modal and always took the full
         confirm-page navigation instead. */}
-    <ConfirmDialog client:load transition:persist="bp-confirm" />
+    <ConfirmDialog client:load transition:persist="bp-confirm" locale={Astro.locals.locale} />
   </div>
 </Layout>
 

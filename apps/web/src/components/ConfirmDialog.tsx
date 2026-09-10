@@ -11,6 +11,11 @@
 // steps" — automatic focus restoration to whatever was focused before it
 // opened (the trigger), for free, in every evergreen browser. Hand-rolling
 // that is a common source of a11y bugs; the platform already does it.
+import { type Locale, islandsMessages } from "@bandplate/i18n";
+import { currentLocale } from "../client/locale.js";
+
+/** Read at call time, never captured: this island is `transition:persist`. */
+const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
 import { useEffect, useRef, useState } from "preact/hooks";
 
 interface ConfirmState {
@@ -36,7 +41,11 @@ interface ConfirmState {
   danger: boolean;
 }
 
-export default function ConfirmDialog() {
+export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
+  // `locale` is the SSR fallback for the markup below. Everything inside the
+  // delegated listener runs in the browser, where `<html lang>` is readable,
+  // so those calls take no fallback and the effect keeps its empty deps.
+  void locale;
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [state, setState] = useState<ConfirmState | null>(null);
   const [pending, setPending] = useState(false);
@@ -77,10 +86,10 @@ export default function ConfirmDialog() {
         return;
       }
       setState({
-        title: target.dataset.confirmTitle ?? "Are you sure?",
-        body: target.dataset.confirmBody ?? "This can't be undone.",
+        title: target.dataset.confirmTitle ?? ti().confirmTitle,
+        body: target.dataset.confirmBody ?? ti().confirmBody,
         action,
-        cta: target.dataset.confirmCta ?? "Confirm",
+        cta: target.dataset.confirmCta ?? ti().confirmCta,
         redirect: target.dataset.confirmRedirect,
         danger: target.dataset.confirmTone !== "neutral",
       });
@@ -120,7 +129,7 @@ export default function ConfirmDialog() {
         headers: { accept: "text/plain" },
       });
       if (!res.ok) {
-        throw new Error(`That didn't work (status ${res.status}). Try again.`);
+        throw new Error(ti().confirmFailedStatus(res.status));
       }
       // `location.reload()` repeats the ORIGINAL request that loaded the
       // current document, method included — and on the token-creation
@@ -142,7 +151,7 @@ export default function ConfirmDialog() {
       window.location.replace(state.redirect ?? window.location.href);
     } catch (err) {
       setPending(false);
-      setError(err instanceof Error ? err.message : "That didn't work. Try again.");
+      setError(err instanceof Error ? err.message : ti().confirmFailed);
     }
   }
 
@@ -197,7 +206,7 @@ export default function ConfirmDialog() {
                   <path d="M10.3 3.2 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
                 </svg>
               )}
-              {pending ? "Working…" : state.cta}
+              {pending ? "{ti().confirmWorking}" : state.cta}
             </button>
           </div>
         </>

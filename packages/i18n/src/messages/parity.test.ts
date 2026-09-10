@@ -48,6 +48,9 @@ const IDENTICAL_IS_FINE = new Set<string>([
   "takes.masterLabel",
   // Same word in a Czech studio, and the player says it beside "stopa".
   "player.master",
+  // Same in a Czech studio, and the chord example is chords.
+  "islands.uploadMaster",
+  "islands.chartChordsPlaceholder",
   "takes.masterMix",
 ]);
 
@@ -89,6 +92,24 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "common.editingSheet": [{ label: "n", args: ["Čoudy"] }],
   "voting.favoriteAdd": [{ label: "n", args: ["Čoudy"] }],
   "voting.favoriteRemove": [{ label: "n", args: ["Čoudy"] }],
+  "islands.chartUnnamedSection": [{ label: "i", args: [3] }],
+  "islands.chartSectionNameLabel": [{ label: "i", args: [3] }],
+  "islands.chartMoveUp": [{ label: "n", args: ["Sloka"] }],
+  "islands.chartMoveDown": [{ label: "n", args: ["Sloka"] }],
+  "islands.chartRemoveRow": [{ label: "n", args: ["Sloka"] }],
+  "islands.chartChordsFor": [{ label: "n", args: ["Sloka"] }],
+  "islands.chartWordsFor": [{ label: "n", args: ["Sloka"] }],
+  "islands.chartUnknownNames": [
+    { label: "one", args: [1] },
+    { label: "many", args: [3] },
+  ],
+  "islands.uploadAdding": [
+    { label: "one", args: [1] },
+    { label: "many", args: [3] },
+  ],
+  "islands.uploadInstrumentFor": [{ label: "f", args: ["bass.flac"] }],
+  "islands.uploadErrRefused": [{ label: "s", args: [413] }],
+  "islands.confirmFailedStatus": [{ label: "s", args: [500] }],
   "player.solo": [{ label: "i", args: ["Bass"] }],
   "player.nowPlaying": [{ label: "t", args: ["Čoudy"] }],
   "player.nowPlayingSource": [{ label: "p", args: [{ title: "Čoudy", source: "Solo: Bass" }] }],

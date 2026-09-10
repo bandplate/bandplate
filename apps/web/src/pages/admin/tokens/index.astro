@@ -79,7 +79,7 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
             is read a character at a time, and that is exactly what a
             fixed-width face is for. Email addresses and labels are words. */}
         <p class="bp-mono">{created.rawToken}</p>
-        <CopyButton client:load value={created.rawToken} label="Copy secret" />
+        <CopyButton client:load value={created.rawToken} label="Copy secret" locale={Astro.locals.locale} />
       </Banner>
     )}
 

@@ -23,9 +23,25 @@
 //     clipboard still held whatever was there before. For a
 //     shown-once secret that is the worst possible failure mode: the
 //     member navigates away believing they have it.
+import { type Locale, islandsMessages } from "@bandplate/i18n";
 import { useState } from "preact/hooks";
+import { currentLocale } from "../client/locale.js";
+
+/** Read at call time — see `client/locale.ts`. */
+const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
 
 interface Props {
+  /**
+   * The page's language, for the SERVER render.
+   *
+   * `client:load` renders on the server, where there is no `document` to read
+   * `<html lang>` from — and Preact's `hydrate()` does NOT patch an attribute
+   * that differs, so an English server pass STICKS in the DOM rather than
+   * being corrected on the client. The prop is the fallback only; the live
+   * `lang` still wins in the browser, which is what keeps this right after a
+   * language change.
+   */
+  locale?: Locale;
   value: string;
   label?: string;
 }
@@ -54,7 +70,10 @@ function copyViaExecCommand(value: string): boolean {
   }
 }
 
-export default function CopyButton({ value, label = "Copy" }: Props) {
+export default function CopyButton({ value, label, locale }: Props) {
+  // Not a default in the signature: that would be evaluated before `locale`
+  // is in scope, and on the server it would resolve to English.
+  const copyLabel = label ?? ti(locale).copy;
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
 
   async function handleClick() {
@@ -95,7 +114,11 @@ export default function CopyButton({ value, label = "Copy" }: Props) {
         class="bp-btn bp-btn-secondary bp-btn-sm bp-copy-btn"
         onClick={handleClick}
       >
-        {state === "copied" ? "Copied" : state === "failed" ? "Couldn't copy" : label}
+        {state === "copied"
+          ? ti(locale).copied
+          : state === "failed"
+            ? ti(locale).copyFailed
+            : label}
       </button>
       {state === "failed" && (
         <p class="bp-field-error bp-m0">

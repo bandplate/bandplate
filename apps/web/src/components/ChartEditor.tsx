@@ -3,7 +3,7 @@
 // --- Why this exists ------------------------------------------------------
 //
 // The parser takes two conventions and neither field said so: chords want one
-// line per section, `Verse: Am Dm7`, while lyrics want the label alone on its
+// line per section, `{ti(locale).chartFormatExample}`, while lyrics want the label alone on its
 // own line with the words beneath. Getting it wrong produced NOTHING — the
 // chart fell back to two plain blocks with no explanation, and the only way to
 // find out was to save and go look at the song page.
@@ -32,6 +32,16 @@
 // The text boxes are also the no-JS path: the two `<textarea>`s ARE the form
 // fields, always present and always in sync, so with scripting off you get
 // exactly the editor that exists today. Nothing here is required to save.
+import { type Locale, islandsMessages } from "@bandplate/i18n";
+import { currentLocale } from "../client/locale.js";
+
+/** Read at call time — see `client/locale.ts`. */
+const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
+
+/** A row's name for an accessible label, or "section 3" when it has none. */
+function rowName(row: { label: string }, index: number, locale?: Locale): string {
+  return row.label || ti(locale).chartUnnamedSection(index + 1);
+}
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   type EditorRow,
@@ -42,6 +52,17 @@ import {
 } from "../client/chart-rows.js";
 
 interface Props {
+  /**
+   * The page's language, for the SERVER render.
+   *
+   * `client:load` renders on the server, where there is no `document` to read
+   * `<html lang>` from — and Preact's `hydrate()` does NOT patch an attribute
+   * that differs, so an English server pass STICKS in the DOM rather than
+   * being corrected on the client. The prop is the fallback only; the live
+   * `lang` still wins in the browser, which is what keeps this right after a
+   * language change.
+   */
+  locale?: Locale;
   /** Parsed server-side. Empty when the song has nothing yet. */
   initialRows: { label: string; chords: string; lyrics: string }[];
   /** True when the text could not be read as sections — see `songToRows`. */
@@ -81,6 +102,7 @@ export default function ChartEditor({
   chordText,
   lyricsText,
   vocabulary,
+  locale,
 }: Props) {
   const [rows, setRows] = useState<EditorRow[]>(() =>
     initialRows.length > 0
@@ -189,7 +211,7 @@ export default function ChartEditor({
           {rows.map((row, index) => {
             const known = row.label.trim() === "" || isKnownSection(row.label, vocabulary);
             // A row with words but no name cannot be WRITTEN: both output
-            // conventions start with the label (`Verse: Am Dm7`, and the label
+            // conventions start with the label (`{ti(locale).chartFormatExample}`, and the label
             // alone above its words), so `rowsToText` skips it — and used to
             // skip it silently, which meant typing a verse into the section
             // the editor opens with and pressing Save threw the words away
@@ -202,8 +224,8 @@ export default function ChartEditor({
                     class="bp-input bp-chart-row-name"
                     type="text"
                     list="bp-section-names"
-                    placeholder="Verse"
-                    aria-label={`Section ${index + 1} name`}
+                    placeholder={ti(locale).chartSectionNamePlaceholder}
+                    aria-label={ti(locale).chartSectionNameLabel(index + 1)}
                     /* One attribute, both reasons: the name is unusable
                        either because the parser will not recognise it or
                        because there isn't one and the row has words to lose. */
@@ -225,7 +247,7 @@ export default function ChartEditor({
                     <button
                       type="button"
                       class="bp-btn bp-btn-quiet bp-btn-sm bp-chart-row-move"
-                      aria-label={`Move ${row.label || `section ${index + 1}`} up`}
+                      aria-label={ti(locale).chartMoveUp(rowName(row, index, locale))}
                       disabled={index === 0}
                       onClick={() => setRows((c) => moveRow(c, index, -1))}
                     >
@@ -234,7 +256,7 @@ export default function ChartEditor({
                     <button
                       type="button"
                       class="bp-btn bp-btn-quiet bp-btn-sm bp-chart-row-move"
-                      aria-label={`Move ${row.label || `section ${index + 1}`} down`}
+                      aria-label={ti(locale).chartMoveDown(rowName(row, index, locale))}
                       disabled={index === rows.length - 1}
                       onClick={() => setRows((c) => moveRow(c, index, 1))}
                     >
@@ -243,7 +265,7 @@ export default function ChartEditor({
                     <button
                       type="button"
                       class="bp-btn bp-btn-quiet bp-btn-sm"
-                      aria-label={`Remove ${row.label || `section ${index + 1}`}`}
+                      aria-label={ti(locale).chartRemoveRow(rowName(row, index, locale))}
                       onClick={() =>
                         setRows((c) => {
                           const next = c.filter((r) => r.id !== row.id);
@@ -276,16 +298,16 @@ export default function ChartEditor({
                 <textarea
                   class="bp-textarea bp-chart-row-chords bp-mono"
                   rows={2}
-                  placeholder="Am Dm7"
-                  aria-label={`Chords for ${row.label || `section ${index + 1}`}`}
+                  placeholder={ti(locale).chartChordsPlaceholder}
+                  aria-label={ti(locale).chartChordsFor(rowName(row, index, locale))}
                   value={row.chords}
                   onInput={(e) => update(row.id, { chords: e.currentTarget.value })}
                 />
                 <textarea
                   class="bp-textarea bp-chart-row-lyrics"
                   rows={4}
-                  placeholder="The words for this section"
-                  aria-label={`Words for ${row.label || `section ${index + 1}`}`}
+                  placeholder={ti(locale).chartLyricsPlaceholder}
+                  aria-label={ti(locale).chartWordsFor(rowName(row, index, locale))}
                   value={row.lyrics}
                   onInput={(e) => update(row.id, { lyrics: e.currentTarget.value })}
                 />
@@ -308,15 +330,15 @@ export default function ChartEditor({
             class="bp-btn bp-btn-secondary bp-btn-sm"
             onClick={() => setRows((c) => [...c, newRow()])}
           >
-            Add a section
+            {ti(locale).chartAddSection}
           </button>
         </div>
 
         {unknownNames.length > 0 && (
           <p class="bp-sheet-hint bp-m0">
-            {unknownNames.length === 1 ? "One section has" : `${unknownNames.length} sections have`}{" "}
-            a name the song page won't recognise. You can save anyway — those parts just won't line
-            their chords up with their words.
+            {ti(locale).chartUnknownNames(unknownNames.length)} a name the song page won't
+            recognise. You can save anyway — those parts just won't line their chords up with their
+            words.
           </p>
         )}
       </div>
@@ -329,7 +351,8 @@ export default function ChartEditor({
             Chords
           </label>
           <p class="bp-sheet-hint bp-m0">
-            One section per line: <code class="bp-mono">Verse: Am Dm7</code>
+            {ti(locale).chartFormatHint}{" "}
+            <code class="bp-mono">{ti(locale).chartFormatExample}</code>
           </p>
           <textarea
             class="bp-textarea bp-mono"
@@ -363,7 +386,8 @@ export default function ChartEditor({
           This song's text isn't written in sections the song page recognises, so it renders as
           plain text — nothing is lost, but the chords don't line up with the words. Give a part a
           name on its own line and put its chords after a colon (
-          <code class="bp-mono">Verse: Am Dm7</code>), save, and it opens as sections next time.
+          <code class="bp-mono">{ti(locale).chartFormatExample}</code>), save, and it opens as
+          sections next time.
         </p>
       )}
     </div>

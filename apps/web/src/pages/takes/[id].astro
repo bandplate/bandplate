@@ -608,6 +608,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
           `AppLayout` because it serves exactly this page. */}
       <AssetUploader
         client:load
+        locale={locale}
         takeId={take.id}
         takeHasMaster={masters.length > 0}
         instruments={allInstruments.map((i) => ({ id: i.id, label: i.label }))}

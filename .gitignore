@@ -25,3 +25,4 @@ wrangler.toml
 # design tooling from the .dc.html sources beside it. The sources are tracked;
 # the build output is not.
 design-canvas/bandplate-colour-and-type.html
+__pycache__/

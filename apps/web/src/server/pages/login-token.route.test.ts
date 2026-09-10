@@ -160,6 +160,23 @@ describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", (
     await rm(dbDir, { recursive: true, force: true });
   });
 
+  // A sign-in URL is a bearer credential. A mail client or chat app that
+  // unfurls the link would fetch its card and cache a preview of a one-time
+  // credential where anyone on the thread can see it — so this page offers
+  // NOTHING to unfurl. `Layout` gates every `og:`/`twitter:` tag on the same
+  // `noindex` flag this page already sets, and this is what proves the two
+  // stayed wired together.
+  it("offers a link unfurler nothing: noindex, and not one og: or twitter: tag", async () => {
+    const res = await fetch(`${ORIGIN}/login/${rawToken}`);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain('name="robots" content="noindex"');
+    expect(body).not.toContain('property="og:');
+    expect(body).not.toContain('name="twitter:');
+    expect(body).not.toContain("og-image.png");
+  });
+
   it("GET renders the token page twice without consuming it, then POST still succeeds (302, Set-Cookie)", async () => {
     const get1 = await fetch(`${ORIGIN}/login/${rawToken}`);
     expect(get1.status).toBe(200);

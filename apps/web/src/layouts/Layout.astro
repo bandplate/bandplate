@@ -6,17 +6,76 @@ export interface Props {
   title: string;
   /** Set for pages that must never be indexed or cached by intermediaries (the login-token page). */
   noindex?: boolean;
+  /**
+   * The one sentence a link preview shows under the title. Defaults to the
+   * pitch the auth screen carries — see the note on `SHARE_DESCRIPTION`.
+   */
+  description?: string;
 }
 
-const { title, noindex = false } = Astro.props;
+const { title, noindex = false, description } = Astro.props;
+
+/**
+ * What a shared bandplate link says about itself.
+ *
+ * The same sentence `/login` renders, and for the same reason: it is the one
+ * place the product describes itself, and a preview card has exactly that job.
+ *
+ * It is also, in practice, the only description anyone outside the band will
+ * ever see. Every page is behind the session middleware, so an unauthenticated
+ * crawler following a link to `/songs/dub-corner` is redirected to `/login` and
+ * previews THAT — which is the correct outcome for a private archive (a card
+ * that named the song would leak the archive to every chat the link is pasted
+ * into) and the reason there is one card here rather than a per-page one.
+ */
+const SHARE_DESCRIPTION =
+  "Every rehearsal your band has recorded, in one place, with the keepers marked.";
+
+const shareTitle = `${title} — bandplate`;
+const shareDescription = description ?? SHARE_DESCRIPTION;
+
+// Absolute, because `og:image` and `og:url` are fetched by a crawler with no
+// page context to resolve a relative path against. Built from the REQUEST
+// rather than from configuration so a deployment behind any host describes
+// itself as the host the reader actually reached.
+const canonical = new URL(Astro.url.pathname, Astro.url);
+const shareImage = new URL("/og-image.png", Astro.url);
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title} — bandplate</title>
+    <title>{shareTitle}</title>
+    <meta name="description" content={shareDescription} />
     {noindex && <meta name="robots" content="noindex" />}
+    {
+      /* A page that must not be indexed must not be PREVIEWED either. The
+         login-token page is the whole reason: its URL is a bearer credential,
+         and a mail client or chat app that unfurls it would fetch the card,
+         cache a preview of a one-time sign-in link, and hand it to whoever can
+         see the thread. Nothing to unfurl is the only safe answer, so the
+         `noindex` flag gates every tag below rather than just the robots one. */
+      !noindex && (
+        <>
+          <meta property="og:type" content="website" />
+          <meta property="og:site_name" content="bandplate" />
+          <meta property="og:title" content={shareTitle} />
+          <meta property="og:description" content={shareDescription} />
+          <meta property="og:url" content={canonical.href} />
+          <meta property="og:image" content={shareImage.href} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          {/* Described, not decorative: this is the only image in the preview,
+              and a reader on a screen reader gets the alt or gets nothing. */}
+          <meta
+            property="og:image:alt"
+            content="The bandplate wordmark beside a record, on a dark ground."
+          />
+          <meta name="twitter:card" content="summary_large_image" />
+        </>
+      )
+    }
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

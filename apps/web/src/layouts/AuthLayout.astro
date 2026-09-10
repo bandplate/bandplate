@@ -19,6 +19,7 @@
 // on the light ground would be a plate nobody recognises. Its own text
 // colours come from `--bp-auth-field-*` for exactly that reason — reaching
 // for `--bp-color-fg` here would put ink on lacquer in the light theme.
+import { messages } from "@bandplate/i18n";
 import Logo from "@bandplate/ui/components/Logo.astro";
 import Layout from "./Layout.astro";
 
@@ -51,7 +52,7 @@ const { title, noindex = false } = Astro.props;
       {/* The one sentence of pitch in the whole product. It is hidden on the
           phone band, where there is room for the wordmark and nothing else. */}
       <p class="bp-auth-pitch bp-m0">
-        Every rehearsal your band has recorded, in one place, with the keepers marked.
+        {messages(Astro.locals.locale).shell.shareDescription}
       </p>
     </div>
     <main id="main" class="bp-auth-pane">

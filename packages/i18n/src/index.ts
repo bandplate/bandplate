@@ -22,7 +22,9 @@ export {
   formatShortDate,
 } from "./format.js";
 
+export { authMessages } from "./messages/auth.js";
 export { commonMessages } from "./messages/common.js";
 export { type Messages, messages } from "./messages/index.js";
 export { LANGUAGE_NAMES, meMessages } from "./messages/me.js";
+export { shellMessages } from "./messages/shell.js";
 export { type VoteTally, votingMessages } from "./messages/voting.js";

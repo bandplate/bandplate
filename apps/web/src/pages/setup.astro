@@ -5,6 +5,7 @@
 // directly here (not after a redirect) — a broken mailer needs to be
 // discovered by the operator running setup, not by the first member who
 // can't get a login link.
+import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AuthLayout from "../layouts/AuthLayout.astro";
@@ -41,54 +42,50 @@ if (Astro.request.method === "POST") {
 }
 
 const fieldErrors = result?.kind === "invalid" ? result.errors : {};
+
+const t = messages(Astro.locals.locale);
 ---
 
-<AuthLayout title="Set up bandplate">
+<AuthLayout title={t.auth.setupTitle}>
   {originError && (
-    <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
+    <Banner kind="error">{t.common.originError}</Banner>
   )}
 
   {result?.kind === "ok" ? (
     <>
-      <h1 class="bp-auth-title">You're in</h1>
-      <p class="bp-auth-lede bp-m0">
-        You're signed in as the first admin, and bandplate is ready to use.
-      </p>
+      <h1 class="bp-auth-title">{t.auth.setupOkHeading}</h1>
+      <p class="bp-auth-lede bp-m0">{t.auth.setupOkLede}</p>
       {/* The mail self-test stays a Banner: unlike the auth outcomes, this is
           a notice ABOUT something else on the page — the setup that already
           succeeded — and its failure case needs room for a paragraph of
           operator instructions that would swamp a state screen. */}
       {result.testEmailSent ? (
-        <Banner kind="success" title="Test email sent">
-          The mailer works — a confirmation email went out to your address.
-        </Banner>
+        <Banner kind="success" title={t.auth.setupMailOkTitle}>{t.auth.setupMailOkBody}</Banner>
       ) : (
-        <Banner kind="error" title="Test email failed to send">
-          Members won't be able to sign in by email until this is fixed. You're still
-          signed in, so you can fix it and carry on. The provider's own error explains
-          why, and it's only in the server log, not here — on Workers run
-          <code class="bp-mono">wrangler tail</code>, on a container read the app's
-          stdout. Most often it's the wrong API key, or a From address the provider
-          hasn't verified yet.
+        /* Whole clauses, assembled here rather than one paragraph with the
+           command buried mid-sentence: no translation can reorder around an
+           inline `<code>`, and Czech wants it somewhere English does not. */
+        <Banner kind="error" title={t.auth.setupMailFailTitle}>
+          {t.auth.setupMailFailLede} {t.auth.setupMailFailWhere}{" "}
+          {t.auth.setupMailFailWorkers} <code class="bp-mono">wrangler tail</code>.{" "}
+          {t.auth.setupMailFailContainer} {t.auth.setupMailFailCommon}
         </Banner>
       )}
-      <a href="/admin" class="bp-btn bp-btn-primary bp-auth-action">Go to admin</a>
+      <a href="/admin" class="bp-btn bp-btn-primary bp-auth-action">{t.auth.setupGoToAdmin}</a>
     </>
   ) : (
     <>
-      <h1 class="bp-auth-title">Set up the archive</h1>
-      <p class="bp-auth-lede bp-m0">
-        Create the first admin. You'll need the bootstrap token from your server's environment.
-      </p>
+      <h1 class="bp-auth-title">{t.auth.setupHeading}</h1>
+      <p class="bp-auth-lede bp-m0">{t.auth.setupLede}</p>
       {result?.kind === "bad_token" && (
-        <Banner kind="error">That bootstrap token isn't right. Check your server configuration.</Banner>
+        <Banner kind="error">{t.auth.setupBadToken}</Banner>
       )}
       {result?.kind === "already_bootstrapped" && (
-        <Banner kind="error">bandplate is already set up. Sign in instead.</Banner>
+        <Banner kind="error">{t.auth.setupAlreadyDone}</Banner>
       )}
       <form method="post" class="bp-auth-form" novalidate>
         <Field
-          label="Bootstrap token"
+          label={t.auth.setupTokenLabel}
           name="bootstrapToken"
           type="password"
           required
@@ -96,21 +93,21 @@ const fieldErrors = result?.kind === "invalid" ? result.errors : {};
           error={fieldErrors.bootstrapToken}
         />
         <Field
-          label="Your name"
+          label={t.auth.setupNameLabel}
           name="displayName"
           required
           autocomplete="name"
           error={fieldErrors.displayName}
         />
         <Field
-          label="Your email address"
+          label={t.auth.setupEmailLabel}
           name="email"
           type="email"
           required
           autocomplete="email"
           error={fieldErrors.email}
         />
-        <button type="submit" class="bp-btn bp-btn-primary">Create the first admin</button>
+        <button type="submit" class="bp-btn bp-btn-primary">{t.auth.setupSubmit}</button>
       </form>
     </>
   )}

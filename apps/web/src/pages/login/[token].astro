@@ -9,6 +9,7 @@
 // (via `Layout`'s `noindex` prop) keep any intermediate cache or crawler
 // from ever holding onto this URL, since holding it is equivalent to
 // holding a (time-limited, single-use) credential.
+import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import AuthState from "../../components/AuthState.astro";
 import AuthLayout from "../../layouts/AuthLayout.astro";
@@ -18,6 +19,8 @@ import { isSameOrigin } from "../../server/csrf.js";
 import { type LoginTokenView, consume, peekView } from "../../server/pages/login-token.js";
 
 Astro.response.headers.set("Cache-Control", "no-store");
+
+const t = messages(Astro.locals.locale);
 
 const token = Astro.params.token;
 if (!token) {
@@ -59,9 +62,9 @@ const initials = displayName
   .join("");
 ---
 
-<AuthLayout title="Sign in" noindex>
+<AuthLayout title={t.auth.signInTitle} noindex>
   {originError && (
-    <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
+    <Banner kind="error">{t.common.originError}</Banner>
   )}
 
   {view.kind === "valid" ? (
@@ -69,20 +72,20 @@ const initials = displayName
       {/* The screen already knows whose link this is, so it answers "who am I
           about to become" before asking for a press — with the same initials
           disc `/me` draws, rather than the name buried in a sentence. */}
-      <p class="bp-eyebrow bp-m0">Signing in as</p>
+      <p class="bp-eyebrow bp-m0">{t.auth.signingInAs}</p>
       <div class="bp-auth-who">
         {initials && <span class="bp-auth-avatar" aria-hidden="true">{initials}</span>}
-        <h1 class="bp-auth-title bp-auth-who-name">{view.displayName ?? "yourself"}</h1>
+        <h1 class="bp-auth-title bp-auth-who-name">{view.displayName ?? t.auth.yourself}</h1>
       </div>
       <form method="post" class="bp-auth-form">
-        <button type="submit" class="bp-btn bp-btn-primary">Sign in to bandplate</button>
+        <button type="submit" class="bp-btn bp-btn-primary">{t.auth.tokenSubmit}</button>
       </form>
       <p class="bp-auth-aside bp-m0">
-        Not you? <a href="/login">Ask for your own link</a>
+        {t.auth.notYou} <a href="/login">{t.auth.notYouLink}</a>
       </p>
     </>
   ) : (
-    <AuthState tone="alert" title="That link is spent">
+    <AuthState tone="alert" title={t.auth.spentTitle}>
       <svg slot="icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="8.5" />
         <path d="M12 7.5V13M12 16.2v.2" />
@@ -91,11 +94,8 @@ const initials = displayName
           expired link from an already-used one without leaking which, and the
           member's next move is the same either way — so the way out is the
           gold action rather than a link at the bottom of a notice. */}
-      <p class="bp-auth-lede bp-m0">
-        Sign-in links work once and last 15 minutes. This one has expired or has already been
-        used.
-      </p>
-      <a href="/login" class="bp-btn bp-btn-primary bp-auth-action">Send me a new link</a>
+      <p class="bp-auth-lede bp-m0">{t.auth.spentLede}</p>
+      <a href="/login" class="bp-btn bp-btn-primary bp-auth-action">{t.auth.spentAction}</a>
     </AuthState>
   )}
 </AuthLayout>

@@ -151,5 +151,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect(memberDecision.to);
   }
 
-  return next();
+  const response = await next();
+
+  // What this response depended on, for any cache between here and the reader.
+  //
+  // Nothing in front of the app today caches HTML — the only `Cache-Control`
+  // on any page is `/login/[token]`'s `no-store` — so this changes nothing
+  // now. It is here because the page whose language is negotiated rather than
+  // chosen is `/login`, the ONE page a cache would ever be allowed to hold: it
+  // is the same for every anonymous visitor except for the language, and
+  // serving a Czech sign-in screen to an English visitor (or the reverse) is
+  // exactly the bug a missing `Vary` produces. Cheaper to state the dependency
+  // now than to debug it after somebody puts a CDN in front.
+  //
+  // `Cookie` as well as `Accept-Language`, because `bp_locale` outranks the
+  // header — and because every signed-in page already varies by the session
+  // cookie anyway.
+  response.headers.append("Vary", "Accept-Language, Cookie");
+  return response;
 });

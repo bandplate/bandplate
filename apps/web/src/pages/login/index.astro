@@ -3,6 +3,7 @@
 // confirmation regardless of whether the address is registered (see
 // `handleLoginPost`/`requestLogin`), so this page has no branch that could
 // leak membership.
+import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AuthState from "../../components/AuthState.astro";
@@ -70,11 +71,27 @@ const showSent = params.has("sent");
 const showInvalid = params.has("invalid");
 const rawSlow = Number.parseInt(params.get("slow") ?? "", 10);
 const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 3600) : undefined;
+
+const t = messages(Astro.locals.locale);
+
+// `set:html` is safe here, and this is the only place it is used on this page.
+// BOTH halves are ours: the sentence comes from the message catalog, and the
+// one interpolated value is `slowSeconds` — a number already clamped to
+// 1..3600 on the line above. Nothing a caller typed can reach this string.
+//
+// It exists because the number is wrapped in `.bp-tabular` so it does not
+// jitter as it counts down. Assembling that in the template would mean three
+// adjacent expressions in a fixed English order, and Czech puts the number
+// somewhere else in the sentence.
+const slowLedeHtml =
+  slowSeconds === undefined
+    ? ""
+    : t.auth.slowLede(`<span class="bp-tabular">${slowSeconds}</span>`);
 ---
 
-<AuthLayout title="Sign in">
+<AuthLayout title={t.auth.signInTitle}>
   {originError && (
-    <Banner kind="error">Something about that request looked wrong. Reload the page and try again.</Banner>
+    <Banner kind="error">{t.common.originError}</Banner>
   )}
 
   {/* The sent state REPLACES the form rather than sitting above it. The page
@@ -82,7 +99,7 @@ const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 36
       invites a second submission — which mints a second token and a second
       email — to answer a question the page has already answered. */}
   {showSent && (
-    <AuthState tone="ok" title="Check your email">
+    <AuthState tone="ok" title={t.auth.sentTitle}>
       <svg slot="icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="5" width="18" height="14" rx="2.5" />
         <path d="M3 7.5l9 6 9-6" />
@@ -91,44 +108,46 @@ const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 36
           registered turns the members table into an enumeration oracle, which
           is exactly what `handleLoginPost`'s uniform response prevents. The
           copy must not give back what the server withholds. */}
-      <p class="bp-auth-lede bp-m0">If that address is registered, a link is on its way.</p>
-      <a href="/login" class="bp-btn bp-btn-quiet bp-auth-action">Use a different address</a>
+      <p class="bp-auth-lede bp-m0">{t.auth.sentLede}</p>
+      <a href="/login" class="bp-btn bp-btn-quiet bp-auth-action">{t.auth.sentUseAnother}</a>
     </AuthState>
   )}
 
   {slowSeconds !== undefined && (
-    <AuthState tone="alert" title="Give it a minute">
+    <AuthState tone="alert" title={t.auth.slowTitle}>
       <svg slot="icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12.5" r="8" />
         <path d="M12 8.5V13l3 1.8M9.5 3h5" />
       </svg>
-      <p class="bp-auth-lede bp-m0">
-        Too many sign-in requests from here. Try again in about <span class="bp-tabular">{slowSeconds}</span>
-        {" "}seconds.
-      </p>
+      {/* The number is wrapped so it does not jitter as it counts down, which
+          is why the sentence arrives already assembled around a placeholder
+          rather than as three adjacent expressions — Czech puts the number in
+          a different place, and gluing fragments in the template would fix the
+          word order in English. */}
+      <p class="bp-auth-lede bp-m0" set:html={slowLedeHtml} />
       {/* No button, and no disabled one either: there is genuinely nothing to
           press, and a control that goes live on its own is a control people
           sit and watch. What this state actually provokes is "did the link I
           already asked for die too?", so that is what the line answers. */}
-      <p class="bp-auth-note bp-m0">any link already sent still works</p>
+      <p class="bp-auth-note bp-m0">{t.auth.slowNote}</p>
     </AuthState>
   )}
 
   {!showSent && slowSeconds === undefined && (
     <>
-      <h1 class="bp-auth-title">Sign in</h1>
-      <p class="bp-auth-lede bp-m0">Enter your email. We'll send you a link.</p>
+      <h1 class="bp-auth-title">{t.auth.heading}</h1>
+      <p class="bp-auth-lede bp-m0">{t.auth.lede}</p>
       <form method="post" class="bp-auth-form" novalidate>
         <Field
-          label="Email address"
+          label={t.auth.emailLabel}
           name="email"
           type="email"
           required
           autocomplete="email"
           inputmode="email"
-          error={showInvalid ? "Enter your email address." : undefined}
+          error={showInvalid ? t.auth.emailRequired : undefined}
         />
-        <button type="submit" class="bp-btn bp-btn-primary">Send me a link</button>
+        <button type="submit" class="bp-btn bp-btn-primary">{t.auth.submit}</button>
       </form>
     </>
   )}

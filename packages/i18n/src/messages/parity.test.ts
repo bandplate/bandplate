@@ -28,10 +28,14 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // The empty-tally case is "" in every language — an unvoted take renders
   // nothing at all. See `en/voting.ts`.
   "voting.tally(unvoted)",
+  // The bootstrap token is called that in both languages — it is the name of
+  // an environment variable the deployer already typed.
+  "auth.setupTokenLabel",
 ]);
 
 /** Arguments to call a function-valued entry with, keyed by its dotted path. */
 const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
+  "auth.slowLede": [{ label: "seconds", args: ["45"] }],
   "me.languageCurrent": [{ label: "name", args: ["English"] }],
   "me.languageSwitch": [{ label: "name", args: ["Čeština"] }],
   "voting.tally": [

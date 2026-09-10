@@ -9,6 +9,7 @@ import { ClientRouter } from "astro:transitions";
 // any page needing its own client-side JS; it respects
 // `prefers-reduced-motion` itself (Astro's built-in behavior).
 import type { MemberPrincipal } from "@bandplate/core";
+import { messages } from "@bandplate/i18n";
 import Logo from "@bandplate/ui/components/Logo.astro";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import NavIcon from "../components/NavIcon.astro";
@@ -40,12 +41,14 @@ type NavKey = "home" | "songs" | "events" | "takes" | "admin" | "me";
 // know on the web and do not necessarily look for on a phone — and the phone
 // has no wordmark in reach at all, only the tab bar. A page every other page
 // links back to should be reachable the same way as the rest of them.
+const t = messages(Astro.locals.locale);
+
 const navItems = [
-  { key: "home", label: "Home", href: "/" },
-  { key: "songs", label: "Songs", href: "/songs" },
-  { key: "events", label: "Events", href: "/events" },
-  { key: "takes", label: "Takes", href: "/takes" },
-  { key: "me", label: "Me", href: "/me" },
+  { key: "home", label: t.shell.nav.home, href: "/" },
+  { key: "songs", label: t.shell.nav.songs, href: "/songs" },
+  { key: "events", label: t.shell.nav.events, href: "/events" },
+  { key: "takes", label: t.shell.nav.takes, href: "/takes" },
+  { key: "me", label: t.shell.nav.me, href: "/me" },
 ] as const;
 
 // Admin is its own SECTION of the sidebar, under a rule and its own label,
@@ -54,10 +57,10 @@ const navItems = [
 // and the four sections below are its own navigation, not the app's. Listing
 // them here is also what lets the section pills stay a phone-only control.
 const adminItems = [
-  { key: "overview", label: "Overview", href: "/admin" },
-  { key: "members", label: "Members", href: "/admin/members" },
-  { key: "instruments", label: "Instruments", href: "/admin/instruments" },
-  { key: "tokens", label: "Tokens", href: "/admin/tokens" },
+  { key: "overview", label: t.shell.adminNav.overview, href: "/admin" },
+  { key: "members", label: t.shell.adminNav.members, href: "/admin/members" },
+  { key: "instruments", label: t.shell.adminNav.instruments, href: "/admin/instruments" },
+  { key: "tokens", label: t.shell.adminNav.tokens, href: "/admin/tokens" },
 ] as const;
 
 // The phone has no sidebar to hold a section, so there Admin stays one tab —
@@ -71,7 +74,7 @@ const adminItems = [
 const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmin
   ? [
       ...navItems.slice(0, -1),
-      { key: "admin", label: "Admin", href: "/admin" },
+      { key: "admin", label: t.shell.nav.admin, href: "/admin" },
       ...navItems.slice(-1),
     ]
   : navItems;
@@ -93,7 +96,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
       </a>
     </header>
     <div class="bp-shell-body">
-      <nav class="bp-sidebar" aria-label="Main">
+      <nav class="bp-sidebar" aria-label={t.shell.navLabel}>
         <a href="/" class="bp-shell-wordmark">
           <Logo size={26} id="sidebar" class="bp-shell-mark" />
           bandplate
@@ -119,7 +122,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
         {
           isAdmin && (
             <div class="bp-sidebar-group">
-              <p class="bp-eyebrow bp-sidebar-group-label bp-m0">Admin</p>
+              <p class="bp-eyebrow bp-sidebar-group-label bp-m0">{t.shell.adminGroupLabel}</p>
               <ul class="bp-sidebar-nav">
                 {adminItems.map((item) => (
                   <li>
@@ -146,7 +149,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
         <slot />
       </main>
     </div>
-    <nav class="bp-tabbar" aria-label="Main">
+    <nav class="bp-tabbar" aria-label={t.shell.navLabel}>
       {
         tabItems.map((item) => (
           <a href={item.href} class="bp-tabbar-item" aria-current={item.key === current ? "page" : undefined}>

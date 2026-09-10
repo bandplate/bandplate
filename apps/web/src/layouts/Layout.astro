@@ -1,4 +1,5 @@
 ---
+import { messages } from "@bandplate/i18n";
 import "@bandplate/ui/tokens/theme.css";
 import "@bandplate/ui/tokens/components.css";
 
@@ -8,7 +9,7 @@ export interface Props {
   noindex?: boolean;
   /**
    * The one sentence a link preview shows under the title. Defaults to the
-   * pitch the auth screen carries — see the note on `SHARE_DESCRIPTION`.
+   * pitch the auth screen carries — see `shell.shareDescription`.
    */
   description?: string;
 }
@@ -28,11 +29,10 @@ const { title, noindex = false, description } = Astro.props;
  * that named the song would leak the archive to every chat the link is pasted
  * into) and the reason there is one card here rather than a per-page one.
  */
-const SHARE_DESCRIPTION =
-  "Every rehearsal your band has recorded, in one place, with the keepers marked.";
+const t = messages(Astro.locals.locale);
 
 const shareTitle = `${title} | bandplate`;
-const shareDescription = description ?? SHARE_DESCRIPTION;
+const shareDescription = description ?? t.shell.shareDescription;
 
 // Absolute, because `og:image` and `og:url` are fetched by a crawler with no
 // page context to resolve a relative path against. Built from the REQUEST
@@ -70,7 +70,7 @@ const shareImage = new URL("/og-image.png", Astro.url);
               and a reader on a screen reader gets the alt or gets nothing. */}
           <meta
             property="og:image:alt"
-            content="The bandplate wordmark beside a record, on a dark ground."
+            content={t.shell.shareImageAlt}
           />
           <meta name="twitter:card" content="summary_large_image" />
         </>
@@ -86,7 +86,7 @@ const shareImage = new URL("/og-image.png", Astro.url);
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body class="bg-ground text-ink font-body">
-    <a href="#main" class="bp-skip-link">Skip to content</a>
+    <a href="#main" class="bp-skip-link">{t.shell.skipToContent}</a>
     <slot />
   </body>
 </html>

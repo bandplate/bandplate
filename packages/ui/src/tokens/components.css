@@ -1312,14 +1312,7 @@ a.bp-btn {
   border-top: 1px solid var(--bp-color-border);
 }
 
-/* A phone has room for the plate, the name, the source and one big play
-   button — not for a skip pair as well. Ten seconds back is a desktop
-   convenience; on a phone the waveform is the way you get there. */
 @media (max-width: 639px) {
-  .bp-player-skip {
-    display: none;
-  }
-
   .bp-player-source-trigger {
     max-width: 8rem;
     overflow: hidden;
@@ -1486,6 +1479,34 @@ a.bp-btn {
 
 .bp-player-skip:hover {
   background: var(--bp-fill-subtle);
+}
+
+/* The skip pair is a DESKTOP control, and `lg` is where this app's desktop
+   layout begins — the same line the sidebar, the two-column song detail and
+   the wide take rows are drawn on. The plan scoped "real transport controls"
+   to that layout from the start; this is that scoping applied.
+ *
+ * Hiding them costs nothing, because the waveform is not a picture:
+ * `.bp-player-seek` is a real `<input type="range">` sized over it, so tapping
+ * the timeline seeks and arrow keys step along it. Ten seconds back was always
+ * a convenience over a control that already did the job, and below `lg` the
+ * bar needs the width more than the convenience is worth — two 44px boxes
+ * flanking play, on a row that also carries the title, the source switch and
+ * the close.
+ *
+ * `display: none`, not `visibility` or opacity: a control nobody can see must
+ * not be reachable by Tab or announced by a screen reader either.
+ *
+ * THIS RULE MUST STAY BELOW the base `.bp-player-skip` above. There was an
+ * identical hide at `max-width: 639px` up beside `.bp-player-bar`, and it
+ * never once took effect: same specificity, declared EARLIER, so the base
+ * rule's `display: grid` won on source order at every width. The skip pair
+ * drew on every phone the whole time it was believed hidden. A media query is
+ * not a specificity boost. */
+@media (max-width: 1023px) {
+  .bp-player-skip {
+    display: none;
+  }
 }
 
 .bp-player-scrub {

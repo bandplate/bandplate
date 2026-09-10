@@ -252,6 +252,37 @@
   font-size: 0.875rem;
 }
 
+/* Smaller than `.bp-btn-sm`, for an action that sits BESIDE A SECTION HEADING
+   rather than acting on the page — "Add take" under a song's Takes heading,
+   where a 44px pill beside a 19px heading is heavier than the thing it is
+   attached to and reads as the section's subject rather than its afterthought.
+ *
+ * The DRAWN button shrinks; the TARGET does not. `.bp-btn-sm` was raised from
+ * 36px to 44px in an earlier round precisely because dropping below the floor
+ * there took most of the app's controls with it, and this must not reopen that
+ * — so the `::after` carries the 44px (32 + 6 above + 6 below) while the fill
+ * stays 32. That is the same trick `.bp-take-label::after` already uses to make
+ * a whole row clickable from a short link.
+ *
+ * Use it where the button is ALONE. Two of these side by side would put their
+ * hit areas 0px apart, which is the spacing condition WCAG 2.5.8 relies on
+ * when a target is under 44px; `.bp-btn-sm` is still the right choice in a
+ * row of actions. */
+.bp-btn-xs {
+  position: relative;
+  min-height: 32px;
+  min-width: 0;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.bp-btn-xs::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+}
+
 /* A destructive trigger rendered as a plain link (the no-JS path to a
    confirm page) but styled to match the button set. */
 a.bp-btn {
@@ -3343,7 +3374,18 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* count, last played) is mono, right-aligned on desktop as real columns.  */
 /* ---------------------------------------------------------------------- */
 
-.bp-song-list {
+/* The first row's top hairline is drawn BY THE ROW, not by the list.
+ *
+ * It was `border-top` on `.bp-song-list`, and it came up 20px short: every row
+ * carries `margin-inline: -0.625rem` so its hover surface bleeds past the
+ * list's own box (see `--bp-row-gutter`), which left the cap 10px shy at each
+ * end while every other separator — each row's own `border-bottom` — ran the
+ * full width. On the first row, hovered, the line visibly failed to reach its
+ * own corners.
+ *
+ * Putting it on the row puts it in the same box as every other rule in the
+ * list, so the two cannot disagree again. */
+.bp-song-list > .bp-song-row:first-child {
   border-top: 1px solid var(--bp-color-border);
 }
 
@@ -3538,9 +3580,34 @@ html:has(dialog.bp-filter-sheet[open]) body {
   grid-area: title;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   min-width: 0;
   min-height: 44px;
+}
+
+/* The title and its kind badge are ONE LINE OF TEXT, not two boxes.
+ *
+ * They were two flex items under `align-items: center`, which centres BOXES —
+ * so a 15px badge box against a 22px title box put "REHEARSAL" 3px above
+ * "Čoudy"'s baseline. `align-items: baseline` is the obvious repair and it is
+ * not enough either: it aligns the items' first baselines, and with two faces
+ * at 19px and 10px whose metrics differ the text still measured ~2.4px apart.
+ *
+ * A line box has exactly one baseline, so putting both runs in one is the
+ * thing that cannot drift — it is not an alignment applied to text, it is what
+ * text sitting on a line already is. The `<a>` and the badge go back to being
+ * inline, and truncation moves here, onto the run as a whole. */
+.bp-take-row-name {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bp-take-row-name > .bp-kind {
+  /* A word space, set as margin because there is no flex `gap` in a line box
+     and a literal space would collapse against the ellipsis. */
+  margin-inline-start: 0.5rem;
 }
 
 .bp-take-label {
@@ -3550,10 +3617,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
   line-height: 1.15;
   color: var(--bp-color-fg);
   text-decoration: none;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Inline, so it shares a line box — and therefore a baseline — with the kind
+     badge beside it. The truncation it used to own moved to
+     `.bp-take-row-name`, which is the run both of them are part of. */
 }
 
 /* NO underline on hover, on any row type. The row lights up; that is the
@@ -6095,10 +6161,76 @@ html:has(dialog.bp-filter-sheet[open]) body {
   text-transform: none;
 }
 
+/* The exact-date escape hatch under the Recorded pills.
+ *
+ * A `<details>` rather than a script-driven panel, for the same reason the
+ * whole sheet is form-first: this page works with JS off, and a date range you
+ * cannot open is worse than one that is always visible. It opens by default
+ * only when a date is actually set — see `usingExactDates` on the page. */
+.bp-filter-dates-fold {
+  margin-top: 0.75rem;
+}
+
+.bp-filter-dates-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  /* The marker is drawn below, so the native one goes — and with it the
+     Safari-only `::-webkit-details-marker`, which `list-style` alone misses. */
+  list-style: none;
+  min-height: 32px;
+  font-family: var(--bp-font-body);
+  font-size: var(--text-note, 0.875rem);
+  font-weight: 600;
+  color: var(--bp-color-muted);
+  cursor: pointer;
+}
+
+.bp-filter-dates-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.bp-filter-dates-toggle::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  rotate: -45deg;
+  translate: 0 -1px;
+  transition: rotate 0.12s ease;
+}
+
+.bp-filter-dates-fold[open] > .bp-filter-dates-toggle::before {
+  rotate: 45deg;
+  translate: 0 -2px;
+}
+
+.bp-filter-dates-toggle:hover {
+  color: var(--bp-color-fg);
+}
+
+.bp-filter-dates-toggle:focus-visible {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 2px;
+  border-radius: var(--bp-radius-sm, 6px);
+}
+
+.bp-filter-dates-fold > .bp-field-hint {
+  margin-top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-filter-dates-toggle::before {
+    transition: none;
+  }
+}
+
 .bp-filter-dates {
   display: flex;
   align-items: center;
   gap: 0.625rem;
+  margin-top: 0.625rem;
 }
 
 .bp-filter-dates .bp-input {

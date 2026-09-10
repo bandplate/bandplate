@@ -16,7 +16,10 @@ import {
 } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
-import { hasAnyFilter, parseSearchQuery, searchTakes } from "./search.js";
+import { hasAnyFilter, hasRecordedFilter, parseSearchQuery, searchTakes } from "./search.js";
+
+/** A fixed clock, so a relative window ("past week") is a fixed range here. */
+const NOW = Date.parse("2026-09-10T12:00:00.000Z");
 
 describe("parseSearchQuery", () => {
   it("defaults to no filters for an empty query string", () => {
@@ -131,6 +134,7 @@ describe("searchTakes", () => {
       parseSearchQuery(new URLSearchParams()),
       memberId,
       { limit: 25, offset: 0 },
+      NOW,
     );
     expect(results).toEqual([]);
     expect(total).toBe(0);
@@ -161,8 +165,8 @@ describe("searchTakes", () => {
     }
 
     const query = parseSearchQuery(new URLSearchParams());
-    const first = await searchTakes(db, query, memberId, { limit: 3, offset: 0 });
-    const third = await searchTakes(db, query, memberId, { limit: 3, offset: 6 });
+    const first = await searchTakes(db, query, memberId, { limit: 3, offset: 0 }, NOW);
+    const third = await searchTakes(db, query, memberId, { limit: 3, offset: 6 }, NOW);
 
     expect(first.results).toHaveLength(3);
     expect(first.total).toBe(7);
@@ -195,10 +199,16 @@ describe("searchTakes", () => {
       instrumentIds: [bass.id],
     });
 
-    const { results } = await searchTakes(db, parseSearchQuery(new URLSearchParams()), memberId, {
-      limit: 25,
-      offset: 0,
-    });
+    const { results } = await searchTakes(
+      db,
+      parseSearchQuery(new URLSearchParams()),
+      memberId,
+      {
+        limit: 25,
+        offset: 0,
+      },
+      NOW,
+    );
     expect(results.map((t) => t.id)).toEqual([take.id]);
     expect(results[0]?.song?.slug).toBe("search-composition-song");
     expect(results[0]?.event?.id).toBe(event.id);
@@ -234,10 +244,16 @@ describe("searchTakes", () => {
       createdAt: now,
     });
 
-    const { results } = await searchTakes(db, parseSearchQuery(new URLSearchParams()), memberId, {
-      limit: 25,
-      offset: 0,
-    });
+    const { results } = await searchTakes(
+      db,
+      parseSearchQuery(new URLSearchParams()),
+      memberId,
+      {
+        limit: 25,
+        offset: 0,
+      },
+      NOW,
+    );
     expect(results.find((t) => t.id === take.id)?.favorited).toBe(true);
   });
 
@@ -270,7 +286,7 @@ describe("searchTakes", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("dateFrom=2026-01-01&dateTo=2026-01-31"));
-    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 }, NOW);
 
     expect(results.map((t) => t.id)).toContain(inRange.id);
     expect(results.map((t) => t.id)).not.toContain(outOfRange.id);
@@ -298,7 +314,7 @@ describe("searchTakes", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("dateTo=2026-01-31"));
-    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 }, NOW);
 
     expect(results.map((t) => t.id)).toContain(lateInDay.id);
   });
@@ -368,7 +384,7 @@ describe("the unvoted filter", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
-    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 }, NOW);
     expect(results.map((r) => r.id)).toEqual([unvoted.id]);
   });
 
@@ -383,7 +399,7 @@ describe("the unvoted filter", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
-    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 }, NOW);
     expect(results.map((r) => r.id)).toEqual([take.id]);
   });
 
@@ -399,7 +415,7 @@ describe("the unvoted filter", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
-    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 }, NOW);
     expect(results).toEqual([]);
   });
 
@@ -411,12 +427,14 @@ describe("the unvoted filter", () => {
     const query = parseSearchQuery(
       new URLSearchParams("unvoted=1&dateFrom=1990-01-01&dateTo=1990-12-31"),
     );
-    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 }, NOW);
     expect(results).toEqual([]);
 
     const wide = parseSearchQuery(new URLSearchParams("unvoted=1&dateFrom=1990-01-01"));
     expect(
-      (await searchTakes(db, wide, memberId, { limit: 25, offset: 0 })).results.map((r) => r.id),
+      (await searchTakes(db, wide, memberId, { limit: 25, offset: 0 }, NOW)).results.map(
+        (r) => r.id,
+      ),
     ).toEqual([take.id]);
   });
 
@@ -424,5 +442,161 @@ describe("the unvoted filter", () => {
     expect(parseSearchQuery(new URLSearchParams()).unvotedOnly).toBe(false);
     expect(hasAnyFilter(parseSearchQuery(new URLSearchParams()))).toBe(false);
     expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("unvoted=1")))).toBe(true);
+  });
+});
+
+// --- the Recorded window ----------------------------------------------------
+//
+// The two date pickers are still there, but they are the escape hatch now: the
+// question a band actually asks is "what have we played lately", and these
+// pins the relative answer to it.
+
+describe("parseSearchQuery: the recorded window", () => {
+  it("reads a known window", () => {
+    expect(parseSearchQuery(new URLSearchParams("since=30d")).since).toBe("30d");
+  });
+
+  it("ignores one it does not offer, rather than 400ing a hand-edited URL", () => {
+    expect(parseSearchQuery(new URLSearchParams("since=7000y")).since).toBeUndefined();
+    expect(parseSearchQuery(new URLSearchParams("since=")).since).toBeUndefined();
+  });
+
+  // With no JS nothing clears the radio when a date is typed, so both can
+  // arrive. The more specific answer wins and the pills re-render unselected.
+  it("drops the preset when an exact date is also given", () => {
+    const q = parseSearchQuery(new URLSearchParams("since=30d&dateFrom=2026-01-01"));
+    expect(q.since).toBeUndefined();
+    expect(q.dateFrom).toBe("2026-01-01");
+  });
+
+  it("counts as a filter either way", () => {
+    expect(hasRecordedFilter(parseSearchQuery(new URLSearchParams("since=7d")))).toBe(true);
+    expect(hasRecordedFilter(parseSearchQuery(new URLSearchParams("dateTo=2026-01-01")))).toBe(
+      true,
+    );
+    expect(hasRecordedFilter(parseSearchQuery(new URLSearchParams("")))).toBe(false);
+    expect(hasAnyFilter(parseSearchQuery(new URLSearchParams("since=7d")))).toBe(true);
+  });
+});
+
+describe("searchTakes: relative windows", () => {
+  let db: Db;
+  let memberId: string;
+  let songId: string;
+  let eventId: string;
+
+  /** A take recorded `daysAgo` before `NOW`. */
+  async function takeAt(daysAgo: number) {
+    const at = NOW - daysAgo * 24 * 60 * 60 * 1000;
+    return takesRepo.create(db, {
+      songId,
+      eventId,
+      recordedAt: at,
+      state: "published",
+      createdAt: at,
+      updatedAt: at,
+    });
+  }
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const member = await membersRepo.create(db, {
+      displayName: "Window Member",
+      slug: "window-member",
+      email: "window-member@example.com",
+      createdAt: NOW,
+    });
+    memberId = member.id;
+    const song = await songsRepo.create(db, {
+      title: "Window Song",
+      slug: "window-song",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    songId = song.id;
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: NOW,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    eventId = event.id;
+  });
+
+  it("past week keeps a take from 3 days ago and drops one from 20", async () => {
+    const recent = await takeAt(3);
+    await takeAt(20);
+
+    const { results } = await searchTakes(
+      db,
+      parseSearchQuery(new URLSearchParams("since=7d")),
+      memberId,
+      { limit: 25, offset: 0 },
+      NOW,
+    );
+    expect(results.map((t) => t.id)).toEqual([recent.id]);
+  });
+
+  it("past month keeps both", async () => {
+    await takeAt(3);
+    await takeAt(20);
+
+    const { total } = await searchTakes(
+      db,
+      parseSearchQuery(new URLSearchParams("since=30d")),
+      memberId,
+      { limit: 25, offset: 0 },
+      NOW,
+    );
+    expect(total).toBe(2);
+  });
+
+  // The window is resolved against the CALLER's clock, not frozen when the
+  // pill was pressed — a saved `since=7d` link means "the past week" whenever
+  // it is opened. Same query, a clock two weeks on, different answer.
+  it("resolves against the clock it is given, so a saved link stays relative", async () => {
+    await takeAt(3);
+    const query = parseSearchQuery(new URLSearchParams("since=7d"));
+
+    const now = await searchTakes(db, query, memberId, { limit: 25, offset: 0 }, NOW);
+    const later = await searchTakes(
+      db,
+      query,
+      memberId,
+      { limit: 25, offset: 0 },
+      NOW + 14 * 24 * 60 * 60 * 1000,
+    );
+    expect(now.total).toBe(1);
+    expect(later.total).toBe(0);
+  });
+
+  // "The past month" has no upper bound. Pinning `dateTo` to `now` would drop
+  // a take stamped slightly ahead by a bridge with a fast clock.
+  it("leaves the window open at the top end", async () => {
+    const ahead = await takeAt(-1);
+
+    const { results } = await searchTakes(
+      db,
+      parseSearchQuery(new URLSearchParams("since=7d")),
+      memberId,
+      { limit: 25, offset: 0 },
+      NOW,
+    );
+    expect(results.map((t) => t.id)).toEqual([ahead.id]);
+  });
+
+  it("an exact range overrides the preset", async () => {
+    await takeAt(3);
+    const old = await takeAt(200);
+    const day = new Date(old.recordedAt).toISOString().slice(0, 10);
+
+    const { results } = await searchTakes(
+      db,
+      parseSearchQuery(new URLSearchParams(`since=7d&dateFrom=${day}&dateTo=${day}`)),
+      memberId,
+      { limit: 25, offset: 0 },
+      NOW,
+    );
+    expect(results.map((t) => t.id)).toEqual([old.id]);
   });
 });

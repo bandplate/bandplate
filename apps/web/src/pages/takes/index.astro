@@ -29,8 +29,10 @@ import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import {
+  RECORDED_WINDOWS,
   TAKES_PER_PAGE,
   hasAnyFilter,
+  hasRecordedFilter,
   parseSearchQuery,
   searchTakes,
 } from "../../server/pages/search.js";
@@ -47,7 +49,7 @@ const filtersApplied = hasAnyFilter(query) || query.sort !== "recent";
 
 const { page, args: takesPage } = pageRequest(Astro.url.searchParams, TAKES_PER_PAGE);
 const [{ results, total }, instruments, songs] = await Promise.all([
-  searchTakes(appDeps.db, query, principal.memberId, takesPage),
+  searchTakes(appDeps.db, query, principal.memberId, takesPage, appDeps.clock.now()),
   instrumentsRepo.list(appDeps.db),
   // The picker's options. A band's repertoire is tens of songs, so the whole
   // list is one cheap query and a plain `<select>` — no autocomplete, no
@@ -61,9 +63,14 @@ const [{ results, total }, instruments, songs] = await Promise.all([
 const activeFilterCount = [
   Boolean(query.songId),
   query.instrumentIds.length > 0,
-  Boolean(query.dateFrom) || Boolean(query.dateTo),
+  hasRecordedFilter(query),
   query.unvotedOnly,
 ].filter(Boolean).length;
+
+// Open the exact-date disclosure only when it is the one in use. A member who
+// picked "Past month" should not have two empty date fields sitting under it
+// implying they still have to fill something in.
+const usingExactDates = Boolean(query.dateFrom) || Boolean(query.dateTo);
 
 const pages = pageView({ url: Astro.url, page, perPage: TAKES_PER_PAGE, total });
 // A filtered link whose page has since fallen off the end lands on the last
@@ -173,27 +180,61 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
             </div>
           </fieldset>
 
+          {/* A WINDOW first, a date range second. "What have we played in the
+              past month" is the question this filter is actually asked; the
+              two date pickers that used to be the whole control made a member
+              work out and type the answer to a question they had not asked.
+
+              Radios, not links: the sheet applies on confirm like every other
+              control here, and a link would apply itself. `Any time` is a real
+              option rather than an absent state, so the group always has a
+              selected member and a member can get back to it. */}
           <fieldset class="bp-filter-group">
             <legend class="bp-eyebrow bp-filter-legend">Recorded</legend>
-            <div class="bp-filter-dates">
-              <label class="bp-visually-hidden" for="search-date-from">Recorded from</label>
-              <input
-                class="bp-input"
-                type="date"
-                id="search-date-from"
-                name="dateFrom"
-                value={query.dateFrom ?? ""}
-              />
-              <span class="bp-filter-dates-sep" aria-hidden="true">to</span>
-              <label class="bp-visually-hidden" for="search-date-to">Recorded to</label>
-              <input
-                class="bp-input"
-                type="date"
-                id="search-date-to"
-                name="dateTo"
-                value={query.dateTo ?? ""}
-              />
+            <div class="bp-filter-pills">
+              <label class="bp-filter-pill-check">
+                <input
+                  type="radio"
+                  name="since"
+                  value=""
+                  checked={!query.since && !usingExactDates}
+                />
+                <span class="bp-filter-pill">Any time</span>
+              </label>
+              {Object.entries(RECORDED_WINDOWS).map(([value, { label }]) => (
+                <label class="bp-filter-pill-check">
+                  <input type="radio" name="since" value={value} checked={query.since === value} />
+                  <span class="bp-filter-pill">{label}</span>
+                </label>
+              ))}
             </div>
+
+            {/* The escape hatch, folded away. `<details>` because it has to
+                open with no JS, and open by default only when it is what the
+                member is actually using. */}
+            <details class="bp-filter-dates-fold" open={usingExactDates}>
+              <summary class="bp-filter-dates-toggle">Exact dates</summary>
+              <div class="bp-filter-dates">
+                <label class="bp-visually-hidden" for="search-date-from">Recorded from</label>
+                <input
+                  class="bp-input"
+                  type="date"
+                  id="search-date-from"
+                  name="dateFrom"
+                  value={query.dateFrom ?? ""}
+                />
+                <span class="bp-filter-dates-sep" aria-hidden="true">to</span>
+                <label class="bp-visually-hidden" for="search-date-to">Recorded to</label>
+                <input
+                  class="bp-input"
+                  type="date"
+                  id="search-date-to"
+                  name="dateTo"
+                  value={query.dateTo ?? ""}
+                />
+              </div>
+              <p class="bp-field-hint bp-m0">A date here is used instead of the choice above.</p>
+            </details>
           </fieldset>
 
           {/* Where `/me`'s count sends you. A filter rather than a separate

@@ -225,18 +225,25 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
       several rounds of this: the same facts kept landing in different places
       (and wrapping differently) depending on how long a venue name was. */}
   <div class="bp-take-row-line">
-    <a
-      href={`/takes/${take.id}`}
-      class="bp-take-label"
-      transition:name={resolvedTransitionName}
-      data-take-id={take.id}
-    >
-      {primaryLabel}
-    </a>
-    {/* The kind as small caps, not a pill. A pill is a thing you can press; a
-        kind is a label on a fact, so it takes the same voice the event ledger
-        on home uses. */}
-    {kindBadge && <span class="bp-kind">{kindBadge}</span>}
+    {/* The title and its kind are one BASELINE GROUP, wrapped so they can be
+        aligned to each other while the group as a whole stays centred in the
+        row's 44px. Without the wrapper the line centred them, and a 15px badge
+        box centred against a 22px title box put the badge's baseline 3px above
+        the title's — see `.bp-take-row-name`. */}
+    <span class="bp-take-row-name">
+      <a
+        href={`/takes/${take.id}`}
+        class="bp-take-label"
+        transition:name={resolvedTransitionName}
+        data-take-id={take.id}
+      >
+        {primaryLabel}
+      </a>
+      {/* The kind as small caps, not a pill. A pill is a thing you can press; a
+          kind is a label on a fact, so it takes the same voice the event ledger
+          on home uses. */}
+      {kindBadge && <span class="bp-kind">{kindBadge}</span>}
+    </span>
   </div>
 
   <span class="bp-take-row-duration">{formatDuration(take.durationMs)}</span>

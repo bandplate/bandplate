@@ -27,6 +27,7 @@ export { commonMessages } from "./messages/common.js";
 export { eventsMessages } from "./messages/events.js";
 export { homeMessages } from "./messages/home.js";
 export { islandsMessages } from "./messages/islands.js";
+export { mailMessages } from "./messages/mail.js";
 export { type Messages, messages } from "./messages/index.js";
 export { playerMessages } from "./messages/player.js";
 export { LANGUAGE_NAMES, meMessages } from "./messages/me.js";

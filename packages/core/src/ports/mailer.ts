@@ -1,9 +1,12 @@
+import type { Locale } from "@bandplate/i18n";
 // Mailer port. Implementations (console/null/smtp) live in `@bandplate/mail` —
 // this package only declares the shape the domain depends on.
 
 export interface SendLoginLinkOptions {
   /** The member's display name, for a friendlier email body. */
   displayName?: string;
+  /** The member's own language. Omitted means English. */
+  locale?: Locale;
   /**
    * How long the link is good for, in whole minutes. The CALLER computes it,
    * because the caller has the clock (`deps.clock`) and a mailer does not.

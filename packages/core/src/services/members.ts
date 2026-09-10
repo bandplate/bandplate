@@ -1,3 +1,4 @@
+import { type Db, membersRepo } from "@bandplate/db";
 // Member-management domain rules shared by every caller that can mutate a
 // member's role/status — `packages/api`'s `PATCH /admin/members/:id` and
 // `apps/web`'s `/admin/members` page. Both used to carry their own copy of
@@ -9,7 +10,7 @@
 // Pushing the rule down here, with both layers calling it, makes that kind
 // of divergence structurally impossible: there is exactly one place either
 // layer can get this rule from.
-import { type Db, membersRepo } from "@bandplate/db";
+import type { Locale } from "@bandplate/i18n";
 import { z } from "zod";
 import { buildInviteMessage } from "../mail-messages.js";
 import type { Mailer } from "../ports/mailer.js";
@@ -176,7 +177,7 @@ export interface SendMemberInviteDeps {
  */
 export async function sendMemberInvite(
   deps: SendMemberInviteDeps,
-  member: { displayName: string; email: string },
+  member: { displayName: string; email: string; locale?: Locale },
 ): Promise<boolean> {
   const signInUrl = `${deps.appOrigin.replace(/\/+$/, "")}/login`;
 
@@ -191,6 +192,10 @@ export async function sendMemberInvite(
           to: member.email,
           displayName: member.displayName,
           signInUrl,
+          // The new member's own row. It carries the column default until
+          // they pick a language themselves — there is no better guess to
+          // make about someone who has never signed in.
+          locale: member.locale,
         }),
       ),
       deps.inviteMailTimeoutMs ?? DEFAULT_INVITE_MAIL_TIMEOUT_MS,

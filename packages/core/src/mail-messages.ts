@@ -31,6 +31,7 @@
 // The text part is the real message and always carries everything the HTML
 // does. That is the plan's "plain-text-first" in practice: a client that
 // shows only text loses styling, never information.
+import { DEFAULT_LOCALE, type Locale, mailMessages } from "@bandplate/i18n";
 import type { MailMessage } from "./ports/mailer.js";
 
 /** Escapes the five HTML-significant characters. */
@@ -86,8 +87,8 @@ function para(text: string): string {
  * client, a text-only reader, a forwarded message — leaves nothing to click,
  * and this is the only way into the app.
  */
-function fallbackUrl(url: string): string {
-  return `<p style="margin:0 0 16px;font-size:13px;color:${MUTED};word-break:break-all;">Or paste this into your browser:<br>${escapeHtml(url)}</p>`;
+function fallbackUrl(url: string, orPaste: string): string {
+  return `<p style="margin:0 0 16px;font-size:13px;color:${MUTED};word-break:break-all;">${escapeHtml(orPaste)}<br>${escapeHtml(url)}</p>`;
 }
 
 function originOf(url: string): string | undefined {
@@ -99,6 +100,16 @@ function originOf(url: string): string | undefined {
 }
 
 export interface LoginLinkMessageInput {
+  /**
+   * Which language to write in. Omitted means English.
+   *
+   * The login mail uses the MEMBER's own setting (the row is already in scope
+   * in `requestLogin`); the invite has no recipient locale yet, so it inherits
+   * the inviting admin's — which is also what `createMember` writes into the
+   * new row, so the two agree; the setup test uses the request's negotiated
+   * locale.
+   */
+  locale?: Locale;
   to: string;
   url: string;
   displayName?: string;
@@ -112,38 +123,28 @@ export interface LoginLinkMessageInput {
 }
 
 export function buildLoginLinkMessage(input: LoginLinkMessageInput): MailMessage {
-  const greeting = input.displayName ? `Hi ${input.displayName},` : "Hi,";
+  const t = mailMessages(input.locale ?? DEFAULT_LOCALE);
+  const greeting = input.displayName ? t.greeting(input.displayName) : t.greetingAnonymous;
   const life =
     input.expiresInMinutes && input.expiresInMinutes > 0
-      ? `It works once, and only for the next ${input.expiresInMinutes} ${input.expiresInMinutes === 1 ? "minute" : "minutes"}.`
-      : "It works once.";
+      ? t.loginLife(input.expiresInMinutes)
+      : t.loginLifeNoExpiry;
   // Said because this address is on a whitelist: an unexpected sign-in mail
   // means somebody typed it into the login form, and saying nothing about that
   // invites a support question.
-  const why =
-    "You are getting this because someone entered this address on the bandplate sign-in page. If that was not you, ignore it — nobody can sign in without the link.";
+  const why = t.loginFooter;
 
   return {
     to: input.to,
-    subject: "Your sign-in link for bandplate",
-    text: [
-      greeting,
-      "",
-      `Here is your link to sign in. ${life}`,
-      "",
-      input.url,
-      "",
-      why,
-      "",
-      "— bandplate",
-    ].join("\n"),
+    subject: t.loginSubject,
+    text: [greeting, "", t.loginLead(life), "", input.url, "", why, "", t.signOff].join("\n"),
     html: shell(
       originOf(input.url),
       [
         para(greeting),
-        para(`Here is your link to sign in. ${life}`),
-        button(input.url, "Sign in to bandplate"),
-        fallbackUrl(input.url),
+        para(t.loginLead(life)),
+        button(input.url, t.loginButton),
+        fallbackUrl(input.url, t.orPaste),
       ].join(""),
       escapeHtml(why),
     ),
@@ -151,6 +152,16 @@ export function buildLoginLinkMessage(input: LoginLinkMessageInput): MailMessage
 }
 
 export interface InviteMessageInput {
+  /**
+   * Which language to write in. Omitted means English.
+   *
+   * The login mail uses the MEMBER's own setting (the row is already in scope
+   * in `requestLogin`); the invite has no recipient locale yet, so it inherits
+   * the inviting admin's — which is also what `createMember` writes into the
+   * new row, so the two agree; the setup test uses the request's negotiated
+   * locale.
+   */
+  locale?: Locale;
   to: string;
   displayName: string;
   /** Where they sign in — `${appOrigin}/login`. */
@@ -158,28 +169,34 @@ export interface InviteMessageInput {
 }
 
 export function buildInviteMessage(input: InviteMessageInput): MailMessage {
-  const greeting = `Hi ${input.displayName},`;
-  const what = "You've been added to bandplate — your band's rehearsal and recording archive.";
-  const how = `There's no password to set up. Go to the sign-in page, enter this address (${input.to}), and we'll email you a link that signs you in.`;
+  const t = mailMessages(input.locale ?? DEFAULT_LOCALE);
+  const greeting = t.greeting(input.displayName);
+  const what = t.inviteWhat;
+  const how = t.inviteHow(input.to);
 
   return {
     to: input.to,
-    subject: "You've been added to bandplate",
-    text: [greeting, "", what, "", how, "", input.signInUrl, "", "— bandplate"].join("\n"),
+    subject: t.inviteSubject,
+    text: [greeting, "", what, "", how, "", input.signInUrl, "", t.signOff].join("\n"),
     html: shell(
       originOf(input.signInUrl),
-      [
-        para(greeting),
-        para(what),
-        para(how),
-        button(input.signInUrl, "Go to the sign-in page"),
-      ].join(""),
-      "An admin of your band added this address. If you were not expecting it, you can ignore this message.",
+      [para(greeting), para(what), para(how), button(input.signInUrl, t.inviteButton)].join(""),
+      t.inviteFooter,
     ),
   };
 }
 
 export interface SetupTestMessageInput {
+  /**
+   * Which language to write in. Omitted means English.
+   *
+   * The login mail uses the MEMBER's own setting (the row is already in scope
+   * in `requestLogin`); the invite has no recipient locale yet, so it inherits
+   * the inviting admin's — which is also what `createMember` writes into the
+   * new row, so the two agree; the setup test uses the request's negotiated
+   * locale.
+   */
+  locale?: Locale;
   to: string;
   /**
    * The app's own origin, so the message can point at the deployment it came
@@ -200,20 +217,19 @@ export interface SetupTestMessageInput {
  * before anyone can sign in.
  */
 export function buildSetupTestMessage(input: SetupTestMessageInput): MailMessage {
-  const what =
-    "Mail is working. That was the last thing standing between your band and their archive — everyone signs in by a link sent to this address, so nothing else works without it.";
-  const next =
-    "Add your bandmates from the admin area, and they'll each get an invite like this one.";
+  const t = mailMessages(input.locale ?? DEFAULT_LOCALE);
+  const what = t.setupWhat;
+  const next = t.setupNext;
   const origin = input.appOrigin ? originOf(input.appOrigin) : undefined;
 
   return {
     to: input.to,
-    subject: "bandplate is set up",
-    text: [what, "", next, ...(origin ? ["", origin] : []), "", "— bandplate"].join("\n"),
+    subject: t.setupSubject,
+    text: [what, "", next, ...(origin ? ["", origin] : []), "", t.signOff].join("\n"),
     html: shell(
       origin,
-      [para(what), para(next), ...(origin ? [button(origin, "Open bandplate")] : [])].join(""),
-      "You are getting this because you just set up this bandplate deployment.",
+      [para(what), para(next), ...(origin ? [button(origin, t.setupButton)] : [])].join(""),
+      t.setupFooter,
     ),
   };
 }

@@ -107,6 +107,7 @@ export function createHttpMailer(config: HttpMailerConfig): Mailer {
       // hold separate copies of the same three strings.
       await sendMessage(
         buildLoginLinkMessage({
+          locale: opts?.locale,
           to,
           url,
           displayName: opts?.displayName,

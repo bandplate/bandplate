@@ -48,6 +48,8 @@ const IDENTICAL_IS_FINE = new Set<string>([
   "takes.masterLabel",
   // Same word in a Czech studio, and the player says it beside "stopa".
   "player.master",
+  // The wordmark, unchanged in any language.
+  "mail.signOff",
   // Same in a Czech studio, and the chord example is chords.
   "islands.uploadMaster",
   "islands.chartChordsPlaceholder",
@@ -189,6 +191,13 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "home.plateTakeName": [{ label: "parts", args: [{ name: "Čoudy", date: "8. 7. 2026" }] }],
   "home.plateSongName": [{ label: "parts", args: [{ name: "Čoudy", detail: "3 taky" }] }],
   "home.plateEventName": [{ label: "parts", args: [{ name: "Zkouška", detail: "3 taky" }] }],
+  "mail.greeting": [{ label: "n", args: ["Vařič"] }],
+  "mail.loginLead": [{ label: "l", args: ["It works once."] }],
+  "mail.loginLife": [
+    { label: "one", args: [1] },
+    { label: "many", args: [15] },
+  ],
+  "mail.inviteHow": [{ label: "a", args: ["a@b.cz"] }],
   "me.unvotedAfterCount": [
     { label: "one", args: [1] },
     { label: "many", args: [3] },

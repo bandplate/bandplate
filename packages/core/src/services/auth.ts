@@ -224,6 +224,8 @@ export async function requestLogin(
         // mailers used to receive the epoch and each render it as an ISO
         // timestamp, which is not a thing anyone reads.
         expiresInMinutes: Math.max(1, Math.round((expiresAt - now) / 60_000)),
+        // The member's OWN language — the row is already loaded here.
+        locale: member.locale,
       });
     if (deps.deferMailSend) {
       deps.deferMailSend(send);
@@ -582,7 +584,13 @@ export async function bootstrapAdmin(
       // Shares the shell with the sign-in and invite messages: this is the
       // first thing a new deployer ever sees from their own install, and it
       // used to be one unstyled sentence of machine voice.
-      deps.mailer.send(buildSetupTestMessage({ to: member.email, appOrigin: deps.appOrigin })),
+      deps.mailer.send(
+        buildSetupTestMessage({
+          to: member.email,
+          appOrigin: deps.appOrigin,
+          locale: input.locale,
+        }),
+      ),
       deps.bootstrapMailTimeoutMs ?? DEFAULT_BOOTSTRAP_MAIL_TIMEOUT_MS,
     );
     testEmailSent = true;

@@ -37,6 +37,7 @@ export function createSmtpMailer(config: SmtpConfig): Mailer {
       // the same three strings again, with nothing keeping the two in step.
       // A transport decides how a message goes on the wire, not what it says.
       const msg = buildLoginLinkMessage({
+        locale: opts?.locale,
         to,
         url,
         displayName: opts?.displayName,

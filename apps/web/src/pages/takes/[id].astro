@@ -28,7 +28,14 @@ import { canPublish, hasAllScopes } from "@bandplate/core";
 // transition, just not a pixel-identical one. See task-6-report.md.
 import type { assetsRepo } from "@bandplate/db";
 import { instrumentsRepo, songsRepo } from "@bandplate/db";
-import { formatBytes, messages, playerMessages, validationMessage } from "@bandplate/i18n";
+import {
+  formatBytes,
+  formatLongDate,
+  formatShortDate,
+  messages,
+  playerMessages,
+  validationMessage,
+} from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AssetUploader from "../../components/AssetUploader.tsx";
@@ -40,14 +47,7 @@ import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import {
-  eventKindLabel,
-  eventLabel,
-  formatDuration,
-  formatLongDate,
-  formatShortDate,
-  takeNote,
-} from "../../server/format.js";
+import { eventLabel, formatDuration, takeNote } from "../../server/format.js";
 import {
   type TakeField,
   deleteAssetConsequence,
@@ -136,7 +136,7 @@ const playableMaster =
   readyMasters.find((a) => a.tier === "lossy") ?? readyMasters.find((a) => a.tier === "lossless");
 const playableStems = stems.filter((a) => a.status === "ready");
 
-const kindLabel = event ? eventKindLabel(event.kind) : "";
+const kindLabel = event ? t.events.kindLabel(event.kind) : "";
 // The event's NAME where it has one, exactly as the take rows say it — a
 // member arriving here from a row should read the same words they clicked.
 const eventName = event
@@ -154,12 +154,16 @@ const noteText = takeNote(take.label, kindLabel);
 // can hold, including one an admin adds later.
 const heroLede = event
   ? eventName
-    ? `A take from ${eventName}, ${formatLongDate(event.heldAt)}`
-    : `A ${kindLabel} take, ${formatLongDate(event.heldAt)}`
-  : `Recorded ${formatLongDate(take.recordedAt)}`;
+    ? t.takes.heroFromEvent({ event: eventName, date: formatLongDate(locale, event.heldAt) })
+    : t.takes.heroOfKind({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })
+  : t.takes.heroRecorded(formatLongDate(locale, take.recordedAt));
 
-const heroTitle = song ? song.title : `Take from ${formatLongDate(take.recordedAt)}`;
-const heroSubtitle = event ? `${kindLabel} — ${formatLongDate(event.heldAt)}` : (take.label ?? "");
+const heroTitle = song
+  ? song.title
+  : t.takes.heroTitleByDate(formatLongDate(locale, take.recordedAt));
+const heroSubtitle = event
+  ? `${kindLabel} — ${formatLongDate(locale, event.heldAt)}`
+  : (take.label ?? "");
 
 const canDelete = hasAllScopes(principal, ["members:admin"]);
 const justCreated = Astro.url.searchParams.get("created") === "1";
@@ -354,7 +358,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
               <span class="bp-take-way-kind">{kindLabel}</span>
               {/* An untitled event has no name to print, so its DATE names it —
                   which is exactly what the event ledger shows for one too. */}
-              <span class="bp-take-way-name">{eventName || formatShortDate(event.heldAt)}</span>
+              <span class="bp-take-way-name">{eventName || formatShortDate(locale, event.heldAt)}</span>
               <svg
             class="bp-take-way-arrow"
             viewBox="0 0 24 24"

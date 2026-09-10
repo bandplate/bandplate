@@ -186,7 +186,11 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                       seeing is the exception — invited, disabled — and an
                       exception reads better attached to the person it is
                       about. */}
-                  {member.status !== "active" && <span class="bp-kind">{member.status}</span>}
+                  {member.status !== "active" && (
+                    <span class="bp-kind">
+                      {member.status === "invited" ? ta.statusInvited : ta.statusDisabled}
+                    </span>
+                  )}
                 </td>
                 <td data-label={ta.colEmail} class="bp-table-quiet">{member.email}</td>
                 <td data-label={ta.colRole}>
@@ -205,7 +209,7 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                     emptyLabel="none"
                   />
                 </td>
-                <td data-label={ta.colLastSeen} class="bp-table-quiet bp-table-when">{formatTimestamp(member.lastSeenAt)}</td>
+                <td data-label={ta.colLastSeen} class="bp-table-quiet bp-table-when">{formatTimestamp(Astro.locals.locale, member.lastSeenAt)}</td>
                 {/* The row carries no controls at all now — one trigger, and
                     everything you can do to the record lives in its sheet. */}
                 <td data-label={ta.colActions}>

@@ -31,6 +31,8 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // The bootstrap token is called that in both languages — it is the name of
   // an environment variable the deployer already typed.
   "auth.setupTokenLabel",
+  // An em dash is an em dash.
+  "me.ledgerNoAnswer",
   // Developer vocabulary the person reading this screen already uses: they
   // set up the server. Same word in Czech.
   "admin.colSlug",
@@ -62,6 +64,10 @@ const IDENTICAL_IS_FINE = new Set<string>([
 
 /** Arguments to call a function-valued entry with, keyed by its dotted path. */
 const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
+  "admin.revokedCount": [
+    { label: "one", args: [1] },
+    { label: "many", args: [7] },
+  ],
   "auth.slowLede": [{ label: "seconds", args: ["45"] }],
   "events.kindLabel": [
     { label: "rehearsal", args: ["rehearsal"] },
@@ -128,6 +134,10 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "few", args: [3] },
     { label: "other", args: [9] },
   ],
+  "takes.heroFromEvent": [{ label: "p", args: [{ event: "Zkušebna", date: "27. 8. 2026" }] }],
+  "takes.heroOfKind": [{ label: "p", args: [{ kind: "zkouška", date: "27. 8. 2026" }] }],
+  "takes.heroRecorded": [{ label: "d", args: ["27. 8. 2026"] }],
+  "takes.heroTitleByDate": [{ label: "d", args: ["27. 8. 2026"] }],
   "takes.pageTitle": [{ label: "t", args: ["Čoudy"] }],
   "takes.downloadAsset": [
     { label: "p", args: [{ label: "Master", format: "flac", size: "84.0 MB" }] },
@@ -202,6 +212,16 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "many", args: [15] },
   ],
   "mail.inviteHow": [{ label: "a", args: ["a@b.cz"] }],
+  "me.memberSince": [{ label: "d", args: ["8. února 2026"] }],
+  "me.ledgerVotes": [
+    { label: "one", args: [1] },
+    { label: "many", args: [12] },
+  ],
+  "me.ledgerKeepers": [
+    { label: "one", args: [1] },
+    { label: "many", args: [7] },
+  ],
+  "me.allVotes": [{ label: "n", args: [12] }],
   "me.unvotedAfterCount": [
     { label: "one", args: [1] },
     { label: "many", args: [3] },

@@ -30,8 +30,8 @@ export const takes = {
   recordedTo: "Recorded to",
   exactDatesNote: "A date here is used instead of the choice above.",
 
-  yoursLegend: "Yours",
-  notVotedByMe: "Not voted by me",
+  yoursLegend: "My votes",
+  notVotedByMe: "Not voted yet",
 
   sortLabel: "Sort by",
   sortRecent: "Most recent",
@@ -44,6 +44,22 @@ export const takes = {
   /** The page title. A take has no name of its own, so it borrows its song's. */
   pageTitle: (songTitle: string): string => `Take of ${songTitle}`,
   pageTitleUnknown: "Take",
+
+  /**
+   * The hero's one line about where this take came from.
+   *
+   * Three shapes, because the kind is a WORD from an admin-editable
+   * vocabulary and only one of them can take it: where the event has a name
+   * the name carries the sentence; where it does not, the kind becomes an
+   * adjective on the take ("A rehearsal take"), which stays grammatical for
+   * any value the vocabulary holds — including one added later.
+   */
+  heroFromEvent: ({ event, date }: { event: string; date: string }): string =>
+    `A take from ${event}, ${date}`,
+  heroOfKind: ({ kind, date }: { kind: string; date: string }): string => `A ${kind} take, ${date}`,
+  heroRecorded: (date: string): string => `Recorded ${date}`,
+  /** A take of no known song borrows its date for a title. */
+  heroTitleByDate: (date: string): string => `Take from ${date}`,
 
   saved: "Saved.",
   fileDeleted: "File deleted.",

@@ -12,7 +12,9 @@
 import {
   DEFAULT_LOCALE,
   EMPTY_VALUE,
+  type Locale,
   formatBytes as i18nFormatBytes,
+  formatDateTime as i18nFormatDateTime,
   formatDuration as i18nFormatDuration,
   formatLongDate as i18nFormatLongDate,
   formatShortDate as i18nFormatShortDate,
@@ -21,29 +23,14 @@ import {
 } from "@bandplate/i18n";
 
 /**
- * `yyyy-mm-dd hh:mm` for admin tables.
+ * A date and a time, for admin tables.
  *
- * The one formatter that takes NO locale, deliberately. `en-CA` was chosen for
- * its ISO-shaped output, not because the reader speaks Canadian English: this
- * is a machine-readable timestamp in a technical table, set in JetBrains Mono
- * alongside ids and hashes, and it should sort and align the same way for
- * everybody. Rendering it as "8. 7. 2026 14:03" for a Czech admin would make
- * the column narrower to read, not friendlier.
+ * It was pinned to `en-CA` to get an ISO shape, on the argument that this is
+ * technical data rather than prose. That is overruled: it reads as unformatted
+ * on a Czech page, and a person is reading the column either way.
  */
-const timestampFormatter = new Intl.DateTimeFormat("en-CA", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
-export function formatTimestamp(ms: number | undefined | null): string {
-  if (ms === undefined || ms === null) {
-    return EMPTY_VALUE;
-  }
-  return timestampFormatter.format(new Date(ms)).replace(",", "");
+export function formatTimestamp(locale: Locale, ms: number | undefined | null): string {
+  return i18nFormatDateTime(locale, ms);
 }
 
 /** Human-readable dates for the member-facing pages. */

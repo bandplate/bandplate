@@ -50,8 +50,10 @@ export const takes = {
   // en: A date here is used instead of the choice above.
   exactDatesNote: "Datum tady má přednost před výběrem nahoře.",
 
-  yoursLegend: "Tvoje", // en: Yours
-  notVotedByMe: "Ještě jsem nehlasoval", // en: Not voted by me
+  yoursLegend: "Moje hlasy", // en: My votes
+  // Impersonal, not "ještě jsem nehlasoval": the Czech past tense
+  // carries the speaker's gender and a filter label cannot know it.
+  notVotedByMe: "Ještě nehlasováno", // en: Not voted yet
 
   sortLabel: "Řadit podle", // en: Sort by
   sortRecent: "Nejnovější", // en: Most recent
@@ -63,6 +65,20 @@ export const takes = {
 
   pageTitle: (songTitle: string): string => `Nahrávka: ${songTitle}`, // en: `Take of ${songTitle}`
   pageTitleUnknown: "Nahrávka", // en: Take
+
+  // en: `A take from ${event}, ${date}`
+  heroFromEvent: ({ event, date }: { event: string; date: string }): string =>
+    `Nahrávka z akce ${event}, ${date}`,
+  // en: `A ${kind} take, ${date}`
+  //
+  // "Nahrávka ze zkoušky" would need the kind in the genitive, and the kind
+  // is an admin-editable word nothing here can decline — so it goes in
+  // brackets after the noun, nominative, the same escape the event confirm
+  // titles use.
+  heroOfKind: ({ kind, date }: { kind: string; date: string }): string =>
+    `Nahrávka (${kind}), ${date}`,
+  heroRecorded: (date: string): string => `Nahráno ${date}`, // en: `Recorded ${date}`
+  heroTitleByDate: (date: string): string => `Nahrávka z ${date}`, // en: `Take from ${date}`
 
   saved: "Uloženo.", // en: Saved.
   fileDeleted: "Soubor smazán.", // en: File deleted.

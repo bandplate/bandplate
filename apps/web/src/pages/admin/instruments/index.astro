@@ -88,8 +88,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
     </form>
 
     <p class="bp-field-hint bp-m0">
-      Archiving an instrument hides it from new takes but keeps every past take that used it
-      rendering correctly.
+      {ta.archiveInstrumentNote}
     </p>
     {instruments.length === 0 ? (
       <div class="bp-empty-state">
@@ -130,7 +129,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                     instrument must leave this cell with NO child nodes so the
                     phone layout's `td:empty` rule can drop it, rather than
                     rendering a STATUS label with a blank beside it. */}
-                <td data-label={ta.colStatus}>{instrument.archivedAt && <span class="bp-kind">archived</span>}</td>
+                <td data-label={ta.colStatus}>{instrument.archivedAt && <span class="bp-kind">{ta.statusArchived}</span>}</td>
                 <td data-label={ta.colActions}>
                   <button
                     type="button"
@@ -237,10 +236,10 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
       </div>
     )}
     <p class="bp-credit">
-    Instrument icons from{" "}
+    {ta.iconCreditBefore}{" "}
     <a href={INSTRUMENT_GLYPH_CREDIT.url} rel="noopener noreferrer" target="_blank">
       {INSTRUMENT_GLYPH_CREDIT.set}
-    </a>, licensed{" "}
+    </a>{ta.iconCreditLicensed}{" "}
     <a href={INSTRUMENT_GLYPH_CREDIT.licenceUrl} rel="noopener noreferrer" target="_blank">
       {INSTRUMENT_GLYPH_CREDIT.licence}
       </a>.

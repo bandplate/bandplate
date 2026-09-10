@@ -16,6 +16,7 @@ export { type PluralForms, countOf, formatNumber, plural } from "./plural.js";
 export {
   EMPTY_VALUE,
   formatBytes,
+  formatDateTime,
   formatDuration,
   formatLongDate,
   formatMonthShort,

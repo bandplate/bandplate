@@ -50,7 +50,7 @@ const activeTokens = tokens.filter((t) => t.revokedAt === null);
       <a href="/admin/tokens" class="bp-admin-tile">
         <span class="bp-eyebrow">{ta.serviceTokens}</span>
         <span class="bp-admin-tile-value">{activeTokens.length}</span>
-        <span class="bp-admin-tile-note">{tokens.length - activeTokens.length} revoked.</span>
+        <span class="bp-admin-tile-note">{ta.revokedCount(tokens.length - activeTokens.length)}</span>
       </a>
     </div>
   </div>

@@ -138,11 +138,11 @@ const justRevoked = Astro.url.searchParams.get("revoked") === "1";
               <tr>
                 <td data-label={ta.colLabel}>
                   <span class="bp-table-name">{token.label}</span>
-                  {token.revokedAt && <span class="bp-kind">revoked</span>}
+                  {token.revokedAt && <span class="bp-kind">{ta.statusRevoked}</span>}
                 </td>
                 <td data-label={ta.colScopes} class="bp-table-quiet">{token.scopes.join(", ")}</td>
-                <td data-label={ta.colCreated} class="bp-table-quiet bp-table-when">{formatTimestamp(token.createdAt)}</td>
-                <td data-label={ta.colLastUsed} class="bp-table-quiet bp-table-when">{formatTimestamp(token.lastUsedAt)}</td>
+                <td data-label={ta.colCreated} class="bp-table-quiet bp-table-when">{formatTimestamp(Astro.locals.locale, token.createdAt)}</td>
+                <td data-label={ta.colLastUsed} class="bp-table-quiet bp-table-when">{formatTimestamp(Astro.locals.locale, token.lastUsedAt)}</td>
                 <td data-label={ta.colActions}>
                   {!token.revokedAt && (
                     <>

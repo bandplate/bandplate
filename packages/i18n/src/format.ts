@@ -25,12 +25,20 @@ import { formatNumber } from "./plural.js";
 /** What an absent date, duration or size renders as. */
 export const EMPTY_VALUE = "—";
 
-type DateStyle = "long" | "short" | "monthShort";
+type DateStyle = "long" | "short" | "monthShort" | "dateTime";
 
 const DATE_OPTIONS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   long: { year: "numeric", month: "long", day: "numeric" },
   short: { year: "numeric", month: "short", day: "numeric" },
   monthShort: { month: "short" },
+  dateTime: {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  },
 };
 
 const dateFormatCache = new Map<string, Intl.DateTimeFormat>();
@@ -75,6 +83,20 @@ export function formatShortDate(locale: Locale, ms: number | undefined | null): 
  */
 export function formatMonthShort(locale: Locale, ms: number | undefined | null): string {
   return formatDate(locale, "monthShort", ms);
+}
+
+/**
+ * A date and a time together — admin tables' "last seen", "created",
+ * "last used".
+ *
+ * This used to be a locale-INDEPENDENT `en-CA` formatter, on the argument
+ * that `2026-09-09 10:17` is machine-readable technical data in a mono column
+ * rather than a date anyone reads aloud. The owner overruled it: on a Czech
+ * page it just reads as unformatted, and the column is being read by a person
+ * either way. It follows the reader now, like every other date.
+ */
+export function formatDateTime(locale: Locale, ms: number | undefined | null): string {
+  return formatDate(locale, "dateTime", ms);
 }
 
 /**

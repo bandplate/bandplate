@@ -75,6 +75,17 @@ export const admin = {
   iconNone: "None",
   iconNoneHint: "No icon — show initials",
   archiveInstrument: "Archive instrument",
+  /** Row states. Lowercase — they render inside `.bp-kind`, which uppercases. */
+  statusArchived: "archived",
+  statusRevoked: "revoked",
+  statusInvited: "invited",
+  statusDisabled: "disabled",
+  revokedCount: (count: number): string => `${count} revoked.`,
+  archiveInstrumentNote:
+    "Archiving an instrument hides it from new takes but keeps every past take that used it rendering correctly.",
+  /** Attribution for the icon set. The set's NAME and licence stay as they are. */
+  iconCreditBefore: "Instrument icons from",
+  iconCreditLicensed: ", licensed",
 
   // --- tokens --------------------------------------------------------------
   tokens: "Tokens",

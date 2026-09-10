@@ -1,4 +1,5 @@
 ---
+import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 // A single take, listed but not yet playable in this task — `/takes/[id]`
 // is Task 6's own detail page. This is a domain-specific composite (a Take
 // + its instruments + the song/event context it's being listed under)
@@ -100,14 +101,8 @@
 // that component's own header comment). It has no effect at all without
 // that script: with JS off, this attribute just sits there unused and
 // round 1's first-occurrence-wins naming is exactly what still happens.
-import type { instrumentsRepo, takesRepo } from "@bandplate/db";
-import {
-  eventKindLabel,
-  eventLabel,
-  formatDuration,
-  formatShortDate,
-  takeNote,
-} from "../server/format.js";
+import { formatShortDate, messages } from "@bandplate/i18n";
+import { eventLabel, formatDuration, takeNote } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
 import InstrumentSet from "./InstrumentSet.astro";
 import PlayToggleButton from "./PlayToggleButton.astro";
@@ -145,6 +140,9 @@ const {
   favorited = false,
   playableAssetId,
 } = Astro.props;
+
+const locale = Astro.locals.locale;
+const t = messages(locale);
 const resolvedTransitionName =
   transitionName === null ? undefined : (transitionName ?? `take-${take.id}`);
 
@@ -157,7 +155,7 @@ const song = context.kind !== "song" ? context.song : undefined;
 // since "what was played" (not "when") is what those lists are for. A
 // label (when present) renders as a sublabel underneath in every mode,
 // never as a replacement for the primary link text.
-const primaryLabel = song ? song.title : formatShortDate(take.recordedAt);
+const primaryLabel = song ? song.title : formatShortDate(locale, take.recordedAt);
 // "full" mode alone needs an explicit date line — it's the one context
 // where the date isn't implied by the page (a song page's rows already
 // linger under that song; an event page's rows already share one date).
@@ -166,7 +164,9 @@ const showDate = context.kind === "full";
 // not shown visually here — the row's own markup already shows this same
 // information) — mirrors whichever of date/label this row doesn't already
 // use as its primary link text.
-const playSubtitle = song ? (take.label ?? formatShortDate(take.recordedAt)) : (take.label ?? "");
+const playSubtitle = song
+  ? (take.label ?? formatShortDate(locale, take.recordedAt))
+  : (take.label ?? "");
 // The event's NAME, and only its name — "Live at The Attic — The Attic" tells
 // you which event this was, where "View this rehearsal" told you only that one
 // existed. Empty when the event has neither title nor venue, which is the
@@ -181,9 +181,9 @@ const eventName = event
 // Only used to decide whether the take's label says anything the page does
 // not already.
 const eventKind = event
-  ? eventKindLabel(event.kind)
+  ? t.events.kindLabel(event.kind)
   : context.kind === "event"
-    ? eventKindLabel(context.eventKind)
+    ? t.events.kindLabel(context.eventKind)
     : "";
 const noteText = takeNote(take.label, eventKind);
 // …and the badge is NOT that. An event page's own heading names the kind, so
@@ -286,7 +286,7 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
       {showDate && (
         <>
           {((event && eventName) || noteText) && <span class="bp-take-rule" />}
-          <span class="bp-take-fixed">{formatShortDate(take.recordedAt)}</span>
+          <span class="bp-take-fixed">{formatShortDate(locale, take.recordedAt)}</span>
         </>
       )}
     </span>

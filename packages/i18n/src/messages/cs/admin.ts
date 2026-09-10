@@ -91,6 +91,18 @@ export const admin = {
   iconNone: "Žádná", // en: None
   iconNoneHint: "Bez ikony — zobrazí se iniciály", // en: No icon — show initials
   archiveInstrument: "Archivovat nástroj", // en: Archive instrument
+  statusArchived: "archivováno", // en: archived
+  statusRevoked: "zneplatněno", // en: revoked
+  statusInvited: "pozván", // en: invited
+  statusDisabled: "vypnutý", // en: disabled
+  // en: `${count} revoked.` — 1 zneplatněný · 2–4 zneplatněné · 5+ zneplatněných
+  revokedCount: (count: number): string =>
+    `${count} ${count === 1 ? "zneplatněný" : count < 5 ? "zneplatněné" : "zneplatněných"}.`,
+  // en: Archiving an instrument hides it from new takes but keeps every past take that used it rendering correctly.
+  archiveInstrumentNote:
+    "Archivovaný nástroj zmizí z nových nahrávek, ale všechny starší, které ho použily, se dál zobrazují správně.",
+  iconCreditBefore: "Ikony nástrojů od", // en: Instrument icons from
+  iconCreditLicensed: ", licence", // en: , licensed
 
   tokens: "Tokeny", // en: Tokens
   createToken: "Vytvořit token", // en: Create token

@@ -61,6 +61,7 @@ const consequence = deleteTakeConsequence(assets, take.totalVotes);
     bannerTitle={`Delete this take of ${what}?`}
     cta="Delete take"
     cancelHref={`/takes/${take.id}`}
+    cancelLabel="Cancel"
   >
     {consequence}
   </ConfirmActionPage>

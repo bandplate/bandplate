@@ -65,6 +65,7 @@ const consequence = deleteSongConsequence(takes.length, fileCount, byteTotal);
     bannerTitle={`Delete ${song.title} and everything under it?`}
     cta="Delete song"
     cancelHref={`/songs/${song.slug}`}
+    cancelLabel="Cancel"
   >
     {consequence}
   </ConfirmActionPage>

@@ -63,6 +63,7 @@ const inheritsKey = !keep.clientRef && merge.clientRef !== null;
     bannerTitle={`Move everything from ${name(merge)} into ${name(keep)}?`}
     cta="Merge them"
     cancelHref={`/events/${keep.id}`}
+    cancelLabel="Cancel"
     tone="neutral"
   >
     {movingCount === 0

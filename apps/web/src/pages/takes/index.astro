@@ -36,7 +36,7 @@ import {
   parseSearchQuery,
   searchTakes,
 } from "../../server/pages/search.js";
-import { pageRequest, pageView } from "../../server/pagination.js";
+import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -310,7 +310,7 @@ const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
         )
       }
 
-      <Pagination {...pages} noun="take" />
+      <Pagination {...pages} labels={paginationLabels(pages, "take")} />
     </div>
   </div>
 </AppLayout>

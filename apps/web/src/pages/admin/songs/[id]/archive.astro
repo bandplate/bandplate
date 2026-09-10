@@ -60,6 +60,7 @@ const consequence = archiveSongConsequence(takeCount);
         bannerTitle={`Archive ${song.title}?`}
         cta="Archive song"
         cancelHref={`/songs/${song.slug}`}
+        cancelLabel="Cancel"
       >
         {consequence} Archiving is a decision about the repertoire, not about the recordings.
       </ConfirmActionPage>
@@ -68,6 +69,7 @@ const consequence = archiveSongConsequence(takeCount);
         bannerTitle={`Put ${song.title} back?`}
         cta="Unarchive song"
         cancelHref={`/songs/${song.slug}`}
+        cancelLabel="Cancel"
         tone="neutral"
       >
         It returns to the song library and to the picker when you add a take.

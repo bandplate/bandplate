@@ -61,6 +61,7 @@ const take = await takesRepo.getById(appDeps.db, asset.takeId);
     bannerTitle={`Delete the ${label} from this take?`}
     cta="Delete file"
     cancelHref={take ? `/takes/${take.id}` : "/takes"}
+    cancelLabel="Cancel"
   >
     {deleteAssetConsequence(label, asset, isLastPlayable)}
   </ConfirmActionPage>

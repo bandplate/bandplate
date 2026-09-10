@@ -26,13 +26,18 @@ export interface Props {
   bannerTitle: string;
   /** The button's label — should echo the verb the trigger used ("Revoke token"). */
   cta: string;
-  /** Where "Cancel" goes back to. */
+  /** Where the way-out link goes back to. */
   cancelHref: string;
+  /**
+   * The way-out link's label. A prop, not the literal "Cancel", so this
+   * component — the swappable brand layer — holds no copy of its own.
+   */
+  cancelLabel: string;
   /** `"neutral"` when nothing is destroyed. Defaults to `danger`. */
   tone?: "danger" | "neutral";
 }
 
-const { bannerTitle, cta, cancelHref, tone = "danger" } = Astro.props;
+const { bannerTitle, cta, cancelHref, cancelLabel, tone = "danger" } = Astro.props;
 const danger = tone === "danger";
 ---
 
@@ -67,6 +72,6 @@ const danger = tone === "danger";
       }
       {cta}
     </button>
-    <a href={cancelHref} class="bp-btn bp-btn-secondary">Cancel</a>
+    <a href={cancelHref} class="bp-btn bp-btn-secondary">{cancelLabel}</a>
   </form>
 </main>

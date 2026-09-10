@@ -29,7 +29,7 @@ import {
   updateEvent,
 } from "../../server/pages/events.js";
 import { type TakeField, createTake } from "../../server/pages/takes.js";
-import { pageRequest, pageView } from "../../server/pagination.js";
+import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -387,7 +387,7 @@ const [allSongs, allInstruments] = await Promise.all([
         )
       }
 
-      <Pagination {...pages} noun="take" />
+      <Pagination {...pages} labels={paginationLabels(pages, "take")} />
     </section>
   </div>
 </AppLayout>

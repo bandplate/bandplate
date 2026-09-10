@@ -21,7 +21,7 @@ import {
   parseEventsListArchivedFilter,
   parseEventsListKindFilter,
 } from "../../server/pages/events.js";
-import { pageRequest, pageView } from "../../server/pagination.js";
+import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -246,6 +246,6 @@ function archivedHref(): string {
       )
     }
 
-    <Pagination {...pages} noun="event" />
+    <Pagination {...pages} labels={paginationLabels(pages, "event")} />
   </div>
 </AppLayout>

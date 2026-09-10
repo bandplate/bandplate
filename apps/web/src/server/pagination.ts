@@ -9,6 +9,7 @@
 // under a list of songs behaves exactly like the one under a list of takes —
 // including what it does when someone edits the number in the URL by hand.
 import { MAX_PAGE_SIZE, type PageArgs, clampPageSize } from "@bandplate/db";
+import type { PaginationLabels } from "@bandplate/ui/components/Pagination.astro";
 
 /** The query parameter every listing pages on. */
 export const PAGE_PARAM = "page";
@@ -174,6 +175,58 @@ export function pageView(input: {
     nextHref: page < pageCount ? hrefForPage(url, page + 1) : undefined,
     items,
     redirectTo,
+  };
+}
+
+/**
+ * What a listing counts. A KEY, not a word — `Pagination` draws sentences and
+ * this module builds them, so nothing outside here knows how to spell "takes".
+ */
+export type CountableNoun = "song" | "take" | "event" | "vote";
+
+/**
+ * The English forms of each countable, keyed by `Intl.PluralRules` category.
+ *
+ * English only ever returns `one` and `other`, so two entries is the whole
+ * language. Czech returns `one` / `few` / `many` / `other` and needs the
+ * genitive after a numeral ("5 skladeb"), which is the same axis — a record
+ * per noun covers both, with no separate case machinery. That is why the shape
+ * is a record rather than a singular/plural pair.
+ */
+const NOUN_FORMS: Record<CountableNoun, Record<string, string>> = {
+  song: { one: "song", other: "songs" },
+  take: { one: "take", other: "takes" },
+  event: { one: "event", other: "events" },
+  vote: { one: "vote", other: "votes" },
+};
+
+function countable(noun: CountableNoun, count: number): string {
+  const forms = NOUN_FORMS[noun];
+  const category = new Intl.PluralRules("en").select(count);
+  return forms[category] ?? forms.other ?? noun;
+}
+
+/**
+ * Every word the pagination control says, for one listing.
+ *
+ * Lives here rather than in `packages/ui` so the brand layer stays free of a
+ * locale concept, and so the range line is assembled somewhere that knows how
+ * the language works. Built as ONE string rather than as adjacent
+ * `{from}–{to} of {total} {noun}` expressions in the template: Astro drops the
+ * whitespace between two neighbouring expressions on the same line, which
+ * rendered "of 225takes".
+ */
+export function paginationLabels(
+  view: Pick<PageView, "page" | "pageCount" | "total" | "from" | "to">,
+  noun: CountableNoun,
+): PaginationLabels {
+  return {
+    range: `${view.from}–${view.to} of ${view.total} ${countable(noun, view.total)}`,
+    previous: "Previous",
+    next: "Next",
+    here: `Page ${view.page} of ${view.pageCount}`,
+    nav: `Pagination, page ${view.page} of ${view.pageCount}`,
+    page: (n) => `Page ${n}`,
   };
 }
 

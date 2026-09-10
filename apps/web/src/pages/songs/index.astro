@@ -30,7 +30,7 @@ import {
   listSongsForLibrary,
   parseSongsListQuery,
 } from "../../server/pages/songs.js";
-import { pageRequest, pageView } from "../../server/pagination.js";
+import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -323,7 +323,7 @@ function archivedHref(): string {
       )
     }
 
-    <Pagination {...pages} noun="song" />
+    <Pagination {...pages} labels={paginationLabels(pages, "song")} />
   </div>
 </AppLayout>
 

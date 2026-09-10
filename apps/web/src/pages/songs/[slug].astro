@@ -31,7 +31,7 @@ import {
   updateSong,
 } from "../../server/pages/songs.js";
 import { type TakeField, createTake } from "../../server/pages/takes.js";
-import { pageRequest, pageView } from "../../server/pagination.js";
+import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 import { songToRows } from "../../server/song-chart-rows.js";
 import { KNOWN_SECTION_WORDS, buildSongChart } from "../../server/song-text.js";
 
@@ -522,7 +522,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                   </div>
                 </details>
               )}
-              <Pagination {...pages} noun="take" />
+              <Pagination {...pages} labels={paginationLabels(pages, "take")} />
             </div>
           )
         }

@@ -48,6 +48,33 @@ export interface PaginationItem {
   current?: boolean;
 }
 
+/**
+ * Every word this control says, supplied by the caller.
+ *
+ * It used to take `noun`/`pluralNoun` and build the range line itself, which
+ * assumed a language has exactly two forms of a noun and picks between them on
+ * `total === 1`. Czech has four plural categories AND declines the noun after a
+ * numeral — "1 skladba", "2 skladby", "5 skladeb", and the whole line reads
+ * "1–25 z 225 skladeb". No pair of noun props can express that.
+ *
+ * So the sentences are built where a locale is known and this component draws
+ * them. That also keeps `packages/ui` free of a locale concept: it is the
+ * swappable brand layer, and seven strings are not a reason to put message
+ * lookup into it.
+ */
+export interface PaginationLabels {
+  /** The whole range line, e.g. "1–25 of 225 takes". */
+  range: string;
+  previous: string;
+  next: string;
+  /** The phone's stand-in for the numbers, e.g. "Page 4 of 9". */
+  here: string;
+  /** Accessible name for the nav itself, e.g. "Pagination, page 4 of 9". */
+  nav: string;
+  /** Accessible name for one numbered link. */
+  page: (n: number) => string;
+}
+
 export interface Props {
   page: number;
   pageCount: number;
@@ -58,20 +85,10 @@ export interface Props {
   prevHref?: string | undefined;
   nextHref?: string | undefined;
   items: PaginationItem[];
-  /** What is being counted, singular — "take", "song", "event". */
-  noun: string;
-  /** Overrides the plural when it is not `${noun}s`. */
-  pluralNoun?: string;
+  labels: PaginationLabels;
 }
 
-const { page, pageCount, total, from, to, prevHref, nextHref, items, noun, pluralNoun } =
-  Astro.props;
-
-const plural = pluralNoun ?? `${noun}s`;
-// Built as ONE string rather than as adjacent `{from}–{to} of {total} {noun}`
-// expressions: Astro drops the whitespace between two neighbouring expressions
-// on the same line, which rendered "of 225takes".
-const rangeLabel = `${from}–${to} of ${total} ${total === 1 ? noun : plural}`;
+const { pageCount, prevHref, nextHref, items, labels } = Astro.props;
 ---
 
 {
@@ -79,8 +96,8 @@ const rangeLabel = `${from}–${to} of ${total} ${total === 1 ? noun : plural}`;
      disabled arrow either side of the number 1, which is furniture, not
      information. The range line above it already says how many there are. */
   pageCount > 1 && (
-    <nav class="bp-pagination" aria-label={`Pagination, page ${page} of ${pageCount}`}>
-      <p class="bp-pagination-range bp-m0">{rangeLabel}</p>
+    <nav class="bp-pagination" aria-label={labels.nav}>
+      <p class="bp-pagination-range bp-m0">{labels.range}</p>
 
       <div class="bp-pagination-row">
         {prevHref ? (
@@ -98,7 +115,7 @@ const rangeLabel = `${from}–${to} of ${total} ${total === 1 ? noun : plural}`;
             >
               <path d="M15 5l-7 7 7 7" />
             </svg>
-            <span class="bp-pagination-step-word">Previous</span>
+            <span class="bp-pagination-step-word">{labels.previous}</span>
           </a>
         ) : (
           /* Rendered, not omitted: an arrow that appears on page 2 and shifts
@@ -118,7 +135,7 @@ const rangeLabel = `${from}–${to} of ${total} ${total === 1 ? noun : plural}`;
             >
               <path d="M15 5l-7 7 7 7" />
             </svg>
-            <span class="bp-pagination-step-word">Previous</span>
+            <span class="bp-pagination-step-word">{labels.previous}</span>
           </span>
         )}
 
@@ -127,7 +144,7 @@ const rangeLabel = `${from}–${to} of ${total} ${total === 1 ? noun : plural}`;
             below are still in the accessibility tree at every width — this is
             a visual substitute, not a second announcement. */}
         <span class="bp-pagination-here" aria-hidden="true">
-          Page {page} of {pageCount}
+          {labels.here}
         </span>
 
         <ol class="bp-pagination-pages">
@@ -142,7 +159,7 @@ const rangeLabel = `${from}–${to} of ${total} ${total === 1 ? noun : plural}`;
                   class="bp-filter-pill bp-pagination-page"
                   href={item.href}
                   aria-current={item.current ? "page" : undefined}
-                  aria-label={`Page ${item.page}`}
+                  aria-label={item.page === undefined ? undefined : labels.page(item.page)}
                 >
                   {item.page}
                 </a>
@@ -153,7 +170,7 @@ const rangeLabel = `${from}–${to} of ${total} ${total === 1 ? noun : plural}`;
 
         {nextHref ? (
           <a class="bp-filter-pill bp-pagination-step" href={nextHref} rel="next">
-            <span class="bp-pagination-step-word">Next</span>
+            <span class="bp-pagination-step-word">{labels.next}</span>
             <svg
               viewBox="0 0 24 24"
               width="16"
@@ -170,7 +187,7 @@ const rangeLabel = `${from}–${to} of ${total} ${total === 1 ? noun : plural}`;
           </a>
         ) : (
           <span class="bp-filter-pill bp-pagination-step bp-pagination-step--off" aria-hidden="true">
-            <span class="bp-pagination-step-word">Next</span>
+            <span class="bp-pagination-step-word">{labels.next}</span>
             <svg
               viewBox="0 0 24 24"
               width="16"

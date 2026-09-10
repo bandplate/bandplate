@@ -60,6 +60,7 @@ const takeLabel = `${song ? song.title : "Untitled take"} — ${formatLongDate(t
     bannerTitle={rejecting ? `Reject ${takeLabel}?` : `Promote ${takeLabel} to keeper?`}
     cta={rejecting ? "Reject" : "Promote to keeper"}
     cancelHref={`/takes/${id}`}
+    cancelLabel="Cancel"
     tone="neutral"
   >
     {

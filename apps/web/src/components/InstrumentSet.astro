@@ -58,14 +58,27 @@ const DENSE_ABOVE = 4;
 const BASE_SIZE = 20;
 const DENSE_SIZE = 16;
 
+type VerbKey = "instruments" | "plays";
+
+/** The word each case opens with. Becomes a catalog lookup when one exists. */
+const VERB_LABELS: Record<VerbKey, string> = {
+  instruments: "Instruments",
+  plays: "Plays",
+};
+
 export interface Props {
   instruments: instrumentsRepo.Instrument[];
   /**
-   * The verb the accessible label opens with. A take's set is a list of what
-   * was recorded ("Instruments: bass, drums"); a member's is a list of what
-   * they play ("Plays: bass, drums"). Same component, different sentence.
+   * Which sentence the accessible label opens with. A take's set is a list of
+   * what was recorded ("Instruments: bass, drums"); a member's is a list of
+   * what they play ("Plays: bass, drums"). Same component, different sentence.
+   *
+   * A KEY, not the word itself. This was typed `"Instruments" | "Plays"` —
+   * user-facing copy standing in for an enum — so the callers named a sentence
+   * by quoting it and the type would have had to grow a Czech member to hold a
+   * Czech verb. The word is looked up here; the caller names the case.
    */
-  verb?: "Instruments" | "Plays";
+  verb?: VerbKey;
   /** `"chip"` (default) draws the tinted pad; `"bare"` draws glyphs alone. */
   tone?: "chip" | "bare";
   /** Overrides the count-driven size. See the header comment. */
@@ -79,7 +92,7 @@ export interface Props {
   emptyLabel?: string | null;
 }
 
-const { instruments, verb = "Instruments", tone = "chip", size, emptyLabel = null } = Astro.props;
+const { instruments, verb = "instruments", tone = "chip", size, emptyLabel = null } = Astro.props;
 
 /** One entry per glyph actually drawn, in the order the set was given. */
 interface DrawnMark {
@@ -125,7 +138,7 @@ const classes = [
     <span
       class={classes}
       role="img"
-      aria-label={`${verb}: ${instruments.map((i) => i.label).join(", ")}`}
+      aria-label={`${VERB_LABELS[verb]}: ${instruments.map((i) => i.label).join(", ")}`}
     >
       {drawn.map((mark) => (
         <InstrumentIcon

@@ -20,7 +20,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { formatShortDate } from "../../server/format.js";
 import { VOTES_PER_PAGE, getMeData } from "../../server/pages/me.js";
-import { pageRequest, pageView } from "../../server/pagination.js";
+import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -146,7 +146,7 @@ const initials = member.displayName
         )
       }
 
-      <Pagination {...pages} noun="vote" />
+      <Pagination {...pages} labels={paginationLabels(pages, "vote")} />
     </section>
 
     <aside class="bp-me-aside">
@@ -164,7 +164,7 @@ const initials = member.displayName
       {
         instruments.length > 0 && (
           <p class="bp-me-instruments bp-m0">
-            <InstrumentSet instruments={instruments} verb="Plays" />
+            <InstrumentSet instruments={instruments} verb="plays" />
           </p>
         )
       }

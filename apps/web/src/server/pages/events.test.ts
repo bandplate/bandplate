@@ -46,7 +46,7 @@ describe("listEventsForArchive / getEventDetail", () => {
       updatedAt: 2000,
     });
 
-    const events = await listEventsForArchive(db, []);
+    const { rows: events } = await listEventsForArchive(db, [], false, { limit: 25, offset: 0 });
     expect(events.map((e) => e.id)).toEqual([concert.id, rehearsal.id]);
   });
 
@@ -64,7 +64,10 @@ describe("listEventsForArchive / getEventDetail", () => {
       updatedAt: 2000,
     });
 
-    const events = await listEventsForArchive(db, ["concert"]);
+    const { rows: events } = await listEventsForArchive(db, ["concert"], false, {
+      limit: 25,
+      offset: 0,
+    });
     expect(events.map((e) => e.id)).toEqual([concert.id]);
   });
 

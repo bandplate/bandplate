@@ -18,7 +18,7 @@
 // dozen checkboxes answering a question about a different object, and on a
 // phone it pushed the songs themselves below the fold.
 import { type Storage, allocateSongSlug, normalizeTitle } from "@bandplate/core";
-import { type Db, assetsRepo } from "@bandplate/db";
+import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
   favoritesRepo,
@@ -58,22 +58,29 @@ export function parseSongsListQuery(searchParams: URLSearchParams): SongsListQue
   return { search, sort, archived };
 }
 
-export async function listSongsForLibrary(db: Db, query: SongsListQuery): Promise<SongListItem[]> {
-  const rows = await songsRepo.listWithStats(db, {
+/** Rows per page in the song library. */
+export const SONGS_PER_PAGE = 25;
+
+export async function listSongsForLibrary(
+  db: Db,
+  query: SongsListQuery,
+  page: PageArgs,
+): Promise<Paged<SongListItem>> {
+  // `onlyArchived` is a repo option now rather than a `.filter()` here. It had
+  // to become one: the old shape asked for BOTH sets and dropped the live ones
+  // in JS, which cannot be paged (the page would be however many of its 25
+  // rows happened to be archived) and cannot be counted.
+  return songsRepo.listWithStats(db, {
     search: query.search,
     sort: query.sort,
-    includeArchived: query.archived === true,
+    onlyArchived: query.archived === true,
+    page,
   });
-  // `includeArchived` widens the repo query to BOTH; the page wants only the
-  // archived ones. Filtering here rather than adding an `onlyArchived` option
-  // keeps the repo's vocabulary to the one thing every other caller needs.
-  return query.archived === true ? rows.filter((r) => r.archivedAt !== null) : rows;
 }
 
 /** How many songs are archived — the Archived pill shows nothing when it is 0. */
 export async function countArchivedSongs(db: Db): Promise<number> {
-  const rows = await songsRepo.listWithStats(db, { includeArchived: true });
-  return rows.filter((r) => r.archivedAt !== null).length;
+  return songsRepo.count(db, { onlyArchived: true });
 }
 
 export interface TakeWithContext extends takesRepo.Take {
@@ -92,8 +99,20 @@ export interface SongDetail {
   songFavorited: boolean;
   aliases: songsRepo.SongAlias[];
   instrumentNotes: songsRepo.InstrumentNote[];
+  /** ONE PAGE of takes, newest first, plus how many the song has in all. */
   takes: TakeWithContext[];
+  takeTotal: number;
 }
+
+/**
+ * Rows per page in a song's take list.
+ *
+ * Smaller than the archive's page: this list sits below the lyrics and chords
+ * on a page whose subject is the SONG, and a take list that runs longer than
+ * the thing it belongs to has taken the page over. It is also what the
+ * three-take fold above it was already saying.
+ */
+export const SONG_TAKES_PER_PAGE = 15;
 
 /**
  * Everything `/songs/[slug]` renders in one call: the song, its aliases and
@@ -105,18 +124,20 @@ export async function getSongDetail(
   db: Db,
   slug: string,
   memberId: string,
+  takesPage: PageArgs = { limit: SONG_TAKES_PER_PAGE, offset: 0 },
 ): Promise<SongDetail | undefined> {
   const song = await songsRepo.getBySlug(db, slug);
   if (!song) {
     return undefined;
   }
 
-  const [aliases, instrumentNotes, takes, songFavorited] = await Promise.all([
+  const [aliases, instrumentNotes, pagedTakes, songFavorited] = await Promise.all([
     songsRepo.listAliases(db, song.id),
     songsRepo.listInstrumentNotes(db, song.id),
-    takesRepo.listBySong(db, song.id),
+    takesRepo.listBySong(db, song.id, { page: takesPage }),
     favoritesRepo.isFavorited(db, memberId, "song", song.id),
   ]);
+  const takes = pagedTakes.rows;
 
   const takeIds = takes.map((t) => t.id);
   const eventIds = [...new Set(takes.map((t) => t.eventId))];
@@ -135,6 +156,7 @@ export async function getSongDetail(
     songFavorited,
     aliases,
     instrumentNotes,
+    takeTotal: pagedTakes.total,
     takes: takes.map((take) => ({
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],
@@ -398,7 +420,8 @@ export async function deleteSong(db: Db, storage: Storage, id: string): Promise<
     return { kind: "not_found" };
   }
 
-  const takes = await takesRepo.listBySong(db, id);
+  // Every take, not a page: a cascade has to touch each row.
+  const takes = await takesRepo.listAllBySong(db, id);
   const storageKeys: string[] = [];
   for (const take of takes) {
     const assets = await assetsRepo.listByTake(db, take.id);

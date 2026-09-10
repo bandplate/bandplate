@@ -43,7 +43,7 @@ describe("listSongsForLibrary / getSongDetail", () => {
   });
 
   it("returns an empty song list, not a throw, on a fresh database", async () => {
-    const result = await listSongsForLibrary(db, {});
+    const { rows: result } = await listSongsForLibrary(db, {}, { limit: 25, offset: 0 });
     expect(result).toEqual([]);
   });
 

@@ -45,8 +45,8 @@ const event = await eventsRepo.getById(appDeps.db, id);
 if (!event) {
   return new Response("Event not found.", { status: 404 });
 }
-const takes = await takesRepo.listByEvent(appDeps.db, event.id, { order: "asc" });
-const consequence = archiveEventConsequence(takes.length);
+const takeCount = await takesRepo.countByEvent(appDeps.db, event.id);
+const consequence = archiveEventConsequence(takeCount);
 const what = `the ${eventKindLabel(event.kind)} of ${formatLongDate(event.heldAt)}`;
 ---
 

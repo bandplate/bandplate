@@ -1,5 +1,5 @@
 import { normalizeTitle, uuidv7 } from "@bandplate/core";
-import { type SQL, and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
   favorites,
@@ -10,6 +10,7 @@ import {
   takes,
 } from "../schema/sqlite/index.js";
 import { escapeLikePattern } from "./like-pattern.js";
+import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 import * as takesRepo from "./takes.js";
 
 export type Song = typeof songs.$inferSelect;
@@ -222,6 +223,55 @@ export interface ListWithStatsOptions {
   sort?: SongSort;
   /** Archived songs are a browse-surface omission, so listings exclude them by default. */
   includeArchived?: boolean;
+  /** Only songs that ARE archived — the archive pill's own view. */
+  onlyArchived?: boolean;
+  /** Which page to return. Omitted means the FIRST page — never all of them. */
+  page?: PageArgs;
+}
+
+/**
+ * The conditions both the page query and its count run against, built once —
+ * see `takesRepo.searchConditions` for why this is not two copies.
+ *
+ * The instrument filter is a SUBQUERY over the same condition
+ * `takesRepo.listByInstruments` uses. It was a pre-pass that fetched every
+ * matching take, projected its song ids into a `Set`, and fed them back as an
+ * `inArray` — which grew the bound-parameter list with the archive and made a
+ * pushed-down `count(*)` impossible. See `takesRepo.hasAllInstruments`.
+ */
+function songConditions(db: Db, options: ListWithStatsOptions): SQL[] {
+  const conditions: SQL[] = [];
+  if (options.search) {
+    const pattern = `%${escapeLikePattern(normalizeTitle(options.search))}%`;
+    conditions.push(sql`${songs.titleNorm} LIKE ${pattern} ESCAPE '\\'`);
+  }
+  if (options.instrumentIds && options.instrumentIds.length > 0) {
+    conditions.push(
+      inArray(
+        songs.id,
+        db
+          .select({ songId: takes.songId })
+          .from(takes)
+          .where(takesRepo.hasAllInstruments(db, options.instrumentIds)),
+      ),
+    );
+  }
+  if (options.onlyArchived) {
+    conditions.push(isNotNull(songs.archivedAt));
+  } else if (!options.includeArchived) {
+    conditions.push(isNull(songs.archivedAt));
+  }
+  return conditions;
+}
+
+/** How many songs match — the library's total, and the Archived pill's badge. */
+export async function count(db: Db, options: ListWithStatsOptions = {}): Promise<number> {
+  const conditions = songConditions(db, options);
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(songs)
+    .where(conditions.length > 0 ? and(...conditions) : undefined);
+  return rows[0]?.value ?? 0;
 }
 
 /**
@@ -234,36 +284,10 @@ export interface ListWithStatsOptions {
 export async function listWithStats(
   db: Db,
   options: ListWithStatsOptions = {},
-): Promise<SongWithStats[]> {
-  let songIdFilter: Set<string> | undefined;
-  if (options.instrumentIds && options.instrumentIds.length > 0) {
-    const matchingTakes = await takesRepo.listByInstruments(db, options.instrumentIds);
-    songIdFilter = new Set(matchingTakes.map((t) => t.songId));
-    if (songIdFilter.size === 0) {
-      return [];
-    }
-  }
-
-  const conditions: SQL[] = [];
-  if (options.search) {
-    const pattern = `%${escapeLikePattern(normalizeTitle(options.search))}%`;
-    conditions.push(sql`${songs.titleNorm} LIKE ${pattern} ESCAPE '\\'`);
-  }
-  if (songIdFilter) {
-    conditions.push(inArray(songs.id, [...songIdFilter]));
-  }
-  if (!options.includeArchived) {
-    conditions.push(isNull(songs.archivedAt));
-  }
-
-  const base = db
-    .select({
-      song: songs,
-      takeCount: sql<number>`count(${takes.id})`,
-      lastPlayedAt: sql<number | null>`max(${takes.recordedAt})`,
-    })
-    .from(songs)
-    .leftJoin(takes, eq(takes.songId, songs.id));
+): Promise<Paged<SongWithStats>> {
+  const conditions = songConditions(db, options);
+  const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = options.page?.offset ?? 0;
 
   // `titleNorm` is always the secondary key: `recent`/`takes` tie constantly
   // (several songs share a take count, or share "never played" — a null
@@ -273,6 +297,10 @@ export async function listWithStats(
   // data and observing the tied songs' order vary. SQLite treats NULL as
   // the lowest value, so `ORDER BY max(...) DESC` already puts a
   // never-played song last without a separate NULLS LAST clause.
+  //
+  // It is also what makes this query safe to PAGE: `titleNorm` is uniquely
+  // indexed, so every ordering here is total and a row cannot drift between
+  // pages. Nothing further is needed — see `pagination.ts`'s ordering rule.
   const sort = options.sort ?? "title";
   const orderBy =
     sort === "recent"
@@ -284,16 +312,31 @@ export async function listWithStats(
   // `and()` of an empty list is `undefined`, which `.where()` treats as no
   // filter — so one query builder covers every combination of search,
   // instrument and archived filters.
-  const rows = await base
-    .where(and(...conditions))
-    .groupBy(songs.id)
-    .orderBy(...orderBy);
+  const [rows, total] = await Promise.all([
+    db
+      .select({
+        song: songs,
+        takeCount: sql<number>`count(${takes.id})`,
+        lastPlayedAt: sql<number | null>`max(${takes.recordedAt})`,
+      })
+      .from(songs)
+      .leftJoin(takes, eq(takes.songId, songs.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(songs.id)
+      .orderBy(...orderBy)
+      .limit(limit)
+      .offset(offset),
+    count(db, options),
+  ]);
 
-  return rows.map((row) => ({
-    ...row.song,
-    takeCount: row.takeCount,
-    lastPlayedAt: row.lastPlayedAt,
-  }));
+  return {
+    rows: rows.map((row) => ({
+      ...row.song,
+      takeCount: row.takeCount,
+      lastPlayedAt: row.lastPlayedAt,
+    })),
+    total,
+  };
 }
 
 /** Every known alias of a song (manual or ingest-created), in no particular order. */

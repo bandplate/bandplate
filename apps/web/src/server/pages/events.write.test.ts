@@ -167,8 +167,10 @@ describe("archiving events", () => {
   it("takes an event out of the archive listing and into the archived view", async () => {
     await setEventArchived(db, 3000, id, true);
 
-    expect(await listEventsForArchive(db, [])).toHaveLength(1);
-    const archived = await listEventsForArchive(db, [], true);
+    expect((await listEventsForArchive(db, [], false, { limit: 25, offset: 0 })).rows).toHaveLength(
+      1,
+    );
+    const { rows: archived } = await listEventsForArchive(db, [], true, { limit: 25, offset: 0 });
     expect(archived.map((e) => e.id)).toEqual([id]);
     expect(await countArchivedEvents(db)).toBe(1);
   });
@@ -177,7 +179,9 @@ describe("archiving events", () => {
     await setEventArchived(db, 3000, id, true);
     await setEventArchived(db, 4000, id, false);
 
-    expect(await listEventsForArchive(db, [])).toHaveLength(2);
+    expect((await listEventsForArchive(db, [], false, { limit: 25, offset: 0 })).rows).toHaveLength(
+      2,
+    );
     expect(await countArchivedEvents(db)).toBe(0);
   });
 
@@ -242,7 +246,7 @@ describe("mergeEvents", () => {
     expect((await takesRepo.getById(db, onManual.id))?.eventId).toBe(fromBridge.id);
     // Archived, not deleted — a favourite pointing at it still resolves.
     expect((await eventsRepo.getById(db, manual.id))?.archivedAt).toBe(5000);
-    expect(await takesRepo.listByEvent(db, manual.id, { order: "asc" })).toEqual([]);
+    expect((await takesRepo.listByEvent(db, manual.id, { order: "asc" })).rows).toEqual([]);
   });
 
   it("gives the survivor the key when it had none", async () => {

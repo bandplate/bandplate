@@ -1469,7 +1469,8 @@ a.bp-btn {
 
 /* Back 10 and forward 10, not previous/next: there is no queue in this app.
    You are listening to one take, and the move you actually make is "play
-   that bit again". */
+   that bit again". Drawn only at `lg` and up — see the rule near the top of
+   the player block for why, and for what does the job below it. */
 .bp-player-skip {
   display: grid;
   place-items: center;
@@ -6342,5 +6343,148 @@ html:has(dialog.bp-filter-sheet[open]) body {
   .bp-take-fold-toggle,
   .bp-take-fold-toggle::after {
     transition: none;
+  }
+}
+
+/* --- Pagination ---------------------------------------------------------
+
+   The numbers are `.bp-filter-pill`s: same size, same fill, same accent for
+   the chosen one, and that class already styled `[aria-current="page"]`
+   before anything paged. What is left here is the ROW — how the numbers sit
+   between the two steps, and what happens when there is not enough width for
+   all of them.
+
+   The narrow case is the whole design problem. A row of eleven numbers plus
+   two worded steps does not fit a 375px phone, and there are only three ways
+   out: wrap it (a two-line control that reflows as you page), scroll it
+   (numbers hidden off-screen with nothing saying so), or drop something. This
+   drops the WORDS from the steps below `sm`, leaving the arrows — a left and
+   a right chevron flanking the numbers is the one pagination idiom that needs
+   no words at all, and the accessible names stay on the links either way. */
+.bp-pagination {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--bp-color-rule);
+}
+
+.bp-pagination-range {
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-pagination-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.bp-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Square-ish rather than the pill's text-width padding: a row of numbers of
+   different digit counts ("9" beside "10" beside "100") reads as a row of
+   buttons only when they share a width. */
+.bp-pagination-page {
+  justify-content: center;
+  min-width: 40px;
+  padding-inline: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-pagination-gap {
+  padding-inline: 0.125rem;
+  color: var(--bp-color-muted);
+  user-select: none;
+}
+
+/* The two ends carry more weight than a number: they are what a thumb goes
+   for, and `margin-inline-start: auto` on Next pushes them to the edges so
+   the numbers sit centred between them on a wide row. */
+.bp-pagination-step {
+  flex: 0 0 auto;
+}
+
+.bp-pagination-step[rel="next"],
+.bp-pagination-step--off:last-child {
+  margin-inline-start: auto;
+}
+
+/* Present but inert on the first and last page — see the component for why it
+   is rendered at all rather than omitted. Not `[disabled]`: this is a `<span>`
+   with no href, so there is nothing to disable, and the muted fill is what
+   says "not now" without claiming to be a broken control. */
+.bp-pagination-step--off {
+  background: transparent;
+  color: var(--bp-color-muted);
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* The phone's stand-in for the numbered links — see the component's header
+   for the measurements that made this the answer rather than a smaller
+   window or a scroller. Hidden by default because the numbers are the
+   desktop truth; the query below swaps which one is drawn. */
+.bp-pagination-here {
+  display: none;
+  font-size: var(--text-meta, 0.78125rem);
+  font-weight: 600;
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .bp-pagination-step-word {
+    /* The same technique `.bp-visually-hidden` uses, applied to one span:
+       the word leaves the layout but stays in the accessible name, so the
+       arrow is still called "Previous" by a screen reader. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* 44px in BOTH directions. `.bp-filter-pill`'s own 36px min-height is right
+     for a pill in a wrapping bank of filters, where the label beside it makes
+     the target read wider than it is; an icon-only arrow that is the primary
+     thing a thumb reaches for on this control has to clear the floor on its
+     own. */
+  .bp-pagination-step {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .bp-pagination-pages {
+    display: none;
+  }
+
+  .bp-pagination-here {
+    display: inline;
+    margin-inline: auto;
+  }
+
+  /* With the numbers gone the row cannot wrap, and `margin-inline-start: auto`
+     on Next is doing the pushing — so the label is centred between the two
+     arrows rather than pinned to either. */
+  .bp-pagination-row {
+    flex-wrap: nowrap;
   }
 }

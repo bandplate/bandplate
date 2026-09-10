@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { takes, votes } from "../schema/sqlite/index.js";
+import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 
 export type Vote = typeof votes.$inferSelect;
 
@@ -91,8 +92,47 @@ export async function listByTake(db: Db, takeId: string): Promise<Vote[]> {
   return db.select().from(votes).where(eq(votes.takeId, takeId));
 }
 
-export async function listByMember(db: Db, memberId: string): Promise<Vote[]> {
-  return db.select().from(votes).where(eq(votes.memberId, memberId)).orderBy(desc(votes.updatedAt));
+/**
+ * Every vote one member has cast, most recently changed first.
+ *
+ * `takeId` breaks the tie: the primary key is `(takeId, memberId)`, so within
+ * one member's votes `takeId` is unique and the ordering is total. Two votes
+ * cast in the same millisecond — a double-tap, or a test fixture using one
+ * literal timestamp — would otherwise have no contractual order, which
+ * `/me`'s paged history would turn into a duplicated row.
+ */
+export interface ListByMemberOptions {
+  /** Which page to return. Omitted means the FIRST page — never all of them. */
+  page?: PageArgs;
+}
+
+export async function listByMember(
+  db: Db,
+  memberId: string,
+  options: ListByMemberOptions = {},
+): Promise<Paged<Vote>> {
+  const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = options.page?.offset ?? 0;
+  const [rows, total] = await Promise.all([
+    db
+      .select()
+      .from(votes)
+      .where(eq(votes.memberId, memberId))
+      .orderBy(desc(votes.updatedAt), desc(votes.takeId))
+      .limit(limit)
+      .offset(offset),
+    countByMember(db, memberId),
+  ]);
+  return { rows, total };
+}
+
+/** How many votes one member has cast — the count, without the rows. */
+export async function countByMember(db: Db, memberId: string): Promise<number> {
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(votes)
+    .where(eq(votes.memberId, memberId));
+  return rows[0]?.value ?? 0;
 }
 
 /**

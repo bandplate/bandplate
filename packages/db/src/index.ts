@@ -3,6 +3,7 @@
 export * from "./client.js";
 export * from "./database-url.js";
 export * from "./schema/sqlite/index.js";
+export * from "./repos/pagination.js";
 
 export * as membersRepo from "./repos/members.js";
 export * as instrumentsRepo from "./repos/instruments.js";

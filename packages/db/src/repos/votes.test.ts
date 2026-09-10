@@ -90,7 +90,7 @@ describe("votes.castVote", () => {
     await votes.castVote(db, { takeId: take.id, memberId: member.id, keeper: true, now: 1000 });
     await votes.castVote(db, { takeId: take.id, memberId: member.id, keeper: true, now: 2000 });
 
-    const memberVotes = await votes.listByMember(db, member.id);
+    const { rows: memberVotes } = await votes.listByMember(db, member.id);
     expect(memberVotes.length).toBe(1);
 
     const row = await takes.getById(db, take.id);
@@ -158,7 +158,7 @@ describe("votes.castVote", () => {
     expect(row?.ratingScore).toBe(0);
     expect(row?.ratingScore).not.toBeNull();
 
-    const memberVotes = await votes.listByMember(db, member.id);
+    const { rows: memberVotes } = await votes.listByMember(db, member.id);
     expect(memberVotes.length).toBe(0);
   });
 
@@ -239,7 +239,7 @@ describe("votes.castVote", () => {
     const resolved = await members.getById(db, member.id);
     expect(resolved?.status).toBe("disabled");
 
-    const memberVotes = await votes.listByMember(db, member.id);
+    const { rows: memberVotes } = await votes.listByMember(db, member.id);
     expect(memberVotes.length).toBe(1);
     expect(memberVotes[0]?.memberId).toBe(member.id);
   });

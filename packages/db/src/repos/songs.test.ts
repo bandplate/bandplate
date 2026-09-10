@@ -165,7 +165,7 @@ describe("songs repo", () => {
     });
 
     it("reports zero takes and a null lastPlayedAt for a song with none", async () => {
-      const [result] = await songs.listWithStats(db);
+      const [result] = (await songs.listWithStats(db)).rows;
       expect(result?.takeCount).toBe(0);
       expect(result?.lastPlayedAt).toBeNull();
     });
@@ -186,16 +186,16 @@ describe("songs repo", () => {
         updatedAt: 5000,
       });
 
-      const [result] = await songs.listWithStats(db);
+      const [result] = (await songs.listWithStats(db)).rows;
       expect(result?.takeCount).toBe(2);
       expect(result?.lastPlayedAt).toBe(5000);
     });
 
     it("search matches a diacritic/case-insensitive substring of the title", async () => {
-      const results = await songs.listWithStats(db, { search: "STATS" });
+      const { rows: results } = await songs.listWithStats(db, { search: "STATS" });
       expect(results.map((s) => s.slug)).toEqual(["stats-song"]);
 
-      const noMatch = await songs.listWithStats(db, { search: "nonexistent" });
+      const { rows: noMatch } = await songs.listWithStats(db, { search: "nonexistent" });
       expect(noMatch).toEqual([]);
     });
 
@@ -211,7 +211,7 @@ describe("songs repo", () => {
         updatedAt: 1,
       });
 
-      const results = await songs.listWithStats(db, { search: "%" });
+      const { rows: results } = await songs.listWithStats(db, { search: "%" });
       expect(results).toEqual([]);
     });
 
@@ -229,7 +229,7 @@ describe("songs repo", () => {
         updatedAt: 1,
       });
 
-      const results = await songs.listWithStats(db, { search: "_" });
+      const { rows: results } = await songs.listWithStats(db, { search: "_" });
       expect(results.map((s) => s.slug)).toEqual(["under-score"]);
     });
 
@@ -243,17 +243,19 @@ describe("songs repo", () => {
         instrumentIds: [bassId],
       });
 
-      const bassOnly = await songs.listWithStats(db, { instrumentIds: [bassId] });
+      const { rows: bassOnly } = await songs.listWithStats(db, { instrumentIds: [bassId] });
       expect(bassOnly.map((s) => s.slug)).toContain("stats-song");
 
       // No take has both bass AND drums together, so the AND-filtered query
       // must exclude this song even though it has a take with bass alone.
-      const bassAndDrums = await songs.listWithStats(db, { instrumentIds: [bassId, drumsId] });
+      const { rows: bassAndDrums } = await songs.listWithStats(db, {
+        instrumentIds: [bassId, drumsId],
+      });
       expect(bassAndDrums.map((s) => s.slug)).not.toContain("stats-song");
     });
 
     it("instrumentIds filter returns an empty array when nothing matches", async () => {
-      const results = await songs.listWithStats(db, { instrumentIds: [bassId] });
+      const { rows: results } = await songs.listWithStats(db, { instrumentIds: [bassId] });
       expect(results).toEqual([]);
     });
 
@@ -272,7 +274,7 @@ describe("songs repo", () => {
         updatedAt: 9000,
       });
 
-      const results = await songs.listWithStats(db, { sort: "recent" });
+      const { rows: results } = await songs.listWithStats(db, { sort: "recent" });
       // "other-song" was played (9000); "stats-song" has never been played.
       expect(results.map((s) => s.slug)).toEqual(["other-song", "stats-song"]);
     });
@@ -286,7 +288,7 @@ describe("songs repo", () => {
         updatedAt: 1,
       });
 
-      const results = await songs.listWithStats(db, { sort: "takes" });
+      const { rows: results } = await songs.listWithStats(db, { sort: "takes" });
       const quietIndex = results.findIndex((s) => s.slug === "quiet-song");
       const statsIndex = results.findIndex((s) => s.slug === "stats-song");
       expect(quiet.slug).toBe("quiet-song");
@@ -321,7 +323,7 @@ describe("songs repo", () => {
       // "stats-song" (from beforeEach) also has zero takes, so all four songs
       // tie at takeCount === 0.
 
-      const results = await songs.listWithStats(db, { sort: "takes" });
+      const { rows: results } = await songs.listWithStats(db, { sort: "takes" });
       expect(results.map((s) => s.slug)).toEqual([
         "apple-song",
         "mango-song",
@@ -346,8 +348,71 @@ describe("songs repo", () => {
       // "stats-song" (from beforeEach) is also never played — all three tie
       // on a null lastPlayedAt.
 
-      const results = await songs.listWithStats(db, { sort: "recent" });
+      const { rows: results } = await songs.listWithStats(db, { sort: "recent" });
       expect(results.map((s) => s.slug)).toEqual(["apple-song", "stats-song", "zebra-song"]);
+    });
+
+    describe("paging", () => {
+      beforeEach(async () => {
+        // Ten more, so there is something to page. `titleNorm` is uniquely
+        // indexed, so the default `title` sort is already a total order —
+        // which is what makes this query safe to page at all.
+        for (let i = 0; i < 10; i++) {
+          await songs.create(db, {
+            title: `Paged Song ${String(i).padStart(2, "0")}`,
+            slug: `paged-song-${i}`,
+            createdAt: 1,
+            updatedAt: 1,
+          });
+        }
+      });
+
+      it("returns a page and the whole library's count", async () => {
+        const { rows, total } = await songs.listWithStats(db, { page: { limit: 4, offset: 0 } });
+        expect(rows).toHaveLength(4);
+        expect(total).toBe(11);
+      });
+
+      it("walks every song exactly once across pages", async () => {
+        const seen: string[] = [];
+        for (let offset = 0; offset < 12; offset += 4) {
+          const { rows } = await songs.listWithStats(db, { page: { limit: 4, offset } });
+          seen.push(...rows.map((r) => r.id));
+        }
+        expect(seen).toHaveLength(11);
+        expect(new Set(seen).size).toBe(11);
+      });
+
+      it("counts what the search matches, not the whole library", async () => {
+        const { rows, total } = await songs.listWithStats(db, {
+          search: "Paged",
+          page: { limit: 3, offset: 0 },
+        });
+        expect(rows).toHaveLength(3);
+        expect(total).toBe(10);
+        expect(await songs.count(db, { search: "Paged" })).toBe(10);
+      });
+
+      // The instrument filter is a subquery now, not a pre-pass that pulled
+      // every matching id into an `inArray` — so it composes with the count.
+      it("counts an instrument-filtered library correctly", async () => {
+        const filtered = { instrumentIds: [bassId] };
+        const { rows, total } = await songs.listWithStats(db, {
+          ...filtered,
+          page: { limit: 5, offset: 0 },
+        });
+        expect(total).toBe(rows.length);
+        expect(await songs.count(db, filtered)).toBe(total);
+      });
+
+      it("onlyArchived returns the archive rather than both sets", async () => {
+        await songs.update(db, songId, { archivedAt: 5000, updatedAt: 5000 });
+        const live = await songs.listWithStats(db);
+        const archived = await songs.listWithStats(db, { onlyArchived: true });
+        expect(live.total).toBe(10);
+        expect(archived.total).toBe(1);
+        expect(archived.rows.map((r) => r.id)).toEqual([songId]);
+      });
     });
   });
 
@@ -424,7 +489,7 @@ describe("songs repo", () => {
     await songs.update(db, retired.id, { archivedAt: 3000, updatedAt: 3000 });
 
     expect((await songs.list(db)).map((r) => r.id)).toEqual([live.id]);
-    expect((await songs.listWithStats(db)).map((r) => r.id)).toEqual([live.id]);
+    expect((await songs.listWithStats(db)).rows.map((r) => r.id)).toEqual([live.id]);
 
     // A take of an archived song still links to /songs/beta, so the lookups
     // must keep resolving it.
@@ -446,9 +511,9 @@ describe("songs repo", () => {
     expect((await songs.list(db, { includeArchived: true })).map((r) => r.id)).toEqual([
       retired.id,
     ]);
-    expect((await songs.listWithStats(db, { includeArchived: true })).map((r) => r.id)).toEqual([
-      retired.id,
-    ]);
+    expect(
+      (await songs.listWithStats(db, { includeArchived: true })).rows.map((r) => r.id),
+    ).toEqual([retired.id]);
   });
 
   it("listWithStats combines the search and archived filters", async () => {
@@ -466,7 +531,7 @@ describe("songs repo", () => {
     });
     await songs.update(db, retired.id, { archivedAt: 3000, updatedAt: 3000 });
 
-    const found = await songs.listWithStats(db, { search: "neon" });
+    const { rows: found } = await songs.listWithStats(db, { search: "neon" });
     expect(found.map((r) => r.id)).toEqual([live.id]);
   });
 

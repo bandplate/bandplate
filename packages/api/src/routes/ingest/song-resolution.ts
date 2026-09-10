@@ -46,8 +46,14 @@ async function reviveIfArchived(
 
 /** Up to 5 loose title matches for a `song_not_found` response's `candidates`. */
 async function fuzzyCandidates(db: Db, title: string): Promise<songsRepo.Song[]> {
-  const results = await songsRepo.listWithStats(db, { search: title });
-  return results.slice(0, 5);
+  // Asked of the database as a page of five rather than sliced from every
+  // match — this is a hint in an error body, so five is the whole requirement
+  // and there is no reason to read the rest of the library to throw it away.
+  const { rows } = await songsRepo.listWithStats(db, {
+    search: title,
+    page: { limit: 5, offset: 0 },
+  });
+  return rows;
 }
 
 export async function resolveSong(

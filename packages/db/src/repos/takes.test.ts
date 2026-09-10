@@ -6,6 +6,7 @@ import { createTestDb } from "../testing/create-test-db.js";
 import * as events from "./events.js";
 import * as instruments from "./instruments.js";
 import * as members from "./members.js";
+import { DEFAULT_PAGE_SIZE } from "./pagination.js";
 import * as songs from "./songs.js";
 import * as takes from "./takes.js";
 import type { TakeState } from "./takes.js";
@@ -181,12 +182,12 @@ describe("takes.listByEvent ordering", () => {
   });
 
   it("defaults to newest first (desc)", async () => {
-    const result = await takes.listByEvent(db, eventId);
+    const { rows: result } = await takes.listByEvent(db, eventId);
     expect(result.map((t) => t.recordedAt)).toEqual([3000, 2000, 1000]);
   });
 
   it("order: 'asc' returns recorded order — the order the session actually happened", async () => {
-    const result = await takes.listByEvent(db, eventId, { order: "asc" });
+    const { rows: result } = await takes.listByEvent(db, eventId, { order: "asc" });
     expect(result.map((t) => t.recordedAt)).toEqual([1000, 2000, 3000]);
   });
 });
@@ -228,7 +229,7 @@ describe("takes.listBySong ordering", () => {
   });
 
   it("returns every take of a song newest first", async () => {
-    const result = await takes.listBySong(db, songId);
+    const { rows: result } = await takes.listBySong(db, songId);
     expect(result.map((t) => t.recordedAt)).toEqual([3000, 2000, 1000]);
   });
 
@@ -248,7 +249,7 @@ describe("takes.listBySong ordering", () => {
       updatedAt: 4000,
     });
 
-    const result = await takes.listBySong(db, songId);
+    const { rows: result } = await takes.listBySong(db, songId);
     expect(result.map((t) => t.recordedAt)).toEqual([3000, 2000, 1000]);
   });
 
@@ -273,11 +274,103 @@ describe("takes.listBySong ordering", () => {
     await insertTakeWithId(db, "zzz-take", { songId, eventId, recordedAt: same });
     await insertTakeWithId(db, "aaa-take", { songId, eventId, recordedAt: same });
 
-    const first = await takes.listBySong(db, songId);
-    const second = await takes.listBySong(db, songId);
+    const { rows: first } = await takes.listBySong(db, songId);
+    const { rows: second } = await takes.listBySong(db, songId);
     const tied = first.filter((t) => t.recordedAt === same).map((t) => t.id);
     expect(tied).toEqual(second.filter((t) => t.recordedAt === same).map((t) => t.id));
     expect(tied).toEqual(["zzz-take", "aaa-take"]);
+  });
+});
+
+describe("takes per-parent paging", () => {
+  let db: Db;
+  let songId: string;
+  let eventId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    const song = await songs.create(db, {
+      title: "Paged Parent Song",
+      slug: "paged-parent-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    songId = song.id;
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    eventId = event.id;
+    // Every take stamped the SAME instant — a rehearsal's renders come off the
+    // bridge in one batch, and a fixture makes it certain. This is the shape a
+    // missing `id` tie-break turns into a row shown on two pages.
+    for (let i = 0; i < 7; i++) {
+      await takes.create(db, {
+        songId,
+        eventId,
+        recordedAt: 4242,
+        createdAt: 1000 + i,
+        updatedAt: 1000 + i,
+      });
+    }
+  });
+
+  it("listBySong returns a page plus the song's true take count", async () => {
+    const { rows, total } = await takes.listBySong(db, songId, { page: { limit: 3, offset: 0 } });
+    expect(rows).toHaveLength(3);
+    expect(total).toBe(7);
+  });
+
+  it("listBySong walks all seven exactly once despite identical timestamps", async () => {
+    const seen: string[] = [];
+    for (let offset = 0; offset < 9; offset += 3) {
+      const { rows } = await takes.listBySong(db, songId, { page: { limit: 3, offset } });
+      seen.push(...rows.map((r) => r.id));
+    }
+    expect(seen).toHaveLength(7);
+    expect(new Set(seen).size).toBe(7);
+  });
+
+  it("listByEvent walks all seven exactly once, in either direction", async () => {
+    for (const order of ["asc", "desc"] as const) {
+      const seen: string[] = [];
+      for (let offset = 0; offset < 9; offset += 3) {
+        const { rows } = await takes.listByEvent(db, eventId, {
+          order,
+          page: { limit: 3, offset },
+        });
+        seen.push(...rows.map((r) => r.id));
+      }
+      expect(new Set(seen).size).toBe(7);
+    }
+  });
+
+  it("listByEvent's asc and desc pages are exact reverses of each other", async () => {
+    const asc = await takes.listByEvent(db, eventId, {
+      order: "asc",
+      page: { limit: 7, offset: 0 },
+    });
+    const desc = await takes.listByEvent(db, eventId, {
+      order: "desc",
+      page: { limit: 7, offset: 0 },
+    });
+    // The tie-break follows the primary key's direction — otherwise takes
+    // stamped the same second read backwards relative to the rows around them.
+    expect(asc.rows.map((r) => r.id)).toEqual([...desc.rows].reverse().map((r) => r.id));
+  });
+
+  it("counts without fetching rows", async () => {
+    expect(await takes.countBySong(db, songId)).toBe(7);
+    expect(await takes.countByEvent(db, eventId)).toBe(7);
+    expect((await takes.countBySongs(db, [songId])).get(songId)).toBe(7);
+    expect((await takes.countByEvents(db, [eventId])).get(eventId)).toBe(7);
+  });
+
+  it("listAllBySong returns every take, unpaged — the cascade's view", async () => {
+    expect(await takes.listAllBySong(db, songId)).toHaveLength(7);
   });
 });
 
@@ -743,7 +836,7 @@ describe("takes.search", () => {
       updatedAt: 2000,
     });
 
-    const { results: result } = await takes.search(db);
+    const { rows: result } = await takes.search(db);
     expect(result.map((t) => t.id)).toEqual([newer.id, older.id]);
   });
 
@@ -807,10 +900,10 @@ describe("takes.search", () => {
     // A plain recency (default) sort would put the newer 1-of-1 first —
     // proving the "rating" sort actually changes the order, not just
     // agreeing with recency by coincidence.
-    const { results: recent } = await takes.search(db, {}, { sort: "recent" });
+    const { rows: recent } = await takes.search(db, {}, { sort: "recent" });
     expect(recent.map((t) => t.id)).toEqual([oneOfOne.id, sixOfSeven.id]);
 
-    const { results: rated } = await takes.search(db, {}, { sort: "rating" });
+    const { rows: rated } = await takes.search(db, {}, { sort: "rating" });
     expect(rated.map((t) => t.id)).toEqual([sixOfSeven.id, oneOfOne.id]);
   });
 
@@ -838,11 +931,11 @@ describe("takes.search", () => {
       instrumentIds: [bassId, drumsId],
     });
 
-    const { results: bassAndDrums } = await takes.search(db, { instrumentIds: [bassId, drumsId] });
+    const { rows: bassAndDrums } = await takes.search(db, { instrumentIds: [bassId, drumsId] });
     expect(bassAndDrums.map((t) => t.id)).toEqual([both.id]);
     expect(bassAndDrums.map((t) => t.id)).not.toContain(bassOnly.id);
 
-    const { results: bassOnlyFilter } = await takes.search(db, { instrumentIds: [bassId] });
+    const { rows: bassOnlyFilter } = await takes.search(db, { instrumentIds: [bassId] });
     expect(bassOnlyFilter.map((t) => t.id).sort()).toEqual([bassOnly.id, both.id].sort());
   });
 
@@ -875,10 +968,10 @@ describe("takes.search", () => {
       updatedAt: 3000,
     });
 
-    const { results: inRange } = await takes.search(db, { dateFrom: 1500, dateTo: 2500 });
+    const { rows: inRange } = await takes.search(db, { dateFrom: 1500, dateTo: 2500 });
     expect(inRange.map((t) => t.id)).toEqual([mid.id]);
 
-    const { results: inclusiveEnds } = await takes.search(db, { dateFrom: 1000, dateTo: 3000 });
+    const { rows: inclusiveEnds } = await takes.search(db, { dateFrom: 1000, dateTo: 3000 });
     expect(inclusiveEnds.map((t) => t.id).sort()).toEqual([early.id, mid.id, late.id].sort());
   });
 
@@ -916,7 +1009,7 @@ describe("takes.search", () => {
       now: 1000,
     });
 
-    const { results: result } = await takes.search(db, { minRating: 0.5 });
+    const { rows: result } = await takes.search(db, { minRating: 0.5 });
     expect(result.map((t) => t.id)).toEqual([highRated.id]);
     expect(result.map((t) => t.id)).not.toContain(unrated.id);
   });
@@ -945,7 +1038,7 @@ describe("takes.search", () => {
       state: "rejected",
     });
 
-    const { results: result } = await takes.search(db, { states: ["published"] });
+    const { rows: result } = await takes.search(db, { states: ["published"] });
     expect(result.map((t) => t.id)).toEqual([published.id]);
     expect(result.map((t) => t.id)).not.toContain(rejected.id);
   });
@@ -978,7 +1071,7 @@ describe("takes.search", () => {
       updatedAt: 1000,
     });
 
-    const { results: result } = await takes.search(db, { search: "skyline" });
+    const { rows: result } = await takes.search(db, { search: "skyline" });
     expect(result.map((t) => t.id)).toEqual([match.id]);
     expect(result.map((t) => t.id)).not.toContain(noMatch.id);
   });
@@ -999,7 +1092,7 @@ describe("takes.search", () => {
       updatedAt: 1000,
     });
 
-    const { results: result } = await takes.search(db, { search: "nickname" });
+    const { rows: result } = await takes.search(db, { search: "nickname" });
     expect(result.map((t) => t.id)).toEqual([take.id]);
   });
 
@@ -1040,7 +1133,7 @@ describe("takes.search", () => {
       instrumentIds: [drumsId],
     });
 
-    const { results: result } = await takes.search(db, {
+    const { rows: result } = await takes.search(db, {
       instrumentIds: [bassId],
       states: ["published"],
     });
@@ -1055,7 +1148,7 @@ describe("takes.search", () => {
       updatedAt: 1000,
     });
 
-    const { results: result } = await takes.search(db, { search: "no-such-title-exists" });
+    const { rows: result } = await takes.search(db, { search: "no-such-title-exists" });
     expect(result).toEqual([]);
   });
 
@@ -1078,22 +1171,21 @@ describe("takes.search", () => {
     await insertTakeWithId(db, "zzz-take", { songId: song.id, eventId, recordedAt: same });
     await insertTakeWithId(db, "aaa-take", { songId: song.id, eventId, recordedAt: same });
 
-    const { results: first } = await takes.search(db, { search: "tie break" });
-    const { results: second } = await takes.search(db, { search: "tie break" });
+    const { rows: first } = await takes.search(db, { search: "tie break" });
+    const { rows: second } = await takes.search(db, { search: "tie break" });
     expect(first.map((t) => t.id)).toEqual(second.map((t) => t.id));
     // Deterministic AND matches the documented tie-break (id, descending).
     expect(first.map((t) => t.id)).toEqual(["zzz-take", "aaa-take"]);
   });
 
-  it("truncates at SEARCH_LIMIT and reports truncated: true when more takes match", async () => {
+  it("returns one page and the TOTAL matching count, not the page's length", async () => {
     const song = await songs.create(db, {
       title: "Truncation Search Song",
       slug: "truncation-search-song",
       createdAt: 1000,
       updatedAt: 1000,
     });
-    const limit = 3;
-    for (let i = 0; i < limit + 2; i++) {
+    for (let i = 0; i < 5; i++) {
       await takes.create(db, {
         songId: song.id,
         eventId,
@@ -1103,20 +1195,74 @@ describe("takes.search", () => {
       });
     }
 
-    const { results, truncated } = await takes.search(db, {}, { limit });
-    expect(results).toHaveLength(limit);
-    expect(truncated).toBe(true);
+    const { rows, total } = await takes.search(db, {}, { page: { limit: 3, offset: 0 } });
+    expect(rows).toHaveLength(3);
+    // The point of the total: it counts every match, so a caller can say "5"
+    // rather than the "3+" a truncation flag forced.
+    expect(total).toBe(5);
   });
 
-  it("reports truncated: false when the result count is exactly at the limit", async () => {
+  it("walks every matching take exactly once across pages, with no overlap", async () => {
     const song = await songs.create(db, {
-      title: "Exact Limit Search Song",
-      slug: "exact-limit-search-song",
+      title: "Paged Search Song",
+      slug: "paged-search-song",
       createdAt: 1000,
       updatedAt: 1000,
     });
-    const limit = 3;
-    for (let i = 0; i < limit; i++) {
+    for (let i = 0; i < 5; i++) {
+      await takes.create(db, {
+        songId: song.id,
+        eventId,
+        // The same instant for every take — the case a missing `id` tie-break
+        // turns into a row appearing on two pages and another on none.
+        recordedAt: 4242,
+        createdAt: 1000 + i,
+        updatedAt: 1000 + i,
+      });
+    }
+
+    const first = await takes.search(db, { songId: song.id }, { page: { limit: 2, offset: 0 } });
+    const second = await takes.search(db, { songId: song.id }, { page: { limit: 2, offset: 2 } });
+    const third = await takes.search(db, { songId: song.id }, { page: { limit: 2, offset: 4 } });
+
+    const seen = [...first.rows, ...second.rows, ...third.rows].map((t) => t.id);
+    expect(seen).toHaveLength(5);
+    expect(new Set(seen).size).toBe(5);
+    expect(first.total).toBe(5);
+  });
+
+  it("returns an empty page, and the true total, past the end", async () => {
+    const song = await songs.create(db, {
+      title: "Past The End Song",
+      slug: "past-the-end-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await takes.create(db, {
+      songId: song.id,
+      eventId,
+      recordedAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    const { rows, total } = await takes.search(
+      db,
+      { songId: song.id },
+      { page: { limit: 25, offset: 100 } },
+    );
+    expect(rows).toEqual([]);
+    expect(total).toBe(1);
+  });
+
+  it("defaults to the FIRST page rather than to everything", async () => {
+    const song = await songs.create(db, {
+      title: "Default Page Song",
+      slug: "default-page-song",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    for (let i = 0; i < DEFAULT_PAGE_SIZE + 4; i++) {
       await takes.create(db, {
         songId: song.id,
         eventId,
@@ -1126,9 +1272,9 @@ describe("takes.search", () => {
       });
     }
 
-    const { results, truncated } = await takes.search(db, {}, { limit });
-    expect(results).toHaveLength(limit);
-    expect(truncated).toBe(false);
+    const { rows, total } = await takes.search(db, { songId: song.id });
+    expect(rows).toHaveLength(DEFAULT_PAGE_SIZE);
+    expect(total).toBe(DEFAULT_PAGE_SIZE + 4);
   });
 });
 

@@ -24,10 +24,17 @@
 // `display: none`, which the no-JS rule below overrides), and the form's own
 // submit button applies the filters.
 import { instrumentsRepo, songsRepo } from "@bandplate/db";
+import Pagination from "@bandplate/ui/components/Pagination.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { hasAnyFilter, parseSearchQuery, searchTakes } from "../../server/pages/search.js";
+import {
+  TAKES_PER_PAGE,
+  hasAnyFilter,
+  parseSearchQuery,
+  searchTakes,
+} from "../../server/pages/search.js";
+import { pageRequest, pageView } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -38,8 +45,9 @@ const appDeps = await getAppDeps();
 const query = parseSearchQuery(Astro.url.searchParams);
 const filtersApplied = hasAnyFilter(query) || query.sort !== "recent";
 
-const [{ results, truncated }, instruments, songs] = await Promise.all([
-  searchTakes(appDeps.db, query, principal.memberId),
+const { page, args: takesPage } = pageRequest(Astro.url.searchParams, TAKES_PER_PAGE);
+const [{ results, total }, instruments, songs] = await Promise.all([
+  searchTakes(appDeps.db, query, principal.memberId, takesPage),
   instrumentsRepo.list(appDeps.db),
   // The picker's options. A band's repertoire is tens of songs, so the whole
   // list is one cheap query and a plain `<select>` — no autocomplete, no
@@ -57,14 +65,17 @@ const activeFilterCount = [
   query.unvotedOnly,
 ].filter(Boolean).length;
 
-// When truncated, `results.length` is only the page size (`SEARCH_LIMIT`),
-// not the true match count — stating it as a count directly above the
-// truncation notice below would contradict that notice ("N takes match" /
-// "showing the first N — narrow to see the rest" reads as if N were the
-// whole truth). Qualify it as "at least N" instead so the two lines agree.
-const countLabel = truncated
-  ? `${results.length}+ ${results.length === 1 ? "take" : "takes"}`
-  : `${results.length} ${results.length === 1 ? "take" : "takes"}`;
+const pages = pageView({ url: Astro.url, page, perPage: TAKES_PER_PAGE, total });
+// A filtered link whose page has since fallen off the end lands on the last
+// real one rather than on an empty result set that looks like a bad filter.
+if (pages.redirectTo) {
+  return Astro.redirect(pages.redirectTo);
+}
+
+// The real count, not a hedge. This read `${results.length}+ takes` when the
+// old hard cap truncated — "200+" said nothing a member could act on, and was
+// indistinguishable from an archive that held exactly 200.
+const countLabel = `${total} ${total === 1 ? "take" : "takes"}`;
 ---
 
 <AppLayout title="Takes" principal={principal} current="takes">
@@ -235,13 +246,6 @@ const countLabel = truncated
         {filtersApplied && <span class="bp-kind">filtered</span>}
       </p>
       {
-        truncated && (
-          <p class="bp-field-hint bp-m0">
-            Showing the first {results.length} — narrow the filters to see the rest.
-          </p>
-        )
-      }
-      {
         results.length === 0 ? (
           <div class="bp-empty-state">
             <p>
@@ -264,6 +268,8 @@ const countLabel = truncated
           </div>
         )
       }
+
+      <Pagination {...pages} noun="take" />
     </div>
   </div>
 </AppLayout>

@@ -1,6 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { favorites } from "../schema/sqlite/index.js";
+import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 
 export type Favorite = typeof favorites.$inferSelect;
 export type FavoriteTargetType = Favorite["targetType"];
@@ -59,12 +60,47 @@ export async function removeAllForTarget(
     .where(and(eq(favorites.targetType, targetType), eq(favorites.targetId, targetId)));
 }
 
-export async function listByMember(db: Db, memberId: string): Promise<Favorite[]> {
-  return db
-    .select()
+/**
+ * One member's pins, newest first.
+ *
+ * `(targetType, targetId)` completes the ordering — with `memberId` fixed
+ * they are the rest of the primary key, so no two rows can tie on all three.
+ * Pins made in one burst share a `createdAt` far more often than takes share
+ * a `recordedAt`, which makes this the listing where a missing tie-break
+ * would have surfaced first.
+ */
+export interface ListByMemberOptions {
+  /** Which page to return. Omitted means the FIRST page — never all of them. */
+  page?: PageArgs;
+}
+
+export async function listByMember(
+  db: Db,
+  memberId: string,
+  options: ListByMemberOptions = {},
+): Promise<Paged<Favorite>> {
+  const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = options.page?.offset ?? 0;
+  const [rows, total] = await Promise.all([
+    db
+      .select()
+      .from(favorites)
+      .where(eq(favorites.memberId, memberId))
+      .orderBy(desc(favorites.createdAt), desc(favorites.targetType), desc(favorites.targetId))
+      .limit(limit)
+      .offset(offset),
+    countByMember(db, memberId),
+  ]);
+  return { rows, total };
+}
+
+/** How many things one member has pinned — the count, without the rows. */
+export async function countByMember(db: Db, memberId: string): Promise<number> {
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
     .from(favorites)
-    .where(eq(favorites.memberId, memberId))
-    .orderBy(desc(favorites.createdAt));
+    .where(eq(favorites.memberId, memberId));
+  return rows[0]?.value ?? 0;
 }
 
 export async function isFavorited(

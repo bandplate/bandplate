@@ -50,11 +50,11 @@ const [keep, merge] = await Promise.all([
 if (!keep || !merge) {
   return new Response("Event not found.", { status: 404 });
 }
-const moving = await takesRepo.listByEvent(appDeps.db, merge.id, { order: "asc" });
+const movingCount = await takesRepo.countByEvent(appDeps.db, merge.id);
 const name = (event: eventsRepo.Event) =>
   eventLabel({ title: event.title ?? null, venue: event.venue ?? null }) ||
   `the ${eventKindLabel(event.kind)} of ${formatLongDate(event.heldAt)}`;
-const takeNoun = moving.length === 1 ? "take" : "takes";
+const takeNoun = movingCount === 1 ? "take" : "takes";
 const inheritsKey = !keep.clientRef && merge.clientRef !== null;
 ---
 
@@ -65,9 +65,9 @@ const inheritsKey = !keep.clientRef && merge.clientRef !== null;
     cancelHref={`/events/${keep.id}`}
     tone="neutral"
   >
-    {moving.length === 0
+    {movingCount === 0
       ? "It has no takes, so nothing moves — it is just archived."
-      : `Its ${moving.length} ${takeNoun} move across, keeping their songs, their files and their votes.`}
+      : `Its ${movingCount} ${takeNoun} move across, keeping their songs, their files and their votes.`}
     {" "}The emptied event is archived rather than deleted, so anything pinned to it still resolves.
     {inheritsKey
       ? " This one also takes over the key the bridge files against, so the next push lands here instead of creating the split again."

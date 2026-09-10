@@ -15,6 +15,7 @@ import { hasAllScopes } from "@bandplate/core";
 import { favoritesRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import Pagination from "@bandplate/ui/components/Pagination.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -22,12 +23,14 @@ import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { formatShortDate } from "../../server/format.js";
 import {
+  SONGS_PER_PAGE,
   type SongField,
   countArchivedSongs,
   createSong,
   listSongsForLibrary,
   parseSongsListQuery,
 } from "../../server/pages/songs.js";
+import { pageRequest, pageView } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -71,11 +74,18 @@ if (Astro.request.method === "POST") {
 const query = parseSongsListQuery(Astro.url.searchParams);
 const canArchive = hasAllScopes(principal, ["members:admin"]);
 
+const { page, args: songsPage } = pageRequest(Astro.url.searchParams, SONGS_PER_PAGE);
 const [songs, favoriteSongIds, archivedCount] = await Promise.all([
-  listSongsForLibrary(appDeps.db, query),
+  listSongsForLibrary(appDeps.db, query, songsPage),
   favoritesRepo.listTargetIdsByMember(appDeps.db, principal.memberId, "song"),
   countArchivedSongs(appDeps.db),
 ]);
+const pages = pageView({ url: Astro.url, page, perPage: SONGS_PER_PAGE, total: songs.total });
+// A link to a page that has since fallen off the end lands on the last real
+// one, filters intact, rather than on a blank library.
+if (pages.redirectTo) {
+  return Astro.redirect(pages.redirectTo);
+}
 
 const justArchived = Astro.url.searchParams.get("archived_ok") === "1";
 const justUnarchived = Astro.url.searchParams.get("unarchived") === "1";
@@ -83,12 +93,15 @@ const justDeleted = Astro.url.searchParams.get("song_deleted") === "1";
 
 const sort = query.sort ?? "title";
 const viewingArchive = query.archived === true;
-const noun = songs.length === 1 ? "song" : "songs";
+// Counted from the TOTAL, not from this page: "25 songs" under a library of
+// 60 would be the page's length wearing the library's name.
+const songCount = songs.total;
+const noun = songCount === 1 ? "song" : "songs";
 const resultsLabel = query.search
-  ? `${songs.length} ${songs.length === 1 ? "song matches" : "songs match"}`
+  ? `${songCount} ${songCount === 1 ? "song matches" : "songs match"}`
   : viewingArchive
-    ? `${songs.length} archived ${noun}`
-    : `${songs.length} ${noun}`;
+    ? `${songCount} archived ${noun}`
+    : `${songCount} ${noun}`;
 
 const SORT_OPTIONS = [
   { value: "title", label: "A to Z" },
@@ -260,7 +273,7 @@ function archivedHref(): string {
     <p class="bp-field-hint bp-m0">{resultsLabel}</p>
 
     {
-      songs.length === 0 ? (
+      songs.rows.length === 0 ? (
         <div class="bp-empty-state">
           <p>
             {query.search
@@ -272,7 +285,7 @@ function archivedHref(): string {
         </div>
       ) : (
         <div class="bp-song-list">
-          {songs.map((song) => (
+          {songs.rows.map((song) => (
             <div class="bp-song-row">
               <a href={`/songs/${song.slug}`} class="bp-song-row-link">
                 <span class="bp-song-row-main">
@@ -309,6 +322,8 @@ function archivedHref(): string {
         </div>
       )
     }
+
+    <Pagination {...pages} noun="song" />
   </div>
 </AppLayout>
 

@@ -54,7 +54,7 @@ describe("events repo", () => {
 
   it("listRecentWithTakeCounts reports zero for an event with no takes", async () => {
     await events.create(db, { kind: "rehearsal", heldAt: 1000, createdAt: 1000, updatedAt: 1000 });
-    const [result] = await events.listRecentWithTakeCounts(db);
+    const [result] = (await events.listRecentWithTakeCounts(db)).rows;
     expect(result?.takeCount).toBe(0);
   });
 
@@ -86,7 +86,7 @@ describe("events repo", () => {
       updatedAt: 1100,
     });
 
-    const [result] = await events.listRecentWithTakeCounts(db);
+    const [result] = (await events.listRecentWithTakeCounts(db)).rows;
     expect(result?.takeCount).toBe(2);
   });
 
@@ -107,10 +107,12 @@ describe("events repo", () => {
       updatedAt: 2000,
     });
 
-    const concertsOnly = await events.listRecentWithTakeCounts(db, { kind: ["concert"] });
+    const { rows: concertsOnly } = await events.listRecentWithTakeCounts(db, { kind: ["concert"] });
     expect(concertsOnly.map((e) => e.id)).toEqual([concert.id]);
 
-    const both = await events.listRecentWithTakeCounts(db, { kind: ["concert", "rehearsal"] });
+    const { rows: both } = await events.listRecentWithTakeCounts(db, {
+      kind: ["concert", "rehearsal"],
+    });
     expect(both.map((e) => e.id)).toEqual([concert.id, rehearsal.id]);
   });
 
@@ -128,7 +130,7 @@ describe("events repo", () => {
       updatedAt: 2000,
     });
 
-    const list = await events.listRecentWithTakeCounts(db);
+    const { rows: list } = await events.listRecentWithTakeCounts(db);
     expect(list.map((e) => e.id)).toEqual([newer.id, older.id]);
   });
 
@@ -185,7 +187,7 @@ describe("events repo", () => {
     await events.update(db, retired.id, { archivedAt: 3000, updatedAt: 3000 });
 
     expect((await events.listRecent(db)).map((e) => e.id)).toEqual([live.id]);
-    expect((await events.listRecentWithTakeCounts(db)).map((e) => e.id)).toEqual([live.id]);
+    expect((await events.listRecentWithTakeCounts(db)).rows.map((e) => e.id)).toEqual([live.id]);
 
     // The listings-filter/lookups-don't rule: a take row pointing at an
     // archived event must still be able to name it.
@@ -207,7 +209,7 @@ describe("events repo", () => {
       retired.id,
     ]);
     expect(
-      (await events.listRecentWithTakeCounts(db, { includeArchived: true })).map((e) => e.id),
+      (await events.listRecentWithTakeCounts(db, { includeArchived: true })).rows.map((e) => e.id),
     ).toEqual([retired.id]);
   });
 
@@ -227,7 +229,7 @@ describe("events repo", () => {
     });
     await events.update(db, archivedRehearsal.id, { archivedAt: 4000, updatedAt: 4000 });
 
-    const list = await events.listRecentWithTakeCounts(db, { kind: ["rehearsal"] });
+    const { rows: list } = await events.listRecentWithTakeCounts(db, { kind: ["rehearsal"] });
     expect(list.map((e) => e.id)).toEqual([rehearsal.id]);
   });
 
@@ -250,5 +252,126 @@ describe("events repo", () => {
     // event possible at all.
     await events.setClientRef(db, manual.id, null, 3000);
     expect(await events.getByClientRef(db, "reaper-abc")).toBeUndefined();
+  });
+
+  // --- paging -------------------------------------------------------------
+
+  describe("listRecentWithTakeCounts paging", () => {
+    /** Every event on the SAME DAY — the case a missing tie-break breaks. */
+    async function seedSameDay(count: number) {
+      const ids: string[] = [];
+      for (let i = 0; i < count; i++) {
+        const e = await events.create(db, {
+          kind: "rehearsal",
+          // One `heldAt` for all of them: `heldAt` is a date, so a band that
+          // logs a morning and an evening rehearsal ties on the only sort key.
+          heldAt: 1_700_000_000_000,
+          createdAt: 1000 + i,
+          updatedAt: 1000 + i,
+        });
+        ids.push(e.id);
+      }
+      return ids;
+    }
+
+    it("returns one page and the total matching count", async () => {
+      await seedSameDay(7);
+      const { rows, total } = await events.listRecentWithTakeCounts(db, {
+        page: { limit: 3, offset: 0 },
+      });
+      expect(rows).toHaveLength(3);
+      expect(total).toBe(7);
+    });
+
+    it("walks every event exactly once across pages, all held the same day", async () => {
+      const ids = await seedSameDay(7);
+      const seen: string[] = [];
+      for (let offset = 0; offset < 9; offset += 3) {
+        const { rows } = await events.listRecentWithTakeCounts(db, {
+          page: { limit: 3, offset },
+        });
+        seen.push(...rows.map((r) => r.id));
+      }
+      expect(seen).toHaveLength(7);
+      expect(new Set(seen).size).toBe(7);
+      expect(new Set(seen)).toEqual(new Set(ids));
+    });
+
+    it("counts what the filter matches, not the whole table", async () => {
+      await seedSameDay(4);
+      await events.create(db, {
+        kind: "concert",
+        heldAt: 1_700_000_000_000,
+        createdAt: 9000,
+        updatedAt: 9000,
+      });
+      const { total } = await events.listRecentWithTakeCounts(db, { kind: ["concert"] });
+      expect(total).toBe(1);
+    });
+
+    it("onlyArchived counts and returns the archive, not both sets", async () => {
+      const ids = await seedSameDay(3);
+      await events.update(db, ids[0] as string, { archivedAt: 5000, updatedAt: 5000 });
+
+      const live = await events.listRecentWithTakeCounts(db);
+      const archived = await events.listRecentWithTakeCounts(db, { onlyArchived: true });
+      expect(live.total).toBe(2);
+      expect(archived.total).toBe(1);
+      expect(archived.rows.map((r) => r.id)).toEqual([ids[0]]);
+      expect(await events.count(db, { onlyArchived: true })).toBe(1);
+    });
+  });
+
+  describe("listOnDay", () => {
+    it("finds another event of the same kind that day, and not the day either side", async () => {
+      const day = new Date(2026, 6, 8).getTime();
+      const onIt = await events.create(db, {
+        kind: "rehearsal",
+        heldAt: day + 3600_000,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await events.create(db, {
+        kind: "rehearsal",
+        heldAt: day - 1,
+        createdAt: 2,
+        updatedAt: 2,
+      });
+      await events.create(db, {
+        kind: "rehearsal",
+        heldAt: day + 24 * 3600_000,
+        createdAt: 3,
+        updatedAt: 3,
+      });
+      // Same day, different kind — an afternoon rehearsal and an evening gig
+      // are not duplicates of each other.
+      await events.create(db, {
+        kind: "concert",
+        heldAt: day + 7200_000,
+        createdAt: 4,
+        updatedAt: 4,
+      });
+
+      const found = await events.listOnDay(db, "rehearsal", day);
+      expect(found.map((e) => e.id)).toEqual([onIt.id]);
+    });
+
+    it("skips archived events by default and includes them when asked", async () => {
+      const day = new Date(2026, 6, 8).getTime();
+      const e = await events.create(db, {
+        kind: "rehearsal",
+        heldAt: day,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await events.update(db, e.id, { archivedAt: 2000, updatedAt: 2000 });
+
+      expect(await events.listOnDay(db, "rehearsal", day)).toEqual([]);
+      // The ingest path needs the archived one: `client_ref` is UNIQUE, so a
+      // filtered lookup makes the bridge's insert throw.
+      expect(
+        (await events.listOnDay(db, "rehearsal", day, { includeArchived: true })).map((x) => x.id),
+      ).toEqual([e.id]);
+    });
   });
 });

@@ -1,7 +1,7 @@
 import { uuidv7 } from "@bandplate/core";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
-import { assets } from "../schema/sqlite/index.js";
+import { assets, takes } from "../schema/sqlite/index.js";
 
 export type Asset = typeof assets.$inferSelect;
 export type AssetKind = Asset["kind"];
@@ -273,4 +273,45 @@ export async function takeHasLossless(db: Db, takeId: string): Promise<boolean> 
     ) AS hasLossless
   `);
   return Boolean(row?.hasLossless);
+}
+
+/** How many files a set of rows adds up to, and how many bytes. */
+export interface AssetTally {
+  files: number;
+  bytes: number;
+}
+
+/**
+ * Every asset belonging to every take of a song, tallied in SQL.
+ *
+ * This is the number in "permanently removes 14 audio files (212 MB)", and it
+ * used to be produced by walking the song's takes and issuing `listByTake` per
+ * take — a query per take, each returning full rows, on every render of a song
+ * page an admin visits. It also stopped being CORRECT the moment those takes
+ * became a page: a tally over fifteen of forty takes understates what a delete
+ * would destroy, which is the one number on a destructive confirm that must
+ * never be too small.
+ */
+export async function tallyBySong(db: Db, songId: string): Promise<AssetTally> {
+  const rows = await db
+    .select({
+      files: sql<number>`count(${assets.id})`,
+      bytes: sql<number>`coalesce(sum(${assets.bytes}), 0)`,
+    })
+    .from(assets)
+    .innerJoin(takes, eq(takes.id, assets.takeId))
+    .where(eq(takes.songId, songId));
+  return { files: rows[0]?.files ?? 0, bytes: rows[0]?.bytes ?? 0 };
+}
+
+/** `tallyBySong`, for one take. */
+export async function tallyByTake(db: Db, takeId: string): Promise<AssetTally> {
+  const rows = await db
+    .select({
+      files: sql<number>`count(${assets.id})`,
+      bytes: sql<number>`coalesce(sum(${assets.bytes}), 0)`,
+    })
+    .from(assets)
+    .where(eq(assets.takeId, takeId));
+  return { files: rows[0]?.files ?? 0, bytes: rows[0]?.bytes ?? 0 };
 }

@@ -49,8 +49,8 @@ const song = await songsRepo.getById(appDeps.db, id);
 if (!song) {
   return new Response("Song not found.", { status: 404 });
 }
-const takes = await takesRepo.listBySong(appDeps.db, song.id);
-const consequence = archiveSongConsequence(takes.length);
+const takeCount = await takesRepo.countBySong(appDeps.db, song.id);
+const consequence = archiveSongConsequence(takeCount);
 ---
 
 <Layout title={archiving ? "Archive song" : "Unarchive song"}>

@@ -46,7 +46,7 @@ describe("favorites repo", () => {
       createdAt: 2000,
     });
 
-    const list = await favorites.listByMember(db, member.id);
+    const { rows: list } = await favorites.listByMember(db, member.id);
     expect(list.length).toBe(2);
     expect(list[0]?.targetType).toBe("event");
     expect(list[1]?.targetType).toBe("song");
@@ -79,7 +79,7 @@ describe("favorites repo", () => {
       createdAt: 2000,
     });
 
-    const list = await favorites.listByMember(db, member.id);
+    const { rows: list } = await favorites.listByMember(db, member.id);
     expect(list.length).toBe(1);
   });
 
@@ -221,8 +221,8 @@ describe("favorites repo", () => {
 
     expect(await favorites.isFavorited(db, memberA.id, "song", song.id)).toBe(true);
     expect(await favorites.isFavorited(db, memberB.id, "song", song.id)).toBe(false);
-    expect((await favorites.listByMember(db, memberB.id)).length).toBe(0);
-    expect((await favorites.listByMember(db, memberA.id)).length).toBe(1);
+    expect((await favorites.listByMember(db, memberB.id)).total).toBe(0);
+    expect((await favorites.listByMember(db, memberA.id)).total).toBe(1);
 
     // memberB removing a favorite they never had must not disturb memberA's.
     await favorites.remove(db, memberB.id, "song", song.id);
@@ -251,7 +251,7 @@ describe("favorites repo", () => {
     });
     await favorites.remove(db, member.id, "song", song.id);
 
-    const list = await favorites.listByMember(db, member.id);
+    const { rows: list } = await favorites.listByMember(db, member.id);
     expect(list.length).toBe(0);
   });
 });

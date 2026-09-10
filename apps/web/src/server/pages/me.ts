@@ -15,7 +15,7 @@
 // table rather than a JSON column. `membersRepo.listInstrumentsForMember`
 // includes archived instruments on purpose, so a member who plays one the
 // band has since dropped still sees it here.
-import type { Db, instrumentsRepo } from "@bandplate/db";
+import type { Db, PageArgs, instrumentsRepo } from "@bandplate/db";
 import { membersRepo, takesRepo, votesRepo } from "@bandplate/db";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
@@ -27,7 +27,10 @@ export interface VoteWithTake {
 export interface MeData {
   member: membersRepo.Member;
   instruments: instrumentsRepo.Instrument[];
+  /** ONE PAGE of votes, most recently changed first. */
   votes: VoteWithTake[];
+  /** How many votes this member has cast in all. */
+  voteTotal: number;
   /**
    * How many published takes this member has never voted on. Home used to
    * render these as a queue; nothing on the page everyone opens should nag, so
@@ -37,16 +40,33 @@ export interface MeData {
   unvotedCount: number;
 }
 
-async function getVotes(db: Db, memberId: string): Promise<VoteWithTake[]> {
-  const votes = await votesRepo.listByMember(db, memberId);
+/**
+ * Rows per page in the vote history.
+ *
+ * This is the listing that grows most reliably: one row per take a member has
+ * ever judged, forever, with nothing that ever removes one.
+ */
+export const VOTES_PER_PAGE = 20;
+
+async function getVotes(
+  db: Db,
+  memberId: string,
+  page: PageArgs,
+): Promise<{ votes: VoteWithTake[]; total: number }> {
+  const { rows: voteRows, total } = await votesRepo.listByMember(db, memberId, { page });
+  const votes = voteRows;
   const takeIds = votes.map((v) => v.takeId);
   const takes = await takesRepo.getByIds(db, takeIds);
   const withContext = await attachFullContext(db, takes, memberId);
   const byTakeId = new Map(withContext.map((t) => [t.id, t]));
-  return votes.map((vote) => ({ vote, take: byTakeId.get(vote.takeId) }));
+  return { votes: votes.map((vote) => ({ vote, take: byTakeId.get(vote.takeId) })), total };
 }
 
-export async function getMeData(db: Db, memberId: string): Promise<MeData | undefined> {
+export async function getMeData(
+  db: Db,
+  memberId: string,
+  votesPage: PageArgs = { limit: VOTES_PER_PAGE, offset: 0 },
+): Promise<MeData | undefined> {
   const member = await membersRepo.getById(db, memberId);
   if (!member) {
     return undefined;
@@ -54,14 +74,15 @@ export async function getMeData(db: Db, memberId: string): Promise<MeData | unde
 
   const [instruments, votes, unvoted] = await Promise.all([
     membersRepo.listInstrumentsForMember(db, memberId),
-    getVotes(db, memberId),
+    getVotes(db, memberId, votesPage),
     takesRepo.listUnvotedByMember(db, memberId),
   ]);
 
   return {
     member,
     instruments,
-    votes,
+    votes: votes.votes,
+    voteTotal: votes.total,
     unvotedCount: unvoted.length,
   };
 }

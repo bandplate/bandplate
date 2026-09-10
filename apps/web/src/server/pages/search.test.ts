@@ -126,13 +126,49 @@ describe("searchTakes", () => {
   });
 
   it("returns an empty array, not a throw, on a fresh database", async () => {
-    const { results, truncated } = await searchTakes(
+    const { results, total } = await searchTakes(
       db,
       parseSearchQuery(new URLSearchParams()),
       memberId,
+      { limit: 25, offset: 0 },
     );
     expect(results).toEqual([]);
-    expect(truncated).toBe(false);
+    expect(total).toBe(0);
+  });
+
+  it("reports a total larger than the page it returned", async () => {
+    const now = Date.now();
+    const song = await songsRepo.create(db, {
+      title: "Paged Archive Song",
+      slug: "paged-archive-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    for (let i = 0; i < 7; i++) {
+      await takesRepo.create(db, {
+        songId: song.id,
+        eventId: event.id,
+        recordedAt: now + i,
+        createdAt: now + i,
+        updatedAt: now + i,
+      });
+    }
+
+    const query = parseSearchQuery(new URLSearchParams());
+    const first = await searchTakes(db, query, memberId, { limit: 3, offset: 0 });
+    const third = await searchTakes(db, query, memberId, { limit: 3, offset: 6 });
+
+    expect(first.results).toHaveLength(3);
+    expect(first.total).toBe(7);
+    // The last page is short, and the total does not shrink to match it.
+    expect(third.results).toHaveLength(1);
+    expect(third.total).toBe(7);
   });
 
   it("attaches song, event, and instruments to each result", async () => {
@@ -159,7 +195,10 @@ describe("searchTakes", () => {
       instrumentIds: [bass.id],
     });
 
-    const { results } = await searchTakes(db, parseSearchQuery(new URLSearchParams()), memberId);
+    const { results } = await searchTakes(db, parseSearchQuery(new URLSearchParams()), memberId, {
+      limit: 25,
+      offset: 0,
+    });
     expect(results.map((t) => t.id)).toEqual([take.id]);
     expect(results[0]?.song?.slug).toBe("search-composition-song");
     expect(results[0]?.event?.id).toBe(event.id);
@@ -195,7 +234,10 @@ describe("searchTakes", () => {
       createdAt: now,
     });
 
-    const { results } = await searchTakes(db, parseSearchQuery(new URLSearchParams()), memberId);
+    const { results } = await searchTakes(db, parseSearchQuery(new URLSearchParams()), memberId, {
+      limit: 25,
+      offset: 0,
+    });
     expect(results.find((t) => t.id === take.id)?.favorited).toBe(true);
   });
 
@@ -228,7 +270,7 @@ describe("searchTakes", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("dateFrom=2026-01-01&dateTo=2026-01-31"));
-    const { results } = await searchTakes(db, query, memberId);
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
 
     expect(results.map((t) => t.id)).toContain(inRange.id);
     expect(results.map((t) => t.id)).not.toContain(outOfRange.id);
@@ -256,7 +298,7 @@ describe("searchTakes", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("dateTo=2026-01-31"));
-    const { results } = await searchTakes(db, query, memberId);
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
 
     expect(results.map((t) => t.id)).toContain(lateInDay.id);
   });
@@ -326,7 +368,7 @@ describe("the unvoted filter", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
-    const { results } = await searchTakes(db, query, memberId);
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
     expect(results.map((r) => r.id)).toEqual([unvoted.id]);
   });
 
@@ -341,7 +383,7 @@ describe("the unvoted filter", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
-    const { results } = await searchTakes(db, query, memberId);
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
     expect(results.map((r) => r.id)).toEqual([take.id]);
   });
 
@@ -357,7 +399,7 @@ describe("the unvoted filter", () => {
     });
 
     const query = parseSearchQuery(new URLSearchParams("unvoted=1"));
-    const { results } = await searchTakes(db, query, memberId);
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
     expect(results).toEqual([]);
   });
 
@@ -367,13 +409,15 @@ describe("the unvoted filter", () => {
     // the unvoted take must still exclude it.
     const take = await publishedTake(0);
     const query = parseSearchQuery(
-      new URLSearchParams(`unvoted=1&dateFrom=1990-01-01&dateTo=1990-12-31`),
+      new URLSearchParams("unvoted=1&dateFrom=1990-01-01&dateTo=1990-12-31"),
     );
-    const { results } = await searchTakes(db, query, memberId);
+    const { results } = await searchTakes(db, query, memberId, { limit: 25, offset: 0 });
     expect(results).toEqual([]);
 
     const wide = parseSearchQuery(new URLSearchParams("unvoted=1&dateFrom=1990-01-01"));
-    expect((await searchTakes(db, wide, memberId)).results.map((r) => r.id)).toEqual([take.id]);
+    expect(
+      (await searchTakes(db, wide, memberId, { limit: 25, offset: 0 })).results.map((r) => r.id),
+    ).toEqual([take.id]);
   });
 
   it("is off unless asked for, and counts as a filter when it is on", async () => {

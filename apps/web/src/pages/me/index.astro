@@ -14,11 +14,13 @@
 // What is left is the page's actual subject: the takes still waiting for your
 // ear, and the calls you have already made. Identity is a line at the top, not
 // a card — this is the one page where the app already knows who is looking.
+import Pagination from "@bandplate/ui/components/Pagination.astro";
 import InstrumentSet from "../../components/InstrumentSet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { formatShortDate } from "../../server/format.js";
-import { getMeData } from "../../server/pages/me.js";
+import { VOTES_PER_PAGE, getMeData } from "../../server/pages/me.js";
+import { pageRequest, pageView } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -26,12 +28,17 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
-const data = await getMeData(appDeps.db, principal.memberId);
+const { page, args: votesPage } = pageRequest(Astro.url.searchParams, VOTES_PER_PAGE);
+const data = await getMeData(appDeps.db, principal.memberId, votesPage);
 if (!data) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { member, instruments, votes, unvotedCount } = data;
+const { member, instruments, votes, voteTotal, unvotedCount } = data;
+const pages = pageView({ url: Astro.url, page, perPage: VOTES_PER_PAGE, total: voteTotal });
+if (pages.redirectTo) {
+  return Astro.redirect(pages.redirectTo);
+}
 
 // Initials for the identity disc — first letters of the first two words, which
 // handles "František Voráč" and a single-word stage name alike.
@@ -138,6 +145,8 @@ const initials = member.displayName
           </ul>
         )
       }
+
+      <Pagination {...pages} noun="vote" />
     </section>
 
     <aside class="bp-me-aside">

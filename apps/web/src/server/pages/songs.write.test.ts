@@ -202,11 +202,15 @@ describe("archiving", () => {
   it("takes a song out of the library and puts it in the archived view", async () => {
     await setSongArchived(db, 3000, id, true);
 
-    const library = await listSongsForLibrary(db, {});
+    const { rows: library } = await listSongsForLibrary(db, {}, { limit: 25, offset: 0 });
     expect(library.map((s) => s.title)).toEqual(["Nightbus"]);
 
     // The Archived pill shows the archive INSTEAD of the library, not as well.
-    const archived = await listSongsForLibrary(db, { archived: true });
+    const { rows: archived } = await listSongsForLibrary(
+      db,
+      { archived: true },
+      { limit: 25, offset: 0 },
+    );
     expect(archived.map((s) => s.title)).toEqual(["Old Set Closer"]);
     expect(await countArchivedSongs(db)).toBe(1);
   });
@@ -215,7 +219,7 @@ describe("archiving", () => {
     await setSongArchived(db, 3000, id, true);
     await setSongArchived(db, 4000, id, false);
 
-    const library = await listSongsForLibrary(db, {});
+    const { rows: library } = await listSongsForLibrary(db, {}, { limit: 25, offset: 0 });
     expect(library.map((s) => s.title).sort()).toEqual(["Nightbus", "Old Set Closer"]);
     expect(await countArchivedSongs(db)).toBe(0);
   });
@@ -343,7 +347,7 @@ describe("deleteSong", () => {
     // Foreign keys are never enforced here (D1 parity), so nothing cleans
     // these up on our behalf.
     expect(await votesRepo.listByTake(db, take.id)).toEqual([]);
-    expect(await favoritesRepo.listByMember(db, member.id)).toEqual([]);
+    expect((await favoritesRepo.listByMember(db, member.id)).rows).toEqual([]);
   });
 
   it("leaves the event alone — the session still happened", async () => {

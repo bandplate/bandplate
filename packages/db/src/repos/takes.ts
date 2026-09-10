@@ -1,5 +1,5 @@
 import { normalizeTitle, uuidv7 } from "@bandplate/core";
-import { type SQL, and, asc, desc, eq, gte, inArray, lte, notInArray, sql } from "drizzle-orm";
+import { type SQL, and, asc, desc, eq, gte, inArray, lte, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
   assets,
@@ -13,6 +13,7 @@ import {
 } from "../schema/sqlite/index.js";
 import type { Instrument } from "./instruments.js";
 import { escapeLikePattern } from "./like-pattern.js";
+import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 
 export type Take = typeof takes.$inferSelect;
 export type TakeState = Take["state"];
@@ -250,29 +251,67 @@ export async function getByIds(db: Db, ids: string[]): Promise<Take[]> {
 }
 
 /**
- * Safety cap for `listBySong`/`listUnvotedByMember`'s default (unrequested)
- * limit — review round 1's F6. Neither listing has a UI for paging past it
- * today (a song's own take count, and one member's unvoted queue, are both
- * naturally small in practice), so this is a defensive ceiling rather than
- * a real pagination feature the way `search`'s `SEARCH_LIMIT` is — but the
- * review is right that "no LIMIT at all" is still wrong even for a listing
- * that's SUPPOSED to stay small.
+ * Safety cap for `listUnvotedByMember`'s default (unrequested) limit — review
+ * round 1's F6. That queue has no UI for paging past it (one member's unvoted
+ * takes are naturally few), so this is a defensive ceiling rather than a real
+ * pagination feature — but "no LIMIT at all" is still wrong even for a listing
+ * that is SUPPOSED to stay small.
+ *
+ * `listBySong` used to share this cap. It pages properly now: a song
+ * accumulates takes for as long as the band plays it, which is exactly the
+ * shape a silent ceiling hides.
  */
 const DEFAULT_TAKE_LIST_CAP = 500;
 
-export async function listBySong(db: Db, songId: string): Promise<Take[]> {
-  return (
+/** The ordering every per-song and per-event take listing shares. */
+const TAKE_LIST_ORDER = [desc(takes.recordedAt), desc(takes.id)];
+
+export interface ListBySongOptions {
+  /** Which page to return. Omitted means the FIRST page — never all of them. */
+  page?: PageArgs;
+}
+
+/**
+ * One page of a song's takes, newest first.
+ *
+ * `recordedAt` alone is not unique — two takes recorded at the same instant
+ * (or, in a test fixture, given the same literal timestamp) would otherwise
+ * have non-contractual relative order, which under paging means one row shown
+ * on two pages and another shown on none. `id` (uuidv7, itself roughly
+ * time-ordered) is a real, deterministic tie-break.
+ */
+export async function listBySong(
+  db: Db,
+  songId: string,
+  options: ListBySongOptions = {},
+): Promise<Paged<Take>> {
+  const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = options.page?.offset ?? 0;
+  const [rows, total] = await Promise.all([
     db
       .select()
       .from(takes)
       .where(eq(takes.songId, songId))
-      // `recordedAt` alone is not unique — two takes recorded at the same
-      // instant (or, in a test fixture, given the same literal timestamp)
-      // would otherwise have non-contractual relative order. `id` (uuidv7,
-      // itself roughly time-ordered) is a real, deterministic tie-break.
-      .orderBy(desc(takes.recordedAt), desc(takes.id))
-      .limit(DEFAULT_TAKE_LIST_CAP)
-  );
+      .orderBy(...TAKE_LIST_ORDER)
+      .limit(limit)
+      .offset(offset),
+    countBySong(db, songId),
+  ]);
+  return { rows, total };
+}
+
+/**
+ * Every take of a song, unpaged — for CASCADES, which have to touch each row
+ * (deleting a song walks its takes to collect storage keys). Named for what it
+ * does so that reaching for it on a browse surface reads as the mistake it
+ * would be; `listBySong` is what a page wants.
+ */
+export async function listAllBySong(db: Db, songId: string): Promise<Take[]> {
+  return db
+    .select()
+    .from(takes)
+    .where(eq(takes.songId, songId))
+    .orderBy(...TAKE_LIST_ORDER);
 }
 
 export interface ListByEventOptions {
@@ -283,15 +322,35 @@ export interface ListByEventOptions {
    * day first" is how a member reconstructs what happened that day.
    */
   order?: "asc" | "desc";
+  /** Which page to return. Omitted means the FIRST page — never all of them. */
+  page?: PageArgs;
 }
 
+/** One page of the takes recorded at one event. */
 export async function listByEvent(
   db: Db,
   eventId: string,
   options: ListByEventOptions = {},
-): Promise<Take[]> {
+): Promise<Paged<Take>> {
   const direction = options.order === "asc" ? asc(takes.recordedAt) : desc(takes.recordedAt);
-  return db.select().from(takes).where(eq(takes.eventId, eventId)).orderBy(direction);
+  // `id` follows the direction of the primary key rather than always
+  // descending: under `asc` the tie-break has to agree with "earliest first",
+  // or two takes stamped the same second read backwards relative to the rows
+  // around them. See `listBySong` for why a tie-break is here at all.
+  const tieBreak = options.order === "asc" ? asc(takes.id) : desc(takes.id);
+  const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = options.page?.offset ?? 0;
+  const [rows, total] = await Promise.all([
+    db
+      .select()
+      .from(takes)
+      .where(eq(takes.eventId, eventId))
+      .orderBy(direction, tieBreak)
+      .limit(limit)
+      .offset(offset),
+    countByEvent(db, eventId),
+  ]);
+  return { rows, total };
 }
 
 /**
@@ -314,11 +373,12 @@ export async function listByEvents(
   }
 
   const direction = options.order === "asc" ? asc(takes.recordedAt) : desc(takes.recordedAt);
+  const tieBreak = options.order === "asc" ? asc(takes.id) : desc(takes.id);
   const rows = await db
     .select()
     .from(takes)
     .where(inArray(takes.eventId, eventIds))
-    .orderBy(direction);
+    .orderBy(direction, tieBreak);
 
   for (const row of rows) {
     const existing = result.get(row.eventId);
@@ -332,6 +392,56 @@ export async function listByEvents(
 }
 
 /**
+ * "Has all of these instruments", as a CONDITION rather than a list of ids.
+ *
+ * This used to run as a pre-pass: fetch every matching take id, then
+ * `inArray(takes.id, ids)`. That is fine for a query that returns everything
+ * and wrong for one that returns a page — page 40 still materialised the
+ * whole match set to find 25 rows, `count(*)` could not be pushed into SQL at
+ * all, and the bound-parameter list grew with the archive until D1's cap on
+ * them would turn a large band's filter into a runtime error.
+ *
+ * As a subquery it is one statement the database can limit, offset and count.
+ * Exported so `songsRepo.listWithStats` composes the SAME condition rather than
+ * keeping a second copy of the AND semantics these tests pin.
+ */
+export function hasAllInstruments(db: Db, instrumentIds: string[]): SQL {
+  return inArray(
+    takes.id,
+    db
+      .select({ takeId: takeInstruments.takeId })
+      .from(takeInstruments)
+      .where(inArray(takeInstruments.instrumentId, instrumentIds))
+      .groupBy(takeInstruments.takeId)
+      // `distinct` matters: the same instrument listed twice against one take
+      // must not count as two of the requested set.
+      .having(sql`count(distinct ${takeInstruments.instrumentId}) = ${instrumentIds.length}`),
+  );
+}
+
+/** Takes whose SONG matches `search`, by title or by any of its aliases. */
+function songTextMatches(db: Db, search: string): SQL {
+  const pattern = `%${escapeLikePattern(normalizeTitle(search))}%`;
+  const byTitle = inArray(
+    takes.songId,
+    db
+      .select({ id: songs.id })
+      .from(songs)
+      .where(sql`${songs.titleNorm} LIKE ${pattern} ESCAPE '\\'`),
+  );
+  const byAlias = inArray(
+    takes.songId,
+    db
+      .select({ songId: songAliases.songId })
+      .from(songAliases)
+      .where(sql`${songAliases.aliasNorm} LIKE ${pattern} ESCAPE '\\'`),
+  );
+  // `or()` returns `undefined` only for an empty argument list; two
+  // conditions always produce one.
+  return or(byTitle, byAlias) as SQL;
+}
+
+/**
  * Takes that have ALL of the given instruments (AND semantics, not any-of).
  * A take with {bass, drums} matches a query for {bass} and for
  * {bass, drums}, but a take with only {bass} does not match {bass, drums}.
@@ -341,19 +451,11 @@ export async function listByInstruments(db: Db, instrumentIds: string[]): Promis
     return [];
   }
 
-  const matches = await db
-    .select({ takeId: takeInstruments.takeId })
-    .from(takeInstruments)
-    .where(inArray(takeInstruments.instrumentId, instrumentIds))
-    .groupBy(takeInstruments.takeId)
-    .having(sql`count(distinct ${takeInstruments.instrumentId}) = ${instrumentIds.length}`);
-
-  const ids = matches.map((m) => m.takeId);
-  if (ids.length === 0) {
-    return [];
-  }
-
-  return db.select().from(takes).where(inArray(takes.id, ids)).orderBy(desc(takes.recordedAt));
+  return db
+    .select()
+    .from(takes)
+    .where(hasAllInstruments(db, instrumentIds))
+    .orderBy(desc(takes.recordedAt), desc(takes.id));
 }
 
 export async function setState(
@@ -482,70 +584,40 @@ export interface SearchFilters {
 export type TakeSort = "recent" | "rating";
 
 export interface SearchOptions {
-  /** Override for tests — production callers should leave this at `SEARCH_LIMIT`. */
-  limit?: number;
   /** Defaults to `"recent"`. */
   sort?: TakeSort;
+  /** Which page to return. Omitted means the FIRST page — never all of them. */
+  page?: PageArgs;
 }
 
 /**
- * Hard cap on `search`'s result set (review round 1's F6): an unfiltered
- * `/search` used to have no LIMIT at all, returning literally every take in
- * the archive. Unlike `listBySong`/`listUnvotedByMember` (naturally small,
- * per-song/per-member listings — see `DEFAULT_TAKE_LIST_CAP`), an
- * unfiltered archive-wide search is exactly the case that keeps growing, so
- * this one surfaces a real `truncated` flag rather than just capping
- * silently.
+ * `rows` is one page; `total` is every take matching the filters.
+ *
+ * This replaced a `truncated` boolean over a hard cap of 200. That flag could
+ * say "there are more" but never how many, which is why `/takes` had to hedge
+ * its count as "200+ takes" — true, useless, and indistinguishable from an
+ * archive that really did hold exactly 200. A real total is one `count(*)`
+ * over conditions the query has already built.
  */
-export const SEARCH_LIMIT = 200;
+export type SearchResult = Paged<Take>;
 
-export interface SearchResult {
-  results: Take[];
-  /** True when more takes match than were returned — narrow the filters (or
-   *  free-text search) to see the rest. */
-  truncated: boolean;
-}
-
-export async function search(
-  db: Db,
-  filters: SearchFilters = {},
-  options: SearchOptions = {},
-): Promise<SearchResult> {
-  const limit = options.limit ?? SEARCH_LIMIT;
+/**
+ * The filter conditions, built once and used by BOTH the page query and the
+ * count. Two hand-maintained copies of this list is how a listing ends up
+ * reporting a total that disagrees with the rows under it.
+ */
+function searchConditions(db: Db, filters: SearchFilters): SQL[] {
   const conditions: SQL[] = [];
 
   if (filters.instrumentIds && filters.instrumentIds.length > 0) {
-    const matching = await listByInstruments(db, filters.instrumentIds);
-    const ids = matching.map((t) => t.id);
-    if (ids.length === 0) {
-      return { results: [], truncated: false };
-    }
-    conditions.push(inArray(takes.id, ids));
+    conditions.push(hasAllInstruments(db, filters.instrumentIds));
   }
-
   if (filters.search) {
-    const pattern = `%${escapeLikePattern(normalizeTitle(filters.search))}%`;
-    const bySongTitle = await db
-      .select({ id: songs.id })
-      .from(songs)
-      .where(sql`${songs.titleNorm} LIKE ${pattern} ESCAPE '\\'`);
-    const byAlias = await db
-      .select({ songId: songAliases.songId })
-      .from(songAliases)
-      .where(sql`${songAliases.aliasNorm} LIKE ${pattern} ESCAPE '\\'`);
-    const songIds = [
-      ...new Set([...bySongTitle.map((r) => r.id), ...byAlias.map((r) => r.songId)]),
-    ];
-    if (songIds.length === 0) {
-      return { results: [], truncated: false };
-    }
-    conditions.push(inArray(takes.songId, songIds));
+    conditions.push(songTextMatches(db, filters.search));
   }
-
   if (filters.songId) {
     conditions.push(eq(takes.songId, filters.songId));
   }
-
   if (filters.dateFrom !== undefined) {
     conditions.push(gte(takes.recordedAt, filters.dateFrom));
   }
@@ -558,7 +630,6 @@ export async function search(
   if (filters.states && filters.states.length > 0) {
     conditions.push(inArray(takes.state, filters.states));
   }
-
   if (filters.unvotedByMemberId) {
     const votedTakeIds = db
       .select({ takeId: votes.takeId })
@@ -571,26 +642,99 @@ export async function search(
     conditions.push(notInArray(takes.id, votedTakeIds));
   }
 
-  // Fetch one row past the limit — if it comes back, there are more matches
-  // than `limit` and the caller should say so, rather than the member
-  // silently seeing a partial archive with no indication it's partial.
-  const query =
-    conditions.length > 0
-      ? db
-          .select()
-          .from(takes)
-          .where(and(...conditions))
-      : db.select().from(takes);
+  return conditions;
+}
+
+export async function search(
+  db: Db,
+  filters: SearchFilters = {},
+  options: SearchOptions = {},
+): Promise<SearchResult> {
+  const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = options.page?.offset ?? 0;
+  const conditions = searchConditions(db, filters);
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
   // `desc(takes.id)` is the same deterministic tie-break `listBySong` uses —
-  // see its comment. It's the LAST key in both orderings (after whatever
-  // the sort mode itself ranks by), so it only ever breaks a tie the sort
-  // mode left open, never overrides it.
+  // see its comment. It is the LAST key in both orderings (after whatever the
+  // sort mode itself ranks by), so it only ever breaks a tie the sort mode
+  // left open, never overrides it. Under paging it stopped being a nicety:
+  // without it two takes tied on the sort key can land on two different pages,
+  // or on the same page twice.
   const orderBy =
     options.sort === "rating"
       ? [desc(takes.keeperVotes), desc(takes.ratingScore), desc(takes.recordedAt), desc(takes.id)]
       : [desc(takes.recordedAt), desc(takes.id)];
-  const rows = await query.orderBy(...orderBy).limit(limit + 1);
 
-  const truncated = rows.length > limit;
-  return { results: truncated ? rows.slice(0, limit) : rows, truncated };
+  const [rows, totals] = await Promise.all([
+    db
+      .select()
+      .from(takes)
+      .where(where)
+      .orderBy(...orderBy)
+      .limit(limit)
+      .offset(offset),
+    db.select({ value: sql<number>`count(*)` }).from(takes).where(where),
+  ]);
+
+  return { rows, total: totals[0]?.value ?? 0 };
+}
+
+/** How many takes exist of one song — the count, without the rows. */
+export async function countBySong(db: Db, songId: string): Promise<number> {
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(takes)
+    .where(eq(takes.songId, songId));
+  return rows[0]?.value ?? 0;
+}
+
+/** How many takes were recorded at one event — the count, without the rows. */
+export async function countByEvent(db: Db, eventId: string): Promise<number> {
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(takes)
+    .where(eq(takes.eventId, eventId));
+  return rows[0]?.value ?? 0;
+}
+
+/**
+ * How many takes each of these songs has, as a `Map` keyed by song id.
+ *
+ * Home rendered this by calling `listBySong` per pinned song and taking
+ * `.length` — one query per pin, each pulling every take ROW of that song
+ * across the wire to arrive at an integer. This is one query that counts.
+ * Callers dedupe `songIds` themselves, matching `listInstrumentsForTakes`.
+ */
+export async function countBySongs(db: Db, songIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (songIds.length === 0) {
+    return result;
+  }
+  const rows = await db
+    .select({ songId: takes.songId, value: sql<number>`count(*)` })
+    .from(takes)
+    .where(inArray(takes.songId, songIds))
+    .groupBy(takes.songId);
+  for (const row of rows) {
+    result.set(row.songId, row.value);
+  }
+  return result;
+}
+
+/** `countBySongs`, per event — same reason, same shape. */
+export async function countByEvents(db: Db, eventIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (eventIds.length === 0) {
+    return result;
+  }
+  const rows = await db
+    .select({ eventId: takes.eventId, value: sql<number>`count(*)` })
+    .from(takes)
+    .where(inArray(takes.eventId, eventIds))
+    .groupBy(takes.eventId);
+  for (const row of rows) {
+    result.set(row.eventId, row.value);
+  }
+  return result;
 }

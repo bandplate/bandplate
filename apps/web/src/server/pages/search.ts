@@ -13,7 +13,7 @@
 // There is no RATING filter either. "75% keeper or better" asks a member to
 // think in percentages about a tally of at most seven votes, and the keeper
 // badge already says the thing they actually wanted to find.
-import type { Db } from "@bandplate/db";
+import type { Db, PageArgs } from "@bandplate/db";
 import { favoritesRepo, takesRepo } from "@bandplate/db";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
@@ -110,26 +110,34 @@ function toFilters(query: SearchQuery, memberId: string): takesRepo.SearchFilter
   };
 }
 
+/** Rows per page in the takes archive. */
+export const TAKES_PER_PAGE = 25;
+
 export interface SearchTakesResult {
   results: Array<TakeWithFullContext & { favorited: boolean }>;
-  /** True when more takes match the filters than were returned (F6, review
-   *  round 1) — `takesRepo.search` caps an unfiltered/broad archive search
-   *  rather than returning it all. */
-  truncated: boolean;
+  /**
+   * Every take matching the filters, not just this page.
+   *
+   * This replaced a `truncated` boolean. The flag could say "there are more"
+   * but never how many, so `/takes` had to hedge its own count as "200+" —
+   * a number no member could act on and no filter could be judged against.
+   */
+  total: number;
 }
 
 export async function searchTakes(
   db: Db,
   query: SearchQuery,
   memberId: string,
+  page: PageArgs,
 ): Promise<SearchTakesResult> {
-  const [{ results, truncated }, favoriteTakeIds] = await Promise.all([
-    takesRepo.search(db, toFilters(query, memberId), { sort: query.sort }),
+  const [{ rows, total }, favoriteTakeIds] = await Promise.all([
+    takesRepo.search(db, toFilters(query, memberId), { sort: query.sort, page }),
     favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
   ]);
-  const withContext = await attachFullContext(db, results, memberId);
+  const withContext = await attachFullContext(db, rows, memberId);
   return {
     results: withContext.map((take) => ({ ...take, favorited: favoriteTakeIds.has(take.id) })),
-    truncated,
+    total,
   };
 }

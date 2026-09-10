@@ -13,6 +13,7 @@ import { hasAllScopes } from "@bandplate/core";
 import { assetsRepo, eventsRepo, instrumentsRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import Pagination from "@bandplate/ui/components/Pagination.astro";
 import ChartEditor from "../../components/ChartEditor.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
@@ -22,6 +23,7 @@ import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { eventLabel, formatShortDate } from "../../server/format.js";
 import {
+  SONG_TAKES_PER_PAGE,
   type SongField,
   archiveSongConsequence,
   deleteSongConsequence,
@@ -29,6 +31,7 @@ import {
   updateSong,
 } from "../../server/pages/songs.js";
 import { type TakeField, createTake } from "../../server/pages/takes.js";
+import { pageRequest, pageView } from "../../server/pagination.js";
 import { songToRows } from "../../server/song-chart-rows.js";
 import { KNOWN_SECTION_WORDS, buildSongChart } from "../../server/song-text.js";
 
@@ -89,12 +92,22 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const detail = await getSongDetail(appDeps.db, slug, principal.memberId);
+const { page, args: takesPage } = pageRequest(Astro.url.searchParams, SONG_TAKES_PER_PAGE);
+const detail = await getSongDetail(appDeps.db, slug, principal.memberId, takesPage);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { song, songFavorited, aliases, instrumentNotes, takes } = detail;
+const { song, songFavorited, aliases, instrumentNotes, takes, takeTotal } = detail;
+const pages = pageView({
+  url: Astro.url,
+  page,
+  perPage: SONG_TAKES_PER_PAGE,
+  total: takeTotal,
+});
+if (pages.redirectTo) {
+  return Astro.redirect(pages.redirectTo);
+}
 
 /**
  * How many takes stand above the fold.
@@ -131,18 +144,17 @@ const justCreated = Astro.url.searchParams.get("created") === "1";
 const justSaved = Astro.url.searchParams.get("saved") === "1";
 
 // What a permanent delete would take with it, counted for the confirm. Only
-// for an admin — nobody else can reach the page it warns about, and it is a
-// query per take.
-let songFileCount = 0;
-let songByteTotal = 0;
-if (canArchive) {
-  for (const take of takes) {
-    for (const asset of await assetsRepo.listByTake(appDeps.db, take.id)) {
-      songFileCount += 1;
-      songByteTotal += asset.bytes;
-    }
-  }
-}
+// for an admin — nobody else can reach the page it warns about.
+//
+// ONE aggregate query over every take of the song, not a walk of the takes on
+// screen: those are a page now, and a tally of the visible fifteen would have
+// understated what a delete destroys — the one number on a destructive confirm
+// that must never read low.
+const tally = canArchive
+  ? await assetsRepo.tallyBySong(appDeps.db, song.id)
+  : { files: 0, bytes: 0 };
+const songFileCount = tally.files;
+const songByteTotal = tally.bytes;
 
 // The take sheet's pickers. Newest event first, which is nearly always the one
 // being added to, so it is also the default.
@@ -350,7 +362,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                   class="bp-sheet-danger"
                   data-confirm
                   data-confirm-title={`Archive ${song.title}?`}
-                  data-confirm-body={archiveSongConsequence(takes.length)}
+                  data-confirm-body={archiveSongConsequence(takeTotal)}
                   data-confirm-action={`/admin/songs/${song.id}/archive`}
                   data-confirm-cta="Archive song"
                 >
@@ -362,7 +374,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                 class="bp-sheet-danger"
                 data-confirm
                 data-confirm-title={`Delete ${song.title} and everything under it?`}
-                data-confirm-body={deleteSongConsequence(takes.length, songFileCount, songByteTotal)}
+                data-confirm-body={deleteSongConsequence(takeTotal, songFileCount, songByteTotal)}
                 data-confirm-action={`/admin/songs/${song.id}/delete`}
                 data-confirm-cta="Delete song"
                 data-confirm-redirect="/songs?song_deleted=1"
@@ -502,6 +514,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                   </div>
                 </details>
               )}
+              <Pagination {...pages} noun="take" />
             </div>
           )
         }

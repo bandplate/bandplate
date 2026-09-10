@@ -5,6 +5,7 @@
 import { favoritesRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import Pagination from "@bandplate/ui/components/Pagination.astro";
 import EventLedger from "../../components/EventLedger.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -12,6 +13,7 @@ import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { formatLongDate } from "../../server/format.js";
 import {
+  EVENTS_PER_PAGE,
   type EventField,
   countArchivedEvents,
   createEvent,
@@ -19,6 +21,7 @@ import {
   parseEventsListArchivedFilter,
   parseEventsListKindFilter,
 } from "../../server/pages/events.js";
+import { pageRequest, pageView } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -53,11 +56,18 @@ if (Astro.request.method === "POST") {
 
 const kindFilter = parseEventsListKindFilter(Astro.url.searchParams);
 const viewingArchive = parseEventsListArchivedFilter(Astro.url.searchParams);
+const { page, args: eventsPage } = pageRequest(Astro.url.searchParams, EVENTS_PER_PAGE);
 const [events, favoriteEventIds, archivedCount] = await Promise.all([
-  listEventsForArchive(appDeps.db, kindFilter, viewingArchive),
+  listEventsForArchive(appDeps.db, kindFilter, viewingArchive, eventsPage),
   favoritesRepo.listTargetIdsByMember(appDeps.db, principal.memberId, "event"),
   countArchivedEvents(appDeps.db),
 ]);
+const pages = pageView({ url: Astro.url, page, perPage: EVENTS_PER_PAGE, total: events.total });
+// A link to a page that has since fallen off the end lands on the last real
+// one, filters intact, rather than on an empty archive.
+if (pages.redirectTo) {
+  return Astro.redirect(pages.redirectTo);
+}
 
 const justArchived = Astro.url.searchParams.get("archived_ok") === "1";
 // `<input type="date">` wants YYYY-MM-DD in the member's own timezone, which
@@ -219,7 +229,7 @@ function archivedHref(): string {
     </div>
 
     {
-      events.length === 0 ? (
+      events.rows.length === 0 ? (
         <div class="bp-empty-state">
           <p>
             {kindFilter.length > 0
@@ -232,8 +242,10 @@ function archivedHref(): string {
         // member decides an event is worth keeping in reach, and pinning it
         // here is how it reaches home's shelf. Home's own copy has no stars: a
         // column of them down a chronology reads as a second list.
-        <EventLedger events={events} favoritedIds={favoriteEventIds} />
+        <EventLedger events={events.rows} favoritedIds={favoriteEventIds} />
       )
     }
+
+    <Pagination {...pages} noun="event" />
   </div>
 </AppLayout>

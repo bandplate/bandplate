@@ -12,6 +12,7 @@ import { hasAllScopes } from "@bandplate/core";
 import { instrumentsRepo, songsRepo } from "@bandplate/db";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import Pagination from "@bandplate/ui/components/Pagination.astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import TakeRow from "../../components/TakeRow.astro";
@@ -20,6 +21,7 @@ import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { eventKindLabel, eventLabel, formatLongDate } from "../../server/format.js";
 import {
+  EVENT_TAKES_PER_PAGE,
   type EventField,
   archiveEventConsequence,
   findSameDayEvents,
@@ -27,6 +29,7 @@ import {
   updateEvent,
 } from "../../server/pages/events.js";
 import { type TakeField, createTake } from "../../server/pages/takes.js";
+import { pageRequest, pageView } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -79,12 +82,22 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const detail = await getEventDetail(appDeps.db, id, principal.memberId);
+const { page, args: takesPage } = pageRequest(Astro.url.searchParams, EVENT_TAKES_PER_PAGE);
+const detail = await getEventDetail(appDeps.db, id, principal.memberId, takesPage);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { event, eventFavorited, takes } = detail;
+const { event, eventFavorited, takes, takeTotal } = detail;
+const pages = pageView({
+  url: Astro.url,
+  page,
+  perPage: EVENT_TAKES_PER_PAGE,
+  total: takeTotal,
+});
+if (pages.redirectTo) {
+  return Astro.redirect(pages.redirectTo);
+}
 // `eventKindLabel`, not a ternary of its own. This page said "Concert" while
 // every take row, the ledger and the take page said "live" for the same event
 // — one fact, two words, depending which screen you were on. It also hard-coded
@@ -326,7 +339,7 @@ const [allSongs, allInstruments] = await Promise.all([
                 class="bp-sheet-danger"
                 data-confirm
                 data-confirm-title={`Archive the ${kindLabel} of ${formatLongDate(event.heldAt)}?`}
-                data-confirm-body={archiveEventConsequence(takes.length)}
+                data-confirm-body={archiveEventConsequence(takeTotal)}
                 data-confirm-action={`/admin/events/${event.id}/archive`}
                 data-confirm-cta="Archive event"
               >
@@ -349,9 +362,9 @@ const [allSongs, allInstruments] = await Promise.all([
           Add take
         </button>
       </div>
-      {takes.length > 0 && (
+      {takeTotal > 0 && (
         <p class="bp-event-hero-hint bp-m0">
-          {takes.length} {takes.length === 1 ? "take" : "takes"}, in the order they were played
+          {takeTotal} {takeTotal === 1 ? "take" : "takes"}, in the order they were played
         </p>
       )}
       {
@@ -373,6 +386,8 @@ const [allSongs, allInstruments] = await Promise.all([
           </div>
         )
       }
+
+      <Pagination {...pages} noun="take" />
     </section>
   </div>
 </AppLayout>

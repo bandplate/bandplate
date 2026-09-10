@@ -2,7 +2,7 @@
 // handlers that write them. Same shape as `server/pages/songs.ts`, including
 // the note there about why the write half lives in `apps/web` rather than in
 // `@bandplate/core`.
-import { type Db, assetsRepo } from "@bandplate/db";
+import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
   favoritesRepo,
@@ -31,22 +31,27 @@ export function parseEventsListArchivedFilter(searchParams: URLSearchParams): bo
   return searchParams.get("archived") === "1";
 }
 
+/** Rows per page in the event archive. */
+export const EVENTS_PER_PAGE = 20;
+
 export async function listEventsForArchive(
   db: Db,
   kind: eventsRepo.EventKind[],
-  archived = false,
-): Promise<EventListItem[]> {
-  const rows = await eventsRepo.listRecentWithTakeCounts(db, {
+  archived: boolean,
+  page: PageArgs,
+): Promise<Paged<EventListItem>> {
+  // `onlyArchived` is a repo option now rather than a `.filter()` here — see
+  // `listSongsForLibrary` for why a page cannot be narrowed after the fact.
+  return eventsRepo.listRecentWithTakeCounts(db, {
     kind,
-    includeArchived: archived,
+    onlyArchived: archived,
+    page,
   });
-  return archived ? rows.filter((r) => r.archivedAt !== null) : rows;
 }
 
 /** How many events are archived — the Archived pill shows nothing when it is 0. */
 export async function countArchivedEvents(db: Db): Promise<number> {
-  const rows = await eventsRepo.listRecentWithTakeCounts(db, { includeArchived: true });
-  return rows.filter((r) => r.archivedAt !== null).length;
+  return eventsRepo.count(db, { onlyArchived: true });
 }
 
 export interface TakeWithContext extends takesRepo.Take {
@@ -63,8 +68,19 @@ export interface EventDetail {
   event: eventsRepo.Event;
   /** Whether THIS member has favorited the event itself — drives the hero's `FavoriteToggle`. */
   eventFavorited: boolean;
+  /** ONE PAGE of takes, in recorded order, plus how many the event has in all. */
   takes: TakeWithContext[];
+  takeTotal: number;
 }
+
+/**
+ * Rows per page on an event.
+ *
+ * Larger than a song's page: reading an event IS reading its take list in
+ * order, so the list is the page rather than a section of it, and a rehearsal
+ * that produced thirty takes should mostly fit in one read.
+ */
+export const EVENT_TAKES_PER_PAGE = 30;
 
 /**
  * Everything `/events/[id]` renders: the event plus every take recorded
@@ -76,16 +92,18 @@ export async function getEventDetail(
   db: Db,
   id: string,
   memberId: string,
+  takesPage: PageArgs = { limit: EVENT_TAKES_PER_PAGE, offset: 0 },
 ): Promise<EventDetail | undefined> {
   const event = await eventsRepo.getById(db, id);
   if (!event) {
     return undefined;
   }
 
-  const [takes, eventFavorited] = await Promise.all([
-    takesRepo.listByEvent(db, event.id, { order: "asc" }),
+  const [pagedTakes, eventFavorited] = await Promise.all([
+    takesRepo.listByEvent(db, event.id, { order: "asc", page: takesPage }),
     favoritesRepo.isFavorited(db, memberId, "event", event.id),
   ]);
+  const takes = pagedTakes.rows;
   const takeIds = takes.map((t) => t.id);
   const songIds = [...new Set(takes.map((t) => t.songId))];
   const [instrumentsByTake, songs, playableByTakeId, myVoteByTakeId, favoriteTakeIds] =
@@ -101,6 +119,7 @@ export async function getEventDetail(
   return {
     event,
     eventFavorited,
+    takeTotal: pagedTakes.total,
     takes: takes.map((take) => ({
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],
@@ -191,8 +210,6 @@ function invalidEvent(parsed: z.SafeParseError<unknown>): EventFormFailure {
   };
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /**
  * Create an event, and report any event of the same kind ALREADY on that day.
  *
@@ -219,11 +236,12 @@ export async function createEvent(
   }
 
   const dayStart = parsed.data.heldAt;
-  const existing = await eventsRepo.listRecentWithTakeCounts(db, {
-    kind: [parsed.data.kind],
+  // A range query rather than "every event of this kind, narrowed in JS" —
+  // see `eventsRepo.listOnDay`. The old shape would have missed a duplicate
+  // that fell past the first page.
+  const sameDay = await eventsRepo.listOnDay(db, parsed.data.kind, dayStart, {
     includeArchived: true,
   });
-  const sameDay = existing.filter((e) => e.heldAt >= dayStart && e.heldAt < dayStart + DAY_MS);
 
   const event = await eventsRepo.create(db, {
     kind: parsed.data.kind,
@@ -333,7 +351,9 @@ export async function mergeEvents(
     return { kind: "not_found" };
   }
 
-  const moving = await takesRepo.listByEvent(db, mergeId, { order: "asc" });
+  // A count, not a page of rows: `moveAllToEvent` below moves them in SQL,
+  // so the only thing needed here is how many there were to report.
+  const movingCount = await takesRepo.countByEvent(db, mergeId);
   await takesRepo.moveAllToEvent(db, mergeId, keepId, now);
 
   // If the survivor has no key and the one being folded in does, it inherits
@@ -352,7 +372,7 @@ export async function mergeEvents(
   }
   await eventsRepo.update(db, mergeId, { archivedAt: now, updatedAt: now });
 
-  return { kind: "ok", keptId: keepId, movedTakes: moving.length };
+  return { kind: "ok", keptId: keepId, movedTakes: movingCount };
 }
 
 /**
@@ -366,9 +386,6 @@ export async function findSameDayEvents(
   const dayStart = new Date(event.heldAt);
   dayStart.setHours(0, 0, 0, 0);
   const start = dayStart.getTime();
-  const all = await eventsRepo.listRecentWithTakeCounts(db, {
-    kind: [event.kind],
-    includeArchived: false,
-  });
-  return all.filter((e) => e.id !== event.id && e.heldAt >= start && e.heldAt < start + DAY_MS);
+  const sameDay = await eventsRepo.listOnDay(db, event.kind, start);
+  return sameDay.filter((e) => e.id !== event.id);
 }

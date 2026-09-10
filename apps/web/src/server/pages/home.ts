@@ -28,6 +28,15 @@ import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 /** How many events the ledger lists before pointing at `/events` for the rest. */
 const RECENT_EVENTS_LIMIT = 5;
 
+/**
+ * How many pins the shelf holds.
+ *
+ * A cap, not a page: the shelf is a horizontal RAIL, and paging a rail is a
+ * control that fights the gesture already on it. What a member reaches for at
+ * a rehearsal is in the first handful; `total` is what says there are more.
+ */
+const PINNED_LIMIT = 24;
+
 export interface HomeFavorites {
   songs: songsRepo.Song[];
   takes: TakeWithFullContext[];
@@ -40,7 +49,9 @@ export interface HomeFavorites {
 
 /** Also used by `server/pages/me.ts` — `/me` shows the same favorites list. */
 export async function getFavorites(db: Db, memberId: string): Promise<HomeFavorites> {
-  const rows = await favoritesRepo.listByMember(db, memberId);
+  const { rows } = await favoritesRepo.listByMember(db, memberId, {
+    page: { limit: PINNED_LIMIT, offset: 0 },
+  });
   const songIds = rows.filter((r) => r.targetType === "song").map((r) => r.targetId);
   const takeIds = rows.filter((r) => r.targetType === "take").map((r) => r.targetId);
   const eventIds = rows.filter((r) => r.targetType === "event").map((r) => r.targetId);
@@ -122,22 +133,30 @@ export function pinnedKindWord(item: PinnedItem): string {
  * already orders by `createdAt DESC` across all three target types, so the
  * merge is just a matter of keeping that order rather than re-sorting anything.
  */
-async function getPinned(db: Db, memberId: string): Promise<PinnedItem[]> {
-  const rows = await favoritesRepo.listByMember(db, memberId);
+async function getPinned(
+  db: Db,
+  memberId: string,
+): Promise<{ items: PinnedItem[]; total: number }> {
+  const { rows, total } = await favoritesRepo.listByMember(db, memberId, {
+    page: { limit: PINNED_LIMIT, offset: 0 },
+  });
   if (rows.length === 0) {
-    return [];
+    return { items: [], total };
   }
 
   const songIds = rows.filter((r) => r.targetType === "song").map((r) => r.targetId);
   const takeIds = rows.filter((r) => r.targetType === "take").map((r) => r.targetId);
   const eventIds = rows.filter((r) => r.targetType === "event").map((r) => r.targetId);
 
-  const [songs, takes, events, playableByTakeId, takesByPinnedEvent] = await Promise.all([
+  const [songs, takes, events, playableByTakeId, takeCountByPinnedEvent] = await Promise.all([
     songsRepo.getByIds(db, songIds),
     takesRepo.getByIds(db, takeIds),
     eventsRepo.getByIds(db, eventIds),
     assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
-    eventIds.length > 0 ? takesRepo.listByEvents(db, eventIds) : Promise.resolve(new Map()),
+    // A COUNT per pinned event, not its takes: the card shows a number, and
+    // this used to fetch every take row of every pinned event to call
+    // `.length` on the result.
+    takesRepo.countByEvents(db, eventIds),
   ]);
 
   // A pinned take names its own song and event; both may be missing if the
@@ -145,20 +164,18 @@ async function getPinned(db: Db, memberId: string): Promise<PinnedItem[]> {
   // below is allowed to come back undefined rather than asserted.
   const takeSongIds = [...new Set(takes.map((t) => t.songId))];
   const takeEventIds = [...new Set(takes.map((t) => t.eventId).filter((id) => id !== null))];
-  const [takeSongs, takeEvents, takeCountsBySong] = await Promise.all([
+  const [takeSongs, takeEvents, songTakeCount] = await Promise.all([
     songsRepo.getByIds(db, takeSongIds),
     eventsRepo.getByIds(db, takeEventIds as string[]),
-    // Pinned songs are few, so one small query each beats loading the whole
-    // song table with its stats join to read three numbers off it.
-    Promise.all(
-      songIds.map(async (id) => [id, (await takesRepo.listBySong(db, id)).length] as const),
-    ),
+    // ONE grouped count for every pinned song. This was a `Promise.all` over
+    // `listBySong` — a query per pin, each pulling every take ROW of that song
+    // across the wire so that `.length` could be read off it.
+    takesRepo.countBySongs(db, songIds),
   ]);
 
   const songById = new Map([...songs, ...takeSongs].map((x) => [x.id, x]));
   const eventById = new Map([...events, ...takeEvents].map((x) => [x.id, x]));
   const takeById = new Map(takes.map((t) => [t.id, t]));
-  const songTakeCount = new Map(takeCountsBySong);
 
   const items: PinnedItem[] = [];
   for (const row of rows) {
@@ -195,17 +212,19 @@ async function getPinned(db: Db, memberId: string): Promise<PinnedItem[]> {
           kind: "event",
           id: event.id,
           event,
-          takeCount: (takesByPinnedEvent.get(event.id) ?? []).length,
+          takeCount: takeCountByPinnedEvent.get(event.id) ?? 0,
         });
       }
     }
   }
-  return items;
+  return { items, total };
 }
 
 export interface HomeData {
-  /** Newest-pinned first. The first entry is the page's hero. */
+  /** Newest-pinned first, capped at `PINNED_LIMIT`. The first entry is the page's hero. */
   pinned: PinnedItem[];
+  /** How many things the member has pinned in all — may exceed `pinned.length`. */
+  pinnedTotal: number;
   /** The ledger — events only, newest first, each with its take count. */
   recentEvents: eventsRepo.EventWithTakeCount[];
 }
@@ -215,5 +234,9 @@ export async function getHomeData(db: Db, memberId: string): Promise<HomeData> {
     getPinned(db, memberId),
     eventsRepo.listRecentWithTakeCounts(db, { limit: RECENT_EVENTS_LIMIT }),
   ]);
-  return { pinned, recentEvents };
+  return {
+    pinned: pinned.items,
+    pinnedTotal: pinned.total,
+    recentEvents: recentEvents.rows,
+  };
 }

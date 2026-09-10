@@ -1,7 +1,8 @@
 import { uuidv7 } from "@bandplate/core";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { events, takes } from "../schema/sqlite/index.js";
+import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 
 export type Event = typeof events.$inferSelect;
 export type EventKind = Event["kind"];
@@ -127,13 +128,23 @@ export interface ListRecentOptions {
   includeArchived?: boolean;
 }
 
-/** Newest first — this ordering is the default everywhere events appear. */
+/**
+ * Newest first — this ordering is the default everywhere events appear.
+ *
+ * `desc(events.id)` is not decoration: `heldAt` is a DATE, so two events held
+ * the same day tie on the only sort key, and SQLite is free to order tied
+ * rows differently between two runs of the same query. That is invisible in
+ * an unpaged list and corrupting in a paged one — the page-2 query can return
+ * a row page 1 already showed, dropping another entirely. `id` is uuidv7, so
+ * it is a real creation-order tie-break rather than an arbitrary one. Same
+ * reasoning, same fix, as `takesRepo.listBySong`.
+ */
 export async function listRecent(db: Db, options: ListRecentOptions = {}): Promise<Event[]> {
   const query = db
     .select()
     .from(events)
     .where(options.includeArchived ? undefined : isNull(events.archivedAt))
-    .orderBy(desc(events.heldAt));
+    .orderBy(desc(events.heldAt), desc(events.id));
   if (options.limit !== undefined) {
     return query.limit(options.limit);
   }
@@ -145,11 +156,49 @@ export interface EventWithTakeCount extends Event {
 }
 
 export interface ListRecentWithTakeCountsOptions {
+  /**
+   * A plain ceiling, for the callers that want the newest N and no paging —
+   * home's five-event ledger. Ignored when `page` is given.
+   */
   limit?: number;
+  /** Which page to return. Omitted (with no `limit`) means the FIRST page. */
+  page?: PageArgs;
   /** Restrict to these kinds — e.g. the archive's "rehearsals only" filter. */
   kind?: EventKind[];
   /** Archived events are a browse-surface omission, so listings exclude them by default. */
   includeArchived?: boolean;
+  /** Only events that ARE archived — the archive pill's own view. */
+  onlyArchived?: boolean;
+}
+
+/**
+ * The conditions both the page query and its count run against, built once.
+ * See `takesRepo.searchConditions` for why this is not two copies.
+ */
+function eventConditions(options: ListRecentWithTakeCountsOptions): SQL[] {
+  const conditions: SQL[] = [];
+  if (options.kind !== undefined && options.kind.length > 0) {
+    conditions.push(inArray(events.kind, options.kind));
+  }
+  if (options.onlyArchived) {
+    conditions.push(isNotNull(events.archivedAt));
+  } else if (!options.includeArchived) {
+    conditions.push(isNull(events.archivedAt));
+  }
+  return conditions;
+}
+
+/** How many events match — the archive's total, and the Archived pill's badge. */
+export async function count(
+  db: Db,
+  options: ListRecentWithTakeCountsOptions = {},
+): Promise<number> {
+  const conditions = eventConditions(options);
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(events)
+    .where(conditions.length > 0 ? and(...conditions) : undefined);
+  return rows[0]?.value ?? 0;
 }
 
 /**
@@ -163,25 +212,66 @@ export interface ListRecentWithTakeCountsOptions {
 export async function listRecentWithTakeCounts(
   db: Db,
   options: ListRecentWithTakeCountsOptions = {},
-): Promise<EventWithTakeCount[]> {
+): Promise<Paged<EventWithTakeCount>> {
   // Conditions collected into a list and combined with `and()` rather than
   // branching per combination: with a kind filter and an archived filter that
   // would already be four near-identical query builders. `and()` of an empty
   // list is `undefined`, which `.where()` treats as no filter at all.
-  const conditions = [];
-  if (options.kind !== undefined && options.kind.length > 0) {
-    conditions.push(inArray(events.kind, options.kind));
-  }
+  const conditions = eventConditions(options);
+  const limit = options.page?.limit ?? options.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = options.page?.offset ?? 0;
+  const [rows, total] = await Promise.all([
+    db
+      .select({ event: events, takeCount: sql<number>`count(${takes.id})` })
+      .from(events)
+      .leftJoin(takes, eq(takes.eventId, events.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(events.id)
+      // See `listRecent` for why `id` is here — this is the archive's paged
+      // query, so a non-contractual order for same-day events is not cosmetic.
+      .orderBy(desc(events.heldAt), desc(events.id))
+      .limit(limit)
+      .offset(offset),
+    count(db, options),
+  ]);
+  return {
+    rows: rows.map((row) => ({ ...row.event, takeCount: row.takeCount })),
+    total,
+  };
+}
+
+/** One day, in epoch milliseconds. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Every event of one kind held on one day — what the duplicate-event warning
+ * and the merge offer are built from.
+ *
+ * A range query, not a JS filter over the whole archive. The callers used to
+ * ask `listRecentWithTakeCounts` for every event of that kind and narrow the
+ * list themselves, which was already reading the archive to find at most a
+ * couple of rows, and which broke outright once that listing returned a PAGE:
+ * a duplicate held before the page boundary would simply not be found, and
+ * the warning that exists to prevent a split day would go quiet exactly when
+ * the archive was big enough to need it.
+ */
+export async function listOnDay(
+  db: Db,
+  kind: EventKind,
+  dayStart: number,
+  options: { includeArchived?: boolean } = {},
+): Promise<Event[]> {
+  const conditions: SQL[] = [
+    eq(events.kind, kind),
+    gte(events.heldAt, dayStart),
+    lt(events.heldAt, dayStart + DAY_MS),
+  ];
   if (!options.includeArchived) {
     conditions.push(isNull(events.archivedAt));
   }
-  const query = db
-    .select({ event: events, takeCount: sql<number>`count(${takes.id})` })
+  return db
+    .select()
     .from(events)
-    .leftJoin(takes, eq(takes.eventId, events.id))
     .where(and(...conditions))
-    .groupBy(events.id)
-    .orderBy(desc(events.heldAt));
-  const rows = options.limit !== undefined ? await query.limit(options.limit) : await query;
-  return rows.map((row) => ({ ...row.event, takeCount: row.takeCount }));
+    .orderBy(desc(events.heldAt), desc(events.id));
 }

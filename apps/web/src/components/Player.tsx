@@ -432,21 +432,57 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     if (!playerEl) {
       return;
     }
-    const applyHeight = () => {
-      const height = playerEl.getBoundingClientRect().height;
-      if (height <= 0) {
+    const observer = new ResizeObserver(() => applyHeights());
+    // The tab bar is NOT persisted — a fresh element on every navigation —
+    // so the old one is dropped and the new one picked up each time.
+    let observedTabbar: Element | null = null;
+
+    const applyHeights = () => {
+      const shell = document.querySelector<HTMLElement>(".bp-shell");
+      if (!shell) {
         return;
       }
-      const shell = document.querySelector<HTMLElement>(".bp-shell");
-      shell?.style.setProperty("--bp-player-height", `${height}px`);
+      const height = playerEl.getBoundingClientRect().height;
+      if (height > 0) {
+        shell.style.setProperty("--bp-player-height", `${height}px`);
+      }
+
+      // The tab bar's height was hardcoded in `.bp-player`'s `bottom` as
+      // `57px` — 56px of `.bp-tabbar-item` plus its 1px border — which is
+      // only true at the browser's default font size. Raise the system font
+      // (Android's display size, or a browser minimum-font-size setting) and
+      // the labels push the bar taller, the player stays where 57px put it,
+      // and the page shows through the strip between them. Same class of bug
+      // as the declared-76px-vs-measured-109px one above, so the same fix:
+      // measure it. The measurement already includes the bar's own
+      // `env(safe-area-inset-bottom)` padding, which is why the CSS fallback
+      // adds that inset and this value must not.
+      const tabbar = document.querySelector<HTMLElement>(".bp-tabbar");
+      if (tabbar !== observedTabbar) {
+        if (observedTabbar) {
+          observer.unobserve(observedTabbar);
+        }
+        observedTabbar = tabbar;
+        if (tabbar) {
+          observer.observe(tabbar);
+        }
+      }
+      const tabbarHeight = tabbar?.getBoundingClientRect().height ?? 0;
+      if (tabbarHeight > 0) {
+        shell.style.setProperty("--bp-tabbar-height", `${tabbarHeight}px`);
+      } else {
+        // Hidden (desktop) or gone: hand `bottom` back to the CSS fallback
+        // rather than pinning it to a stale phone-sized number.
+        shell.style.removeProperty("--bp-tabbar-height");
+      }
     };
-    const observer = new ResizeObserver(applyHeight);
+
     observer.observe(playerEl);
-    document.addEventListener("astro:page-load", applyHeight);
-    applyHeight();
+    document.addEventListener("astro:page-load", applyHeights);
+    applyHeights();
     return () => {
       observer.disconnect();
-      document.removeEventListener("astro:page-load", applyHeight);
+      document.removeEventListener("astro:page-load", applyHeights);
     };
   }, []);
 

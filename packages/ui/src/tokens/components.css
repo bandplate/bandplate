@@ -1147,14 +1147,19 @@ a.bp-btn {
   width: 100%;
   max-width: 60rem;
   margin: 0 auto;
-  /* 6rem clears the tab bar (56px + safe-area); the player bar sits ABOVE
-     the tab bar (see `.bp-player`'s own `bottom` below), so its height has
-     to be reserved here too, on top of that, or the last take row on a
-     tall list would render underneath it. Always reserved — even with no
-     track loaded — rather than toggled by JS: a fixed bottom-padding
+  /* Clears the tab bar, plus the player bar that sits ABOVE it (see
+     `.bp-player`'s own `bottom` below), plus a little air — or the last take
+     row on a tall list renders underneath them. The tab bar's height is the
+     same measured value the player's `bottom` uses, so a system font size
+     that grows the bar grows this reservation with it. Always reserved, even
+     with no track loaded, rather than toggled by JS: a fixed bottom-padding
      number can't itself cause the width-based scrollWidth-blowout bugs a
      JS-computed one already has, elsewhere in this project. */
-  padding: 1.25rem 1.25rem calc(6rem + var(--bp-player-height));
+  padding: 1.25rem 1.25rem
+    calc(
+      2.5rem + var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
+        var(--bp-player-height)
+    );
   box-sizing: border-box;
 }
 
@@ -1326,11 +1331,14 @@ a.bp-btn {
   position: fixed;
   left: 0;
   right: 0;
-  /* The tab bar (`.bp-tabbar`) is 57px tall, not 56: `.bp-tabbar-item`'s
-     56px min-height PLUS the tab bar's own 1px `border-top`. Matching only
-     the 56px left that border's top pixel sitting under this bar instead
-     of above it. */
-  bottom: calc(57px + env(safe-area-inset-bottom, 0px));
+  /* Sits directly on the tab bar. `--bp-tabbar-height` is the bar's MEASURED
+     height, published by `Player.tsx` — the fallback here (56px of
+     `.bp-tabbar-item` plus the bar's own 1px `border-top`) is only true at
+     the browser's default font size, and a raised system font size pushes
+     the real bar taller than that, opening a strip of page between the two.
+     The measured value already carries the bar's own safe-area padding; the
+     fallback has to add it itself. */
+  bottom: var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px)));
   z-index: 42; /* above the tab bar's 40 */
   min-height: var(--bp-player-height);
   box-sizing: border-box;

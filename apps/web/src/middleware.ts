@@ -26,7 +26,7 @@ import { resolvePrincipalFromCookie } from "./server/principal.js";
 
 const FORBIDDEN_HTML = `<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>Forbidden — bandplate</title>
+<head><meta charset="utf-8"><title>Forbidden | bandplate</title>
 <style>
   /* Hardcoded rather than tokenised on purpose: this page is a string in
      the middleware and never loads a stylesheet. Values are Dubplate bone/ink

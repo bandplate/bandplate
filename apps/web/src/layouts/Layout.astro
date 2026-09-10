@@ -31,7 +31,7 @@ const { title, noindex = false, description } = Astro.props;
 const SHARE_DESCRIPTION =
   "Every rehearsal your band has recorded, in one place, with the keepers marked.";
 
-const shareTitle = `${title} — bandplate`;
+const shareTitle = `${title} | bandplate`;
 const shareDescription = description ?? SHARE_DESCRIPTION;
 
 // Absolute, because `og:image` and `og:url` are fetched by a crawler with no

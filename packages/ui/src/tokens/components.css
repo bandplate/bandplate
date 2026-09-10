@@ -5035,6 +5035,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
    for, so the anchor became this overlay and the badge became a real control
    sitting above it. Everything under it — label, spindle, caption — is inert
    text, so covering it costs nothing. */
+/* WHATEVER HOLDS ONE OF THESE MUST BE POSITIONED. `inset: 0` is measured
+   against the containing block, so a static parent silently hands the overlay
+   to the nearest positioned ancestor instead — which is not a layout glitch
+   but a full-page invisible link, plus a `:hover` on the parent that never
+   stops matching. `.bp-plate` sets it; `.bp-pinned-hero` had to be taught. */
 .bp-plate-hit {
   position: absolute;
   inset: 0;
@@ -5283,6 +5288,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
    which the hero's own plate no longer is (it renders as a plain element —
    see `PinnedPlate.astro`'s `interactive` prop). */
 .bp-pinned-hero {
+  /* REQUIRED, not cosmetic: this element holds a `.bp-plate-hit` directly, and
+     an `inset: 0` overlay is only the size of its containing block. Left
+     static, the hero's link resolved against `.bp-shell` and measured
+     1280x900 — the whole viewport — so every click anywhere on home hit the
+     hero, and `:hover` below matched permanently because the thing under the
+     pointer was always a descendant of the hero. See `.bp-plate-hit`. */
+  position: relative;
+
   display: flex;
   align-items: center;
   gap: 1.375rem;

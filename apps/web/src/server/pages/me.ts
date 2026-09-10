@@ -1,3 +1,5 @@
+import type { Db, PageArgs, instrumentsRepo } from "@bandplate/db";
+import { membersRepo, takesRepo, votesRepo } from "@bandplate/db";
 // `/me` — the signed-in member's own page: who they are, and what they have
 // done. Not a shelf: home already IS the shelf of exactly the things this page
 // used to list again under Songs / Events / Takes, and rendering the same rows
@@ -15,8 +17,7 @@
 // table rather than a JSON column. `membersRepo.listInstrumentsForMember`
 // includes archived instruments on purpose, so a member who plays one the
 // band has since dropped still sees it here.
-import type { Db, PageArgs, instrumentsRepo } from "@bandplate/db";
-import { membersRepo, takesRepo, votesRepo } from "@bandplate/db";
+import { type Locale, isLocale } from "@bandplate/i18n";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
 export interface VoteWithTake {
@@ -85,4 +86,41 @@ export async function getMeData(
     voteTotal: votes.total,
     unvotedCount: unvoted.length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Setting your own language
+// ---------------------------------------------------------------------------
+
+export type SetLocaleResult = { kind: "ok"; locale: Locale } | { kind: "invalid" };
+
+/**
+ * `/me`'s language picker, and the first thing on this page that WRITES.
+ *
+ * Deliberately not routed through `updateMemberWithGuards`. That function
+ * returns `{kind: "self"}` whenever `id === actingMemberId`, which is exactly
+ * right for `role` and `status` — an admin must not be able to demote or
+ * disable themselves and lock the band out — and exactly wrong here, where
+ * acting on yourself is the entire feature. `updateMemberInstruments` already
+ * sits outside it for the same reason.
+ *
+ * The member id comes from the SESSION, never from the form, matching
+ * `castVoteFromForm`'s contract: a form field naming whose language to change
+ * would be an authorization decision made by the browser.
+ *
+ * Returns the locale it wrote so the caller can set the cookie too — a member
+ * who signs out has to land on a sign-in page in the language they just chose,
+ * and by then there is no member row to consult.
+ */
+export async function setLocaleFromForm(
+  db: Db,
+  memberId: string,
+  formData: FormData,
+): Promise<SetLocaleResult> {
+  const raw = formData.get("locale");
+  if (!isLocale(raw)) {
+    return { kind: "invalid" };
+  }
+  await membersRepo.update(db, memberId, { locale: raw });
+  return { kind: "ok", locale: raw };
 }

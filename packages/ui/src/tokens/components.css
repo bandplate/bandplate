@@ -5820,6 +5820,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
   margin-top: 1.25rem;
 }
 
+/* The language picker sits between the instruments and the sign-out button:
+   a setting, in the column about you, above the one destructive thing.
+   `.bp-sheet-field` already supplies the label/control/hint stack — it is
+   written to work as a `<fieldset>`, which is what this is. */
+.bp-me-language {
+  margin-top: 1.25rem;
+}
+
 /* Last, and separated by more space than anything else in this column —
    destructive, rarely wanted, and not something to land on by accident while
    reaching for the admin link above it. */

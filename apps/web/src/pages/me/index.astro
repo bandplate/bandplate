@@ -14,12 +14,16 @@
 // What is left is the page's actual subject: the takes still waiting for your
 // ear, and the calls you have already made. Identity is a line at the top, not
 // a card — this is the one page where the app already knows who is looking.
+import { LANGUAGE_NAMES, LOCALES, messages } from "@bandplate/i18n";
+import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
 import InstrumentSet from "../../components/InstrumentSet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
+import { setLocaleCookie } from "../../server/cookies.js";
+import { isSameOrigin } from "../../server/csrf.js";
 import { formatShortDate } from "../../server/format.js";
-import { VOTES_PER_PAGE, getMeData } from "../../server/pages/me.js";
+import { VOTES_PER_PAGE, getMeData, setLocaleFromForm } from "../../server/pages/me.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
@@ -28,6 +32,40 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
+// `/me`'s first POST branch — the settled shape from
+// `admin/members/index.astro`: same-origin check, `intent` dispatch, then
+// PRG so a reload does not re-submit.
+//
+// The redirect is what makes the language actually change: the member row is
+// written here, but the PAGE was already being rendered in the old language
+// when the form was submitted, and `Astro.locals.locale` for THIS request was
+// resolved before the write. Redirecting means the next request resolves the
+// new value from the row, which is also what re-renders the persisted islands.
+let localeError: string | undefined;
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    localeError = t.common.originError;
+  } else {
+    const formData = await Astro.request.formData();
+    if (formData.get("intent") === "locale") {
+      const result = await setLocaleFromForm(appDeps.db, principal.memberId, formData);
+      if (result.kind === "ok") {
+        // The cookie too, not just the row: sign out and the login page has no
+        // member to ask, and it must not revert to whatever the browser wants.
+        setLocaleCookie(Astro.cookies, result.locale, {
+          cookieSecure: appDeps.config.cookieSecure,
+        });
+        return Astro.redirect("/me?saved=1");
+      }
+      localeError = t.common.genericError;
+    }
+  }
+}
+
+const languageSaved = Astro.url.searchParams.get("saved") === "1";
 const { page, args: votesPage } = pageRequest(Astro.url.searchParams, VOTES_PER_PAGE);
 const data = await getMeData(appDeps.db, principal.memberId, votesPage);
 if (!data) {
@@ -53,6 +91,9 @@ const initials = member.displayName
   <div class="bp-me">
     <section class="bp-me-main">
       <h1 class="bp-me-heading">Your votes</h1>
+
+      {languageSaved && <Banner kind="success">{t.me.languageSaved}</Banner>}
+      {localeError && <Banner kind="error">{localeError}</Banner>}
 
       {/* The count home used to render as a queue of six rows. Here it is a
           number you went looking for rather than one pushed at you, and its
@@ -168,6 +209,80 @@ const initials = member.displayName
           </p>
         )
       }
+
+      {/* The language picker.
+
+          TWO SUBMIT BUTTONS, not a radio group and a Save. A radio group needs
+          a second click on a button that says nothing about what it does; two
+          buttons make the choice and the action the same gesture, which is one
+          tap on a phone and works with no JS at all. The current one is
+          `aria-pressed` and disabled — it is a statement, not an offer.
+
+          Selection carries the tick as well as the accent fill, because this
+          app's rule is that it never rests on colour alone.
+
+          The language NAMES are autonyms — "English", "Čeština" — identical in
+          both catalogs on purpose. Someone who picked Czech by accident has to
+          be able to read their way back out. See `LANGUAGE_NAMES`.
+
+          `data-astro-reload` is load-bearing, not caution: `<ClientRouter />`
+          intercepts every same-origin form submission for its own soft
+          navigation, and `Player`, `VoteFavorite` and `ConfirmDialog` are
+          `transition:persist` — Astro MOVES those islands to the new page
+          rather than remounting them, so their already-rendered text would
+          stay in the old language. Forcing a real document load is the only
+          fix, and its cost (playback stops) is stated on the control rather
+          than discovered. */}
+      <form
+        method="post"
+        class="bp-me-language"
+        data-astro-reload
+      >
+        <input type="hidden" name="intent" value="locale" />
+        <fieldset class="bp-sheet-field">
+          <legend class="bp-eyebrow">{t.me.languageLegend}</legend>
+          <div class="bp-filter-pills">
+            {
+              LOCALES.map((option) => {
+                const name = LANGUAGE_NAMES[option];
+                const current = option === locale;
+                return current ? (
+                  <span class="bp-filter-pill" aria-pressed="true" aria-label={t.me.languageCurrent(name)}>
+                    <svg
+                      class="bp-filter-pill-mark"
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 12.5l5.5 5.5L20 6.5" />
+                    </svg>
+                    {name}
+                  </span>
+                ) : (
+                  <button
+                    type="submit"
+                    name="locale"
+                    value={option}
+                    class="bp-filter-pill"
+                    aria-pressed="false"
+                    aria-label={t.me.languageSwitch(name)}
+                  >
+                    {name}
+                  </button>
+                );
+              })
+            }
+          </div>
+          <p class="bp-sheet-hint bp-m0">{t.me.languageHint}</p>
+          <p class="bp-sheet-hint bp-m0">{t.me.languageStopsPlayback}</p>
+        </fieldset>
+      </form>
 
       {/* Signing out lives here, not in the shell. It was a button in the
           sidebar and another in the phone header — permanent chrome on every

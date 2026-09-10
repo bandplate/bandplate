@@ -32,6 +32,8 @@ const IDENTICAL_IS_FINE = new Set<string>([
 
 /** Arguments to call a function-valued entry with, keyed by its dotted path. */
 const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
+  "me.languageCurrent": [{ label: "name", args: ["English"] }],
+  "me.languageSwitch": [{ label: "name", args: ["Čeština"] }],
   "voting.tally": [
     { label: "unvoted", args: [{ keeperVotes: 0, totalVotes: 0, ratingScore: 0 }] },
     { label: "one", args: [{ keeperVotes: 1, totalVotes: 1, ratingScore: 1 }] },

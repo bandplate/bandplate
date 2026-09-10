@@ -9,11 +9,13 @@
 // Areas are added here as they are extracted, one commit per area, so this
 // list doubles as the record of how far the translation has got.
 import type { Locale } from "../locale.js";
+import { commonByLocale } from "./common.js";
+import { meByLocale } from "./me.js";
 import { votingByLocale } from "./voting.js";
 
 const CATALOG = {
-  en: { voting: votingByLocale.en },
-  cs: { voting: votingByLocale.cs },
+  en: { common: commonByLocale.en, me: meByLocale.en, voting: votingByLocale.en },
+  cs: { common: commonByLocale.cs, me: meByLocale.cs, voting: votingByLocale.cs },
 } as const;
 
 /**

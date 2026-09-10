@@ -106,6 +106,16 @@ export const events = {
   takeLabelLabel: "Label",
   takeLabelHint: "Which pass it was — take 3, with the horns. Optional.",
 
+  archiveThis: "Archive this event",
+  putItBack: "Put it back",
+  /** The kind picker's own label on the edit sheet. */
+  whatWasIt: "What was it",
+  archived: "Archived",
+  edit: "Edit",
+  addTake: "Add take",
+  instrumentsHeading: "Instruments",
+  songHeading: "Song",
+
   takesHeading: "Takes",
   takesEmpty: "No takes logged for this one yet.",
   /** The take list's own subheading, which says what its order means. */

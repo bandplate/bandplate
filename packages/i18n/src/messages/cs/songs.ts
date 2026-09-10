@@ -94,6 +94,7 @@ export const songs = {
   addTakeTitle: "Přidat nahrávku", // en: Add a take
   addTakeSubtitle: "Patří k téhle skladbě; zvuk se přidá potom.", // en: It goes on this song; the audio comes afterwards.
   addTake: "Přidat nahrávku", // en: Add take
+  eventPickLabel: "Akce", // en: Session
   recordedLabel: "Nahráno", // en: Recorded
   takeLabelLabel: "Označení", // en: Label
   takeLabelHint: "Který pokus to byl — třetí, s dechy. Nepovinné.", // en: Which pass it was — take 3, with the horns. Optional.
@@ -105,6 +106,14 @@ export const songs = {
 
   generalNotesHeading: "Obecné poznámky", // en: General notes
   aliasesHeading: "Známé taky jako", // en: Also known as
+
+  edit: "Upravit", // en: Edit
+  archiveThis: "Archivovat tuhle skladbu", // en: Archive this song
+  deleteForGood: "Smazat tuhle skladbu natrvalo", // en: Delete this song for good
+  putItBack: "Vrátit zpět", // en: Put it back
+  instrumentNotesHeading: "Poznámky k nástrojům", // en: Notes by instrument
+  openInstead: "Otevřít ji", // en: Open it instead
+  saveChanges: "Uložit změny", // en: Save changes
 
   takesHeading: "Nahrávky", // en: Takes
   // en: No takes of this one yet — record a rehearsal and it'll show up here.

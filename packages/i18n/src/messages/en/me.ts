@@ -22,6 +22,14 @@ export const LANGUAGE_NAMES: Record<Locale, string> = {
 };
 
 export const me = {
+  title: "Me",
+  votesHeading: "Your votes",
+  allCaughtUp: "You've had your say on every published take.",
+  /** A vote whose take has since been deleted. */
+  takeRemoved: "A take that's since been removed",
+  admin: "Admin",
+  signOut: "Sign out",
+
   languageLegend: "Language",
   languageHint: "Applies everywhere, on every device you're signed in on.",
   /** The button that is already the current language, for screen readers. */

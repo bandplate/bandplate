@@ -12,6 +12,8 @@ export const common = {
 
   genericError: "Nepovedlo se. Zkus to znovu.", // en: That didn't work. Try again.
 
+  closeWithoutSaving: "Zavřít bez uložení", // en: Close without saving
+
   instrumentsVerb: "Nástroje", // en: Instruments
   playsVerb: "Hraje na", // en: Plays
 

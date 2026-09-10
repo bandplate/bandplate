@@ -75,6 +75,8 @@ export const songs = {
   addTakeTitle: "Add a take",
   addTakeSubtitle: "It goes on this song; the audio comes afterwards.",
   addTake: "Add take",
+  /** The event picker on the add-take sheet. */
+  eventPickLabel: "Session",
   recordedLabel: "Recorded",
   takeLabelLabel: "Label",
   takeLabelHint: "Which pass it was — take 3, with the horns. Optional.",
@@ -86,6 +88,14 @@ export const songs = {
 
   generalNotesHeading: "General notes",
   aliasesHeading: "Also known as",
+
+  edit: "Edit",
+  archiveThis: "Archive this song",
+  deleteForGood: "Delete this song for good",
+  putItBack: "Put it back",
+  instrumentNotesHeading: "Notes by instrument",
+  openInstead: "Open it instead",
+  saveChanges: "Save changes",
 
   takesHeading: "Takes",
   takesEmpty: "No takes of this one yet — record a rehearsal and it'll show up here.",

@@ -14,6 +14,14 @@
 import type { me as enMe } from "../en/me.js";
 
 export const me = {
+  title: "Já", // en: Me
+  votesHeading: "Tvoje hlasy", // en: Your votes
+  // en: You've had your say on every published take.
+  allCaughtUp: "Ke všem zveřejněným nahrávkám ses vyjádřil.",
+  takeRemoved: "Nahrávka, která už byla smazaná", // en: A take that's since been removed
+  admin: "Správa", // en: Admin
+  signOut: "Odhlásit se", // en: Sign out
+
   languageLegend: "Jazyk", // en: Language
   languageHint: "Platí všude a na všech zařízeních, kde jsi přihlášený.", // en: Applies everywhere, on every device you're signed in on.
   languageCurrent: (name: string): string => `${name}, současný jazyk`, // en: `${name}, current language`

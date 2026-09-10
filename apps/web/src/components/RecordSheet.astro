@@ -35,7 +35,7 @@ const { id, eyebrow, title, subtitle } = Astro.props;
         inside it — a bare 4px strip is the right shape and an impossible
         thing to hit. Hidden past `lg`, where the X takes over. */}
     <button type="button" class="bp-sheet-grip" data-sheet-close>
-      <span class="bp-visually-hidden">Close without saving</span>
+      <span class="bp-visually-hidden">{commonMessages(Astro.locals.locale).closeWithoutSaving}</span>
     </button>
     <div class="bp-sheet-head-row">
       <div class="bp-sheet-heading">
@@ -44,7 +44,7 @@ const { id, eyebrow, title, subtitle } = Astro.props;
         {subtitle && <p class="bp-sheet-sub bp-m0">{subtitle}</p>}
       </div>
       <button type="button" class="bp-sheet-x" data-sheet-close>
-        <span class="bp-visually-hidden">Close without saving</span>
+        <span class="bp-visually-hidden">{commonMessages(Astro.locals.locale).closeWithoutSaving}</span>
         <svg
           viewBox="0 0 24 24"
           width="16"

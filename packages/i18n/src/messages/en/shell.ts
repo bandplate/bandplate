@@ -23,6 +23,9 @@ export const shell = {
     tokens: "Tokens",
   },
 
+  /** Accessible name for the admin section nav. */
+  adminSectionsLabel: "Admin sections",
+
   /** Accessible name for both the sidebar and the phone tab bar. */
   navLabel: "Main",
 

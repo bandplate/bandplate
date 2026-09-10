@@ -38,6 +38,7 @@ export const shell = {
     tokens: "Tokeny", // en: Tokens
   },
 
+  adminSectionsLabel: "Sekce správy", // en: Admin sections
   navLabel: "Hlavní", // en: Main
   adminGroupLabel: "Správa", // en: Admin
   skipToContent: "Přeskočit na obsah", // en: Skip to content

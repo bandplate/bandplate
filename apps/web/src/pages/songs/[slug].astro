@@ -200,7 +200,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             data-confirm-cta={t.songs.unarchiveCta}
             data-confirm-tone="neutral"
           >
-            Put it back
+            {t.songs.putItBack}
           </a>
         )}
       </Banner>
@@ -224,7 +224,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
         </span>
       </h1>
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-song">
-          Edit
+          {t.songs.edit}
         </button>
       </div>
       {song.isStub && (
@@ -253,7 +253,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
         <input type="hidden" name="songId" value={song.id} />
         <div class="bp-sheet-body">
           <div class="bp-sheet-field">
-            <label class="bp-eyebrow" for="take-event-pick">Session</label>
+            <label class="bp-eyebrow" for="take-event-pick">{t.songs.eventPickLabel}</label>
             <select class="bp-select" id="take-event-pick" name="eventId">
               {allEvents.map((option) => (
                 <option value={option.id}>{eventOptionLabel(option)}</option>
@@ -275,7 +275,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             error={takeErrorField === "label" ? takeError : undefined}
           />
           <fieldset class="bp-sheet-field">
-            <legend class="bp-eyebrow">Instruments</legend>
+            <legend class="bp-eyebrow">{t.takes.instrumentsHeading}</legend>
             <div class="bp-filter-pills">
               {allInstruments.map((instrument) => (
                 <label class="bp-filter-pill-check">
@@ -291,8 +291,8 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           </p>
         </div>
         <div class="bp-sheet-foot">
-          <button type="submit" class="bp-btn bp-btn-primary">Add take</button>
-          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+          <button type="submit" class="bp-btn bp-btn-primary">{t.songs.addTake}</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.songs.cancel}</button>
         </div>
       </form>
     </RecordSheet>
@@ -371,7 +371,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                   data-confirm-action={`/admin/songs/${song.id}/archive`}
                   data-confirm-cta={t.songs.archiveCta}
                 >
-                  Archive this song
+                  {t.songs.archiveThis}
                 </a>
               )}
               <a
@@ -384,14 +384,14 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                 data-confirm-cta={t.songs.deleteCta}
                 data-confirm-redirect="/songs?song_deleted=1"
               >
-                Delete this song for good
+                {t.songs.deleteForGood}
               </a>
             </div>
           )}
         </div>
         <div class="bp-sheet-foot">
-          <button type="submit" class="bp-btn bp-btn-primary">Save changes</button>
-          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>Cancel</button>
+          <button type="submit" class="bp-btn bp-btn-primary">{t.songs.saveChanges}</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.songs.cancel}</button>
         </div>
       </form>
     </RecordSheet>
@@ -534,7 +534,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
 
         {instrumentNotes.length > 0 && (
           <section class="bp-song-aside-section">
-            <h2 class="bp-section-title bp-m0">Notes by instrument</h2>
+            <h2 class="bp-section-title bp-m0">{t.songs.instrumentNotesHeading}</h2>
             <div class="bp-stack bp-stack-tight">
               {instrumentNotes.map((note) => (
                 <div>

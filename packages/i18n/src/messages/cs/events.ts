@@ -114,6 +114,15 @@ export const events = {
   takeLabelLabel: "Označení", // en: Label
   takeLabelHint: "Který pokus to byl — take 3, s dechy. Nepovinné.", // en: Which pass it was — take 3, with the horns. Optional.
 
+  archiveThis: "Archivovat tuhle akci", // en: Archive this event
+  putItBack: "Vrátit zpět", // en: Put it back
+  whatWasIt: "Co to bylo", // en: What was it
+  archived: "Archiv", // en: Archived
+  edit: "Upravit", // en: Edit
+  addTake: "Přidat nahrávku", // en: Add take
+  instrumentsHeading: "Nástroje", // en: Instruments
+  songHeading: "Skladba", // en: Song
+
   takesHeading: "Nahrávky", // en: Takes
   takesEmpty: "K téhle akci zatím žádné nahrávky.", // en: No takes logged for this one yet.
   // en: `${n} takes, in the order they were played`

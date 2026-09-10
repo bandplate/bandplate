@@ -87,10 +87,10 @@ const initials = member.displayName
   .join("");
 ---
 
-<AppLayout title="Me" principal={principal} current="me">
+<AppLayout title={t.me.title} principal={principal} current="me">
   <div class="bp-me">
     <section class="bp-me-main">
-      <h1 class="bp-me-heading">Your votes</h1>
+      <h1 class="bp-me-heading">{t.me.votesHeading}</h1>
 
       {languageSaved && <Banner kind="success">{t.me.languageSaved}</Banner>}
       {localeError && <Banner kind="error">{localeError}</Banner>}
@@ -133,7 +133,7 @@ const initials = member.displayName
           </div>
         ) : (
           <p class="bp-me-unvoted-line bp-me-unvoted bp-m0">
-            <span>You've had your say on every published take.</span>
+            <span>{t.me.allCaughtUp}</span>
           </p>
         )
       }
@@ -165,9 +165,7 @@ const initials = member.displayName
                       {take.song?.title ?? "Untitled take"}
                     </a>
                   ) : (
-                    <span class="bp-vote-row-song bp-vote-row-song--gone">
-                      A take that's since been removed
-                    </span>
+                    <span class="bp-vote-row-song bp-vote-row-song--gone">{t.me.takeRemoved}</span>
                   )}
                   <p class="bp-vote-row-meta bp-m0">
                     {take?.event && <span>{formatShortDate(take.recordedAt)}</span>}
@@ -197,7 +195,7 @@ const initials = member.displayName
           <p class="bp-me-name bp-m0">{member.displayName}</p>
           <p class="bp-me-contact bp-m0">
             <span>{member.email}</span>
-            {member.role === "admin" && <span class="bp-kind">Admin</span>}
+            {member.role === "admin" && <span class="bp-kind">{t.me.admin}</span>}
           </p>
         </div>
       </div>
@@ -295,7 +293,7 @@ const initials = member.displayName
           nav item now, reachable from every page, so a second door to it on
           this one page was chrome that had to be maintained twice. */}
       <form method="post" action="/logout" class="bp-me-signout">
-        <button type="submit" class="bp-btn bp-btn-danger bp-btn-sm">Sign out</button>
+        <button type="submit" class="bp-btn bp-btn-danger bp-btn-sm">{t.me.signOut}</button>
       </form>
     </aside>
   </div>

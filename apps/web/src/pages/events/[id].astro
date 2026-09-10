@@ -155,7 +155,7 @@ const [allSongs, allInstruments] = await Promise.all([
             data-confirm-cta={t.events.unarchiveCta}
             data-confirm-tone="neutral"
           >
-            Put it back
+            {t.events.putItBack}
           </a>
         )}
       </Banner>
@@ -223,7 +223,7 @@ const [allSongs, allInstruments] = await Promise.all([
         </span>
       </h1>
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-event">
-          Edit
+          {t.events.edit}
         </button>
       </div>
       {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
@@ -243,7 +243,7 @@ const [allSongs, allInstruments] = await Promise.all([
         <input type="hidden" name="eventId" value={event.id} />
         <div class="bp-sheet-body">
           <div class="bp-sheet-field">
-            <label class="bp-eyebrow" for="take-song-pick">Song</label>
+            <label class="bp-eyebrow" for="take-song-pick">{t.events.songHeading}</label>
             <select class="bp-select" id="take-song-pick" name="songId">
               {allSongs.map((option) => (
                 <option value={option.id}>{option.title}</option>
@@ -265,7 +265,7 @@ const [allSongs, allInstruments] = await Promise.all([
             error={takeErrorField === "label" ? takeError : undefined}
           />
           <fieldset class="bp-sheet-field">
-            <legend class="bp-eyebrow">Instruments</legend>
+            <legend class="bp-eyebrow">{t.events.instrumentsHeading}</legend>
             <div class="bp-filter-pills">
               {allInstruments.map((instrument) => (
                 <label class="bp-filter-pill-check">
@@ -281,7 +281,7 @@ const [allSongs, allInstruments] = await Promise.all([
           </p>
         </div>
         <div class="bp-sheet-foot">
-          <button type="submit" class="bp-btn bp-btn-primary">Add take</button>
+          <button type="submit" class="bp-btn bp-btn-primary">{t.events.addTake}</button>
           <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.events.cancel}</button>
         </div>
       </form>
@@ -297,7 +297,7 @@ const [allSongs, allInstruments] = await Promise.all([
         <input type="hidden" name="intent" value="update" />
         <div class="bp-sheet-body">
           <div class="bp-sheet-field">
-            <label class="bp-eyebrow" for="edit-event-kind">What was it</label>
+            <label class="bp-eyebrow" for="edit-event-kind">{t.events.whatWasIt}</label>
             <select class="bp-select" id="edit-event-kind" name="kind">
               <option value="rehearsal" selected={event.kind === "rehearsal"}>{t.events.kindRehearsal}</option>
               <option value="concert" selected={event.kind === "concert"}>{t.events.kindConcert}</option>
@@ -343,7 +343,7 @@ const [allSongs, allInstruments] = await Promise.all([
                 data-confirm-action={`/admin/events/${event.id}/archive`}
                 data-confirm-cta={t.events.archiveCta}
               >
-                Archive this event
+                {t.events.archiveThis}
               </a>
             </div>
           )}
@@ -359,7 +359,7 @@ const [allSongs, allInstruments] = await Promise.all([
       <div class="bp-title-row">
         <h2 class="bp-section-title bp-m0">{t.events.takesHeading}</h2>
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="add-take">
-          Add take
+          {t.events.addTake}
         </button>
       </div>
       {takeTotal > 0 && (

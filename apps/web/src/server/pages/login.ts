@@ -47,7 +47,7 @@ export async function handleLoginPost(
   const raw = formData.get("email");
   const parsed = emailSchema.safeParse(typeof raw === "string" ? raw : "");
   if (!parsed.success) {
-    return { kind: "invalid", error: "Enter your email address." };
+    return { kind: "invalid", error: "emailRequiredLogin" };
   }
 
   const ip = extractClientIp(headers, deps.trustedProxyDepth ?? DEFAULT_TRUSTED_PROXY_DEPTH);

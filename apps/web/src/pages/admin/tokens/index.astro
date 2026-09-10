@@ -1,6 +1,6 @@
 ---
 import { SCOPES } from "@bandplate/core";
-import { adminMessages } from "@bandplate/i18n";
+import { adminMessages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AdminHeader from "../../../components/AdminHeader.astro";
@@ -46,7 +46,7 @@ if (Astro.request.method === "POST") {
         // including a query string.
         created = result;
       } else {
-        createError = result.error;
+        createError = validationMessage(Astro.locals.locale, result.error);
         createErrorField = result.field;
       }
     } else if (intent === "update") {

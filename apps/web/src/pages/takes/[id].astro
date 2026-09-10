@@ -28,7 +28,7 @@ import { canPublish, hasAllScopes } from "@bandplate/core";
 // transition, just not a pixel-identical one. See task-6-report.md.
 import type { assetsRepo } from "@bandplate/db";
 import { instrumentsRepo, songsRepo } from "@bandplate/db";
-import { formatBytes, messages, playerMessages } from "@bandplate/i18n";
+import { formatBytes, messages, playerMessages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AssetUploader from "../../components/AssetUploader.tsx";
@@ -93,7 +93,7 @@ if (Astro.request.method === "POST") {
         editError = t.takes.songGone;
         editErrorField = result.field;
       } else {
-        editError = result.error;
+        editError = validationMessage(locale, result.error);
         editErrorField = result.field;
       }
     }

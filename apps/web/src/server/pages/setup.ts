@@ -14,9 +14,9 @@ export async function isBootstrapAvailable(db: Db): Promise<boolean> {
 }
 
 const bootstrapSchema = z.object({
-  bootstrapToken: z.string().min(1, "Enter the bootstrap token."),
-  displayName: z.string().trim().min(1, "Enter a display name.").max(200),
-  email: z.string().trim().min(1, "Enter an email address.").max(320),
+  bootstrapToken: z.string().min(1, "bootstrapTokenRequired"),
+  displayName: z.string().trim().min(1, "displayNameRequired").max(200),
+  email: z.string().trim().min(1, "emailRequired").max(320),
 });
 
 export type BootstrapFieldErrors = Partial<

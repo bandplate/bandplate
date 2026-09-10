@@ -5,7 +5,7 @@
 // directly here (not after a redirect) — a broken mailer needs to be
 // discovered by the operator running setup, not by the first member who
 // can't get a login link.
-import { messages } from "@bandplate/i18n";
+import { messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import AuthLayout from "../layouts/AuthLayout.astro";
@@ -43,7 +43,8 @@ if (Astro.request.method === "POST") {
 
 const fieldErrors = result?.kind === "invalid" ? result.errors : {};
 
-const t = messages(Astro.locals.locale);
+const locale = Astro.locals.locale;
+const t = messages(locale);
 ---
 
 <AuthLayout title={t.auth.setupTitle}>
@@ -90,14 +91,14 @@ const t = messages(Astro.locals.locale);
           type="password"
           required
           autocomplete="off"
-          error={fieldErrors.bootstrapToken}
+          error={fieldErrors.bootstrapToken ? validationMessage(locale, fieldErrors.bootstrapToken) : undefined}
         />
         <Field
           label={t.auth.setupNameLabel}
           name="displayName"
           required
           autocomplete="name"
-          error={fieldErrors.displayName}
+          error={fieldErrors.displayName ? validationMessage(locale, fieldErrors.displayName) : undefined}
         />
         <Field
           label={t.auth.setupEmailLabel}
@@ -105,7 +106,7 @@ const t = messages(Astro.locals.locale);
           type="email"
           required
           autocomplete="email"
-          error={fieldErrors.email}
+          error={fieldErrors.email ? validationMessage(locale, fieldErrors.email) : undefined}
         />
         <button type="submit" class="bp-btn bp-btn-primary">{t.auth.setupSubmit}</button>
       </form>

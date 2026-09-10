@@ -10,7 +10,7 @@ import { instrumentsRepo, songsRepo } from "@bandplate/db";
 // event plus every take that day, with instruments and songs batch-fetched)
 // ran at ~0.5-0.7ms against seeded data — see task-5-report.md. Nothing
 // here is deferred.
-import { formatLongDate, messages } from "@bandplate/i18n";
+import { formatLongDate, messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
@@ -68,7 +68,7 @@ if (Astro.request.method === "POST") {
         takeError = t.events.takeGone;
         takeErrorField = result.field;
       } else {
-        takeError = result.error;
+        takeError = validationMessage(locale, result.error);
         takeErrorField = result.field;
       }
     } else if (formData.get("intent") === "update") {
@@ -79,7 +79,7 @@ if (Astro.request.method === "POST") {
       if (result.kind === "not_found") {
         formError = t.events.gone;
       } else {
-        editError = result.error;
+        editError = validationMessage(locale, result.error);
         editErrorField = result.field;
       }
     }

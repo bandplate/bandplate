@@ -169,14 +169,14 @@ function parseDateInput(value: string): number | undefined {
 
 const eventFieldsSchema = z.object({
   kind: z.enum(["rehearsal", "concert", "session"], {
-    errorMap: () => ({ message: "Choose what kind of session this was." }),
+    errorMap: () => ({ message: "kindRequired" }),
   }),
   heldAt: z
     .string()
     .trim()
-    .min(1, "Enter the date it was held.")
+    .min(1, "heldAtRequired")
     .transform(parseDateInput)
-    .refine((v): v is number => v !== undefined, "That date didn't look right."),
+    .refine((v): v is number => v !== undefined, "dateInvalid"),
   title: z.string().trim().max(300).nullable(),
   venue: z.string().trim().max(300).nullable(),
   notes: z.string().trim().max(20_000).nullable(),
@@ -206,7 +206,7 @@ function invalidEvent(parsed: z.SafeParseError<unknown>): EventFormFailure {
   const issue = parsed.error.issues[0];
   return {
     kind: "invalid",
-    error: issue?.message ?? "Invalid input.",
+    error: issue?.message ?? "generic",
     field: (issue?.path[0] as EventField | undefined) ?? "heldAt",
   };
 }

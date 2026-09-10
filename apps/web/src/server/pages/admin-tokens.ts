@@ -37,7 +37,7 @@ function parseScopes(formData: FormData): Scope[] | undefined {
   return values as Scope[];
 }
 
-const labelSchema = z.string().trim().min(1, "Enter a label.").max(200);
+const labelSchema = z.string().trim().min(1, "labelRequired").max(200);
 
 export type CreateTokenField = "label" | "scopes";
 
@@ -51,12 +51,12 @@ export async function createToken(auth: AuthDeps, formData: FormData): Promise<C
   if (!labelParsed.success) {
     return {
       kind: "invalid",
-      error: labelParsed.error.issues[0]?.message ?? "Invalid input.",
+      error: labelParsed.error.issues[0]?.message ?? "generic",
       field: "label",
     };
   }
   if (!scopes) {
-    return { kind: "invalid", error: "Choose at least one scope.", field: "scopes" };
+    return { kind: "invalid", error: "scopeRequired", field: "scopes" };
   }
 
   const created = await createServiceToken(auth, { label: labelParsed.data, scopes });

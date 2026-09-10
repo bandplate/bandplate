@@ -11,7 +11,7 @@ import { assetsRepo, eventsRepo, instrumentsRepo } from "@bandplate/db";
 // events, all batch-fetched) runs in ~0.5-1.3ms locally — nowhere near the
 // ~150ms bar for a Server Island, so nothing on this page is deferred. See
 // task-5-report.md for the full measurement.
-import { messages } from "@bandplate/i18n";
+import { messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
@@ -74,7 +74,7 @@ if (Astro.request.method === "POST") {
         takeError = t.songs.takeGone;
         takeErrorField = result.field;
       } else {
-        takeError = result.error;
+        takeError = validationMessage(locale, result.error);
         takeErrorField = result.field;
       }
     } else if (formData.get("intent") === "update") {
@@ -89,7 +89,7 @@ if (Astro.request.method === "POST") {
         editError = `${result.existing.title} already has that title.`;
         editErrorField = "title";
       } else {
-        editError = result.error;
+        editError = validationMessage(locale, result.error);
         editErrorField = result.field;
       }
     }

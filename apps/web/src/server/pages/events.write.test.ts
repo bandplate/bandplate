@@ -94,7 +94,7 @@ describe("createEvent", () => {
     const result = await createEvent(db, 1000, formData({ ...REHEARSAL, heldAt: "" }));
     expect(result).toEqual({
       kind: "invalid",
-      error: "Enter the date it was held.",
+      error: "heldAtRequired",
       field: "heldAt",
     });
   });

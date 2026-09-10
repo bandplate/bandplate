@@ -105,7 +105,10 @@ describe("createSong", () => {
 
   it("rejects an empty title against the title field", async () => {
     const result = await createSong(db, 1000, formData({ title: "   " }));
-    expect(result).toEqual({ kind: "invalid", error: "Enter a title.", field: "title" });
+    // A KEY, not a sentence: the schema is module level and cannot take a
+    // locale, so the page resolves it at render. See `@bandplate/i18n`'s
+    // `validationMessage`.
+    expect(result).toEqual({ kind: "invalid", error: "titleRequired", field: "title" });
   });
 
   it("rejects a nonsense tempo against the tempo field", async () => {

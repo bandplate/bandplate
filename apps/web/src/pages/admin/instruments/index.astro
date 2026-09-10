@@ -1,5 +1,5 @@
 ---
-import { adminMessages } from "@bandplate/i18n";
+import { adminMessages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import { INSTRUMENT_GLYPHS, INSTRUMENT_GLYPH_CREDIT } from "@bandplate/ui/icons/instruments.js";
@@ -40,7 +40,7 @@ if (Astro.request.method === "POST") {
       if (result.kind === "ok") {
         return Astro.redirect("/admin/instruments?created=1");
       }
-      createError = result.error;
+      createError = validationMessage(Astro.locals.locale, result.error);
       createErrorField = result.field;
     } else if (intent === "update") {
       const id = String(formData.get("instrumentId") ?? "");

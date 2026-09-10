@@ -117,14 +117,14 @@ function parseDateInput(value: string): number | undefined {
 }
 
 const takeFieldsSchema = z.object({
-  songId: z.string().trim().min(1, "Choose which song this is."),
-  eventId: z.string().trim().min(1, "Choose which session this came from."),
+  songId: z.string().trim().min(1, "songRequired"),
+  eventId: z.string().trim().min(1, "eventRequired"),
   recordedAt: z
     .string()
     .trim()
-    .min(1, "Enter the date it was recorded.")
+    .min(1, "recordedAtRequired")
     .transform(parseDateInput)
-    .refine((v): v is number => v !== undefined, "That date didn't look right."),
+    .refine((v): v is number => v !== undefined, "dateInvalid"),
   label: z.string().trim().max(200).nullable(),
   notes: z.string().trim().max(20_000).nullable(),
 });
@@ -143,7 +143,7 @@ function invalidTake(parsed: z.SafeParseError<unknown>): TakeFormFailure {
   const issue = parsed.error.issues[0];
   return {
     kind: "invalid",
-    error: issue?.message ?? "Invalid input.",
+    error: issue?.message ?? "generic",
     field: (issue?.path[0] as TakeField | undefined) ?? "songId",
   };
 }

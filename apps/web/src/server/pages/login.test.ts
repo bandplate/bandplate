@@ -34,7 +34,7 @@ describe("handleLoginPost", () => {
 
   it("rejects an empty email without throwing", async () => {
     const result = await handleLoginPost(deps, formData(""), headers());
-    expect(result).toEqual({ kind: "invalid", error: "Enter your email address." });
+    expect(result).toEqual({ kind: "invalid", error: "emailRequiredLogin" });
   });
 
   it("accepts a plain form submission and reports success identically for an unknown address", async () => {

@@ -21,6 +21,7 @@ import { playerByLocale } from "./player.js";
 import { shellByLocale } from "./shell.js";
 import { songsByLocale } from "./songs.js";
 import { takesByLocale } from "./takes.js";
+import { validationByLocale } from "./validation.js";
 import { votingByLocale } from "./voting.js";
 
 const CATALOG = {
@@ -37,6 +38,7 @@ const CATALOG = {
     shell: shellByLocale.en,
     songs: songsByLocale.en,
     takes: takesByLocale.en,
+    validation: validationByLocale.en,
     voting: votingByLocale.en,
   },
   cs: {
@@ -52,6 +54,7 @@ const CATALOG = {
     shell: shellByLocale.cs,
     songs: songsByLocale.cs,
     takes: takesByLocale.cs,
+    validation: validationByLocale.cs,
     voting: votingByLocale.cs,
   },
 } as const;

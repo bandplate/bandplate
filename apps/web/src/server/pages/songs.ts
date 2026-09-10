@@ -192,12 +192,8 @@ function optionalNumber(value: FormDataEntryValue | null): string | undefined {
   return text === null ? undefined : text;
 }
 
-const titleSchema = z.string().trim().min(1, "Enter a title.").max(300);
-const tempoSchema = z.coerce
-  .number()
-  .positive("Tempo has to be a positive number.")
-  .max(400, "That tempo looks wrong — 400 bpm is the ceiling.")
-  .optional();
+const titleSchema = z.string().trim().min(1, "titleRequired").max(300);
+const tempoSchema = z.coerce.number().positive("tempoPositive").max(400, "tempoCeiling").optional();
 
 const songFieldsSchema = z.object({
   title: titleSchema,
@@ -241,7 +237,7 @@ function invalidSong(parsed: z.SafeParseError<unknown>): SongFormFailure {
   const issue = parsed.error.issues[0];
   return {
     kind: "invalid",
-    error: issue?.message ?? "Invalid input.",
+    error: issue?.message ?? "generic",
     field: (issue?.path[0] as SongField | undefined) ?? "title",
   };
 }

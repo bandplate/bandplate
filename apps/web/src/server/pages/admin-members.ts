@@ -143,7 +143,7 @@ export async function createMember(
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = (issue?.path[0] as CreateMemberField | undefined) ?? "displayName";
-    return { kind: "invalid", error: issue?.message ?? "Invalid input.", field };
+    return { kind: "invalid", error: issue?.message ?? "generic", field };
   }
 
   const existing = await membersRepo.getByEmail(db, parsed.data.email);

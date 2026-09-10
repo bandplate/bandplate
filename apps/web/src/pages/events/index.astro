@@ -3,7 +3,7 @@ import { favoritesRepo } from "@bandplate/db";
 // The event archive — rehearsals and concerts together, newest first,
 // filterable by kind. The kind filter is a plain GET form (checkboxes),
 // same JS-off approach as /songs.
-import { messages } from "@bandplate/i18n";
+import { messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
@@ -52,7 +52,7 @@ if (Astro.request.method === "POST") {
         const dup = result.sameDay.length > 0 ? "&dup=1" : "";
         return Astro.redirect(`/events/${result.event.id}?created=1${dup}`);
       }
-      createError = result.error;
+      createError = validationMessage(locale, result.error);
       createErrorField = result.field;
     }
   }

@@ -18,8 +18,8 @@ export async function getInstrument(db: Db, id: string): Promise<Instrument | un
 }
 
 const createSchema = z.object({
-  slug: z.string().trim().min(1, "Enter a slug.").max(100),
-  label: z.string().trim().min(1, "Enter a label.").max(200),
+  slug: z.string().trim().min(1, "slugRequired").max(100),
+  label: z.string().trim().min(1, "labelRequired").max(200),
 });
 
 export type CreateInstrumentField = "slug" | "label";
@@ -39,14 +39,14 @@ export async function createInstrument(
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = (issue?.path[0] as CreateInstrumentField | undefined) ?? "slug";
-    return { kind: "invalid", error: issue?.message ?? "Invalid input.", field };
+    return { kind: "invalid", error: issue?.message ?? "generic", field };
   }
   const instrument = await instrumentsRepo.create(db, parsed.data);
   return { kind: "ok", instrument };
 }
 
 const renameSchema = z.object({
-  label: z.string().trim().min(1, "Enter a label.").max(200).optional(),
+  label: z.string().trim().min(1, "labelRequired").max(200).optional(),
   sortOrder: z.coerce.number().int().optional(),
 });
 

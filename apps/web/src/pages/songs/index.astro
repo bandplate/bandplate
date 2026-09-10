@@ -13,7 +13,7 @@ import { favoritesRepo } from "@bandplate/db";
 // Search and sort are the whole toolbar now: a field and three pills, no Apply,
 // no Clear — the same treatment `/events` got, and for the same reason. The
 // instrument filter is gone entirely (see `server/pages/songs.ts`).
-import { formatShortDate, messages } from "@bandplate/i18n";
+import { formatShortDate, messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
@@ -68,7 +68,7 @@ if (Astro.request.method === "POST") {
         createErrorField = "title";
         duplicateSlug = result.existing.slug;
       } else {
-        createError = result.error;
+        createError = validationMessage(locale, result.error);
         createErrorField = result.field;
       }
     }

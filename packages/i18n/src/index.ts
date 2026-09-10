@@ -35,4 +35,9 @@ export { LANGUAGE_NAMES, meMessages } from "./messages/me.js";
 export { shellMessages } from "./messages/shell.js";
 export { songsMessages } from "./messages/songs.js";
 export { takesMessages } from "./messages/takes.js";
+export {
+  type ValidationKey,
+  validationByLocale,
+  validationMessage,
+} from "./messages/validation.js";
 export { type VoteTally, votingMessages } from "./messages/voting.js";

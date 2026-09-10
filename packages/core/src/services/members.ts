@@ -16,19 +16,14 @@ import { buildInviteMessage } from "../mail-messages.js";
 import type { Mailer } from "../ports/mailer.js";
 
 export const createMemberSchema = z.object({
-  displayName: z.string().trim().min(1, "Enter a display name.").max(200),
+  displayName: z.string().trim().min(1, "displayNameRequired").max(200),
   // `.email()`, not just non-empty — a display-name typo in the email
   // field used to create a member who could never log in (the login flow
   // only ever accepts a real address to send a link to), with nothing at
   // creation time to catch it. `packages/api`'s copy of this schema used
   // to validate email as bare `min(1).max(320)`, letting the same mistake
   // through the JSON API even after the web form was tightened.
-  email: z
-    .string()
-    .trim()
-    .min(1, "Enter an email address.")
-    .max(320)
-    .email("Enter a valid email address."),
+  email: z.string().trim().min(1, "emailRequired").max(320).email("emailInvalid"),
   role: z.enum(["member", "admin"]).optional(),
 });
 
@@ -40,7 +35,7 @@ export const patchMemberSchema = z
     role: z.enum(["member", "admin"]).optional(),
   })
   .refine((v) => v.status !== undefined || v.role !== undefined, {
-    message: "At least one of status or role is required.",
+    message: "statusOrRoleRequired",
   });
 
 export type PatchMemberInput = z.infer<typeof patchMemberSchema>;

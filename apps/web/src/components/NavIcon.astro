@@ -59,17 +59,23 @@ const { name } = Astro.props;
   )
 }
 {
-  /* A plate, not a magnifier. The tab lists TAKES — searching is how you
-     narrow them, not what they are — and the app already draws a recording as
-     a grooved disc with a centre hole on home, so the nav borrows its own
-     vocabulary rather than the generic one. Two rings and a hole read as a
-     record at 20px; a third ring turns to mud. */
+  /* A cassette, not a plate. The plate is what a take BECOMES once the band
+     keeps it — home draws one, `/me` draws one, and the record sheet draws
+     one — so spending it on the tab that lists every take, kept or not, said
+     the wrong thing twice over. A cassette is the take before the verdict:
+     the thing you rewind and play again.
+
+     Drawn at the same 1.75 stroke as its neighbours, so the reels have to be
+     generous (r 2.6, not the r 1.5 a cassette really has) or the holes close
+     up at 20px. The bottom lip is what makes it a cassette rather than a box
+     with two dots — it is the detail to keep if this ever needs simplifying. */
   name === "takes" && (
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
       <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="8.5" />
-        <circle cx="12" cy="12" r="4" />
-        <circle cx="12" cy="12" r="0.6" fill="currentColor" />
+        <rect x="2.75" y="5.5" width="18.5" height="13" rx="2.25" />
+        <circle cx="8.6" cy="11.25" r="2.6" />
+        <circle cx="15.4" cy="11.25" r="2.6" />
+        <path d="M7.25 18.5l1.6-2.6h6.3l1.6 2.6" />
       </g>
     </svg>
   )

@@ -12,6 +12,7 @@
 // One component rather than three copies, because it now renders on home, on
 // `/events` and in the gallery — and the last label rule that lived in three
 // places drifted in two of them.
+import { DEFAULT_LOCALE, formatMonthShort } from "@bandplate/i18n";
 import { eventKindLabel, eventLabel } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
 
@@ -32,17 +33,21 @@ export interface Props {
 
 const { events, favoritedIds, footerHref, footerLabel = "All events" } = Astro.props;
 
-// `en-GB` for the month abbreviation: the app's dates are already formatted in
-// that locale everywhere else, and "Sept" vs "Sep" differing between the spine
-// and the rest of the page is the kind of thing that reads as a bug.
-const monthFormatter = new Intl.DateTimeFormat("en-GB", { month: "short" });
+// The month abbreviation follows the reader's language like every other date.
+//
+// It was pinned to `en-GB` while the rest of the page used `en-US`, for a good
+// reason: `en-US` abbreviates September as "Sep" and `en-GB` as "Sept", and
+// the spine's chip is drawn to a width, so the two disagreeing between the
+// spine and the page read as a bug. That reason dies with the hardcoded locale
+// — a Czech reader gets Czech abbreviations on both — so the divergence goes,
+// and the chip copes with whatever the language gives it.
 
 const rows = events.map((event) => {
   const held = new Date(event.heldAt);
   return {
     event,
     day: String(held.getDate()),
-    month: monthFormatter.format(held),
+    month: formatMonthShort(DEFAULT_LOCALE, held.getTime()),
     venue: eventLabel(event),
     kind: eventKindLabel(event.kind),
   };

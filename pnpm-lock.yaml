@@ -35,6 +35,9 @@ importers:
       '@bandplate/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@bandplate/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@bandplate/mail':
         specifier: workspace:*
         version: link:../../packages/mail
@@ -171,6 +174,18 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.23.13
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@26.4.1)(lightningcss@1.32.0)
+
+  packages/i18n:
+    devDependencies:
+      esbuild:
+        specifier: ^0.24.0
+        version: 0.24.2
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

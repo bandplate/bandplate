@@ -81,7 +81,17 @@ const SKIP_SECONDS = 10;
 const MASTER_LABEL = "Master";
 const SOLO_PREFIX = "Solo: ";
 
-/** mm:ss. Chivo's tabular figures (see `.bp-player-time`) keep it from shifting as it ticks. */
+/**
+ * mm:ss. Chivo's tabular figures (see `.bp-player-time`) keep it from shifting
+ * as it ticks.
+ *
+ * NOT `@bandplate/i18n`'s `formatDuration`, despite looking like it. This is a
+ * live clock reading `audio.currentTime`, so it FLOORS — rounding would show
+ * 1:00 from 0:59.5 onward, half a second before the minute. The shared one
+ * rounds, because it renders a stored `durationMs` where the nearest second is
+ * the honest answer. Both are digits and colons in every language, so neither
+ * takes a locale.
+ */
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {
     return "0:00";

@@ -1,7 +1,35 @@
-// Formatting helpers shared by the admin pages. Timestamps render in
-// JetBrains Mono (technical data, per the brief) via the `bp-mono` class
-// wherever these are used — not decoration on ordinary labels.
-const formatter = new Intl.DateTimeFormat("en-CA", {
+// Formatting for the pages, and the words that are not yet in the catalog.
+//
+// The date, duration and byte formatters used to live here as module-level
+// `Intl` singletons pinned to three hardcoded locales. A singleton cannot take
+// a locale, so they now live in `@bandplate/i18n` and are cached per locale
+// there; what is left here are thin wrappers that supply one.
+//
+// The wrappers still take no locale of their own. Pages do not carry one yet —
+// that arrives with `Astro.locals.locale` — so they pass `DEFAULT_LOCALE` and
+// render exactly what they rendered before. Each grows a `locale` parameter as
+// its page is translated, one area per commit.
+import {
+  DEFAULT_LOCALE,
+  EMPTY_VALUE,
+  formatBytes as i18nFormatBytes,
+  formatDuration as i18nFormatDuration,
+  formatLongDate as i18nFormatLongDate,
+  formatShortDate as i18nFormatShortDate,
+  votingMessages,
+} from "@bandplate/i18n";
+
+/**
+ * `yyyy-mm-dd hh:mm` for admin tables.
+ *
+ * The one formatter that takes NO locale, deliberately. `en-CA` was chosen for
+ * its ISO-shaped output, not because the reader speaks Canadian English: this
+ * is a machine-readable timestamp in a technical table, set in JetBrains Mono
+ * alongside ids and hashes, and it should sort and align the same way for
+ * everybody. Rendering it as "8. 7. 2026 14:03" for a Czech admin would make
+ * the column narrower to read, not friendlier.
+ */
+const timestampFormatter = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -12,38 +40,18 @@ const formatter = new Intl.DateTimeFormat("en-CA", {
 
 export function formatTimestamp(ms: number | undefined | null): string {
   if (ms === undefined || ms === null) {
-    return "—";
+    return EMPTY_VALUE;
   }
-  return formatter.format(new Date(ms)).replace(",", "");
+  return timestampFormatter.format(new Date(ms)).replace(",", "");
 }
 
-// Human-readable dates for the member-facing pages (song/event lists and
-// detail heroes) — plain sentence-case English, not the technical
-// yyyy-mm-dd `formatTimestamp` above uses for admin tables.
-const longDateFormatter = new Intl.DateTimeFormat("en-US", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
-
-const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-});
-
+/** Human-readable dates for the member-facing pages. */
 export function formatLongDate(ms: number | undefined | null): string {
-  if (ms === undefined || ms === null) {
-    return "—";
-  }
-  return longDateFormatter.format(new Date(ms));
+  return i18nFormatLongDate(DEFAULT_LOCALE, ms);
 }
 
 export function formatShortDate(ms: number | undefined | null): string {
-  if (ms === undefined || ms === null) {
-    return "—";
-  }
-  return shortDateFormatter.format(new Date(ms));
+  return i18nFormatShortDate(DEFAULT_LOCALE, ms);
 }
 
 /**
@@ -90,51 +98,27 @@ export function takeNote(label: string | null | undefined, kindLabel: string): s
 
 /** Byte count as a human `MB`/`KB`/`B` figure — `/takes/[id]`'s asset list. */
 export function formatBytes(bytes: number): string {
-  if (bytes >= 1_000_000) {
-    return `${(bytes / 1_000_000).toFixed(1)} MB`;
-  }
-  if (bytes >= 1_000) {
-    return `${(bytes / 1_000).toFixed(1)} KB`;
-  }
-  return `${bytes} B`;
+  return i18nFormatBytes(DEFAULT_LOCALE, bytes);
 }
 
 /**
- * The vote-tally sentence — shared by `/takes/[id]`'s own metadata row and
- * `VoteToggle.astro`'s compact row display, so the two never drift apart
- * in wording. `VoteFavorite.tsx`'s client-side re-render (after a
- * successful optimistic vote, before the next full navigation) mirrors
- * this exact wording by hand, since it runs in the browser rather than
- * importing this module — see that file's own comment.
+ * The vote-tally sentence — `/takes/[id]`'s metadata row and
+ * `VoteToggle.astro`'s compact row display.
+ *
+ * `VoteFavorite.tsx` re-renders this in the browser after an optimistic vote.
+ * It used to hold a hand-maintained copy of the wording, kept honest by a
+ * byte-equality test; both sides now call the same catalog entry, so there is
+ * nothing left to keep in step.
  */
 export function formatVoteTally(
   keeperVotes: number,
   totalVotes: number,
   ratingScore: number,
 ): string {
-  // Empty, not "No votes yet." — an unvoted take is the common case in any
-  // list, so that sentence appeared under nearly every row and said nothing a
-  // reader needed. The element stays in the DOM and `.bp-vote-tally:empty`
-  // hides it, so the optimistic island can fill it the moment a vote lands
-  // without needing to unhide anything.
-  if (totalVotes === 0) {
-    return "";
-  }
-  return `${keeperVotes} of ${totalVotes} ${totalVotes === 1 ? "vote says" : "votes say"} keeper (${Math.round(ratingScore * 100)}%).`;
+  return votingMessages(DEFAULT_LOCALE).tally({ keeperVotes, totalVotes, ratingScore });
 }
 
-/** `durationMs` as `m:ss` (or `h:mm:ss` past an hour) — takes are minutes long, never sub-second. */
+/** `durationMs` as `m:ss` (or `h:mm:ss` past an hour). */
 export function formatDuration(ms: number | undefined | null): string {
-  if (ms === undefined || ms === null) {
-    return "—";
-  }
-  const totalSeconds = Math.round(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const paddedSeconds = String(seconds).padStart(2, "0");
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${paddedSeconds}`;
-  }
-  return `${minutes}:${paddedSeconds}`;
+  return i18nFormatDuration(ms);
 }

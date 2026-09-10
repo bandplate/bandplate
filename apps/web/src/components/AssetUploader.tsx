@@ -20,7 +20,9 @@
 // plain notice in its place under `@media (scripting: none)` — and deleting a
 // file stays an ordinary confirm page precisely so the destructive half never
 // depends on script.
+import { formatBytes as i18nFormatBytes } from "@bandplate/i18n";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { currentLocale } from "../client/locale.js";
 import {
   type AssetKind,
   type UploadEvent,
@@ -51,10 +53,16 @@ const CONCURRENCY = 2;
 
 let itemIdCounter = 0;
 
+/**
+ * The same file size the rest of the app quotes.
+ *
+ * This was a second implementation on 1024-based units while the server's was
+ * on 1000, so one file could be "84.0 MB" in the upload queue and "88.1 MB" in
+ * the asset list once it landed. SI won: it is what macOS, every file manager
+ * the band will compare against, and a hosting bill all count in.
+ */
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return i18nFormatBytes(currentLocale(), bytes);
 }
 
 /**

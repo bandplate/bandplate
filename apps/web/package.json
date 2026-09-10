@@ -18,6 +18,7 @@
     "@bandplate/api": "workspace:*",
     "@bandplate/core": "workspace:*",
     "@bandplate/db": "workspace:*",
+    "@bandplate/i18n": "workspace:*",
     "@bandplate/mail": "workspace:*",
     "@bandplate/storage": "workspace:*",
     "@bandplate/ui": "workspace:*",

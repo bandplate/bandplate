@@ -11,6 +11,8 @@
 // vote, a changed vote, and a no-op re-vote (the same value twice, which
 // the segmented `VoteToggle` UI shouldn't normally submit, but a
 // double-click/double-submit race can still produce).
+import { votingMessages } from "@bandplate/i18n";
+import { currentLocale } from "./locale.js";
 export interface Tally {
   keeperVotes: number;
   totalVotes: number;
@@ -40,30 +42,28 @@ export function computeOptimisticTally(
 }
 
 /**
- * The tally sentence — deliberately duplicated from, not imported from,
- * `server/format.ts#formatVoteTally`. Every other client-bundled module in
- * this app (`client/`, and the islands in `components/`) only ever imports
- * from `client/` or `@bandplate/*` packages, never from `server/` — nothing
- * in `server/` is audited for being safe to ship to the browser (some of
- * it touches `Db`/session cookies directly), and importing across that
- * boundary once would make it easy to do again for something that isn't
- * safe. Four lines of formatting logic, covered by this module's own test
- * file, is cheaper than being the first crack in that boundary.
+ * The tally sentence.
+ *
+ * This used to be a deliberate, hand-maintained COPY of
+ * `server/format.ts#formatVoteTally`, kept honest by a test asserting the two
+ * were byte-identical. The reason was a real boundary: a client-bundled module
+ * must never import from `server/`, none of which is audited for being safe to
+ * ship to a browser. Duplicating four lines was cheaper than cracking that.
+ *
+ * With two languages it stops being four lines and starts being four
+ * SENTENCES, and Czech agrees its verb with the count. So the sentence moved
+ * where both sides can reach it: `@bandplate/i18n` is a zero-dependency
+ * package, which `client/` has always been allowed to import. The boundary is
+ * intact and there is no longer anything to keep in step.
+ *
+ * The signature is unchanged so nothing calling it had to move.
  */
 export function formatVoteTallyClient(
   keeperVotes: number,
   totalVotes: number,
   ratingScore: number,
 ): string {
-  // Empty, not "No votes yet." — an unvoted take is the common case in any
-  // list, so that sentence appeared under nearly every row and said nothing a
-  // reader needed. The element stays in the DOM and `.bp-vote-tally:empty`
-  // hides it, so the optimistic island can fill it the moment a vote lands
-  // without needing to unhide anything.
-  if (totalVotes === 0) {
-    return "";
-  }
-  return `${keeperVotes} of ${totalVotes} ${totalVotes === 1 ? "vote says" : "votes say"} keeper (${Math.round(ratingScore * 100)}%).`;
+  return votingMessages(currentLocale()).tally({ keeperVotes, totalVotes, ratingScore });
 }
 
 /**

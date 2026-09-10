@@ -63,12 +63,19 @@ describe("computeOptimisticTally", () => {
 });
 
 describe("formatVoteTallyClient", () => {
-  it("matches server/format.ts#formatVoteTally's wording exactly — see this module's own comment on why it's duplicated, not imported", () => {
-    // Empty rather than a sentence — see the formatter. `.bp-vote-tally:empty`
-    // is what hides the element, so this must stay exactly "".
-    expect(formatVoteTallyClient(0, 0, 0)).toBe("");
+  // It used to be a hand-written copy of `server/format.ts#formatVoteTally`,
+  // and this test asserted the two were byte-identical. Both sides now call
+  // the same catalog entry, so there is no copy left to compare against — what
+  // is worth pinning here is the wording the DOM depends on.
+  it("renders the sentence the page renders", () => {
     expect(formatVoteTallyClient(1, 1, 1)).toBe("1 of 1 vote says keeper (100%).");
     expect(formatVoteTallyClient(3, 5, 0.6)).toBe("3 of 5 votes say keeper (60%).");
+  });
+
+  it("says nothing at all when nobody has voted", () => {
+    // Empty rather than a sentence — `.bp-vote-tally:empty` is what hides the
+    // element, so this must stay exactly "".
+    expect(formatVoteTallyClient(0, 0, 0)).toBe("");
   });
 });
 

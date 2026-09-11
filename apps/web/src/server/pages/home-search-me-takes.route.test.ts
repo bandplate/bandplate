@@ -379,18 +379,22 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).toContain("Master");
       expect(body).toContain("Bass");
       expect(body).toContain("A lossless master is available.");
-      // Increment 4: this take HAS a ready master (lossless-only here —
+      // This take HAS a ready master (lossless-only here —
       // `listPlayableMastersByTakeIds` falls back to it when there's no
-      // lossy tier), so it gets a real play control wired to that asset,
-      // plus a Solo drawer chip for its one ready stem. The persistent
-      // player's own `<audio>` element is a global, once-per-page thing
-      // (rendered by `AppLayout.astro`), not per-take — its presence here
-      // is expected on every member-facing page, not evidence specific to
-      // this take.
+      // lossy tier), so it gets a real play control wired to that asset. The
+      // persistent player's own `<audio>` element is a global, once-per-page
+      // thing (rendered by `AppLayout.astro`), not per-take — its presence
+      // here is expected on every member-facing page, not evidence specific
+      // to this take.
       expect(body).toContain("bp-play-toggle");
       expect(body).toContain('data-role="toggle"');
       expect(body).toMatch(/data-audio-source[^>]*data-take-id="[^"]*"[^>]*data-asset-id="[^"]*"/);
-      expect(body).toContain("Solo: Bass");
+      // And NO per-stem solo drawer. It used to render one chip per ready
+      // stem here; a take's page now offers the master and the mixer, and
+      // solo lives in the shell player's own source switcher. Asserted as an
+      // absence because that is the whole change — a passing "Solo: Bass"
+      // would mean the drawer came back.
+      expect(body).not.toContain("bp-solo-chip");
       expect(body).toContain("<audio");
     });
 

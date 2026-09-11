@@ -925,14 +925,6 @@ a.bp-btn {
   flex-wrap: wrap;
 }
 
-/* `/takes/[id]`'s admin keeper/reject actions — same `.bp-dialog-actions`
-   layout, left-aligned (there's no dialog framing it here) with a little
-   top margin to separate it from the hint paragraph above. */
-.bp-admin-take-actions {
-  justify-content: flex-start;
-  margin-top: 0.75rem;
-}
-
 /* ---------------------------------------------------------------------- */
 /* Layout helpers                                                         */
 /* ---------------------------------------------------------------------- */
@@ -1862,11 +1854,16 @@ a.bp-btn {
 
 /* The take-detail page's play section — the big play control plus (when
    the take has stems) the Solo drawer underneath it. */
+/* The play control and the way into the mixer, on ONE line. They are the two
+   ways to hear this take, so they read as a pair; stacked, the second one sat
+   alone under the first and read as a footnote to it. Wraps rather than
+   squeezes — on a phone the mixer button drops to its own line at full
+   height. */
 .bp-take-play-section {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.875rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.875rem 1rem;
 }
 
 /* The disc alone said nothing about what pressing it would do — on a strip
@@ -1904,7 +1901,12 @@ a.bp-btn {
 /* The stems ("Solo") drawer — a row of source-select chips, "Full mix"
    plus one per available stem. Switching sources plays exactly one stream at
    a time; playing them TOGETHER is the mixer, which is its own page and its
-   own engine (`/takes/:id/mix`). The link to it sits beside this drawer. */
+   own engine (`/takes/:id/mix`).
+
+   A take's own page no longer draws one — its two ways to listen are the
+   master and the mixer. What still uses these classes is the shell player's
+   source switcher, which does the same job without leaving whatever page you
+   are on, and `/dev/sync`. */
 .bp-solo-drawer {
   display: flex;
   flex-wrap: wrap;
@@ -4226,6 +4228,34 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 .bp-take-detail-hero {
   padding-bottom: 1.25rem;
+}
+
+/* The band's ruling and Edit, at the top right of the take. Direction B: the
+   decision keeps the weights it had in the Admin strip it replaced — moving a
+   control must not quietly demote it — so Keeper is the accent fill and
+   Reject the danger one, with Edit's tint beside them.
+
+   Below the breakpoint the row wraps and they drop under the heading: three
+   44px pills and a 36px slab title do not share 375px, and shrinking the
+   controls would put them under the touch floor. */
+.bp-take-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+}
+
+@media (max-width: 39.999rem) {
+  .bp-take-detail-hero .bp-title-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* The take's label, inside its name — "Čoudy: take 2". Muted and at the
+   heading's own size: the song is what you came for, the label is which
+   performance of it, and a reader scanning a list of tabs needs both. */
+.bp-hero-title-note {
+  color: var(--bp-color-muted);
 }
 
 /* One plain sentence under the heading — direction H1 from the canvas. It

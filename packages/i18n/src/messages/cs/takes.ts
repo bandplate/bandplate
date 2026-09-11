@@ -106,12 +106,9 @@ export const takes = {
   listenHeading: "Poslech", // en: Listen
   yourVoteHeading: "Tvůj hlas", // en: Your vote
   instrumentsHeading: "Nástroje", // en: Instruments
-  adminHeading: "Správa", // en: Admin
   songHeading: "Skladba", // en: Song
 
   playThisTake: "Přehrát tuhle nahrávku", // en: Play this take
-  soloAnInstrument: "Sólo jednoho nástroje", // en: Solo an instrument
-  fullMix: "Celý mix", // en: Full mix
   unknownInstrument: "Neznámý nástroj", // en: Unknown instrument
   masterLabel: "Master", // en: Master
   losslessMaster: "bezztrátový master", // en: lossless master
@@ -130,8 +127,6 @@ export const takes = {
   // en: Take added. Nobody will find it until there's something to play and you publish it.
   takeAdded: "Nahrávka přidaná. Nikdo ji nenajde, dokud na ní nebude co pustit a nezveřejníš ji.",
   thisTake: "tuhle nahrávku", // en: this take
-  // en: Votes only inform this — promoting or rejecting is a deliberate call, not automatic.
-  votesInform: "Hlasy jsou jen vodítko — označit za držák nebo odmítnout je vědomé rozhodnutí.",
   losslessYes: "Bezztrátový master je k dispozici.", // en: A lossless master is available.
   losslessNo: "Bezztrátový master zatím není.", // en: No lossless master available yet.
 

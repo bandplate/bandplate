@@ -20,6 +20,7 @@ export const mixer = {
   // en: `Mixer: ${take}`
   pageTitle: (take: string): string => `Mixér: ${take}`,
   backToTake: "Zpátky na nahrávku", // en: Back to the take
+  openInMixer: "Otevřít v mixéru", // en: Open in mixer
 
   play: "Přehrát", // en: Play
   pause: "Pozastavit", // en: Pause

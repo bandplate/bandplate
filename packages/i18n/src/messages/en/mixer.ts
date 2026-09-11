@@ -15,6 +15,14 @@ export const mixer = {
   pageTitle: (take: string): string => `Mixer: ${take}`,
   /** The link back, which is a full page load — see the page for why. */
   backToTake: "Back to the take",
+  /**
+   * The way IN, on the take's own page.
+   *
+   * Not just "Mixer": it sits beside "Play this take" now, and a button next
+   * to another button has to say what pressing it does. It also says that
+   * this one LEAVES — which it does, for reasons the take page explains.
+   */
+  openInMixer: "Open in mixer",
 
   play: "Play",
   pause: "Pause",

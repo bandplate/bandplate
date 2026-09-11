@@ -5,23 +5,27 @@ import { canPublish, hasAllScopes } from "@bandplate/core";
 // take's assets: the master, stems by instrument, and whether a lossless
 // master exists (derived — `assetsRepo.takeHasLossless`, never stored).
 //
-// Playback (increment 4): a play control directly under the hero, above
-// the metadata list — the gap task 6 left on purpose. No fake affordance
-// when there's no ready master (brief still applies): the button and the
-// "Solo" drawer both render conditionally on real, ready assets existing,
-// never a disabled stand-in.
+// Playback: a play control directly under the hero. No fake affordance when
+// there's no ready master (brief still applies) — it renders conditionally
+// on real, ready assets existing, never as a disabled stand-in.
 //
-// The Solo drawer swaps the player's single source, one stream at a time,
-// preserving position. Playing every stem TOGETHER is a different feature
-// with a different engine, and it lives on its own page — `/takes/:id/mix`,
-// linked below once a take has two stems to balance.
+// TWO ways to hear this take, and the page is down to exactly those: the
+// master, and "Open in mixer" beside it. A row of per-stem "Solo" chips used
+// to sit here too; it is gone. It said the same thing three times over — the
+// play button already plays the master, which was its first chip, and the
+// shell player's own source switcher still swaps to a single stem WITHOUT
+// leaving the page, which is strictly better than a drawer that only works
+// on this one. What the drawer could never do is play the stems together,
+// and that is what the mixer is for.
 //
-// This comment used to rule that out, and half of its reasoning still
-// stands: decoding every stem to an `AudioBuffer` really would cost about a
-// gigabyte for one of this band's eight-minute takes. What it got wrong was
-// the conclusion. Streaming elements through a Web Audio graph costs almost
-// no memory, and `/dev/sync` measured the sync penalty rather than assuming
-// it: zero ppm of drift over five minutes on Chrome. See `Mixer.tsx`.
+// That mixer's existence overturned this file's original ruling, which said
+// synchronised multi-track playback was off the table. Half of that
+// reasoning still stands: decoding every stem to an `AudioBuffer` really
+// would cost about a gigabyte for one of this band's eight-minute takes.
+// What it got wrong was the conclusion — streaming elements through a Web
+// Audio graph costs almost no memory, and `/dev/sync` measured the sync
+// penalty rather than assuming it: zero ppm of drift over five minutes on
+// Chrome. See `Mixer.tsx`.
 //
 // `transition:name={`take-${take.id}`}` on the song-title hero matches the
 // same name `TakeRow.astro` puts on its own link — clicking a take row
@@ -37,7 +41,6 @@ import {
   formatLongDate,
   formatShortDate,
   messages,
-  playerMessages,
   validationMessage,
 } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
@@ -76,7 +79,6 @@ const appDeps = await getAppDeps();
 
 const locale = Astro.locals.locale;
 const t = messages(locale);
-const tPlayer = playerMessages(locale);
 
 let editError: string | undefined;
 let editErrorField: TakeField | undefined;
@@ -163,12 +165,28 @@ const heroLede = event
     : t.takes.heroOfKind({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })
   : t.takes.heroRecorded(formatLongDate(locale, take.recordedAt));
 
+// The take's own label belongs in its NAME, not in the run of facts. Two
+// takes of one song are told apart by "take 2", and a reader looking for
+// which one they are on was being asked to find it among a duration, an
+// instrument set and a state badge.
+//
+// `takeNote` still decides whether there is a label worth saying: one that
+// merely repeats the event's kind is suppressed, or the heading would read
+// "Čoudy: Rehearsal" and say twice what the sentence under it already says.
 const heroTitle = song
-  ? song.title
+  ? noteText
+    ? `${song.title}: ${noteText}`
+    : song.title
   : t.takes.heroTitleByDate(formatLongDate(locale, take.recordedAt));
+// Never the label any more — it is in the title now, and the player bar
+// showing "Čoudy — take 2" over "take 2" is the same words twice. With no
+// event to name, the date is what the lede says too.
 const heroSubtitle = event
   ? `${kindLabel} — ${formatLongDate(locale, event.heldAt)}`
-  : (take.label ?? "");
+  : formatLongDate(locale, take.recordedAt);
+
+/** An admin, on a take the band has not yet ruled on. */
+const canDecide = isAdmin && (take.state === "published" || take.state === "new");
 
 const canDelete = hasAllScopes(principal, ["members:admin"]);
 const justCreated = Astro.url.searchParams.get("created") === "1";
@@ -216,7 +234,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
 }
 ---
 
-<AppLayout title={song ? t.takes.pageTitle(song.title) : t.takes.pageTitleUnknown} principal={principal} current="home">
+<AppLayout title={song ? t.takes.pageTitle(heroTitle) : t.takes.pageTitleUnknown} principal={principal} current="home">
   {/* Direction T3 from the design canvas: labelled STRIPS hanging off one
       edge, divided by rules, no cards. It is the same grammar the song page
       uses, which is the whole argument for it — a member moving between the
@@ -265,7 +283,15 @@ function assetLabel(asset: assetsRepo.Asset): string {
           title everywhere except a song page (which is already showing it). */}
       <div class="bp-title-row">
       <h1 class="bp-hero-title bp-m0">
-        <span transition:name={`take-${take.id}`}>{song ? song.title : "Take"}</span>
+        {/* The transition name stays on the SONG alone. It morphs from a take
+            row, whose text is the song's title — carrying the label into it
+            would morph between two different strings. */}
+        {/* Adjacent on purpose, with no whitespace between the tags: a
+            newline here becomes a text node, and the colon would float away
+            from the song's name as "Čoudy : take 1". */}
+        <span transition:name={`take-${take.id}`}>{song ? song.title : "Take"}</span>{
+          song && noteText && <span class="bp-hero-title-note">: {noteText}</span>
+        }
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
             targetType="take"
@@ -276,9 +302,44 @@ function assetLabel(asset: assetsRepo.Asset): string {
           />
         </span>
       </h1>
-        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-take">
-          {t.takes.edit}
-        </button>
+        {/* Direction B from the canvas. The band's ruling and Edit sit
+            together at the top right, at the weights the old Admin strip gave
+            them — moving them must not quietly demote the decision. The pair
+            only renders while the take is undecided, so most pages show Edit
+            alone, exactly as they do for everyone who is not an admin. */}
+        <div class="bp-take-hero-actions">
+          {canDecide && (
+            <>
+              <a
+                href={`/admin/takes/${take.id}/keeper`}
+                class="bp-btn bp-btn-primary bp-btn-sm"
+                data-confirm
+                data-confirm-title={`Promote ${heroTitle} to keeper?`}
+                data-confirm-body={t.takes.keeperBody}
+                data-confirm-action={`/admin/takes/${take.id}/keeper`}
+                data-confirm-cta={t.takes.keeperCta}
+                data-confirm-tone="neutral"
+              >
+                {t.takes.keeperCta}
+              </a>
+              <a
+                href={`/admin/takes/${take.id}/keeper?reject=1`}
+                class="bp-btn bp-btn-danger bp-btn-sm"
+                data-confirm
+                data-confirm-title={`Reject ${heroTitle}?`}
+                data-confirm-body={t.takes.rejectBody}
+                data-confirm-action={`/admin/takes/${take.id}/keeper?reject=1`}
+                data-confirm-cta={t.takes.rejectCta}
+                data-confirm-tone="neutral"
+              >
+                {t.takes.rejectCta}
+              </a>
+            </>
+          )}
+          <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-take">
+            {t.takes.edit}
+          </button>
+        </div>
       </div>
 
       <p class="bp-take-detail-lede bp-m0">{heroLede}</p>
@@ -299,7 +360,6 @@ function assetLabel(asset: assetsRepo.Asset): string {
             </span>
           )
         }
-        {noteText && <span class="bp-take-detail-note">&ldquo;{noteText}&rdquo;</span>}
       </p>
 
       {/* A take created by hand starts empty and out of sight. This is where it
@@ -517,47 +577,16 @@ function assetLabel(asset: assetsRepo.Asset): string {
                 </p>
               </div>
             </div>
-            {playableStems.length > 0 && (
-              <div class="bp-solo-drawer" role="group" aria-label={t.takes.soloAnInstrument}>
-                <button
-                  type="button"
-                  class="bp-solo-chip"
-                  data-audio-source
-                  data-take-id={take.id}
-                  data-asset-id={playableMaster.id}
-                  data-title={heroTitle}
-                  data-subtitle={heroSubtitle}
-                  data-source-kind="master"
-                  data-role="source-select"
-                  aria-pressed="false"
-                >
-                  {t.takes.fullMix}
-                </button>
-                {playableStems.map((stem) => {
-                  const instrumentLabel =
-                    instrumentLabelById.get(stem.instrumentId ?? "") ?? t.takes.unknownInstrument;
-                  return (
-                    <button
-                      type="button"
-                      class="bp-solo-chip"
-                      data-audio-source
-                      data-take-id={take.id}
-                      data-asset-id={stem.id}
-                      data-title={heroTitle}
-                      data-subtitle={heroSubtitle}
-                      data-source-kind="stem"
-                      data-source-name={instrumentLabel}
-                      data-role="source-select"
-                      aria-pressed="false"
-                    >
-                      {tPlayer.solo(instrumentLabel)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
             {playableStems.length >= MIN_MIXER_STEMS && (
-              /* `data-astro-reload` is load-bearing, not a preference. The
+              /* Beside the play control, not under it: this is the other way
+                 to listen to this take, so it belongs on that line. The
+                 per-stem "Solo" chips that used to sit here are gone — the
+                 play button already plays the master, which was the drawer's
+                 first chip, and a stem on its own is still one press away in
+                 the player bar's own source switcher, which does it without
+                 leaving the page.
+
+                 `data-astro-reload` is load-bearing, not a preference. The
                  shell player is `transition:persist`, so a view transition
                  would carry a PLAYING `<audio>` into a page that builds its
                  own audio graph — two engines, one pair of ears. A real
@@ -569,7 +598,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                 class="bp-btn bp-btn-secondary bp-btn-sm"
                 data-astro-reload
               >
-                {t.mixer.title}
+                {t.mixer.openInMixer}
               </a>
             )}
           </div>
@@ -588,43 +617,6 @@ function assetLabel(asset: assetsRepo.Asset): string {
         size="lg"
       />
     </section>
-
-    {
-      isAdmin && (take.state === "published" || take.state === "new") && (
-        <section class="bp-take-strip">
-          <h2 class="bp-strip-label">{t.takes.adminHeading}</h2>
-          <p class="bp-field-hint bp-m0">
-            {t.takes.votesInform}
-          </p>
-          <div class="bp-dialog-actions bp-admin-take-actions">
-            <a
-              href={`/admin/takes/${take.id}/keeper`}
-              class="bp-btn bp-btn-primary bp-btn-sm"
-              data-confirm
-              data-confirm-title={`Promote ${heroTitle} to keeper?`}
-              data-confirm-body={t.takes.keeperBody}
-              data-confirm-action={`/admin/takes/${take.id}/keeper`}
-              data-confirm-cta={t.takes.keeperCta}
-              data-confirm-tone="neutral"
-            >
-              {t.takes.keeperCta}
-            </a>
-            <a
-              href={`/admin/takes/${take.id}/keeper?reject=1`}
-              class="bp-btn bp-btn-danger bp-btn-sm"
-              data-confirm
-              data-confirm-title={`Reject ${heroTitle}?`}
-              data-confirm-body={t.takes.rejectBody}
-              data-confirm-action={`/admin/takes/${take.id}/keeper?reject=1`}
-              data-confirm-cta={t.takes.rejectCta}
-              data-confirm-tone="neutral"
-            >
-              {t.takes.rejectCta}
-            </a>
-          </div>
-        </section>
-      )
-    }
 
       <section class="bp-take-strip">
       {/* Direction U2: the action sits beside the heading — which the island

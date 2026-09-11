@@ -82,12 +82,9 @@ export const takes = {
   listenHeading: "Listen",
   yourVoteHeading: "Your vote",
   instrumentsHeading: "Instruments",
-  adminHeading: "Admin",
   songHeading: "Song",
 
   playThisTake: "Play this take",
-  soloAnInstrument: "Solo an instrument",
-  fullMix: "Full mix",
   /** A stem whose instrument row has gone. */
   unknownInstrument: "Unknown instrument",
   masterLabel: "Master",
@@ -107,8 +104,6 @@ export const takes = {
   takeAdded: "Take added. Nobody will find it until there's something to play and you publish it.",
   /** The favorite star's object name when the take has no song title. */
   thisTake: "this take",
-  votesInform:
-    "Votes only inform this — promoting or rejecting is a deliberate call, not automatic.",
   losslessYes: "A lossless master is available.",
   losslessNo: "No lossless master available yet.",
 

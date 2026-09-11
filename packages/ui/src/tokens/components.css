@@ -381,6 +381,20 @@ a.bp-btn {
 /* Not `--bp-color-muted`: on a 12% fill that measures 4.26:1 in the light
    theme and fails. This is foreground at 70% over the fill instead — a
    different mechanism, 6.5:1 or better in both themes. */
+/* A field that is filled but not editable — `/login` reached from an invite,
+   where the address is the one thing the form already knows. It has to LOOK
+   settled rather than broken: the ink stays full strength (this is real
+   content, not a placeholder) and the ground drops back, so the eye reads
+   "already answered" instead of "disabled, and you cannot proceed". The
+   caret is suppressed because a blinking one in a field that will not take
+   a keystroke is the whole frustration. */
+.bp-input:read-only {
+  background: color-mix(in srgb, var(--bp-fill-subtle) 55%, transparent);
+  color: var(--bp-color-fg);
+  cursor: default;
+  caret-color: transparent;
+}
+
 .bp-input::placeholder,
 .bp-textarea::placeholder {
   color: var(--bp-color-placeholder);
@@ -3249,6 +3263,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
   line-height: 1.5;
   color: var(--bp-color-muted);
   margin-top: 1.125rem;
+}
+
+/* The aside's own colour is muted, and nothing in this stylesheet gives a
+   bare `<a>` a colour — so the link inside it inherited the muted ink and
+   stopped looking like a link at all. Applies to "Not you? Ask for your own
+   link" on the token page as much as to the invite page's way out. */
+.bp-auth-aside a {
+  color: var(--bp-color-accent);
 }
 
 /* Who the link belongs to. */

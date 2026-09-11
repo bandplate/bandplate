@@ -20,6 +20,8 @@ export const auth = {
 
   heading: "Přihlášení", // en: Sign in
   lede: "Zadej e-mail. Pošleme ti odkaz.", // en: Enter your email. We'll send you a link.
+  // en: We'll send your sign-in link to the address your invite went to.
+  invitedLede: "Přihlašovací odkaz pošleme na adresu, kam ti přišla pozvánka.",
   emailLabel: "E-mailová adresa", // en: Email address
   emailRequired: "Zadej svou e-mailovou adresu.", // en: Enter your email address.
   submit: "Poslat odkaz", // en: Send me a link

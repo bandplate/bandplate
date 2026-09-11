@@ -71,6 +71,24 @@ describe("admin members page logic", () => {
     expect(body).not.toMatch(/\/login\/[A-Za-z0-9_-]{10,}/);
   });
 
+  // The button is the whole point of the mail, and a button that lands on an
+  // empty field asks a brand-new member to retype the address the mail was
+  // sent to. `/login` reads this parameter and fills the field in.
+  it("points the invitation at a sign-in page that already knows the address", async () => {
+    await createMember(
+      auth.db,
+      1_000,
+      formData({ displayName: "Bailey", email: "bailey+one@example.com" }),
+      invite,
+    );
+
+    const sent = mailer.sent.filter((m) => m.kind === "message");
+    const body = sent[0]?.kind === "message" ? sent[0].text : "";
+    // Percent-encoded, not raw: `+` in an address is a legal character that a
+    // query string would otherwise decode back as a space.
+    expect(body).toContain("https://bandplate.example/login?email=bailey%2Bone%40example.com");
+  });
+
   it("still creates the member when the invitation cannot be sent, and says so", async () => {
     const broken = {
       mailer: {

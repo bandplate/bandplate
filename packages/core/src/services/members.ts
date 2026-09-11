@@ -174,7 +174,14 @@ export async function sendMemberInvite(
   deps: SendMemberInviteDeps,
   member: { displayName: string; email: string; locale?: Locale },
 ): Promise<boolean> {
-  const signInUrl = `${deps.appOrigin.replace(/\/+$/, "")}/login`;
+  // `?email=` is what makes the button one press rather than "now type the
+  // address this mail was sent to". `/login` reads it, fills the field and
+  // locks it: an invite is bound to ONE address, and a different one there
+  // would be answered with the same non-committal "if that address is
+  // registered…" as everything else — a link that never arrives, and no way
+  // to tell why. The page still offers `/login` with no parameter for anyone
+  // who really does want another address.
+  const signInUrl = `${deps.appOrigin.replace(/\/+$/, "")}/login?email=${encodeURIComponent(member.email)}`;
 
   try {
     await withTimeout(

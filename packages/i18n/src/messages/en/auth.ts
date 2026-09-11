@@ -13,6 +13,12 @@ export const auth = {
   /** The form. */
   heading: "Sign in",
   lede: "Enter your email. We'll send you a link.",
+  /**
+   * Replaces `lede` when the invite mail's button brought them here: the
+   * address is already in the field and locked, so "enter your email" would be
+   * an instruction about a control they cannot use.
+   */
+  invitedLede: "We'll send your sign-in link to the address your invite went to.",
   emailLabel: "Email address",
   emailRequired: "Enter your email address.",
   submit: "Send me a link",

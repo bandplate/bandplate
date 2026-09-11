@@ -72,6 +72,22 @@ const showInvalid = params.has("invalid");
 const rawSlow = Number.parseInt(params.get("slow") ?? "", 10);
 const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 3600) : undefined;
 
+// `?email=` — set by the invite mail's button (see `sendMemberInvite`), so a
+// new member presses one thing instead of retyping the address the mail was
+// sent to. Unlike `sent`/`invalid`/`slow` above this one IS echoed, into the
+// field's `value`, so it is checked for shape first: anyone can type a query
+// string, and a page that renders arbitrary text as a locked-in "your address"
+// is a free pretext for whoever sent the link. Astro escapes the attribute, so
+// the check is about plausibility, not injection — anything that fails it
+// falls through to the ordinary empty form rather than to an error, because a
+// mangled parameter is not the visitor's problem to solve.
+const PLAUSIBLE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const rawInvited = params.get("email")?.trim() ?? "";
+const invitedEmail =
+  rawInvited.length > 0 && rawInvited.length <= 320 && PLAUSIBLE_EMAIL.test(rawInvited)
+    ? rawInvited
+    : undefined;
+
 const t = messages(Astro.locals.locale);
 
 // `set:html` is safe here, and this is the only place it is used on this page.
@@ -136,8 +152,10 @@ const slowLedeHtml =
   {!showSent && slowSeconds === undefined && (
     <>
       <h1 class="bp-auth-title">{t.auth.heading}</h1>
-      <p class="bp-auth-lede bp-m0">{t.auth.lede}</p>
+      <p class="bp-auth-lede bp-m0">{invitedEmail ? t.auth.invitedLede : t.auth.lede}</p>
       <form method="post" class="bp-auth-form" novalidate>
+        {/* `readonly`, not `disabled`: a disabled control is not submitted,
+            and this one carries the only value the form has. */}
         <Field
           label={t.auth.emailLabel}
           name="email"
@@ -145,10 +163,20 @@ const slowLedeHtml =
           required
           autocomplete="email"
           inputmode="email"
+          value={invitedEmail}
+          readonly={invitedEmail !== undefined}
           error={showInvalid ? t.auth.emailRequired : undefined}
         />
         <button type="submit" class="bp-btn bp-btn-primary">{t.auth.submit}</button>
       </form>
+      {/* The way out of the lock. An invite is bound to one address, but the
+          person holding it may not be — and without this the only escape is
+          knowing to edit the URL. */}
+      {invitedEmail && (
+        <p class="bp-auth-aside bp-m0">
+          <a href="/login">{t.auth.sentUseAnother}</a>
+        </p>
+      )}
     </>
   )}
 </AuthLayout>

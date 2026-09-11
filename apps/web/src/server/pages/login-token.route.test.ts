@@ -209,4 +209,30 @@ describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", (
     const secondBody = await secondPost.text();
     expect(secondBody).toContain("expired");
   });
+
+  // `/login?email=` is what the invitation mail's button carries, so that a
+  // new member presses one thing instead of retyping the address the mail
+  // was sent to. Asserted here rather than as a unit test because the value
+  // reaches the page as a query parameter and leaves it as an HTML
+  // attribute — the two ends nothing below the real route connects.
+  it("GET /login?email= fills the field and locks it", async () => {
+    const res = await fetch(`${ORIGIN}/login?email=${encodeURIComponent("robyn+inv@example.com")}`);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain('value="robyn+inv@example.com"');
+    expect(body).toContain("readonly");
+    // The way back out of the lock. Without it the only escape is knowing to
+    // edit the URL.
+    expect(body).toContain('href="/login"');
+  });
+
+  // Anyone can type a query string, and whatever it says is rendered as the
+  // address this sign-in is FOR. Anything that is not an address at all falls
+  // through to the ordinary empty form rather than being echoed.
+  it("GET /login ignores an email parameter that is not one", async () => {
+    const res = await fetch(`${ORIGIN}/login?email=${encodeURIComponent("not an address")}`);
+    const body = await res.text();
+    expect(body).not.toContain("not an address");
+    expect(body).not.toContain("readonly");
+  });
 });

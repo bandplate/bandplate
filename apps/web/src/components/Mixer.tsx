@@ -613,6 +613,17 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                 <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
               </svg>
             </button>
+            <span class="bp-mixer-clock">
+              {clock(position)}
+              {/* While the tracks are still lining up, the total is the least
+                  useful thing this line could say — so the state takes its
+                  place rather than finding a row of its own. */}
+              {busy || buffering ? (
+                <output class="bp-mixer-status">{t.starting}</output>
+              ) : (
+                duration > 0 && <span class="bp-mixer-duration">/ {clock(duration)}</span>
+              )}
+            </span>
             {canMuteMine && (
               /* Icon-only, because the gutter is 184px and the sentence does
                  not fit beside a transport. The label is not lost — it is the
@@ -644,17 +655,6 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                 </svg>
               </button>
             )}
-            <span class="bp-mixer-clock">
-              {clock(position)}
-              {/* While the tracks are still lining up, the total is the least
-                  useful thing this line could say — so the state takes its
-                  place rather than finding a row of its own. */}
-              {busy || buffering ? (
-                <output class="bp-mixer-status">{t.starting}</output>
-              ) : (
-                duration > 0 && <span class="bp-mixer-duration">/ {clock(duration)}</span>
-              )}
-            </span>
           </span>
           <div class="bp-mixer-axis" ref={axisRef}>
             <span class="bp-mixer-ruler-rail" aria-hidden="true">

@@ -5109,6 +5109,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* Icon-only: the gutter is 11.5rem and the sentence does not fit beside a
    transport. Its accessible name and its tooltip carry the words. */
 .bp-mixer-preset {
+  /* The gutter's right edge, away from the transport: play and the clock are
+     one thing you operate constantly, and this is a setting for the session.
+     Putting them side by side made the icon look like a second transport
+     button. */
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5213,9 +5218,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* The clock sits in the gutter cell above the track names, not in the page
    header: it reads the axis beside it, so that is the line it belongs on. */
 .bp-mixer-clock {
-  /* Pushed to the gutter's right edge, so the number touches the axis it
-     reads rather than floating in the middle of the cell. */
-  margin-left: auto;
   min-width: 0;
   display: flex;
   align-items: baseline;

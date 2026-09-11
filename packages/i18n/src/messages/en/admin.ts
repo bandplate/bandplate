@@ -74,6 +74,27 @@ export const admin = {
   sortOrderHint: "What members see on a take.",
   iconNone: "None",
   iconNoneHint: "No icon — show initials",
+  /**
+   * The track-colour picker. Names, not hexes: an admin is choosing an
+   * identity for an instrument, and the value stored is a key whose actual
+   * colour the theme decides — see `@bandplate/ui/tokens/track-colors`.
+   */
+  colColor: "Color",
+  colorNone: "None",
+  colorNoneHint: "No color — the mixer uses a neutral",
+  colorHint: "What the mixer paints this instrument's track with.",
+  trackColor: {
+    rust: "Rust",
+    amber: "Amber",
+    lime: "Lime",
+    fern: "Fern",
+    jade: "Jade",
+    sea: "Sea",
+    sky: "Sky",
+    indigo: "Indigo",
+    orchid: "Orchid",
+    rose: "Rose",
+  },
   archiveInstrument: "Archive instrument",
   /** Row states. Lowercase — they render inside `.bp-kind`, which uppercases. */
   statusArchived: "archived",

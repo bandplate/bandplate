@@ -5027,6 +5027,48 @@ html:has(dialog.bp-filter-sheet[open]) body {
   outline-offset: 2px;
 }
 
+/* The track-colour picker is the ICON PICKER — same grid, same tile, same
+   44px target, same radius, same focus ring — with the tile filled by the
+   chosen colour instead of holding a glyph. Reusing the classes rather than
+   copying them is the point: two pickers stacked in one sheet that merely
+   resembled each other would drift the first time either was touched.
+
+   Exactly one thing has to differ. The icon picker shows selection by
+   recolouring its tile to the accent; a picker whose CHOICES ARE COLOURS
+   cannot do that without destroying the thing being chosen, and colour alone
+   would be the sole means of conveying it either way (WCAG 1.4.1). So a
+   swatch keeps its colour throughout and takes an inset ring plus a tick. */
+.bp-icon-choice-face.bp-swatch {
+  background: var(--bp-swatch, var(--bp-track-none));
+  color: var(--bp-color-on-accent);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.bp-icon-choice input:checked + .bp-swatch {
+  background: var(--bp-swatch, var(--bp-track-none));
+  box-shadow: inset 0 0 0 2px var(--bp-color-fg);
+}
+
+.bp-icon-choice input:checked + .bp-swatch::after {
+  content: "\2713";
+}
+
+/* The dot beside an instrument's name in the admin table — what the mixer
+   will paint that instrument's lane with, shown where the choice is made.
+   A patch, not a bullet: flush against the label it read as punctuation on
+   the word rather than as a property of the row. */
+.bp-color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 0.5rem;
+  vertical-align: 1px;
+  background: var(--bp-swatch, var(--bp-track-none));
+  flex: none;
+}
+
 /* Attribution. CC BY 3.0 requires visible credit wherever the work is used,
    and this app is self-deployed — the obligation follows every deployment, so
    it lives in the product rather than only in the repo. See

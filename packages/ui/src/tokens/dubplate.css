@@ -144,6 +144,47 @@
   --bp-fill-accent: color-mix(in srgb, var(--bp-color-accent) 24%, transparent);
   --bp-color-placeholder: color-mix(in srgb, var(--bp-color-fg) 70%, var(--bp-fill-subtle));
 
+  /* ---- track colours ----
+     What an admin can give an instrument so the mixer can tell a stack of
+     lanes apart. A vocabulary of its own, not an extension of the badge
+     palette: a track colour and a take's state never label the same axis (the
+     argument `docs/design-foundation.md` already makes for badges), so they
+     may share a hue without either one lying. Siblings must differ, and these
+     do — ten of them, evenly spaced around the whole wheel.
+
+     The WHOLE wheel on purpose. An earlier pass carved out the arcs near
+     gold, flare and yard to keep a track from ever looking like a status, and
+     the result was ten shades of the cool half: squashed, and hard to tell
+     apart precisely where it mattered. A patch in a picker and a badge on a
+     row are read in different places for different reasons; the collision is
+     theoretical and the squashing was not.
+
+     Lightness alternates as well as hue, so ~30deg neighbours still separate
+     for a reader who cannot tell the hues apart.
+
+     Measured, not eyeballed: every value clears 4.5:1 against its own theme's
+     ground, which is what lets the picker's selected tick sit directly on the
+     patch in `--bp-color-on-accent`.
+
+     Deep on bone, luminous on lacquer — the same premise as the accents, so
+     `--bp-color-on-accent: var(--bp-color-bg)` stays correct on these too. */
+  --bp-track-rust: #932e1a;
+  --bp-track-amber: #845e06;
+  --bp-track-lime: #506d0d;
+  --bp-track-fern: #1b792e;
+  --bp-track-jade: #137252;
+  --bp-track-sea: #0f7185;
+  --bp-track-sky: #1f4c98;
+  --bp-track-indigo: #532fa7;
+  --bp-track-orchid: #842c8c;
+  --bp-track-rose: #992457;
+  /* No colour chosen. A real presentation, not a placeholder: the same call
+     `instruments.icon` makes when it draws initials rather than inventing a
+     glyph. Hashing the slug into the palette would look like a choice nobody
+     made, and would move every lane's colour the day someone renames an
+     instrument. */
+  --bp-track-none: var(--bp-clay);
+
   /* ---- the plate ----
      Home draws pinned things as dubplates. The LABEL is fixed across themes:
      it is printed paper, and a bone label on a bone page would have nothing
@@ -175,6 +216,19 @@
     --bp-color-overlay: rgb(21 12 7 / 0.92);
     --bp-color-on-accent: var(--bp-color-bg);
 
+    /* Track colours — see the light block for why the whole wheel. */
+    --bp-track-rust: #e26850;
+    --bp-track-amber: #f2b62c;
+    --bp-track-lime: #9dc936;
+    --bp-track-fern: #57c76d;
+    --bp-track-jade: #36b58a;
+    --bp-track-sea: #49bdd4;
+    --bp-track-sky: #6392e3;
+    --bp-track-indigo: #997be0;
+    --bp-track-orchid: #c86cd0;
+    --bp-track-rose: #e56ca0;
+    --bp-track-none: var(--bp-dust);
+
     /* Lighter than the lacquer ground it sits on. A record is black, but a
        black disc on a near-black page is a disc you cannot see — at #0d0704
        against #150c07 the plate read as a hole rather than an object, and its
@@ -203,6 +257,19 @@
 
   --bp-color-overlay: rgb(21 12 7 / 0.92);
   --bp-color-on-accent: var(--bp-color-bg);
+
+  /* Track colours — see the light block for why the whole wheel. */
+  --bp-track-rust: #e26850;
+  --bp-track-amber: #f2b62c;
+  --bp-track-lime: #9dc936;
+  --bp-track-fern: #57c76d;
+  --bp-track-jade: #36b58a;
+  --bp-track-sea: #49bdd4;
+  --bp-track-sky: #6392e3;
+  --bp-track-indigo: #997be0;
+  --bp-track-orchid: #c86cd0;
+  --bp-track-rose: #e56ca0;
+  --bp-track-none: var(--bp-dust);
 
   /* See the `prefers-color-scheme` block above. */
   --bp-plate-vinyl: #2a1a0e;

@@ -1,0 +1,13 @@
+-- Which colour the mixer paints an instrument's track with. The same shape
+-- `0003_add_instrument_icon.sql` introduced beside it: a KEY from a registry
+-- (`@bandplate/ui/tokens/track-colors`), never a hex, so a brand swap
+-- restyles every track without touching a single row.
+--
+-- Nullable, no default, no backfill. Null is a real presentation -- the
+-- neutral `--bp-track-none` -- so every existing instrument renders correctly
+-- on the day this ships, and nothing has to guess a colour on its behalf.
+--
+-- Unlike `0005_add_member_locale.sql` this needs no care about declaration
+-- order: `instruments` has no positional raw `select` and so no
+-- `assertColumnCount` to keep in step.
+ALTER TABLE `instruments` ADD `color` text;

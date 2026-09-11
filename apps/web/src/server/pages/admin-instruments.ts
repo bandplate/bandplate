@@ -5,6 +5,7 @@ import { instrumentsRepo } from "@bandplate/db";
 // never deleted, so historical takes keep rendering an instrument the band
 // has dropped (see the schema comment in `packages/db`).
 import { INSTRUMENT_GLYPHS } from "@bandplate/ui/icons/instruments.js";
+import { isTrackColorKey } from "@bandplate/ui/tokens/track-colors.js";
 import { z } from "zod";
 
 type Instrument = instrumentsRepo.Instrument;
@@ -68,6 +69,15 @@ export async function updateInstrument(
   if (iconField !== undefined && iconField !== "" && !(iconField in INSTRUMENT_GLYPHS)) {
     return { kind: "invalid" };
   }
+  // `color` is the same tri-state as `icon`, validated the same way and for
+  // the same reason: the column is free text at the database level, and an
+  // unknown key would resolve to no custom property at all — a track painted
+  // with nothing rather than with the neutral, which is worse than either.
+  const rawColor = formData.get("color");
+  const colorField = rawColor === null ? undefined : String(rawColor);
+  if (colorField !== undefined && colorField !== "" && !isTrackColorKey(colorField)) {
+    return { kind: "invalid" };
+  }
   const parsed = renameSchema.safeParse({
     label: label ? String(label) : undefined,
     sortOrder: sortOrder ? String(sortOrder) : undefined,
@@ -88,6 +98,9 @@ export async function updateInstrument(
   }
   if (iconField !== undefined) {
     update.icon = iconField === "" ? null : iconField;
+  }
+  if (colorField !== undefined) {
+    update.color = colorField === "" ? null : colorField;
   }
   await instrumentsRepo.update(db, id, update);
   return { kind: "ok" };

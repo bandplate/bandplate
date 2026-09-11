@@ -142,6 +142,25 @@ export const instruments = sqliteTable("instruments", {
    * an unknown key would render nothing at all.
    */
   icon: text("icon"),
+  /**
+   * Which colour the mixer paints this instrument's track with, or null.
+   *
+   * The same shape as `icon` directly above and for the same reasons: a KEY
+   * from a registry (`@bandplate/ui/tokens/track-colors`), never a hex, so a
+   * brand swap restyles every track without a data migration, and validated
+   * on write because an unknown key would paint nothing.
+   *
+   * Nullable with no default and no backfill. Null is a real presentation —
+   * the neutral `--bp-track-none` — and it is exactly what every existing row
+   * shows on the day this ships. Deriving a colour by hashing the slug was
+   * the alternative and is worse: it looks like a choice nobody made, and it
+   * moves every lane's colour the day an instrument is renamed.
+   *
+   * Unlike `members.locale` this table has no positional raw `select`, so
+   * there is no `assertColumnCount` to keep in step and the column can sit
+   * beside the field it belongs with rather than being pinned last.
+   */
+  color: text("color"),
   archivedAt: ts("archived_at"),
 });
 

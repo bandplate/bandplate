@@ -3,6 +3,7 @@ import { adminMessages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import { INSTRUMENT_GLYPHS, INSTRUMENT_GLYPH_CREDIT } from "@bandplate/ui/icons/instruments.js";
+import { TRACK_COLORS, trackColorVar } from "@bandplate/ui/tokens/track-colors.js";
 import AdminHeader from "../../../components/AdminHeader.astro";
 import InstrumentIcon from "../../../components/InstrumentIcon.astro";
 import RecordSheet from "../../../components/RecordSheet.astro";
@@ -119,7 +120,18 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                     every row to three lines — a table of hairline rows you can
                     scan a column of cannot afford that. */}
                 <td data-label={ta.colLabel}>
-                  <span class="bp-table-name">{instrument.label}</span>
+                  {/* The dot, not a swatch column of its own: a colour with no
+                      name beside it is a quiz, and the table already has more
+                      columns than a phone wants. `aria-hidden` because the
+                      colour is decoration here — the picker inside the sheet is
+                      where it is named and chosen. */}
+                  <span class="bp-table-name">
+                    <span
+                      class="bp-color-dot"
+                      aria-hidden="true"
+                      style={`--bp-swatch: ${trackColorVar(instrument.color)}`}
+                    />{instrument.label}
+                  </span>
                 </td>
                 <td data-label={ta.colSlug} class="bp-table-quiet">{instrument.slug}</td>
                 <td data-label={ta.colOrder} class="bp-table-quiet">{instrument.sortOrder}</td>
@@ -192,6 +204,51 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                               </label>
                             ))}
                           </div>
+                        </fieldset>
+
+                        {/* The ICON PICKER's grid and tiles, reused rather
+                            than copied: two pickers stacked in one sheet that
+                            merely resembled each other would drift the first
+                            time either was touched. `bp-swatch` fills the tile
+                            with the colour and swaps the selected state for a
+                            ring and a tick — the one thing that has to differ,
+                            because a picker whose choices ARE colours cannot
+                            show selection by recolouring them. Each radio
+                            carries a real name for the same reason: a swatch
+                            is unusable without sight of it. */}
+                        <fieldset class="bp-sheet-field">
+                          <legend class="bp-eyebrow">{ta.colColor}</legend>
+                          <div class="bp-icon-grid">
+                            <label class="bp-icon-choice" title={ta.colorNoneHint}>
+                              <input
+                                type="radio"
+                                name="color"
+                                value=""
+                                checked={!instrument.color}
+                                aria-label={ta.colorNone}
+                              />
+                              <span class="bp-icon-choice-face bp-icon-choice-none">{ta.colorNone}</span>
+                            </label>
+                            {Object.entries(TRACK_COLORS).map(([key, color]) => {
+                              const name = ta.trackColor[key as keyof typeof ta.trackColor] ?? color.label;
+                              return (
+                                <label class="bp-icon-choice" title={name}>
+                                  <input
+                                    type="radio"
+                                    name="color"
+                                    value={key}
+                                    checked={instrument.color === key}
+                                    aria-label={name}
+                                  />
+                                  <span
+                                    class="bp-icon-choice-face bp-swatch"
+                                    style={`--bp-swatch: var(${color.cssVar})`}
+                                  />
+                                </label>
+                              );
+                            })}
+                          </div>
+                          <p class="bp-sheet-hint bp-m0">{ta.colorHint}</p>
                         </fieldset>
 
                         <div class="bp-sheet-extras">

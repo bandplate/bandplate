@@ -37,6 +37,10 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // set up the server. Same word in Czech.
   "admin.colSlug",
   "admin.colRole",
+  // A track colour named after the dye. Czech writes it the same way, and
+  // inventing "modrofialová" to avoid an identical string would name the
+  // colour worse in order to satisfy a test.
+  "admin.trackColor.indigo",
   // An event kind this map has never heard of passes straight through in
   // every language — that is the point. See `en/events.ts`.
   "events.kindLabel(unknown)",

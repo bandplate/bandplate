@@ -11,6 +11,7 @@ import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 // changes with it — that duplication is the cost of a gallery that always
 // renders.
 import Banner from "@bandplate/ui/components/Banner.astro";
+import { TRACK_COLORS } from "@bandplate/ui/tokens/track-colors.js";
 import EventLedger from "../EventLedger.astro";
 import PinnedPlate from "../PinnedPlate.astro";
 import TakeRow from "../TakeRow.astro";
@@ -27,15 +28,20 @@ import type { TakeRowEventRef } from "../take-row-context.js";
 // honest when a column is added.
 const NOW = Date.UTC(2026, 2, 14);
 
-function instrument(slug: string, label: string, icon: string | null): instrumentsRepo.Instrument {
-  return { id: `i-${slug}`, slug, label, sortOrder: 0, icon, archivedAt: null };
+function instrument(
+  slug: string,
+  label: string,
+  icon: string | null,
+  color: string | null = null,
+): instrumentsRepo.Instrument {
+  return { id: `i-${slug}`, slug, label, sortOrder: 0, icon, color, archivedAt: null };
 }
 
 const BAND = [
-  instrument("drums", "Drums", "drum-kit"),
-  instrument("bass", "Bass", "guitar-bass-head"),
-  instrument("guitar", "Guitar", "guitar"),
-  instrument("vocals", "Vocals", "microphone"),
+  instrument("drums", "Drums", "drum-kit", "fern"),
+  instrument("bass", "Bass", "guitar-bass-head", "sky"),
+  instrument("guitar", "Guitar", "guitar", "plum"),
+  instrument("vocals", "Vocals", "microphone", null),
 ];
 
 function take(over: Partial<takesRepo.Take> & { id: string }): takesRepo.Take {
@@ -220,6 +226,39 @@ const scale = [
       Gold is a fill and rule colour on the light ground — 2.1:1 — so it is not shown as a text
       token here. <code class="bp-mono">--bp-color-on-accent</code> follows the ground; the filled
       buttons below are where that shows.
+    </p>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="bp-section-title bp-m0">Track colours</h2>
+    <div class="bp-icon-grid">
+      <label class="bp-icon-choice">
+        <input type="radio" name="showcase-color" value="" checked aria-label="None" />
+        <span class="bp-icon-choice-face bp-icon-choice-none">None</span>
+      </label>
+      {
+        Object.entries(TRACK_COLORS).map(([key, color]) => (
+          <label class="bp-icon-choice" title={color.label}>
+            <input type="radio" name="showcase-color" value={key} aria-label={color.label} />
+            <span
+              class="bp-icon-choice-face bp-swatch"
+              style={`--bp-swatch: var(${color.cssVar})`}
+            />
+          </label>
+        ))
+      }
+    </div>
+    <p class="text-meta text-muted bp-m0">
+      What the mixer paints a track with, assigned per instrument in admin. Same grid and tile as
+      the icon picker, reused rather than copied. The first tile is checked, so this row is also
+      where the selected state is checked: a ring and a tick, never a recolour, because here the
+      choices <em>are</em> colours.
+    </p>
+    <p class="text-meta text-muted bp-m0">
+      Ten, evenly spaced around the whole wheel. Lightness alternates as well as hue, so
+      neighbours still separate for someone who cannot tell the hues apart — that second axis is
+      what the set rests on. Every value clears 4.5:1 on its own theme's ground, which is what
+      lets the selected tick sit on the patch.
     </p>
   </section>
 

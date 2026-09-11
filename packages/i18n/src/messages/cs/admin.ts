@@ -90,6 +90,25 @@ export const admin = {
   sortOrderHint: "Co členové vidí u nahrávky.", // en: What members see on a take.
   iconNone: "Žádná", // en: None
   iconNoneHint: "Bez ikony — zobrazí se iniciály", // en: No icon — show initials
+  colColor: "Barva", // en: Color
+  colorNone: "Žádná", // en: None
+  // en: No color — the mixer uses a neutral
+  colorNoneHint: "Bez barvy — mixér použije neutrální",
+  // en: What the mixer paints this instrument's track with.
+  colorHint: "Čím mixér obarví stopu tohohle nástroje.",
+  // Názvy, ne kódy — správce vybírá identitu nástroje, ne odstín.
+  trackColor: {
+    rust: "Rez", // en: Rust
+    amber: "Jantar", // en: Amber
+    lime: "Limetka", // en: Lime
+    fern: "Kapradí", // en: Fern
+    jade: "Nefrit", // en: Jade
+    sea: "Moře", // en: Sea
+    sky: "Nebe", // en: Sky
+    indigo: "Indigo", // en: Indigo — stejné slovo v obou jazycích
+    orchid: "Orchidej", // en: Orchid
+    rose: "Růže", // en: Rose
+  },
   archiveInstrument: "Archivovat nástroj", // en: Archive instrument
   statusArchived: "archivováno", // en: archived
   statusRevoked: "zneplatněno", // en: revoked

@@ -11,6 +11,8 @@ export interface CreateInstrumentInput {
   sortOrder?: number;
   /** A key from `@bandplate/ui/icons/instruments`, or null for initials. */
   icon?: string | null;
+  /** A key from `@bandplate/ui/tokens/track-colors`, or null for the neutral. */
+  color?: string | null;
 }
 
 export async function create(db: Db, input: CreateInstrumentInput): Promise<Instrument> {
@@ -22,6 +24,7 @@ export async function create(db: Db, input: CreateInstrumentInput): Promise<Inst
       label: input.label,
       sortOrder: input.sortOrder ?? 0,
       icon: input.icon ?? null,
+      color: input.color ?? null,
     })
     .returning();
 
@@ -63,6 +66,12 @@ export interface UpdateInstrumentInput {
    * cannot silently erase the icon.
    */
   icon?: string | null;
+  /**
+   * A key from `@bandplate/ui/tokens/track-colors`, or `null` to clear it
+   * back to the neutral. Absent leaves the current colour alone, exactly as
+   * `icon` above.
+   */
+  color?: string | null;
 }
 
 export async function update(db: Db, id: string, input: UpdateInstrumentInput): Promise<void> {

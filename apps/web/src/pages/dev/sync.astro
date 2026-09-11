@@ -1,0 +1,33 @@
+---
+import SyncProbe from "../../components/dev/SyncProbe.tsx";
+// Multi-stream drift measurement. The question a stem mixer stands or falls
+// on: play N audio files at once and how far apart do they get?
+//
+// Gated exactly like `/dev/ui` — `import.meta.env.DEV` covers `astro dev`,
+// `PUBLIC_BANDPLATE_DEV_UI=true` at build time is the escape hatch for
+// checking a BUILT server, which is the only place some of these numbers are
+// honest (a dev server and a production one buffer differently). Both are
+// build-time constants, so a normal production build carries a route that
+// answers 404 and nothing else.
+//
+// `/dev` is allowlisted in `server/guard.ts` so this renders with no session
+// — but `/api/assets/:id/audio` still requires one, so sign in first or every
+// track will report an error and no audio.
+import Layout from "../../layouts/Layout.astro";
+
+const enabled = import.meta.env.DEV || import.meta.env.PUBLIC_BANDPLATE_DEV_UI === "true";
+if (!enabled) {
+  return new Response(null, { status: 404 });
+}
+---
+
+<Layout title="Sync probe" noindex>
+  <main id="main" class="bp-shell-main">
+    <h1 class="bp-m0">Sync probe</h1>
+    <p class="bp-field-hint">
+      Measures whether N streaming <code>&lt;audio&gt;</code> elements stay together, and how
+      finely their clocks can be read. Nothing here corrects drift — this measures it.
+    </p>
+    <SyncProbe client:load />
+  </main>
+</Layout>

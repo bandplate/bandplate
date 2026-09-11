@@ -5086,24 +5086,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 1.5rem;
 }
 
-.bp-mixer-head {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
 
-.bp-mixer-sub {
-  font-size: var(--text-meta, 0.78125rem);
-  color: var(--bp-color-muted);
-  font-variant-numeric: tabular-nums;
-}
 
-.bp-mixer-back {
-  margin-top: 0.5rem;
-  align-self: flex-start;
-  font-size: var(--text-ui, 0.9375rem);
-  color: var(--bp-color-accent);
-}
 
 .bp-mixer {
   display: flex;
@@ -5127,6 +5111,10 @@ html:has(dialog.bp-filter-sheet[open]) body {
      disagree. */
   --bp-mixer-gutter: 11.5rem;
   --bp-mixer-gap: 1rem;
+  /* Where the waveform column starts. Read by BOTH the time grid and the
+     playhead: they have to agree, and two copies of this sum is two chances
+     not to. */
+  --bp-mixer-lane-left: calc(var(--bp-mixer-gutter) + var(--bp-mixer-gap));
   position: relative;
 }
 
@@ -5134,18 +5122,33 @@ html:has(dialog.bp-filter-sheet[open]) body {
    role it has in the player. Driven by a single custom property written on
    the stack, so moving it costs one style write per frame regardless of how
    many lanes there are. */
+/* Gold, and the only element on this page that moves continuously.
+   It belongs to the WAVEFORM COLUMN, not to the whole stack — offset past the
+   gutter and scaled to what is left, or it draws across the track names and
+   reads as a border on the wrong thing. Not drawn below the breakpoint at
+   all: there is no waveform there for it to cross, and the ruler's own fill
+   carries the position. */
 .bp-mixer-playhead {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--bp-mix-progress, 0) * 100%);
-  width: 2px;
-  margin-left: -1px;
-  background: var(--bp-color-accent-gold);
-  /* Above the lanes' own drawing, below the scrub input that takes the
-     pointer. */
-  z-index: 1;
-  pointer-events: none;
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-playhead {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(
+      var(--bp-mixer-lane-left) + var(--bp-mix-progress, 0) *
+        (100% - var(--bp-mixer-lane-left))
+    );
+    width: 2px;
+    margin-left: -1px;
+    background: var(--bp-color-accent-gold);
+    /* Above the lanes' own drawing, below the scrub that takes the pointer. */
+    z-index: 1;
+    pointer-events: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5279,7 +5282,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: calc(var(--bp-mixer-gutter) + var(--bp-mixer-gap));
+    left: var(--bp-mixer-lane-left);
     right: 0;
     z-index: 0;
     pointer-events: none;
@@ -5502,6 +5505,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
 @media (min-width: 40rem) {
   .bp-mixer-wave {
     display: flex;
+    /* It seeks when clicked, so it has to say so. */
+    cursor: pointer;
   }
 }
 

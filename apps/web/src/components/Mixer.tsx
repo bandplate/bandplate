@@ -236,6 +236,11 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       return;
     }
     master.gain.setTargetAtTime(0, ctx.currentTime, GAIN_RAMP_S);
+    // The playhead moves HERE, not only from the sync loop. That loop runs
+    // while playing, so leaving it to report the new position meant a seek
+    // did nothing visible whenever the mixer was paused or had never been
+    // started — which is most of the time someone spends clicking a timeline.
+    setPosition(targetS);
     const wasPlaying = elements.some((el) => !el.paused);
     for (const el of elements) {
       el.pause();
@@ -319,6 +324,48 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     }
     setPhase("paused");
   }, []);
+
+  // Space starts and stops, which is what every transport in every DAW does
+  // and the first thing anyone tries with an instrument in their hands.
+  //
+  // Two things it must NOT do. It must not fire while a control has focus —
+  // Space is already how you press a focused button and how you nudge a
+  // focused range, and stealing it there breaks the keyboard path the faders
+  // and M/S depend on. And it must not run while a text field or a
+  // contenteditable has focus anywhere on the page.
+  //
+  // `preventDefault` only once we have decided to act, so Space still scrolls
+  // the page when the mixer is not what you are using.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      // `code`, not `key`: `code` is the physical key regardless of layout or
+      // modifier state, and `key` for the space bar is a single space that is
+      // easy to mistype and that some senders spell differently. `key` stays
+      // as a fallback for anything that reports no `code`.
+      const isSpace = event.code === "Space" || event.key === " ";
+      if (!isSpace || event.repeat || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.isContentEditable ||
+        (target && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(target.tagName))
+      ) {
+        return;
+      }
+      if (phase === "starting") {
+        return;
+      }
+      event.preventDefault();
+      if (phase === "playing") {
+        pause();
+      } else {
+        start();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [phase, pause, start]);
 
   // --- alignment -----------------------------------------------------------
 
@@ -604,7 +651,27 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                   carry everything that matters. A lane whose source has no
                   peaks draws the rail at the SAME height, so the stack does
                   not jump when one is missing. */}
-                <span class="bp-mixer-wave" aria-hidden="true">
+                {/* Click anywhere on a waveform to move the playhead there —
+                    a timeline you cannot click is not a timeline.
+                    On the WAVEFORM rather than on the lane, because the lane's
+                    other half holds the mute, solo and fader: an overlay
+                    across the whole stack is what swallowed those presses the
+                    first time round.
+                    `aria-hidden` stays. This is a mouse shortcut for something
+                    the ruler's range input already does properly with a
+                    keyboard, not a control in its own right — so it must not
+                    appear twice to a screen reader. */}
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: the ruler's range input IS this control's keyboard path; a second one here is the same seek twice */}
+                <span
+                  class="bp-mixer-wave"
+                  aria-hidden="true"
+                  onClick={(event) => {
+                    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+                    if (box.width > 0) {
+                      scrubTo(Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)));
+                    }
+                  }}
+                >
                   {lanes[index] ? (
                     lanes[index]?.map((value, bar) => (
                       <span

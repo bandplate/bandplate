@@ -240,7 +240,7 @@ describe("getMixData", () => {
     expect((await getMixData(db, t.id, me.id, "en"))?.durationMs).toBe(240_000);
   });
 
-  it("names the take by its song, and its event in the subtitle", async () => {
+  it("names the take by its song, and carries the take page's own lede", async () => {
     const me = await member("a@example.com");
     const bass = await instrumentsRepo.create(db, { slug: "bass", label: "Bass" });
     const gtr = await instrumentsRepo.create(db, { slug: "gtr", label: "Guitar" });
@@ -252,9 +252,10 @@ describe("getMixData", () => {
 
     const mix = await getMixData(db, t.id, me.id, "en");
     expect(mix?.title).toBe("Dub Corner");
-    // Lowercase, as the take page renders it — a kind is a word from an
-    // admin-editable vocabulary, not a sentence opener.
-    expect(mix?.subtitle).toBe("rehearsal — July 8, 2026");
+    // The take page's own sentence, word for word. This take's event has no
+    // name, so the kind becomes an adjective rather than being dropped into a
+    // frame that cannot decline it.
+    expect(mix?.lede).toBe("A rehearsal take, July 8, 2026");
   });
 
   it("speaks the requested language", async () => {
@@ -269,6 +270,6 @@ describe("getMixData", () => {
     ]);
 
     const mix = await getMixData(db, t.id, me.id, "cs");
-    expect(mix?.subtitle).toBe("zkouška — 8. července 2026");
+    expect(mix?.lede).toBe("Nahrávka (zkouška), 8. července 2026");
   });
 });

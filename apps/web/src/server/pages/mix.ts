@@ -16,6 +16,7 @@ import { membersRepo } from "@bandplate/db";
 // itself — what the tracks are, which of them are YOURS, and which
 // instruments have no track at all.
 import { type Locale, formatLongDate, messages } from "@bandplate/i18n";
+import { eventLabel } from "../format.js";
 import { getTakeDetail } from "./takes.js";
 
 export interface MixTrack {
@@ -41,7 +42,12 @@ export interface MixTrack {
 export interface MixData {
   takeId: string;
   title: string;
-  subtitle: string;
+  /**
+   * The same one-line sentence the take page's hero carries, built the same
+   * way — a member arriving here should read the words they just left, not a
+   * second phrasing of the same fact.
+   */
+  lede: string;
   /**
    * The stems, in the instrument vocabulary's order. NOT the master.
    *
@@ -139,16 +145,26 @@ export async function getMixData(
 
   const song = detail.song;
   const event = detail.event;
+  // Lifted from the take page's hero, including its three shapes: where the
+  // event has a name the name carries the sentence; where it does not, the
+  // kind becomes an adjective on the take, which stays grammatical for any
+  // value the admin-editable vocabulary holds; with no event at all the
+  // recording date stands alone.
   const kindLabel = event ? t.events.kindLabel(event.kind) : "";
+  const eventName = event
+    ? eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
+    : "";
 
   return {
     takeId: detail.take.id,
     title: song
       ? song.title
       : t.takes.heroTitleByDate(formatLongDate(locale, detail.take.recordedAt)),
-    subtitle: event
-      ? `${kindLabel} — ${formatLongDate(locale, event.heldAt)}`
-      : (detail.take.label ?? ""),
+    lede: event
+      ? eventName
+        ? t.takes.heroFromEvent({ event: eventName, date: formatLongDate(locale, event.heldAt) })
+        : t.takes.heroOfKind({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })
+      : t.takes.heroRecorded(formatLongDate(locale, detail.take.recordedAt)),
     tracks,
     durationMs,
     canMuteMine: tracks.some((track) => track.mine),

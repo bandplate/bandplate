@@ -50,12 +50,23 @@ const t = messages(locale);
   wide
 >
   <div class="bp-mixer-page">
-    <header class="bp-mixer-head">
-      <p class="bp-eyebrow">{t.mixer.title}</p>
-      <h1 class="bp-page-title bp-m0">{mix.title}</h1>
-      {mix.subtitle && <p class="bp-mixer-sub bp-m0">{mix.subtitle}</p>}
-      <a href={`/takes/${mix.takeId}`} class="bp-mixer-back">{t.mixer.backToTake}</a>
-    </header>
+    {/* The take page's own hero, with the way out where that page puts its
+        Edit button. Arriving here should read as the same take, one level in
+        -- a different heading shape would say "different thing". */}
+    <div class="bp-take-detail-hero">
+      <div class="bp-title-row">
+        <h1 class="bp-hero-title bp-m0">{mix.title}</h1>
+        {/* `data-astro-reload` for the mirror of the reason the link IN
+            carries it: this page builds its own audio graph and renders no
+            `ClientRouter`, so leaving it must be a real document load. */}
+        <a
+          href={`/takes/${mix.takeId}`}
+          class="bp-btn bp-btn-secondary bp-btn-sm"
+          data-astro-reload
+        >{t.mixer.backToTake}</a>
+      </div>
+      <p class="bp-take-detail-lede bp-m0">{mix.lede}</p>
+    </div>
 
     {/* The mixer cannot work without script, and an inert one is worse than
         none — the take page really does play each stem on its own. Same

@@ -32,6 +32,10 @@ import { assets as assetsTable } from "../src/schema/sqlite/index.js";
 const execFileAsync = promisify(execFile);
 
 const DURATION_SECONDS = 20;
+/** The ingest contract's waveform: a bare array of this many ints in -128..127 (§5). */
+const PEAKS_BUCKETS = 500;
+/** Contract range. A peak is stored as a signed byte, not a fraction. */
+const PEAK_FULL_SCALE = 127;
 const MIN_FREQ_HZ = 220;
 const MAX_FREQ_HZ = 880;
 
@@ -130,6 +134,28 @@ function encoderArgsFor(format: string): string[] {
   );
 }
 
+/**
+ * A slow amplitude swell over the tone, with a period derived from the asset
+ * so no two stems pulse together.
+ *
+ * Not decoration. A constant sine has a constant waveform, so peaks computed
+ * from it draw a flat band — which means the mixer's lanes could be rendered
+ * completely wrong and still look plausible against this fixture. An envelope
+ * gives the picture something to be right or wrong about. It also makes seven
+ * simultaneous tones merely unpleasant rather than unbearable.
+ */
+function envelopeExpr(frequencyHz: number): string {
+  const periodS = 3 + (frequencyHz % 5);
+  // ffmpeg's `sine` source peaks at about an eighth of full scale (measured:
+  // 4095 of 32768), and it takes no amplitude option. Without this the whole
+  // fixture lives in the bottom 12% of the range, and every generated
+  // waveform comes out as ±11 of the contract's ±127 — which draws fine only
+  // because the client normalises, and so would hide a renderer that ignored
+  // the values entirely.
+  const gain = 7;
+  return `${gain}*(0.15+0.85*abs(sin(2*PI*t/${periodS})))`;
+}
+
 async function generateTone(format: string, frequencyHz: number, outPath: string): Promise<void> {
   await execFileAsync("ffmpeg", [
     "-y",
@@ -137,6 +163,10 @@ async function generateTone(format: string, frequencyHz: number, outPath: string
     "lavfi",
     "-i",
     `sine=frequency=${frequencyHz}:duration=${DURATION_SECONDS}`,
+    "-af",
+    // `eval=frame` or the expression is evaluated once and the swell is a
+    // constant — silently, and the waveform goes flat again.
+    `volume=${envelopeExpr(frequencyHz)}:eval=frame`,
     "-ac",
     "2",
     "-ar",
@@ -146,6 +176,51 @@ async function generateTone(format: string, frequencyHz: number, outPath: string
     ...encoderArgsFor(format),
     outPath,
   ]);
+}
+
+/**
+ * Compute the contract's waveform from an encoded file, by decoding it back to
+ * raw mono PCM with ffmpeg and folding each bucket's minimum and maximum into
+ * one array by alternating sign.
+ *
+ * That alternation IS the format (contract §5), and it is why the client reads
+ * `Math.abs` — the sign carries no information a bar height can use, it is how
+ * two numbers per bucket fit in one flat array.
+ *
+ * 8kHz is plenty: the output is 500 buckets over the whole take, so the
+ * decode rate only has to beat the bucket rate, and this keeps a twenty-second
+ * fixture's PCM under a third of a megabyte.
+ */
+async function computePeaks(audioPath: string): Promise<number[]> {
+  const { stdout } = await execFileAsync(
+    "ffmpeg",
+    ["-v", "quiet", "-i", audioPath, "-f", "s16le", "-ac", "1", "-ar", "8000", "-"],
+    { encoding: "buffer", maxBuffer: 64 * 1024 * 1024 },
+  );
+  const pcm = new Int16Array(stdout.buffer, stdout.byteOffset, Math.floor(stdout.byteLength / 2));
+  const peaks: number[] = [];
+  for (let bucket = 0; bucket < PEAKS_BUCKETS; bucket++) {
+    const start = Math.floor((bucket * pcm.length) / PEAKS_BUCKETS);
+    const end = Math.max(start + 1, Math.floor(((bucket + 1) * pcm.length) / PEAKS_BUCKETS));
+    let min = 0;
+    let max = 0;
+    for (let i = start; i < end && i < pcm.length; i++) {
+      const sample = pcm[i] ?? 0;
+      if (sample < min) {
+        min = sample;
+      }
+      if (sample > max) {
+        max = sample;
+      }
+    }
+    const scale = (value: number) =>
+      Math.max(
+        -PEAK_FULL_SCALE,
+        Math.min(PEAK_FULL_SCALE, Math.round((value / 32768) * PEAK_FULL_SCALE)),
+      );
+    peaks.push(scale(min), scale(max));
+  }
+  return peaks;
 }
 
 async function main(): Promise<void> {
@@ -169,6 +244,16 @@ async function main(): Promise<void> {
     .select()
     .from(assetsTable)
     .where(and(inArray(assetsTable.kind, ["master", "stem"]), eq(assetsTable.status, "ready")));
+
+  // The seed creates peaks ROWS but nothing has ever put an object behind
+  // them, so every waveform in dev 404s and every lane draws a plain rail —
+  // which is a real code path, but it means the drawing one is never
+  // exercised at all. Keyed by take + instrument, which is how a peaks row
+  // says which source it describes (contract §5).
+  const peaksRows = await db.select().from(assetsTable).where(eq(assetsTable.kind, "peaks"));
+  const peaksBySource = new Map(
+    peaksRows.map((row) => [`${row.takeId}:${row.instrumentId ?? ""}`, row]),
+  );
 
   if (rows.length === 0) {
     console.log(
@@ -221,10 +306,31 @@ async function main(): Promise<void> {
         durationMs: DURATION_SECONDS * 1000,
       });
 
+      // The waveform for this same source. `storage.put` rather than a
+      // presigned PUT, which is exactly what the `Storage` port's own comment
+      // reserves it for: "small, non-audio writes (e.g. a generated
+      // peaks.json)".
+      const peaksRow = peaksBySource.get(`${asset.takeId}:${asset.instrumentId ?? ""}`);
+      let peakNote = "";
+      if (peaksRow) {
+        const peaks = await computePeaks(outPath);
+        const body = new TextEncoder().encode(JSON.stringify(peaks));
+        await storage.put(peaksRow.storageKey, body, "application/json");
+        // Not `updateAudioMeta`: that writes a duration too, and a waveform
+        // has none — the ingest contract's peaks asset carries no
+        // `durationMs` at all, deliberately. The seed invents a byte count
+        // for these rows; this is the real one.
+        await db
+          .update(assetsTable)
+          .set({ bytes: body.byteLength })
+          .where(eq(assetsTable.id, peaksRow.id));
+        peakNote = ", + waveform";
+      }
+
       uploaded += 1;
       console.log(
         `  [${uploaded}/${rows.length}] ${asset.storageKey} (${frequencyHz}Hz tone, ` +
-          `${(bytes.byteLength / 1024).toFixed(0)} KiB)`,
+          `${(bytes.byteLength / 1024).toFixed(0)} KiB${peakNote})`,
       );
     }
     console.log(`Done — ${uploaded} object(s) uploaded to ${s3Env.bucket}.`);

@@ -375,6 +375,50 @@ describe("GET /assets/:id/peaks", () => {
     expect(forStem.headers.get("location")).toContain(encodeURIComponent("peaks/stems/bass.json"));
   });
 
+  // The bug this exists to stop coming back: the redirect was cached for a
+  // full day against a URL signed for six hours, so every visit after the
+  // fifth hour replayed a cached 302 to a dead signature. R2 answers an
+  // expired signature with a 403 carrying no `Access-Control-Allow-Origin`,
+  // which the browser reports as a CORS failure — so the symptom pointed at
+  // the bucket's CORS rules, which were right all along. Asserted against
+  // the signature the response actually carries rather than against a number
+  // copied from the route, which is the drift that caused it.
+  it("never lets the browser cache this redirect past the signature it points at", async () => {
+    testApp = await buildTestApp();
+    const cookie = await loginAsMember(testApp);
+    const master = await seedReadyAsset(testApp, "Peaks Cache Song");
+    const now = Date.now();
+    await assetsRepo.createMany(testApp.db, [
+      {
+        takeId: master.takeId,
+        kind: "peaks",
+        tier: "lossy",
+        format: "json",
+        storageKey: peaksStorageKey(master.takeId),
+        contentType: "application/json",
+        bytes: 400,
+        status: "ready",
+        createdAt: now,
+        readyAt: now,
+      },
+    ]);
+
+    const res = await testApp.app.request(`/assets/${master.id}/peaks`, {
+      headers: { cookie: `bp_session=${cookie}` },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(302);
+
+    const maxAge = Number(/max-age=(\d+)/.exec(res.headers.get("cache-control") ?? "")?.[1]);
+    expect(Number.isFinite(maxAge)).toBe(true);
+
+    const expiresAtSec = Number(
+      new URL(res.headers.get("location") ?? "").searchParams.get("expires"),
+    );
+    const secondsOfValidityLeft = expiresAtSec - Math.floor(now / 1000);
+    expect(maxAge).toBeLessThan(secondsOfValidityLeft);
+  });
+
   it("rejects an anonymous caller", async () => {
     testApp = await buildTestApp();
     const master = await seedReadyAsset(testApp, "Anon Peaks Song");

@@ -36,6 +36,23 @@ export interface AudioRouteDeps {
 const DOWNLOAD_URL_MIN_VALIDITY_SECONDS = 5 * 60 * 60;
 
 /**
+ * The ceiling on how long a browser may reuse one of these 302s.
+ *
+ * A cached redirect MUST NOT outlive the signature it points at. When it
+ * does, the browser replays it to an expired presigned URL, R2 answers 403
+ * with no `Access-Control-Allow-Origin` on it, and the browser reports that
+ * as a CORS failure — which is a lie about the cause, and sent us looking at
+ * the bucket's CORS rules (correct all along) rather than at this number.
+ * The tell is that a hard reload fixes it: that bypasses the HTTP cache, so
+ * the redirect is re-issued and signed afresh.
+ *
+ * Derived from the validity guarantee rather than written out, so the two can
+ * never drift apart again. Half of it, so a redirect served at the very end
+ * of its cache lifetime still has hours of signature left to play with.
+ */
+const REDIRECT_CACHE_MAX_SECONDS = Math.floor(DOWNLOAD_URL_MIN_VALIDITY_SECONDS / 2);
+
+/**
  * The filename a member sees in their Downloads folder. Built from what the
  * take IS — song, date, which mix — rather than from the storage key, which is
  * a UUID path and tells a human nothing:
@@ -228,10 +245,12 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
       status: 302,
       headers: {
         location: url,
-        // A waveform never changes once written — the same quantised signing
-        // window `/audio` relies on, and a full day of reuse on top, since
-        // this is fetched once per source switch rather than per seek.
-        "cache-control": "private, max-age=86400",
+        // A waveform never changes once written, so this wants the longest
+        // reuse the signature allows — but no longer. It used to say 86400,
+        // a full day, against a URL guaranteed for five hours: every visit
+        // between the fifth hour and the twenty-fourth replayed a cached
+        // redirect to a dead signature and failed as a CORS error.
+        "cache-control": `private, max-age=${REDIRECT_CACHE_MAX_SECONDS}`,
       },
     });
   });

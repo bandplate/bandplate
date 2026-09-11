@@ -90,8 +90,19 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   const [failure, setFailure] = useState<string>("");
   const [position, setPosition] = useState(0);
   const [lanes, setLanes] = useState<(number[] | null)[]>(() => tracks.map(() => null));
+  /**
+   * Whether the waveforms are still arriving.
+   *
+   * Distinct from "this lane has none", which is a permanent state that draws
+   * a rail — without the distinction a stack of rails means either "still
+   * loading" or "the bridge never uploaded these" and the reader cannot tell
+   * which.
+   */
+  const [lanesLoading, setLanesLoading] = useState(true);
   const [bars, setBars] = useState(160);
   const [duration, setDuration] = useState(0);
+  /** Any track waiting on bytes. The servo already computes this; the page should say it. */
+  const [buffering, setBuffering] = useState(false);
   const lanesRef = useRef<HTMLDivElement | null>(null);
 
   const ctxRef = useRef<AudioContext | null>(null);
@@ -100,6 +111,19 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   const gainsRef = useRef<GainNode[]>([]);
   const wiredRef = useRef<boolean[]>([]);
   const syncRef = useRef<SyncState>(INITIAL_SYNC_STATE);
+  /**
+   * Which seek is current, and whether one is running.
+   *
+   * Both exist because the sync loop writes `position` from the elements
+   * every 250ms. Land a seek between the write and the elements actually
+   * arriving, and the loop reports the OLD position and the playhead snaps
+   * back — which is why clicking the timeline appeared to work only every
+   * second or third try. The loop stands down while a seek is in flight, and
+   * the generation lets a superseded seek abandon its own tail rather than
+   * restoring the gain a newer one is still ramping.
+   */
+  const seekGenerationRef = useRef(0);
+  const seekingRef = useRef(false);
   // The live mix, for the sync loop and the gain effect to read without
   // either of them becoming a dependency that re-runs the other.
   const mixRef = useRef(mix);
@@ -235,6 +259,8 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     if (!ctx || !master) {
       return;
     }
+    const generation = ++seekGenerationRef.current;
+    seekingRef.current = true;
     master.gain.setTargetAtTime(0, ctx.currentTime, GAIN_RAMP_S);
     // The playhead moves HERE, not only from the sync loop. That loop runs
     // while playing, so leaving it to report the new position meant a seek
@@ -263,12 +289,19 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
           }),
       ),
     );
+    // A newer seek started while this one was waiting on `seeked`. Its
+    // target is the one that should win, and it is already ramping the gain
+    // back up — finishing here would fight it.
+    if (seekGenerationRef.current !== generation) {
+      return;
+    }
     if (wasPlaying) {
       for (const el of elements) {
         void el.play().catch(() => undefined);
       }
     }
     syncRef.current = resetSyncState();
+    seekingRef.current = false;
     master.gain.setTargetAtTime(1, ctx.currentTime, GAIN_RAMP_S);
   }, []);
 
@@ -323,6 +356,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       el.pause();
     }
     setPhase("paused");
+    setBuffering(false);
   }, []);
 
   // Space starts and stops, which is what every transport in every DAW does
@@ -347,9 +381,19 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
         return;
       }
       const target = event.target as HTMLElement | null;
+      // Stand down where Space already MEANS something: it presses a focused
+      // button or link, toggles a checkbox, and types into a field.
+      //
+      // A range is the exception, and it matters here: dragging the scrub
+      // leaves it focused, and Space has no standard action on a range — so
+      // guarding every INPUT meant that after one scrub the transport's own
+      // key silently stopped working, which is exactly when someone reaches
+      // for it.
+      const isRange = target instanceof HTMLInputElement && target.type === "range";
       if (
-        target?.isContentEditable ||
-        (target && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(target.tagName))
+        !isRange &&
+        (target?.isContentEditable ||
+          (target && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(target.tagName)))
       ) {
         return;
       }
@@ -374,6 +418,11 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       return;
     }
     const id = window.setInterval(() => {
+      // Mid-seek the elements still report where they WERE. Reading them here
+      // is what made a click on the timeline look unreliable.
+      if (seekingRef.current) {
+        return;
+      }
       const elements = elementsRef.current;
       const samples: TrackSample[] = elements.map((el) => ({
         mediaTime: el.readyState >= 1 ? el.currentTime : null,
@@ -381,6 +430,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
         // `readyState < HAVE_FUTURE_DATA` while playing IS buffering.
         stalled: !el.paused && el.readyState < 3,
       }));
+      setBuffering(samples.some((sample) => sample.stalled));
       const { state, decision } = decideSync(samples, syncRef.current, DEFAULT_SYNC_TUNING);
       syncRef.current = state;
       const leader =
@@ -426,6 +476,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
 
   useEffect(() => {
     let live = true;
+    setLanesLoading(true);
     // All lanes together, because they share one scale: a lane arriving late
     // cannot be drawn until the loudest is known, and drawing then rescaling
     // would make the whole stack jump.
@@ -453,6 +504,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     ).then((all) => {
       if (live) {
         setLanes(mixerLaneBars(all, bars));
+        setLanesLoading(false);
       }
     });
     return () => {
@@ -501,14 +553,43 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       {/* Play, and the preset. The CLOCK is not here — it belongs on the
           ruler's line, beside the axis it reads. */}
       <div class="bp-mixer-transport">
+        {/* The gold disc every other play control in this app is — the take
+            hero's, a take row's, the home shelf's. A pill said "button"
+            where everything else says "play". `.bp-play-toggle` carries the
+            disc, the ring and the icon swap; `aria-pressed` is what flips it,
+            exactly as `syncButtons` drives the shell player's. */}
         <button
           type="button"
-          class="bp-btn bp-btn-primary"
+          class="bp-play-toggle bp-play-toggle-lg"
+          aria-pressed={playing}
+          aria-label={playing ? t.pause : t.play}
           disabled={busy}
           onClick={playing ? pause : start}
         >
-          {busy ? t.starting : playing ? t.pause : t.play}
+          <svg
+            class="bp-play-icon-play"
+            aria-hidden="true"
+            width="28"
+            height="28"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          >
+            <path d="M4 2.5v11l10-5.5-10-5.5z" />
+          </svg>
+          <svg
+            class="bp-play-icon-pause"
+            aria-hidden="true"
+            width="28"
+            height="28"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          >
+            <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
+          </svg>
         </button>
+        {/* The transport's own word, beside the disc rather than inside it:
+            "lining the tracks up" is a state, not a label for a control. */}
+        {(busy || buffering) && <output class="bp-mixer-status">{t.starting}</output>}
         {canMuteMine && (
           <button
             type="button"
@@ -583,7 +664,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             />
           ))}
         </span>
-        <ul class="bp-mixer-tracks">
+        <ul class="bp-mixer-tracks" aria-busy={lanesLoading}>
           {mix.tracks.map((control, index) => {
             const track = tracks[index];
             if (!track) {
@@ -672,7 +753,14 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                     }
                   }}
                 >
-                  {lanes[index] ? (
+                  {lanesLoading ? (
+                    // A skeleton, not the rail: the rail means "this source
+                    // has no waveform", which is permanent, and using it here
+                    // would say that of every lane for as long as the fetch
+                    // takes. `/dev/ui`'s skeleton is documented for exactly
+                    // this — an island fetching after mount.
+                    <span class="bp-skeleton bp-mixer-wave-skeleton" />
+                  ) : lanes[index] ? (
                     lanes[index]?.map((value, bar) => (
                       <span
                         // biome-ignore lint/suspicious/noArrayIndexKey: bar N is bar N

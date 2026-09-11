@@ -5,6 +5,14 @@
 // mixer is one page; the take catalog is nine kilobytes.
 export const mixer = {
   title: "Mixer",
+  /**
+   * The page heading, and its browser title.
+   *
+   * The take's name alone read as the take page one level down — same
+   * heading, same lede, different page. Naming the tool first says which
+   * of the two you are on before you read the song.
+   */
+  pageTitle: (take: string): string => `Mixer: ${take}`,
   /** The link back, which is a full page load — see the page for why. */
   backToTake: "Back to the take",
 

@@ -5510,6 +5510,23 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 }
 
+/* While the waveforms are still arriving. Full lane height so the stack does
+   not resize when they land — a timeline that jumps once per load is worse
+   than one that waits. */
+.bp-mixer-wave-skeleton {
+  flex: 1 1 auto;
+  height: 100%;
+  border-radius: var(--radius-sm, 3px);
+}
+
+/* "Lining the tracks up" / "buffering" — beside the disc, not inside it. */
+.bp-mixer-status {
+  /* `<output>` is inline by default and carries its own live region. */
+  display: inline-block;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+}
+
 .bp-mixer-bar {
   flex: 1 1 0;
   min-width: 1px;

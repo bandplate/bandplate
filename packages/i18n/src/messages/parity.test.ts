@@ -76,6 +76,7 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "many", args: [7] },
   ],
   "auth.slowLede": [{ label: "seconds", args: ["45"] }],
+  "mixer.pageTitle": [{ label: "take", args: ["Čoudy"] }],
   "mixer.mute": [{ label: "i", args: ["Bass"] }],
   "mixer.unmute": [{ label: "i", args: ["Bass"] }],
   "mixer.solo": [{ label: "i", args: ["Bass"] }],

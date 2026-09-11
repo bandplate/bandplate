@@ -42,7 +42,7 @@ const t = messages(locale);
 ---
 
 <AppLayout
-  title={`${t.mixer.title} — ${mix.title}`}
+  title={t.mixer.pageTitle(mix.title)}
   principal={principal}
   current="takes"
   transitions={false}
@@ -55,7 +55,7 @@ const t = messages(locale);
         -- a different heading shape would say "different thing". */}
     <div class="bp-take-detail-hero">
       <div class="bp-title-row">
-        <h1 class="bp-hero-title bp-m0">{mix.title}</h1>
+        <h1 class="bp-hero-title bp-m0">{t.mixer.pageTitle(mix.title)}</h1>
         {/* `data-astro-reload` for the mirror of the reason the link IN
             carries it: this page builds its own audio graph and renders no
             `ClientRouter`, so leaving it must be a real document load. */}

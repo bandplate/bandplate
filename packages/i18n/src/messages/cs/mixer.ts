@@ -16,6 +16,8 @@ import type { mixer as enMixer } from "../en/mixer.js";
 
 export const mixer = {
   title: "Mixér", // en: Mixer
+  // en: `Mixer: ${take}`
+  pageTitle: (take: string): string => `Mixér: ${take}`,
   backToTake: "Zpátky na nahrávku", // en: Back to the take
 
   play: "Přehrát", // en: Play

@@ -145,6 +145,18 @@ export async function getAppDeps(): Promise<AppDeps> {
 }
 
 /**
+ * The whole validated deployment config, for the handful of settings that are
+ * not the API app's business. `AppDeps.config` is `packages/api`'s
+ * `AppConfig` — origin, bootstrap token, cookie flags — and
+ * `BANDPLATE_DEFAULT_LOCALE` does not belong in it: no route reads it, and
+ * putting it there would make `packages/api` depend on `@bandplate/i18n` to
+ * name its type.
+ */
+export async function getWebConfig(): Promise<RuntimeConfig> {
+  return (await getRuntime()).config;
+}
+
+/**
  * The shared `AuthDeps` — used by Astro page handlers that call
  * `@bandplate/core`'s auth services directly (the same functions the JSON API
  * calls), rather than round-tripping through HTTP for their own

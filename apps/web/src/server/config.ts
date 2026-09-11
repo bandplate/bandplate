@@ -8,6 +8,7 @@
 // This file is Node-only (reads `process.env`) — that's fine, it's the
 // composition root the brief calls out as the one place `apps/web` may use
 // Node APIs. Nothing here is imported by `packages/core`/`db`/`api`.
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "@bandplate/i18n";
 import { z } from "zod";
 
 export class ConfigError extends Error {
@@ -37,6 +38,18 @@ export interface S3Config {
 export interface RuntimeConfig {
   databaseUrl: string;
   appOrigin: string;
+  /**
+   * The language this installation speaks when nothing better is known.
+   *
+   * It is a FALLBACK, not an override: a signed-in member's own setting and
+   * the `bp_locale` cookie still win, and so does `Accept-Language` when the
+   * browser asks for a language this app has. What it changes is everything
+   * that used to land on English by default — a visitor whose browser asks
+   * for something we do not speak, and the locale written onto a new member's
+   * row, which is what their invitation is written in and what they see on
+   * their first sign-in.
+   */
+  defaultLocale: Locale;
   bootstrapToken: string;
   cookieSecure: boolean;
   trustedProxyDepth: number;
@@ -49,6 +62,17 @@ export interface RuntimeConfig {
 const BOOLEAN_STRING = z
   .string()
   .refine((v) => v === "true" || v === "false", { message: 'must be "true" or "false"' });
+
+// Validated against the shipped languages rather than accepted as free text:
+// a typo'd `BANDPLATE_DEFAULT_LOCALE=cz` (the country code, not the language
+// code — the mistake this variable invites) would otherwise fall silently
+// back to English and look like the setting simply does nothing.
+const LOCALE_STRING = z
+  .string()
+  .trim()
+  .refine((v): v is Locale => (LOCALES as readonly string[]).includes(v), {
+    message: `must be one of: ${LOCALES.join(", ")}`,
+  });
 
 const NON_NEGATIVE_INT_STRING = z
   .string()
@@ -96,6 +120,7 @@ const EnvSchema = z
       )
       .optional(),
     BANDPLATE_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
+    BANDPLATE_DEFAULT_LOCALE: LOCALE_STRING.optional(),
     BANDPLATE_COOKIE_SECURE: BOOLEAN_STRING.optional(),
     BANDPLATE_TRUSTED_PROXY_DEPTH: NON_NEGATIVE_INT_STRING.optional(),
     BANDPLATE_SMTP_HOST: z.string().trim().min(1).optional(),
@@ -261,6 +286,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
   cached = {
     databaseUrl: data.BANDPLATE_DATABASE_URL,
     appOrigin: data.BANDPLATE_APP_ORIGIN ?? "http://localhost:4321",
+    defaultLocale: data.BANDPLATE_DEFAULT_LOCALE ?? DEFAULT_LOCALE,
     bootstrapToken: data.BANDPLATE_BOOTSTRAP_TOKEN,
     cookieSecure: data.BANDPLATE_COOKIE_SECURE !== "false",
     trustedProxyDepth: data.BANDPLATE_TRUSTED_PROXY_DEPTH

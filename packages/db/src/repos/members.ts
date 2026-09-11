@@ -17,6 +17,13 @@ export interface CreateMemberInput {
   role?: MemberRole;
   status?: MemberStatus;
   createdAt: number;
+  /**
+   * The language this member reads the app in until they change it on `/me`
+   * — the installation's `BANDPLATE_DEFAULT_LOCALE`. Omitted falls to the
+   * column default, which is English; a Czech deployment passes `cs`, and
+   * that is also what their invitation is written in.
+   */
+  locale?: Locale;
 }
 
 /** Normalize an email the same way it is stored: lowercased and trimmed. */
@@ -35,6 +42,7 @@ export async function create(db: Db, input: CreateMemberInput): Promise<Member> 
       role: input.role ?? "member",
       status: input.status ?? "invited",
       createdAt: input.createdAt,
+      locale: input.locale ?? DEFAULT_LOCALE,
     })
     .returning();
 

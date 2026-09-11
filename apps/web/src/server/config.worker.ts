@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "@bandplate/i18n";
 // Workers-profile configuration — the counterpart to `config.ts` (which
 // reads `process.env`, the Node/container profile's only source of
 // truth). Under `@astrojs/cloudflare`, bindings and secrets arrive per
@@ -91,6 +92,16 @@ const EnvSchema = z.object({
     )
     .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
   BANDPLATE_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
+  // See `RuntimeConfig.defaultLocale`. Validated against the shipped
+  // languages so a typo'd `cz` fails the deploy instead of looking like the
+  // setting does nothing.
+  BANDPLATE_DEFAULT_LOCALE: z
+    .string()
+    .trim()
+    .refine((v): v is Locale => (LOCALES as readonly string[]).includes(v), {
+      message: `must be one of: ${LOCALES.join(", ")}`,
+    })
+    .optional(),
   BANDPLATE_TRUSTED_PROXY_DEPTH: z
     .string()
     .trim()
@@ -161,6 +172,7 @@ export function loadWorkersConfig(env: CloudflareEnv): WorkersRuntimeConfig {
     // the shared `RuntimeConfig` shape without a second interface.
     databaseUrl: "",
     appOrigin: data.BANDPLATE_APP_ORIGIN,
+    defaultLocale: data.BANDPLATE_DEFAULT_LOCALE ?? DEFAULT_LOCALE,
     bootstrapToken: data.BANDPLATE_BOOTSTRAP_TOKEN,
     cookieSecure: true,
     trustedProxyDepth: data.BANDPLATE_TRUSTED_PROXY_DEPTH

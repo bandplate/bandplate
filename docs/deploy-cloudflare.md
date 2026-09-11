@@ -143,6 +143,18 @@ thing to change." It is not. Replace all five:
 - **`S3_BUCKET`** — the bucket name you actually created in step 1.2, if
   it isn't literally `bandplate`.
 
+One more, not a placeholder and not required:
+
+- **`BANDPLATE_DEFAULT_LOCALE`** — `en` or `cs`, English if unset. What
+  this installation speaks when nothing better is known: a visitor whose
+  browser asks for a language the app does not have, and — the part that
+  matters — the language written onto every NEW member's row, which is
+  what their invitation is sent in and what they see on their first
+  sign-in. A member's own choice on `/me` still wins, and so does a
+  browser that asks for a language the app does have. Validated against
+  the shipped languages, so a typo'd `cz` fails the deploy naming the
+  variable rather than quietly doing nothing.
+
 `BANDPLATE_APP_ORIGIN`, `MAIL_FROM`, `S3_ENDPOINT`, and
 `S3_PUBLIC_ENDPOINT` are checked at startup: `apps/web/src/server/config.worker.ts`
 refuses to boot if any of them still matches the shipped placeholder

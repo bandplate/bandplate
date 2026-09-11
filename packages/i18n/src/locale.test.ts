@@ -132,4 +132,18 @@ describe("formatBytes", () => {
     expect(formatBytes("cs", 6_000_000)).toBe("6,0 MB");
     expect(formatBytes("en", 512_000)).toBe("512.0 KB");
   });
+
+  // The installation's own language (`BANDPLATE_DEFAULT_LOCALE`) — what a
+  // Czech deployment answers with when the header asks for nothing it has.
+  it("falls back to the given locale rather than English when nothing matches", () => {
+    expect(negotiateLocale("de-DE,de;q=0.9", "cs")).toBe("cs");
+    expect(negotiateLocale(null, "cs")).toBe("cs");
+    expect(negotiateLocale("", "cs")).toBe("cs");
+  });
+
+  // The fallback is a fallback. A browser that asks for a language this app
+  // HAS is making a statement about the person reading, and outranks it.
+  it("still honours a header that asks for a language the app has", () => {
+    expect(negotiateLocale("en-GB,en;q=0.9", "cs")).toBe("en");
+  });
 });

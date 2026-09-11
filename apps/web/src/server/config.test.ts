@@ -226,6 +226,23 @@ describe("loadConfig", () => {
     });
   });
 
+  it("defaults the installation's language to English when unset", () => {
+    expect(loadConfig({ ...BASE_ENV }).defaultLocale).toBe("en");
+  });
+
+  it("takes BANDPLATE_DEFAULT_LOCALE when it names a language the app ships", () => {
+    expect(loadConfig({ ...BASE_ENV, BANDPLATE_DEFAULT_LOCALE: "cs" }).defaultLocale).toBe("cs");
+  });
+
+  // `cz` is the COUNTRY code; `cs` is the language. Getting this wrong would
+  // otherwise fall back to English and look exactly like the setting doing
+  // nothing at all.
+  it("fails, naming the variable and the accepted values, on a language it does not ship", () => {
+    expect(() => loadConfig({ ...BASE_ENV, BANDPLATE_DEFAULT_LOCALE: "cz" })).toThrow(
+      /BANDPLATE_DEFAULT_LOCALE.*en, cs/,
+    );
+  });
+
   it("memoizes: a second call returns the same object without re-reading env", () => {
     const first = loadConfig({ ...BASE_ENV });
     const second = loadConfig({ ...BASE_ENV, BANDPLATE_DATABASE_URL: "file:./different.db" });

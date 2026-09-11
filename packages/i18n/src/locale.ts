@@ -69,9 +69,18 @@ export function isLocale(value: unknown): value is Locale {
  * A malformed header is not an error — a missing, empty or unparseable
  * `Accept-Language` simply means "no opinion", and no opinion means English.
  */
-export function negotiateLocale(acceptLanguage: string | null | undefined): Locale {
+export function negotiateLocale(
+  acceptLanguage: string | null | undefined,
+  /**
+   * What to answer when the header asks for nothing this app speaks — the
+   * installation's own language (`BANDPLATE_DEFAULT_LOCALE`), for a
+   * deployment whose band is not English-speaking. Defaults to English so
+   * callers that have no configuration to hand keep their old behaviour.
+   */
+  fallback: Locale = DEFAULT_LOCALE,
+): Locale {
   if (!acceptLanguage) {
-    return DEFAULT_LOCALE;
+    return fallback;
   }
 
   const ranked = acceptLanguage
@@ -96,5 +105,5 @@ export function negotiateLocale(acceptLanguage: string | null | undefined): Loca
     }
   }
 
-  return DEFAULT_LOCALE;
+  return fallback;
 }

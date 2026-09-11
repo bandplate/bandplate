@@ -46,6 +46,12 @@ migrations_dir = "../../packages/db/migrations/sqlite"
 # "bandplate" is itself a perfectly valid bucket name.
 [vars]
 BANDPLATE_APP_ORIGIN = "https://bandplate.example"
+# Optional, "en" or "cs", English if unset. The language for anyone whose
+# browser asks for something the app does not speak, and the language written
+# onto every new member's row — which is what their invitation is sent in.
+# A member's own choice on `/me` always wins, and so does a browser that asks
+# for a language this app has.
+BANDPLATE_DEFAULT_LOCALE = "en"
 MAIL_PROVIDER = "resend"
 MAIL_FROM = "bandplate@bandplate.example"
 S3_ENDPOINT = "https://<account-id>.r2.cloudflarestorage.com"

@@ -36,6 +36,10 @@ vi.mock("./server/principal.js", () => ({
 vi.mock("./server/app.js", () => ({
   getAuthDeps: vi.fn(async () => ({})),
   getAppDeps: vi.fn(async () => ({ config: { appOrigin: TEST_APP_ORIGIN } })),
+  // `BANDPLATE_DEFAULT_LOCALE` — the language this installation falls back to
+  // when the browser asks for nothing it speaks. English here, so the locale
+  // assertions below read the same as they did before it existed.
+  getWebConfig: vi.fn(async () => ({ defaultLocale: "en" })),
 }));
 
 const { onRequest: rawOnRequest } = await import("./middleware.js");

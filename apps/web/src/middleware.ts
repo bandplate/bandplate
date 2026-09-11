@@ -19,7 +19,7 @@ import { defineMiddleware } from "astro:middleware";
 // calls are left exactly as they were (redundant with this, not replaced
 // by it) — see the task-4 handoff's "do not disturb" list.
 import { DEFAULT_LOCALE, type Locale, negotiateLocale } from "@bandplate/i18n";
-import { getAppDeps, getAuthDeps, initWorkersRuntime } from "./server/app.js";
+import { getAppDeps, getAuthDeps, getWebConfig, initWorkersRuntime } from "./server/app.js";
 import { SESSION_COOKIE_NAME, readLocaleCookie, setLocaleCookie } from "./server/cookies.js";
 import { isSameOrigin } from "./server/csrf.js";
 import { guardAdminPath, guardMemberPath, normalizePathname } from "./server/guard.js";
@@ -89,7 +89,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (context.locals.runtime) {
     initWorkersRuntime(context.locals.runtime.env);
   }
-  const [authDeps, appDeps] = await Promise.all([getAuthDeps(), getAppDeps()]);
+  const [authDeps, appDeps, webConfig] = await Promise.all([
+    getAuthDeps(),
+    getAppDeps(),
+    getWebConfig(),
+  ]);
   const cookieValue = context.cookies.get(SESSION_COOKIE_NAME)?.value;
   const principal = await resolvePrincipalFromCookie(authDeps, cookieValue);
   context.locals.principal = principal;
@@ -97,9 +101,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // --- Which language this request is rendered in -------------------------
   //
   // In order: the member's own setting, then the cookie recording an earlier
-  // choice, then what the browser asked for, then English. Each step is a
+  // choice, then what the browser asked for, then this installation's own
+  // language (`BANDPLATE_DEFAULT_LOCALE`, English unless set). Each step is a
   // stronger statement of intent than the one after it, and only the first is
   // a decision the member made INSIDE the app.
+  //
+  // The configured default sits LAST on purpose. A Czech deployment wants
+  // Czech for the visitor whose browser asks for something nobody here
+  // speaks — it does not want to overrule a browser that asked for English,
+  // which is a real statement about the person reading.
   //
   // The member's locale is read fresh on every request — `resolveSession`
   // already loads the row — so changing it takes effect immediately on every
@@ -108,7 +118,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const locale: Locale =
     principal?.locale ??
     cookieLocale ??
-    negotiateLocale(context.request.headers.get("accept-language"));
+    negotiateLocale(context.request.headers.get("accept-language"), webConfig.defaultLocale);
   context.locals.locale = locale;
 
   // Keep the cookie in step with the member, so the NEXT signed-out page they

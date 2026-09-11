@@ -144,6 +144,17 @@ export async function getAppDeps(): Promise<AppDeps> {
 }
 
 /**
+ * The whole validated deployment config, for settings that are not the API
+ * app's business — `BANDPLATE_DEFAULT_LOCALE` today. Must stay in step with
+ * `app.ts`'s export of the same name: `astro.config.mjs` aliases this file in
+ * for the Workers build, so a name missing here typechecks fine and fails the
+ * Cloudflare build instead.
+ */
+export async function getWebConfig(): Promise<WorkersRuntimeConfig> {
+  return (await getRuntime()).config;
+}
+
+/**
  * The shared `AuthDeps` — used by Astro page handlers that call
  * `@bandplate/core`'s auth services directly, rather than round-tripping
  * through HTTP for their own server-rendered, no-JS-friendly forms.

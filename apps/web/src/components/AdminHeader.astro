@@ -24,17 +24,30 @@ export interface Props {
 
 const { title, current } = Astro.props;
 
+const t = messages(Astro.locals.locale);
+
+// The SAME four labels the sidebar renders (`AppLayout.astro`'s `adminItems`),
+// from the same catalog keys. They were literal English here, which nothing
+// caught because admin is the one area whose sidebar and whose pills are never
+// on screen together: past `lg` the pills are hidden, below it the sidebar is,
+// so a Czech reader on a phone got an English menu and no way to see the
+// translated one beside it — and the pills are the ONLY admin navigation at
+// that width.
 const sections = [
-  { key: "overview", label: "Overview", href: "/admin" },
-  { key: "members", label: "Members", href: "/admin/members" },
-  { key: "instruments", label: "Instruments", href: "/admin/instruments" },
-  { key: "tokens", label: "Tokens", href: "/admin/tokens" },
+  { key: "overview", label: t.shell.adminNav.overview, href: "/admin" },
+  { key: "members", label: t.shell.adminNav.members, href: "/admin/members" },
+  { key: "instruments", label: t.shell.adminNav.instruments, href: "/admin/instruments" },
+  { key: "tokens", label: t.shell.adminNav.tokens, href: "/admin/tokens" },
 ] as const;
 ---
 
 <div class="bp-admin-head">
   <h1 class="bp-page-title">{title}</h1>
-  <nav class="bp-filter-pills bp-admin-sections" aria-label="{messages(Astro.locals.locale).shell.adminSectionsLabel}">
+  {/* `aria-label={...}`, NOT `aria-label="{...}"`. A quoted attribute is a
+      string even when it looks like an expression, so this landmark announced
+      itself to screen readers by reading out its own source code. Nothing
+      warns about it — the markup is valid and the page renders. */}
+  <nav class="bp-filter-pills bp-admin-sections" aria-label={t.shell.adminSectionsLabel}>
     {
       sections.map((section) => (
         <a

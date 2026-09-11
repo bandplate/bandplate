@@ -50,9 +50,7 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
       // A peaks asset names the source it describes, so its slug is validated
       // like any other; an unknown one would otherwise silently resolve to
       // null and file the waveform against the master.
-      ...input.assets.flatMap((a) =>
-        a.kind === "peaks" && a.instrument ? [a.instrument] : [],
-      ),
+      ...input.assets.flatMap((a) => (a.kind === "peaks" && a.instrument ? [a.instrument] : [])),
     ];
     const unknown = unknownSlugs(vocab, declaredSlugs);
     if (unknown.length > 0) {

@@ -21,6 +21,7 @@ export const mixer = {
   play: "Přehrát", // en: Play
   pause: "Pozastavit", // en: Pause
   starting: "Srovnávám stopy…", // en: Lining the tracks up…
+  seek: "Přetočit", // en: Seek
 
   mute: (instrument: string): string => `Ztlumit ${instrument}`, // en: `Mute ${instrument}`
   unmute: (instrument: string): string => `Zase pustit ${instrument}`, // en: `Unmute ${instrument}`

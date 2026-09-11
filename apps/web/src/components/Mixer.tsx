@@ -20,6 +20,7 @@ import { type Locale, mixerMessages } from "@bandplate/i18n";
 import { trackColorVar } from "@bandplate/ui/tokens/track-colors.js";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
+import { type LanePeaks, mixerLaneBars } from "../client/mixer-peaks.js";
 import {
   DEFAULT_SYNC_TUNING,
   INITIAL_SYNC_STATE,
@@ -64,6 +65,11 @@ const GAIN_RAMP_S = 0.015;
 /** Give up waiting for a track to become playable. Long, because this is a cold start over the network. */
 const START_TIMEOUT_MS = 20_000;
 
+/** One bar per this many CSS pixels, matching the player's waveform. */
+const BAR_PITCH_PX = 3;
+const MIN_BARS = 40;
+const MAX_BARS = 600;
+
 type Phase = "idle" | "starting" | "playing" | "paused" | "failed";
 
 /** mm:ss. Floored, because it is a running clock and rounding it up shows a second that has not happened. */
@@ -87,6 +93,10 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   // let someone assume it is zero.
   const [position, setPosition] = useState(0);
   const [spreadMs, setSpreadMs] = useState(0);
+  const [lanes, setLanes] = useState<(number[] | null)[]>(() => tracks.map(() => null));
+  const [bars, setBars] = useState(160);
+  const [duration, setDuration] = useState(0);
+  const lanesRef = useRef<HTMLDivElement | null>(null);
 
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
@@ -327,6 +337,17 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
         decision.leaderIndex === null ? null : (samples[decision.leaderIndex]?.mediaTime ?? null);
       setPosition(leader ?? 0);
       setSpreadMs(decision.worstErrorS * 1000);
+      // The axis is the LONGEST track, never the first: a stem is allowed to
+      // be shorter than the take. Read here rather than in an effect of its
+      // own because this is the one place that already knows metadata has
+      // arrived — `duration` is NaN until it has.
+      const longest = elements.reduce(
+        (max, el) => (Number.isFinite(el.duration) ? Math.max(max, el.duration) : max),
+        0,
+      );
+      if (longest > 0) {
+        setDuration((current) => (current === longest ? current : longest));
+      }
       if (decision.kind === "resync") {
         void alignTo(decision.targetS);
       }
@@ -351,6 +372,74 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     window.addEventListener("pagehide", onHide);
     return () => window.removeEventListener("pagehide", onHide);
   }, [teardown]);
+
+  // --- waveforms -----------------------------------------------------------
+
+  useEffect(() => {
+    let live = true;
+    // All lanes together, because they share one scale: a lane arriving late
+    // cannot be drawn until the loudest is known, and drawing then rescaling
+    // would make the whole stack jump.
+    void Promise.all(
+      tracks.map(async (track): Promise<LanePeaks> => {
+        try {
+          const res = await fetch(`/api/assets/${track.assetId}/peaks`);
+          if (!res.ok) {
+            return null;
+          }
+          const body: unknown = await res.json();
+          // The contract says a bare array; an older shape wrapped it. Both
+          // are accepted for the same reason the player accepts both.
+          const raw = Array.isArray(body) ? body : (body as { peaks?: unknown } | null)?.peaks;
+          return Array.isArray(raw) && raw.every((v) => typeof v === "number")
+            ? (raw as number[])
+            : null;
+        } catch {
+          // A 404 is the ORDINARY case, not an error: per-stem peaks are a
+          // real slot in the contract, but whether a stem has one depends on
+          // what the bridge uploaded. That lane draws a plain rail.
+          return null;
+        }
+      }),
+    ).then((all) => {
+      if (live) {
+        setLanes(mixerLaneBars(all, bars));
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, [tracks, bars]);
+
+  useEffect(() => {
+    const el = lanesRef.current;
+    if (!el || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      const width = el.getBoundingClientRect().width;
+      if (width > 0) {
+        setBars(Math.max(MIN_BARS, Math.min(MAX_BARS, Math.round(width / BAR_PITCH_PX))));
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // The playhead is ONE element across the whole stack, moved by writing a
+  // single custom property. Seven lanes each re-rendering at the transport's
+  // rate is not the design — and the value is a fraction so the lanes can
+  // position it without knowing their own width.
+  const progress = duration > 0 ? Math.min(1, position / duration) : 0;
+
+  const scrubTo = useCallback(
+    (fraction: number) => {
+      if (duration > 0) {
+        void alignTo(fraction * duration);
+      }
+    },
+    [alignTo, duration],
+  );
 
   // --- render --------------------------------------------------------------
 
@@ -390,60 +479,111 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
           result the page computed, and it carries the live region for free. */}
       {failure && <output class="bp-mixer-note bp-mixer-failure">{failure}</output>}
 
-      <ul class="bp-mixer-tracks">
-        {mix.tracks.map((control, index) => {
-          const track = tracks[index];
-          if (!track) {
-            return null;
-          }
-          return (
-            <li
-              key={control.assetId}
-              class="bp-mixer-track"
-              style={`--bp-swatch: ${trackColorVar(track.color)}`}
-            >
-              <span class="bp-mixer-track-name">
-                <span class="bp-color-dot" aria-hidden="true" />
-                {track.label}
-              </span>
-              <span class="bp-mixer-track-buttons">
-                <button
-                  type="button"
-                  class={`bp-mixer-btn${control.muted ? " is-active" : ""}`}
-                  aria-pressed={control.muted}
-                  aria-label={control.muted ? t.unmute(track.label) : t.mute(track.label)}
-                  onClick={() => setMix((s) => setMuted(s, control.assetId, !control.muted))}
-                >
-                  {t.muteShort}
-                </button>
-                <button
-                  type="button"
-                  class={`bp-mixer-btn${control.soloed ? " is-active" : ""}`}
-                  aria-pressed={control.soloed}
-                  aria-label={control.soloed ? t.unsolo(track.label) : t.solo(track.label)}
-                  onClick={() => setMix((s) => setSoloed(s, control.assetId, !control.soloed))}
-                >
-                  {t.soloShort}
-                </button>
-              </span>
-              <input
-                type="range"
-                class="bp-mixer-fader"
-                min={0}
-                max={1.4}
-                step={0.01}
-                value={control.fader}
-                aria-label={t.volume(track.label)}
-                onInput={(event) =>
-                  setMix((s) =>
-                    setFader(s, control.assetId, Number((event.target as HTMLInputElement).value)),
-                  )
-                }
-              />
-            </li>
-          );
-        })}
-      </ul>
+      <div class="bp-mixer-lanes" ref={lanesRef} style={`--bp-mix-progress: ${progress}`}>
+        {/* One playhead for the stack, not one per lane. `aria-hidden` because
+            the ruler's scrub input carries the position for assistive tech. */}
+        <span class="bp-mixer-playhead" aria-hidden="true" />
+        {/* The scrub gets its OWN row rather than lying over the lanes.
+            Overlaying the stack is the obvious construction and it silently
+            swallows every mute, solo and fader press underneath — the
+            controls are still there, still focusable, and completely
+            unclickable. A ruler is also the thing a DAW actually has. */}
+        <div class="bp-mixer-ruler">
+          <span class="bp-mixer-ruler-rail" aria-hidden="true">
+            <span class="bp-mixer-ruler-fill" />
+          </span>
+          <input
+            type="range"
+            class="bp-mixer-scrub"
+            min={0}
+            max={1}
+            step={0.001}
+            value={progress}
+            disabled={duration <= 0}
+            aria-label={t.seek}
+            aria-valuetext={clock(position)}
+            onChange={(event) => scrubTo(Number((event.target as HTMLInputElement).value))}
+          />
+        </div>
+        <ul class="bp-mixer-tracks">
+          {mix.tracks.map((control, index) => {
+            const track = tracks[index];
+            if (!track) {
+              return null;
+            }
+            return (
+              <li
+                key={control.assetId}
+                class="bp-mixer-track"
+                style={`--bp-swatch: ${trackColorVar(track.color)}`}
+              >
+                <span class="bp-mixer-track-name">
+                  <span class="bp-color-dot" aria-hidden="true" />
+                  {track.label}
+                </span>
+                <span class="bp-mixer-track-buttons">
+                  <button
+                    type="button"
+                    class={`bp-mixer-btn${control.muted ? " is-active" : ""}`}
+                    aria-pressed={control.muted}
+                    aria-label={control.muted ? t.unmute(track.label) : t.mute(track.label)}
+                    onClick={() => setMix((s) => setMuted(s, control.assetId, !control.muted))}
+                  >
+                    {t.muteShort}
+                  </button>
+                  <button
+                    type="button"
+                    class={`bp-mixer-btn${control.soloed ? " is-active" : ""}`}
+                    aria-pressed={control.soloed}
+                    aria-label={control.soloed ? t.unsolo(track.label) : t.solo(track.label)}
+                    onClick={() => setMix((s) => setSoloed(s, control.assetId, !control.soloed))}
+                  >
+                    {t.soloShort}
+                  </button>
+                </span>
+                <input
+                  type="range"
+                  class="bp-mixer-fader"
+                  min={0}
+                  max={1.4}
+                  step={0.01}
+                  value={control.fader}
+                  aria-label={t.volume(track.label)}
+                  onInput={(event) =>
+                    setMix((s) =>
+                      setFader(
+                        s,
+                        control.assetId,
+                        Number((event.target as HTMLInputElement).value),
+                      ),
+                    )
+                  }
+                />
+                {/* The lane's own shape. `aria-hidden` throughout: a waveform is
+                  a picture of the audio and says nothing a screen reader can
+                  use — the track's name, its controls and the scrub position
+                  carry everything that matters. A lane whose source has no
+                  peaks draws the rail at the SAME height, so the stack does
+                  not jump when one is missing. */}
+                <span class="bp-mixer-wave" aria-hidden="true">
+                  {lanes[index] ? (
+                    lanes[index]?.map((value, bar) => (
+                      <span
+                        // biome-ignore lint/suspicious/noArrayIndexKey: bar N is bar N
+                        key={bar}
+                        class="bp-mixer-bar"
+                        style={{ height: `${Math.max(6, value * 100)}%` }}
+                      />
+                    ))
+                  ) : (
+                    <span class="bp-mixer-rail" />
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       {onlyInMaster.length > 0 && (
         <p class="bp-mixer-note">{t.onlyInMaster(onlyInMaster.join(", "))}</p>

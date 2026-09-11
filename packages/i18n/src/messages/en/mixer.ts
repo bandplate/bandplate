@@ -12,6 +12,8 @@ export const mixer = {
   pause: "Pause",
   /** While the tracks buffer. Not a spinner's label — it says what is happening. */
   starting: "Lining the tracks up…",
+  /** The scrub bar laid over the lanes. */
+  seek: "Seek",
 
   /** Per-track controls. Each needs a real name: a row of identical squares is unusable without sight of it. */
   mute: (instrument: string): string => `Mute ${instrument}`,

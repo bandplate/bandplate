@@ -15,6 +15,7 @@ import {
   canPublish,
   contentTypeForFormat,
   hexSha256ToBase64,
+  playableSources,
   resolveSlotForUpload,
 } from "./assets.js";
 
@@ -366,5 +367,85 @@ describe("canPublish", () => {
 
   it("is false for peaks alone — a waveform is not something to listen to", () => {
     expect(canPublish([row({ kind: "peaks" })])).toBe(false);
+  });
+});
+
+describe("playableSources", () => {
+  const row = (over: Partial<assetsRepo.Asset>): assetsRepo.Asset =>
+    ({
+      id: "a-1",
+      kind: "master",
+      status: "ready",
+      tier: "lossy",
+      instrumentId: null,
+      ...over,
+    }) as assetsRepo.Asset;
+
+  it("is empty for a take with nothing on it", () => {
+    expect(playableSources([])).toEqual([]);
+  });
+
+  it("skips anything not yet ready — half an upload is not a source", () => {
+    expect(playableSources([row({ status: "pending" })])).toEqual([]);
+  });
+
+  it("skips peaks, which describe a source rather than being one", () => {
+    expect(playableSources([row({ kind: "peaks" })])).toEqual([]);
+  });
+
+  it("collapses a take's two masters into ONE source, preferring the lossy", () => {
+    // The lossy row wins because that is what `/assets/:id/audio` streams.
+    // Listing both would offer the same performance twice under two names.
+    const sources = playableSources([
+      row({ id: "lossless", tier: "lossless", format: "flac" }),
+      row({ id: "lossy", tier: "lossy", format: "mp3" }),
+    ]);
+    expect(sources).toHaveLength(1);
+    expect(sources[0]?.assetId).toBe("lossy");
+  });
+
+  it("prefers the lossy whichever order the rows arrive in", () => {
+    const sources = playableSources([
+      row({ id: "lossy", tier: "lossy" }),
+      row({ id: "lossless", tier: "lossless" }),
+    ]);
+    expect(sources[0]?.assetId).toBe("lossy");
+  });
+
+  it("keeps a lossless-only source — one file you can play beats none", () => {
+    const sources = playableSources([row({ id: "flac", tier: "lossless" })]);
+    expect(sources).toHaveLength(1);
+    expect(sources[0]?.assetId).toBe("flac");
+  });
+
+  it("treats two instruments as two sources, not one collapsed stem", () => {
+    const sources = playableSources([
+      row({ id: "bass", kind: "stem", instrumentId: "i-bass" }),
+      row({ id: "gtr", kind: "stem", instrumentId: "i-gtr" }),
+    ]);
+    expect(sources.map((s) => s.assetId).sort()).toEqual(["bass", "gtr"]);
+  });
+
+  it("collapses the same instrument's two tiers into one source", () => {
+    const sources = playableSources([
+      row({ id: "bass-flac", kind: "stem", instrumentId: "i-bass", tier: "lossless" }),
+      row({ id: "bass-mp3", kind: "stem", instrumentId: "i-bass", tier: "lossy" }),
+    ]);
+    expect(sources).toHaveLength(1);
+    expect(sources[0]?.assetId).toBe("bass-mp3");
+  });
+
+  it("puts the master first, so the order is stable for a caller that re-sorts", () => {
+    const sources = playableSources([
+      row({ id: "gtr", kind: "stem", instrumentId: "i-gtr" }),
+      row({ id: "master" }),
+      row({ id: "bass", kind: "stem", instrumentId: "i-bass" }),
+    ]);
+    expect(sources.map((s) => s.assetId)).toEqual(["master", "gtr", "bass"]);
+  });
+
+  it("carries the instrument id through, which is what names a stem later", () => {
+    const sources = playableSources([row({ kind: "stem", instrumentId: "i-bass" })]);
+    expect(sources[0]).toMatchObject({ kind: "stem", instrumentId: "i-bass", tier: "lossy" });
   });
 });

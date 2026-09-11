@@ -369,3 +369,61 @@ export async function buildUploadItems(
 export function canPublish(assets: assetsRepo.Asset[]): boolean {
   return assets.some((a) => (a.kind === "master" || a.kind === "stem") && a.status === "ready");
 }
+
+/**
+ * What a take can be heard AS — one entry per source, never one per file.
+ *
+ * A take can carry the same source at two tiers (a lossy master and a
+ * lossless one), and the question "what can I listen to" is about the
+ * performance, not the encoding. The lossy row wins because that is what
+ * `/assets/:id/audio` streams; a lossless-only source still appears, since
+ * one file you can play beats none.
+ *
+ * Here rather than inline in the route because there are now two readers of
+ * this rule — the player's source switch and the mixer — and "what a take can
+ * be heard as" answered twice will be answered differently within a release.
+ * That is the argument this file's header already makes for
+ * `resolveSlotForUpload`, applied to the read side.
+ *
+ * Pure, and deliberately UNDECORATED: no label, no icon, no sort order. Those
+ * need the instruments table, and the two callers want different orders — the
+ * switch lists the master first, the mixer wants it last, behind the stems it
+ * would otherwise double. Order here is only stable, not meaningful: master
+ * first, then stems in input order. Callers sort.
+ */
+export interface PlayableSource {
+  assetId: string;
+  kind: "master" | "stem";
+  /** `null` for the master. */
+  instrumentId: string | null;
+  tier: AssetTier;
+}
+
+export function playableSources(assets: assetsRepo.Asset[]): PlayableSource[] {
+  const bySource = new Map<string, assetsRepo.Asset>();
+  for (const asset of assets) {
+    if (asset.status !== "ready" || (asset.kind !== "master" && asset.kind !== "stem")) {
+      continue;
+    }
+    // Keyed by what the listener would call it. Two stems of the same
+    // instrument are the same source at different tiers; two stems of
+    // different instruments are two sources.
+    const key = asset.kind === "stem" ? `stem:${asset.instrumentId}` : "master";
+    const existing = bySource.get(key);
+    if (!existing || (existing.tier === "lossless" && asset.tier === "lossy")) {
+      bySource.set(key, asset);
+    }
+  }
+
+  const master = bySource.get("master");
+  const stems = [...bySource.entries()]
+    .filter(([key]) => key !== "master")
+    .map(([, asset]) => asset);
+
+  return [...(master ? [master] : []), ...stems].map((asset) => ({
+    assetId: asset.id,
+    kind: asset.kind as "master" | "stem",
+    instrumentId: asset.instrumentId,
+    tier: asset.tier,
+  }));
+}

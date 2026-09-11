@@ -16,7 +16,7 @@
 // what makes the LOCATION it redirects to cache-identical across that
 // window too — see task-7-report.md for the proof (a real cache hit,
 // verified in a browser).
-import type { Storage } from "@bandplate/core";
+import { type Storage, playableSources } from "@bandplate/core";
 import { type Db, assetsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";
@@ -158,34 +158,24 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
     }
 
     const assets = await assetsRepo.listByTake(deps.db, id);
-    const playable = assets.filter(
-      (a) => a.status === "ready" && (a.kind === "master" || a.kind === "stem"),
-    );
-
-    // One entry per SOURCE, not per file. A take can carry the same source at
-    // two tiers (a lossy master and a lossless one), and the switch is about
-    // what you are hearing, not which encoding — so the lossy row wins, since
-    // that is what `/audio` streams.
-    const bySource = new Map<string, (typeof playable)[number]>();
-    for (const asset of playable) {
-      const key = asset.kind === "stem" ? `stem:${asset.instrumentId}` : "master";
-      const existing = bySource.get(key);
-      if (!existing || (existing.tier === "lossless" && asset.tier === "lossy")) {
-        bySource.set(key, asset);
-      }
-    }
+    // One entry per SOURCE, not per file — `playableSources` owns that rule
+    // now, because the mixer asks the same question and two answers to "what
+    // can this take be heard as" drift within a release. What stays here is
+    // the DECORATION: the label, the glyph and the order, which need the
+    // instruments table and are this route's own business.
+    const playable = playableSources(assets);
 
     const instruments = await instrumentsRepo.list(deps.db, { includeArchived: true });
     const byId = new Map(instruments.map((i) => [i.id, i]));
 
-    const sources = [...bySource.values()]
-      .map((asset) => {
-        const instrument = asset.instrumentId ? byId.get(asset.instrumentId) : undefined;
+    const sources = playable
+      .map((source) => {
+        const instrument = source.instrumentId ? byId.get(source.instrumentId) : undefined;
         return {
-          assetId: asset.id,
-          kind: asset.kind,
+          assetId: source.assetId,
+          kind: source.kind,
           // "Master" is the label the player already announces for a take's
-          // main mix — see `PlayerTrack.sourceLabel`.
+          // main mix — see `PlayerTrack.sourceKind`.
           label: instrument?.label ?? "Master",
           icon: instrument?.icon ?? null,
           sortOrder: instrument?.sortOrder ?? -1,

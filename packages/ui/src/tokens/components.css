@@ -5481,29 +5481,48 @@ html:has(dialog.bp-filter-sheet[open]) body {
   height: 26px;
   background: transparent;
   cursor: pointer;
+
+  /* Thumb diameter, named once: the thumb, the fill's travel and the
+     vertical centring all have to agree, and three magic numbers that must
+     stay equal is how the fill drifted off the thumb in the first place. */
+  --bp-fader-thumb: 16px;
+  --bp-fader-rail: 5px;
+  /* Set by the island from the live value; unity if the markup renders
+     without script, which is what the fader shows at rest anyway. */
+  --bp-fader-pos: 0.714;
+  /* A thumb's CENTRE travels from half a thumb in to half a thumb short of
+     the end — so the fill is a fraction of (track − thumb), not of the
+     track. A plain percentage puts the seam ahead of the dot at the left
+     end and behind it at the right, and dead on only in the middle. */
+  --bp-fader-fill: calc(
+    var(--bp-fader-pos) * (100% - var(--bp-fader-thumb)) + var(--bp-fader-thumb) / 2
+  );
 }
 
 .bp-mixer-fader::-webkit-slider-runnable-track {
-  height: 5px;
+  height: var(--bp-fader-rail);
   border-radius: 999px;
   /* The instrument's own colour. This is the ONLY place a lane's colour
      appears in the controls — a chip beside the name would say it twice. */
   background: linear-gradient(
     to right,
-    var(--bp-swatch, var(--bp-track-none)) 0%,
-    var(--bp-swatch, var(--bp-track-none)) 71.4%,
-    var(--bp-fill-subtle) 71.4%
+    var(--bp-swatch, var(--bp-track-none)) 0,
+    var(--bp-swatch, var(--bp-track-none)) var(--bp-fader-fill),
+    var(--bp-fill-subtle) var(--bp-fader-fill)
   );
 }
 
+/* Firefox fills the rail itself, from the real value — no custom property
+   needed, and no thumb-width correction either, because it grows the
+   progress box rather than painting a gradient across the track. */
 .bp-mixer-fader::-moz-range-track {
-  height: 5px;
+  height: var(--bp-fader-rail);
   border-radius: 999px;
   background: var(--bp-fill-subtle);
 }
 
 .bp-mixer-fader::-moz-range-progress {
-  height: 5px;
+  height: var(--bp-fader-rail);
   border-radius: 999px;
   background: var(--bp-swatch, var(--bp-track-none));
 }
@@ -5511,16 +5530,17 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-mixer-fader::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
-  margin-top: -5.5px;
+  width: var(--bp-fader-thumb);
+  height: var(--bp-fader-thumb);
+  /* Centred on the rail: half the difference, pulled up. */
+  margin-top: calc((var(--bp-fader-rail) - var(--bp-fader-thumb)) / 2);
   border-radius: 50%;
   background: var(--bp-color-fg);
 }
 
 .bp-mixer-fader::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: var(--bp-fader-thumb);
+  height: var(--bp-fader-thumb);
   border: none;
   border-radius: 50%;
   background: var(--bp-color-fg);

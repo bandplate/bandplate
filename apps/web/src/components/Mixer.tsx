@@ -23,6 +23,7 @@ import { currentLocale } from "../client/locale.js";
 import { type LanePeaks, mixerLaneBars } from "../client/mixer-peaks.js";
 import { timelineTicks } from "../client/mixer-ticks.js";
 import {
+  MAX_FADER,
   type MixerState,
   initialMixerState,
   setFader,
@@ -382,13 +383,19 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                       {t.soloShort}
                     </button>
                   </span>
+                  {/* The filled part of the track is drawn by CSS, and CSS
+                    cannot read an input's value — so the position rides along
+                    as a custom property. Unitless 0..1, not a percentage:
+                    the track has to subtract the thumb's own width from the
+                    travel before it can turn this into a length. */}
                   <input
                     type="range"
                     class="bp-mixer-fader"
                     min={0}
-                    max={1.4}
+                    max={MAX_FADER}
                     step={0.01}
                     value={control.fader}
+                    style={`--bp-fader-pos: ${control.fader / MAX_FADER}`}
                     aria-label={t.volume(track.label)}
                     onInput={(event) =>
                       setMix((s) =>

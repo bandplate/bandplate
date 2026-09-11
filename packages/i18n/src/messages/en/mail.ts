@@ -7,17 +7,22 @@
 //
 // The login message is the one that matters most: it is the ONLY way into the
 // app, so a member who cannot read it cannot sign in.
+//
+// These are SHORT on purpose. A transactional mail is read in two seconds on
+// a phone, and every sentence that is not the greeting, the one fact, or the
+// button is a sentence between the reader and the thing they came for. The
+// small print below the rule is the exception — it says why the mail arrived,
+// which the body no longer has to.
 export const mail = {
   greeting: (displayName: string): string => `Hi ${displayName},`,
   greetingAnonymous: "Hi,",
-  signOff: "— bandplate",
-  orPaste: "Or paste this into your browser:",
+  orPaste: "Or open this address in your browser:",
 
   // --- the sign-in link ----------------------------------------------------
   loginSubject: "Your sign-in link for bandplate",
   loginLead: (life: string): string => `Here is your link to sign in. ${life}`,
   loginLife: (minutes: number): string =>
-    `It works once, and only for the next ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
+    `It works once and lasts ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
   loginLifeNoExpiry: "It works once.",
   loginButton: "Sign in to bandplate",
   /**
@@ -26,23 +31,35 @@ export const mail = {
    * address is on the whitelist.
    */
   loginFooter:
-    "You are getting this because someone entered this address on the bandplate sign-in page. If that was not you, ignore it — nobody can sign in without the link.",
+    "Someone entered this address on the bandplate sign-in page. If that was not you, ignore this — nobody can sign in without the link.",
 
   // --- the invitation ------------------------------------------------------
-  inviteSubject: "You've been added to bandplate",
-  inviteWhat: "You've been added to bandplate — your band's rehearsal and recording archive.",
-  inviteHow: (address: string): string =>
-    `There's no password to set up. Go to the sign-in page, enter this address (${address}), and we'll email you a link that signs you in.`,
-  inviteButton: "Go to the sign-in page",
-  inviteFooter:
-    "An admin of your band added this address. If you were not expecting it, you can ignore this message.",
+  /**
+   * Subject and opening line, in two versions each: with the sender named,
+   * and without, for a caller that has no acting member to name. The two read
+   * the same way — the second is not a lesser message, just one that cannot
+   * point at a person.
+   *
+   * Czech uses the PRESENT tense — "zve", invites — because the past tense it
+   * would otherwise want ("pozval" / "pozvala") carries the sender's gender,
+   * and nothing here knows it.
+   */
+  inviteSubject: "You've been invited to bandplate",
+  inviteSubjectBy: (name: string): string => `${name} invited you to bandplate`,
+  inviteWhat: "You've been invited to bandplate, your band's online archive.",
+  inviteWhatBy: (name: string): string =>
+    `${name} invited you to bandplate, your band's online archive.`,
+  inviteButton: "Accept invite",
+  /**
+   * No "an admin of your band added this address" any more: the opening line
+   * names them. What is left is the one thing the body does not say.
+   */
+  inviteFooter: "If this was a mistake, just ignore this message.",
 
   // --- the setup self-test -------------------------------------------------
   setupSubject: "bandplate is set up",
   setupWhat:
-    "Mail is working. That was the last thing standing between your band and their archive — everyone signs in by a link sent to this address, so nothing else works without it.",
-  setupNext:
-    "Add your bandmates from the admin area, and they'll each get an invite like this one.",
+    "Everything works now. Add your bandmates in the bandplate admin and start creating stuff!",
   setupButton: "Open bandplate",
   setupFooter: "You are getting this because you just set up this bandplate deployment.",
 };

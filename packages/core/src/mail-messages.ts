@@ -129,15 +129,13 @@ export function buildLoginLinkMessage(input: LoginLinkMessageInput): MailMessage
     input.expiresInMinutes && input.expiresInMinutes > 0
       ? t.loginLife(input.expiresInMinutes)
       : t.loginLifeNoExpiry;
-  // Said because this address is on a whitelist: an unexpected sign-in mail
-  // means somebody typed it into the login form, and saying nothing about that
-  // invites a support question.
-  const why = t.loginFooter;
-
   return {
     to: input.to,
     subject: t.loginSubject,
-    text: [greeting, "", t.loginLead(life), "", input.url, "", why, "", t.signOff].join("\n"),
+    // Greeting, the one fact, the link. The "why did I get this" sentence is
+    // small print below the rule in the HTML — it is not the body's job, and
+    // in a plain-text reader it would sit between the reader and the link.
+    text: [greeting, t.loginLead(life), `${t.orPaste}\n${input.url}`].join("\n\n"),
     html: shell(
       originOf(input.url),
       [
@@ -146,7 +144,7 @@ export function buildLoginLinkMessage(input: LoginLinkMessageInput): MailMessage
         button(input.url, t.loginButton),
         fallbackUrl(input.url, t.orPaste),
       ].join(""),
-      escapeHtml(why),
+      escapeHtml(t.loginFooter),
     ),
   };
 }
@@ -164,23 +162,42 @@ export interface InviteMessageInput {
   locale?: Locale;
   to: string;
   displayName: string;
-  /** Where they sign in — `${appOrigin}/login`. */
+  /** Where they sign in — `${appOrigin}/login?email=…`. */
   signInUrl: string;
+  /**
+   * The admin who pressed the button, by display name. Optional: the mail
+   * reads correctly without it, and there is no stored record of who did the
+   * inviting — a RE-send names whoever sent THAT one, which is the honest
+   * answer to "who is this from", since they are the person to ask.
+   */
+  invitedBy?: string;
 }
 
 export function buildInviteMessage(input: InviteMessageInput): MailMessage {
   const t = mailMessages(input.locale ?? DEFAULT_LOCALE);
   const greeting = t.greeting(input.displayName);
-  const what = t.inviteWhat;
-  const how = t.inviteHow(input.to);
+  // The sender is named in the subject AND in the opening line, not added as
+  // a separate by-line: the subject is what makes this legible in a crowded
+  // inbox, and the first line is what tells a new member this is a real
+  // invitation from someone they know rather than a phishing mail.
+  const what = input.invitedBy ? t.inviteWhatBy(input.invitedBy) : t.inviteWhat;
 
   return {
     to: input.to,
-    subject: t.inviteSubject,
-    text: [greeting, "", what, "", how, "", input.signInUrl, "", t.signOff].join("\n"),
+    subject: input.invitedBy ? t.inviteSubjectBy(input.invitedBy) : t.inviteSubject,
+    // One line and a button. What used to sit here — "there's no password to
+    // set up, enter this address on the sign-in page" — described a form the
+    // button now fills in on their behalf (`?email=` in `signInUrl`), so it
+    // was instructions for work nobody has to do.
+    text: [greeting, what, `${t.orPaste}\n${input.signInUrl}`].join("\n\n"),
     html: shell(
       originOf(input.signInUrl),
-      [para(greeting), para(what), para(how), button(input.signInUrl, t.inviteButton)].join(""),
+      [
+        para(greeting),
+        para(what),
+        button(input.signInUrl, t.inviteButton),
+        fallbackUrl(input.signInUrl, t.orPaste),
+      ].join(""),
       t.inviteFooter,
     ),
   };
@@ -219,16 +236,15 @@ export interface SetupTestMessageInput {
 export function buildSetupTestMessage(input: SetupTestMessageInput): MailMessage {
   const t = mailMessages(input.locale ?? DEFAULT_LOCALE);
   const what = t.setupWhat;
-  const next = t.setupNext;
   const origin = input.appOrigin ? originOf(input.appOrigin) : undefined;
 
   return {
     to: input.to,
     subject: t.setupSubject,
-    text: [what, "", next, ...(origin ? ["", origin] : []), "", t.signOff].join("\n"),
+    text: [what, ...(origin ? [origin] : [])].join("\n\n"),
     html: shell(
       origin,
-      [para(what), para(next), ...(origin ? [button(origin, t.setupButton)] : [])].join(""),
+      [para(what), ...(origin ? [button(origin, t.setupButton)] : [])].join(""),
       t.setupFooter,
     ),
   };

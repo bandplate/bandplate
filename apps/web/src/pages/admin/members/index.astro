@@ -6,7 +6,7 @@ import AdminHeader from "../../../components/AdminHeader.astro";
 import InstrumentSet from "../../../components/InstrumentSet.astro";
 import RecordSheet from "../../../components/RecordSheet.astro";
 import AppLayout from "../../../layouts/AppLayout.astro";
-import { getAppDeps } from "../../../server/app.js";
+import { getAppDeps, getWebConfig } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
 import { formatTimestamp } from "../../../server/format.js";
 import {
@@ -26,6 +26,7 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
+const webConfig = await getWebConfig();
 
 let createError: string | undefined;
 let createErrorField: "displayName" | "email" | undefined;
@@ -41,7 +42,14 @@ if (Astro.request.method === "POST") {
     const invite = { mailer: appDeps.mailer, appOrigin: appDeps.config.appOrigin };
 
     if (intent === "create") {
-      const result = await createMember(appDeps.db, appDeps.clock.now(), formData, invite);
+      const result = await createMember(
+        appDeps.db,
+        appDeps.clock.now(),
+        formData,
+        invite,
+        principal.memberId,
+        webConfig.defaultLocale,
+      );
       if (result.kind === "ok") {
         // The banner distinguishes the two, because "member added" while the
         // invitation silently failed is how a broken mail pipeline stays
@@ -87,7 +95,7 @@ if (Astro.request.method === "POST") {
       }
     } else if (intent === "invite") {
       const id = String(formData.get("memberId") ?? "");
-      const result = await resendMemberInvite(appDeps.db, id, invite);
+      const result = await resendMemberInvite(appDeps.db, id, invite, principal.memberId);
       if (result.kind === "not_found") {
         formError = ta.memberNotFound;
       } else {

@@ -8,6 +8,13 @@
 // │ read it, they cannot get in — so this is the one file where clarity     │
 // │ beats voice if the two ever pull apart.                                 │
 // │                                                                        │
+// │ NOTHING HERE MAY DECLARE THE READER'S OR THE SENDER'S GENDER. These     │
+// │ messages go to people the app knows only by name and address. That      │
+// │ rules out the Czech past tense in every sentence about a PERSON —       │
+// │ "pozval/pozvala", "nebyl jsi to ty" — so the invitation uses the        │
+// │ present ("zve") and the footers are phrased around a thing rather than  │
+// │ a person ("pokud to byl omyl", agreeing with "omyl", not the reader).   │
+// │                                                                        │
 // │ `loginFooter` must stay as non-committal as the English: it deliberately│
 // │ does NOT confirm that the address is registered, for the same reason    │
 // │ `/login` answers identically either way.                                │
@@ -17,41 +24,46 @@ import type { mail as enMail } from "../en/mail.js";
 export const mail = {
   greeting: (displayName: string): string => `Ahoj ${displayName},`, // en: `Hi ${displayName},`
   greetingAnonymous: "Ahoj,", // en: Hi,
-  signOff: "— bandplate", // en: — bandplate
-  orPaste: "Nebo si tohle vlož do prohlížeče:", // en: Or paste this into your browser:
+  orPaste: "Nebo otevři tuhle adresu v prohlížeči:", // en: Or open this address in your browser:
 
   loginSubject: "Tvůj přihlašovací odkaz do bandplate", // en: Your sign-in link for bandplate
-  loginLead: (life: string): string => `Tady je odkaz pro přihlášení. ${life}`, // en: `Here is your link to sign in. ${life}`
-  // en: `It works once, and only for the next ${n} ${n === 1 ? "minute" : "minutes"}.`
+  // en: `Here is your link to sign in. ${life}`
+  loginLead: (life: string): string => `Tady je tvůj odkaz pro přihlášení. ${life}`,
+  // en: `It works once and lasts ${n} ${n === 1 ? "minute" : "minutes"}.`
   //
-  // 1 minutu · 2–4 minuty · 5+ minut — accusative after "na", which is what
-  // the count governs here.
+  // 1 minutu · 2–4 minuty · 5+ minut — accusative, which is what the count
+  // governs after "platí".
   loginLife: (minutes: number): string =>
-    `Funguje jednou a jen následujících ${minutes} ${minutes === 1 ? "minutu" : minutes < 5 ? "minuty" : "minut"}.`,
+    `Funguje jednou a platí ${minutes} ${minutes === 1 ? "minutu" : minutes < 5 ? "minuty" : "minut"}.`,
   loginLifeNoExpiry: "Funguje jednou.", // en: It works once.
   loginButton: "Přihlásit se do bandplate", // en: Sign in to bandplate
-  // en: You are getting this because someone entered this address on the bandplate sign-in page. If that was not you, ignore it — nobody can sign in without the link.
+  // en: Someone entered this address on the bandplate sign-in page. If that was not you, ignore this — nobody can sign in without the link.
+  // "Pokud to nebylo od tebe" rather than "pokud jsi to nebyl ty": the past
+  // tense would declare the reader's gender.
   loginFooter:
-    "Tenhle e-mail ti přišel, protože někdo zadal tuhle adresu na přihlašovací stránce bandplate. Pokud jsi to nebyl ty, nevšímej si ho — bez odkazu se nikdo nepřihlásí.",
+    "Někdo zadal tuhle adresu na přihlašovací stránce bandplate. Pokud to nebylo od tebe, zprávu ignoruj — bez odkazu se nikdo nepřihlásí.",
 
-  inviteSubject: "Byl jsi přidán do bandplate", // en: You've been added to bandplate
-  // en: You've been added to bandplate — your band's rehearsal and recording archive.
-  inviteWhat: "Byl jsi přidán do bandplate — archivu zkoušek a nahrávek tvojí kapely.",
-  // en: There's no password to set up. Go to the sign-in page, enter this address (${address}), and we'll email you a link that signs you in.
-  inviteHow: (address: string): string =>
-    `Žádné heslo se nenastavuje. Běž na přihlašovací stránku, zadej tuhle adresu (${address}) a pošleme ti e-mailem odkaz, kterým se přihlásíš.`,
-  inviteButton: "Na přihlašovací stránku", // en: Go to the sign-in page
-  // en: An admin of your band added this address. If you were not expecting it, you can ignore this message.
-  inviteFooter:
-    "Tuhle adresu přidal správce tvojí kapely. Jestli jsi to nečekal, můžeš zprávu ignorovat.",
+  // Present tense — "zve". The past tense Czech would otherwise want
+  // ("pozval" / "pozvala") carries the sender's gender, and nothing here
+  // knows it.
+  inviteSubject: "Máš pozvánku do bandplate", // en: You've been invited to bandplate
+  // en: `${name} invited you to bandplate`
+  inviteSubjectBy: (name: string): string => `${name} tě zve do bandplate`,
+  // en: You've been invited to bandplate, your band's online archive.
+  inviteWhat: "Máš pozvánku do bandplate, online archivu tvojí kapely.",
+  // en: `${name} invited you to bandplate, your band's online archive.`
+  inviteWhatBy: (name: string): string =>
+    `${name} tě zve do bandplate, online archivu tvojí kapely.`,
+  inviteButton: "Přijmout pozvánku", // en: Accept invite
+  // en: If this was a mistake, just ignore this message.
+  // "Byl omyl" agrees with "omyl", a masculine noun — not with the reader.
+  inviteFooter: "Pokud to byl omyl, zprávu klidně ignoruj.",
 
   setupSubject: "bandplate je nastavený", // en: bandplate is set up
-  // en: Mail is working. That was the last thing standing between your band and their archive — everyone signs in by a link sent to this address, so nothing else works without it.
-  setupWhat:
-    "Odesílání e-mailů funguje. To bylo poslední, co stálo mezi kapelou a jejím archivem — všichni se přihlašují odkazem poslaným na tuhle adresu, takže bez toho nic nefunguje.",
-  // en: Add your bandmates from the admin area, and they'll each get an invite like this one.
-  setupNext: "Přidej spoluhráče ve správě a každému přijde pozvánka jako tahle.",
+  // en: Everything works now. Add your bandmates in the bandplate admin and start creating stuff!
+  setupWhat: "Vše je nastaveno. Nyní jen přidej své spoluhráče v adminu a můžete začít tvořit!",
   setupButton: "Otevřít bandplate", // en: Open bandplate
   // en: You are getting this because you just set up this bandplate deployment.
-  setupFooter: "Tenhle e-mail ti přišel, protože jsi právě nastavil tuhle instalaci bandplate.",
+  setupFooter:
+    "Tahle zpráva přišla proto, že se právě dokončilo nastavení téhle instalace bandplate.",
 } satisfies typeof enMail;

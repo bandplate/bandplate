@@ -173,6 +173,14 @@ export interface SendMemberInviteDeps {
 export async function sendMemberInvite(
   deps: SendMemberInviteDeps,
   member: { displayName: string; email: string; locale?: Locale },
+  /**
+   * The admin who pressed the button, by display name — so the mail says who
+   * it is from rather than "an admin of your band". Optional, because nothing
+   * about creating a member depends on knowing this and a caller without an
+   * acting member (a script, a future automated path) must still be able to
+   * send the invitation.
+   */
+  invitedBy?: string,
 ): Promise<boolean> {
   // `?email=` is what makes the button one press rather than "now type the
   // address this mail was sent to". `/login` reads it, fills the field and
@@ -194,6 +202,7 @@ export async function sendMemberInvite(
           to: member.email,
           displayName: member.displayName,
           signInUrl,
+          invitedBy,
           // The new member's own row. It carries the column default until
           // they pick a language themselves — there is no better guess to
           // make about someone who has never signed in.

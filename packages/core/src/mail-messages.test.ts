@@ -38,7 +38,7 @@ describe("buildLoginLinkMessage", () => {
     expect(msg.to).toBe("alex@example.com");
     expect(msg.text).toContain(LOGIN_URL);
     expect(msg.text).toContain("Hi Alex,");
-    expect(msg.text).toContain("next 15 minutes");
+    expect(msg.text).toContain("lasts 15 minutes");
     expect(msg.html).toContain(LOGIN_URL);
     expectRendersInEmailClients(msg.html ?? "");
   });
@@ -51,7 +51,7 @@ describe("buildLoginLinkMessage", () => {
 
   it("says minute, singular, at one", () => {
     const msg = buildLoginLinkMessage({ to: "a@b.c", url: LOGIN_URL, expiresInMinutes: 1 });
-    expect(msg.text).toContain("next 1 minute.");
+    expect(msg.text).toContain("lasts 1 minute.");
   });
 
   it("drops the lifetime sentence rather than printing a wrong one", () => {
@@ -95,12 +95,54 @@ describe("buildInviteMessage", () => {
       signInUrl: "https://band.example/login",
     });
 
-    expect(msg.subject).toBe("You've been added to bandplate");
+    expect(msg.subject).toBe("You've been invited to bandplate");
     expect(msg.text).toContain("Hi Sam,");
-    expect(msg.text).toContain("(sam@example.com)");
     expect(msg.text).toContain("https://band.example/login");
     expect(msg.html).toContain('href="https://band.example/login"');
     expectRendersInEmailClients(msg.html ?? "");
+  });
+
+  // An invitation from a stranger is indistinguishable from a phishing mail,
+  // and the subject line is where that is decided — it is all a crowded inbox
+  // shows.
+  it("names the sender in the subject and the opening line", () => {
+    const msg = buildInviteMessage({
+      to: "sam@example.com",
+      displayName: "Sam",
+      signInUrl: "https://band.example/login",
+      invitedBy: "Vařič",
+    });
+
+    expect(msg.subject).toBe("Vařič invited you to bandplate");
+    expect(msg.text).toContain("Vařič invited you to bandplate, your band's online archive.");
+    expect(msg.html).toContain("Vařič invited you");
+  });
+
+  // Czech says it in the PRESENT tense. The past tense it would otherwise
+  // want — "pozval" / "pozvala" — carries the sender's gender, and nothing
+  // here knows it.
+  it("names the sender in Czech without claiming to know their gender", () => {
+    const msg = buildInviteMessage({
+      to: "sam@example.com",
+      displayName: "Sam",
+      signInUrl: "https://band.example/login",
+      invitedBy: "Vařič",
+      locale: "cs",
+    });
+
+    expect(msg.subject).toBe("Vařič tě zve do bandplate");
+    expect(msg.text).not.toMatch(/pozval/);
+  });
+
+  it("still reads correctly with no sender to name", () => {
+    const msg = buildInviteMessage({
+      to: "sam@example.com",
+      displayName: "Sam",
+      signInUrl: "https://band.example/login",
+    });
+    // No stranded punctuation or blank paragraph where the name would be.
+    expect(msg.text).not.toMatch(/\n\n\n/);
+    expect(msg.html).not.toContain("<p></p>");
   });
 
   it("carries no token — an invite is a notification, not a credential", () => {
@@ -117,7 +159,7 @@ describe("buildSetupTestMessage", () => {
   it("confirms mail works and points at the deployment", () => {
     const msg = buildSetupTestMessage({ to: "op@example.com", appOrigin: "https://band.example" });
     expect(msg.subject).toBe("bandplate is set up");
-    expect(msg.text).toContain("Mail is working.");
+    expect(msg.text).toContain("Everything works now.");
     expect(msg.text).toContain("https://band.example");
     expect(msg.html).toContain('href="https://band.example"');
     expectRendersInEmailClients(msg.html ?? "");
@@ -125,7 +167,7 @@ describe("buildSetupTestMessage", () => {
 
   it("still sends when no origin was configured — the proof matters, the button doesn't", () => {
     const msg = buildSetupTestMessage({ to: "op@example.com" });
-    expect(msg.text).toContain("Mail is working.");
+    expect(msg.text).toContain("Everything works now.");
     expect(msg.html).not.toContain("<a ");
     expect(msg.html).not.toContain("<img");
   });

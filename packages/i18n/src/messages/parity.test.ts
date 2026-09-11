@@ -55,7 +55,6 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // Same word in a Czech studio, and the player says it beside "stopa".
   "player.master",
   // The wordmark, unchanged in any language.
-  "mail.signOff",
   // Same in a Czech studio, and the chord example is chords.
   "islands.uploadMaster",
   "islands.chartChordsPlaceholder",
@@ -211,7 +210,8 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "one", args: [1] },
     { label: "many", args: [15] },
   ],
-  "mail.inviteHow": [{ label: "a", args: ["a@b.cz"] }],
+  "mail.inviteSubjectBy": [{ label: "n", args: ["Vařič"] }],
+  "mail.inviteWhatBy": [{ label: "n", args: ["Vařič"] }],
   "me.memberSince": [{ label: "d", args: ["8. února 2026"] }],
   "me.ledgerVotes": [
     { label: "one", args: [1] },

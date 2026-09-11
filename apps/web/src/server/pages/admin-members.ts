@@ -18,6 +18,7 @@ import {
 } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
 import { authSessionsRepo, instrumentsRepo, membersRepo } from "@bandplate/db";
+import type { Locale } from "@bandplate/i18n";
 
 type Member = membersRepo.Member;
 
@@ -134,6 +135,19 @@ export async function createMember(
   now: number,
   formData: FormData,
   invite: SendMemberInviteDeps,
+  /**
+   * The admin doing the inviting. Only used to name them in the mail, which
+   * is why it is optional and why a failure to find the row is not an error:
+   * the invitation is worth sending either way.
+   */
+  actingMemberId?: string,
+  /**
+   * The installation's language (`BANDPLATE_DEFAULT_LOCALE`), written onto
+   * the new row. It decides what their invitation is written in and what they
+   * see on their first sign-in — a Czech band's new member should not have to
+   * find `/me` before the app speaks Czech. They can still change it there.
+   */
+  defaultLocale?: Locale,
 ): Promise<CreateMemberResult> {
   const parsed = createMemberSchema.safeParse({
     displayName: formData.get("displayName"),
@@ -157,13 +171,14 @@ export async function createMember(
     email: parsed.data.email,
     role: parsed.data.role,
     createdAt: now,
+    locale: defaultLocale,
   });
 
   // Being added and being TOLD you were added are not the same thing, and
   // until now only the first happened: a member appeared in the roster with
   // no idea the archive existed, waiting for an admin to message them out of
   // band. See `sendMemberInvite` for why the invitation carries no token.
-  const invited = await sendMemberInvite(invite, member);
+  const invited = await sendMemberInvite(invite, member, await inviterName(db, actingMemberId));
   return { kind: "ok", member, invited };
 }
 
@@ -178,12 +193,33 @@ export async function resendMemberInvite(
   db: Db,
   id: string,
   invite: SendMemberInviteDeps,
+  /** Named in the mail — see `createMember`. A re-send names whoever pressed
+   *  the button THIS time, not whoever created the row: nothing records the
+   *  latter, and the former is the person to ask about it anyway. */
+  actingMemberId?: string,
 ): Promise<ResendInviteResult> {
   const member = await membersRepo.getById(db, id);
   if (!member) {
     return { kind: "not_found" };
   }
-  return { kind: "ok", invited: await sendMemberInvite(invite, member) };
+  return {
+    kind: "ok",
+    invited: await sendMemberInvite(invite, member, await inviterName(db, actingMemberId)),
+  };
+}
+
+/**
+ * The acting admin's display name, or `undefined` if there isn't one to find.
+ * One extra read on a path that already writes — invitations are rare, and
+ * the alternative is carrying the name through the principal, which exists to
+ * answer "may they" rather than "who are they".
+ */
+async function inviterName(db: Db, actingMemberId?: string): Promise<string | undefined> {
+  if (!actingMemberId) {
+    return undefined;
+  }
+  const actor = await membersRepo.getById(db, actingMemberId);
+  return actor?.displayName;
 }
 
 export type UpdateMemberResult =

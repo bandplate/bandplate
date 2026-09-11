@@ -29,7 +29,16 @@ readable and installable anywhere Python 3.9+ runs.
         <instrument-slug>.<ext>  <- optional: one file per captured stem,
                                     named exactly as the bandplate instrument
                                     slug (see GET /ingest/v1/instruments)
-        peaks.json                <- optional: 1000 ints, -128..127
+        peaks.json               <- optional: the master's waveform,
+                                    1000 ints in -128..127
+        <instrument-slug>.peaks.json
+                                 <- optional: that stem's OWN waveform.
+                                    Contract v1 §5: a waveform describes one
+                                    source, so each gets its own. Without it
+                                    a lane in the mixer draws a plain rail —
+                                    which is honest, but it is the picture
+                                    someone is reading to find out which stem
+                                    is making the noise.
 
 A real Reaper bridge would render these paths directly out of its own
 region/track data; this client only needs the finished files, so nothing
@@ -160,10 +169,31 @@ def discover_take_assets(take_dir: Path) -> list[DeclaredAsset]:
         if not entry.is_file():
             continue
         stem, ext = entry.stem, entry.suffix.lower()
-        if entry.name == "peaks.json":
+        # `peaks.json` is the master's; `<slug>.peaks.json` is that stem's own.
+        # Matched exactly rather than by a trailing "peaks.json", or a file
+        # called `bass_peaks.json` would be filed against the instrument
+        # `bass` — a silent misread is worse than not recognising it at all.
+        is_peaks = entry.name == "peaks.json" or entry.name.endswith(".peaks.json")
+        if is_peaks:
+            # The slug is validated against the vocabulary server-side, so a
+            # typo is refused rather than attached to the wrong source.
+            # `master.peaks.json` is the master's too — the symmetry with
+            # `master.<ext>` makes it the name a bridge author will reach for,
+            # and `master` is not an instrument slug, so the server would
+            # otherwise refuse the whole take over a file name.
+            named = entry.name[: -len(".peaks.json")] if entry.name != "peaks.json" else ""
+            instrument = None if named in ("", "master") else named
             sha, size = sha256_file(entry)
             assets.append(
-                DeclaredAsset(kind="peaks", path=entry, tier="lossy", format="json", bytes=size, sha256=sha)
+                DeclaredAsset(
+                    kind="peaks",
+                    path=entry,
+                    tier="lossy",
+                    format="json",
+                    bytes=size,
+                    sha256=sha,
+                    instrument=instrument,
+                )
             )
             continue
         fmt = FORMAT_BY_EXT.get(ext)

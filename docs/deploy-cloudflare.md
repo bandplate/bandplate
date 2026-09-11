@@ -80,16 +80,30 @@ Do these in order — each later step needs something from the one before it.
    [
      {
        "AllowedOrigins": ["https://your-app-origin"],
-       "AllowedMethods": ["PUT"],
-       "AllowedHeaders": ["content-type"],
+       "AllowedMethods": ["GET", "PUT"],
+       "AllowedHeaders": ["content-type", "range"],
+       "ExposeHeaders": ["etag", "content-length", "content-range"],
        "MaxAgeSeconds": 3600
      }
    ]
    ```
 
    `AllowedOrigins` is the app's own origin — the same value as
-   `BANDPLATE_APP_ORIGIN`. Downloads and playback do not need this: those
-   go through the app's own 302, not a cross-origin fetch.
+   `BANDPLATE_APP_ORIGIN`.
+
+   **`GET`, `range` and `content-range` are not optional, and skipping them
+   fails as silence.** Downloads and the take page's own player really do
+   go through the app's 302 as ordinary no-cors requests and need none of
+   this. The **mixer** (`/takes/:id/mix`) does not: it sets
+   `crossOrigin="anonymous"` on every stem, because Web Audio refuses to
+   read a tainted element — and when the header is missing, the element is
+   tainted, `createMediaElementSource` emits silence, and **no error is
+   raised anywhere**. The mixer draws its waveforms, the playhead runs, and
+   nothing comes out. This paragraph used to say playback needed no CORS
+   rule at all; that was true until the mixer shipped.
+
+   MinIO allows `*` by default, so a local dev setup works whether or not
+   you have done this — the same trap this page already names for `PUT`.
 
    Or from the CLI, which is what `deploy/worker/r2-cors.json` is for
    (edit the origin in it first):

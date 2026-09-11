@@ -133,7 +133,31 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
    * restoring the gain a newer one is still ramping.
    */
   const seekGenerationRef = useRef(0);
-  const seekingRef = useRef(false);
+  /**
+   * How many seeks are in flight. A COUNT, not a flag.
+   *
+   * A flag looked equivalent and was not: a superseded seek returned early
+   * without clearing it, so after two overlapping clicks the sync loop stood
+   * down permanently. The clock froze, the playhead stopped following the
+   * audio, and every later click moved a dead indicator — which is why
+   * seeking looked unreliable only while playing, and only when clicks came
+   * close enough together to overlap.
+   *
+   * Incremented once per call and decremented in a `finally`, so no early
+   * return can leave it raised.
+   */
+  const pendingSeeksRef = useRef(0);
+  /**
+   * Whether playback is INTENDED, as opposed to whether the elements happen
+   * to be running right now.
+   *
+   * `alignTo` pauses every element before it seeks, so a second seek arriving
+   * mid-flight asked "are they playing?" and was told no — by the first
+   * seek's own pause. It then finished without resuming, leaving the audio
+   * stopped while the transport still said playing and the clock sat frozen.
+   * Intent cannot be read off the things the operation itself suspends.
+   */
+  const shouldPlayRef = useRef(false);
   // The live mix, for the sync loop and the gain effect to read without
   // either of them becoming a dependency that re-runs the other.
   const mixRef = useRef(mix);
@@ -270,49 +294,52 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       return;
     }
     const generation = ++seekGenerationRef.current;
-    seekingRef.current = true;
-    master.gain.setTargetAtTime(0, ctx.currentTime, GAIN_RAMP_S);
-    // The playhead moves HERE, not only from the sync loop. That loop runs
-    // while playing, so leaving it to report the new position meant a seek
-    // did nothing visible whenever the mixer was paused or had never been
-    // started — which is most of the time someone spends clicking a timeline.
-    setPosition(targetS);
-    const wasPlaying = elements.some((el) => !el.paused);
-    for (const el of elements) {
-      el.pause();
-      el.currentTime = targetS;
-    }
-    await Promise.all(
-      elements.map(
-        (el) =>
-          new Promise<void>((resolve) => {
-            if (el.seeking === false) {
-              resolve();
-              return;
-            }
-            const done = () => {
-              el.removeEventListener("seeked", done);
-              resolve();
-            };
-            el.addEventListener("seeked", done);
-            setTimeout(done, 2000);
-          }),
-      ),
-    );
-    // A newer seek started while this one was waiting on `seeked`. Its
-    // target is the one that should win, and it is already ramping the gain
-    // back up — finishing here would fight it.
-    if (seekGenerationRef.current !== generation) {
-      return;
-    }
-    if (wasPlaying) {
+    pendingSeeksRef.current++;
+    try {
+      master.gain.setTargetAtTime(0, ctx.currentTime, GAIN_RAMP_S);
+      // The playhead moves HERE, not only from the sync loop. That loop runs
+      // while playing, so leaving it to report the new position meant a seek
+      // did nothing visible whenever the mixer was paused or had never been
+      // started — which is most of the time someone spends clicking a
+      // timeline.
+      setPosition(targetS);
       for (const el of elements) {
-        void el.play().catch(() => undefined);
+        el.pause();
+        el.currentTime = targetS;
       }
+      await Promise.all(
+        elements.map(
+          (el) =>
+            new Promise<void>((resolve) => {
+              if (el.seeking === false) {
+                resolve();
+                return;
+              }
+              const done = () => {
+                el.removeEventListener("seeked", done);
+                resolve();
+              };
+              el.addEventListener("seeked", done);
+              setTimeout(done, 2000);
+            }),
+        ),
+      );
+      // A newer seek started while this one waited on `seeked`. Its target is
+      // the one that should win, and it will restore the gain itself —
+      // finishing here would fight it.
+      if (seekGenerationRef.current !== generation) {
+        return;
+      }
+      if (shouldPlayRef.current) {
+        for (const el of elements) {
+          void el.play().catch(() => undefined);
+        }
+      }
+      syncRef.current = resetSyncState();
+      master.gain.setTargetAtTime(1, ctx.currentTime, GAIN_RAMP_S);
+    } finally {
+      pendingSeeksRef.current = Math.max(0, pendingSeeksRef.current - 1);
     }
-    syncRef.current = resetSyncState();
-    seekingRef.current = false;
-    master.gain.setTargetAtTime(1, ctx.currentTime, GAIN_RAMP_S);
   }, []);
 
   const start = useCallback(() => {
@@ -324,6 +351,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     }
     setFailure("");
     setPhase("starting");
+    shouldPlayRef.current = true;
     // Everything reachable from the gesture, synchronously. iOS unlocks per
     // element per document, and Safari loses the gesture across an `await` —
     // so no await, no fetch, no Promise.all before this loop.
@@ -350,6 +378,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       window.clearInterval(settle);
       if (rejected || (!ready && timedOut)) {
         // Six stems playing and one refusing is worse than nothing playing.
+        shouldPlayRef.current = false;
         for (const el of elements) {
           el.pause();
         }
@@ -362,6 +391,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   }, [alignTo, t.cantStart]);
 
   const pause = useCallback(() => {
+    shouldPlayRef.current = false;
     for (const el of elementsRef.current) {
       el.pause();
     }
@@ -430,7 +460,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     const id = window.setInterval(() => {
       // Mid-seek the elements still report where they WERE. Reading them here
       // is what made a click on the timeline look unreliable.
-      if (seekingRef.current) {
+      if (pendingSeeksRef.current > 0) {
         return;
       }
       const elements = elementsRef.current;
@@ -470,6 +500,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     // The only hook the Back button reaches. Without it, leaving the page
     // leaves seven streams running with no control anywhere.
     const onHide = (event: PageTransitionEvent) => {
+      shouldPlayRef.current = false;
       for (const el of elementsRef.current) {
         el.pause();
       }
@@ -615,14 +646,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             </button>
             <span class="bp-mixer-clock">
               {clock(position)}
-              {/* While the tracks are still lining up, the total is the least
-                  useful thing this line could say — so the state takes its
-                  place rather than finding a row of its own. */}
-              {busy || buffering ? (
-                <output class="bp-mixer-status">{t.starting}</output>
-              ) : (
-                duration > 0 && <span class="bp-mixer-duration">/ {clock(duration)}</span>
-              )}
+              {duration > 0 && <span class="bp-mixer-duration">/ {clock(duration)}</span>}
             </span>
             {canMuteMine && (
               /* Icon-only, because the gutter is 184px and the sentence does
@@ -660,16 +684,24 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             <span class="bp-mixer-ruler-rail" aria-hidden="true">
               <span class="bp-mixer-ruler-fill" />
             </span>
-            {ticks.map((tick) => (
-              <span
-                key={tick.atS}
-                class="bp-mixer-tick"
-                style={{ left: `${tick.fraction * 100}%` }}
-                aria-hidden="true"
-              >
-                {tick.label}
-              </span>
-            ))}
+            {/* The origin keeps its gridline but loses its number. It is the
+                only label with nothing to its left but the gutter's own
+                controls, so it sits against them and reads as theirs rather
+                than as the line's — and a timeline that starts at zero does
+                not need to say so, least of all beside a clock that already
+                reads the position. */}
+            {ticks
+              .filter((tick) => tick.atS > 0)
+              .map((tick) => (
+                <span
+                  key={tick.atS}
+                  class="bp-mixer-tick"
+                  style={{ left: `${tick.fraction * 100}%` }}
+                  aria-hidden="true"
+                >
+                  {tick.label}
+                </span>
+              ))}
             <input
               type="range"
               class="bp-mixer-scrub"
@@ -697,6 +729,11 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             />
           ))}
         </span>
+        {/* Over the waveform column, which is where the waiting actually is —
+            and the only place with room for a sentence. In the 11.5rem gutter
+            it sat on the clock. While it shows, the lanes below it are
+            skeletons anyway. */}
+        {(busy || buffering) && <output class="bp-mixer-status">{t.starting}</output>}
         <ul class="bp-mixer-tracks" aria-busy={lanesLoading}>
           {mix.tracks.map((control, index) => {
             const track = tracks[index];

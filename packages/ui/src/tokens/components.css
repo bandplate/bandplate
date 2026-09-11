@@ -5564,11 +5564,33 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 /* "Lining the tracks up" / "buffering" — beside the disc, not inside it. */
+/* Over the waveform column, centred, while the tracks load or buffer. Not in
+   the gutter: an 11.5rem cell already holding a transport and a clock has no
+   room for a sentence, and it sat on top of both. */
 .bp-mixer-status {
-  /* `<output>` is inline by default and carries its own live region. */
-  display: inline-block;
+  position: absolute;
+  top: 0;
+  left: var(--bp-mixer-lane-left);
+  right: 0;
+  z-index: 2;
+  padding-top: 0.5rem;
+  text-align: center;
   font-size: var(--text-note, 0.71875rem);
   color: var(--bp-color-muted);
+  pointer-events: none;
+}
+
+/* No waveform column below the breakpoint, so it simply sits above the list. */
+@media (max-width: 39.999rem) {
+  .bp-mixer-status {
+    position: static;
+    left: auto;
+    right: auto;
+    display: block;
+    text-align: left;
+    padding-top: 0;
+    padding-bottom: 0.375rem;
+  }
 }
 
 .bp-mixer-bar {

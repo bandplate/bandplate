@@ -1376,6 +1376,38 @@ a.bp-btn {
   display: none;
 }
 
+/* ---------------------------------------------------------------------- */
+/* The two fixed bars, during a view transition.                          */
+/* ---------------------------------------------------------------------- */
+
+/* A named element is captured into the TOP LAYER for the duration of a
+   transition and painted above the page image — and the page image is where
+   everything unnamed lives, the player and the tab bar included. `z-index`
+   inside the document cannot reach across that: the player's 42 is a number
+   in a stacking context the snapshot is no longer part of.
+ 
+   It shows up worst on `/me`, where every vote row carries a
+   `transition:name` of its own: leaving that page sent a column of ten song
+   titles sliding across the player bar. Naming the two bars gives each its
+   own snapshot group, and these `z-index`es put them back on top — which is
+   where they are every other moment.
+ 
+   `transition:persist` is NOT enough on its own. It keeps the element (and
+   the audio) alive across the swap, but a persisted element with no name of
+   its own is still just part of the page image. */
+.bp-player {
+  view-transition-name: bp-player;
+}
+
+.bp-tabbar {
+  view-transition-name: bp-tabbar;
+}
+
+::view-transition-group(bp-player),
+::view-transition-group(bp-tabbar) {
+  z-index: 50;
+}
+
 .bp-player-row {
   display: flex;
   align-items: center;

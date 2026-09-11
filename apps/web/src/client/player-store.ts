@@ -74,30 +74,24 @@ export interface PlayerSource {
 export const PEAK_FULL_SCALE = 127;
 
 /**
- * Reduce a peaks file to the bar count the player draws, taking the MAX of
- * each bucket rather than the mean: a waveform is about where the loud parts
- * are, and averaging flattens exactly the transients that make one
+ * Reduce a peaks file to the bar count the drawing has room for, taking the
+ * MAX of each bucket rather than the mean: a waveform is about where the loud
+ * parts are, and averaging flattens exactly the transients that make one
  * recognisable.
  *
- * Input is the contract's -128..127 integers; output is the 0..1 fraction of
- * full height each bar is drawn at. Reading the integers AS fractions — which
- * is what this did — clamped every bar to 1 and drew a solid block of
- * full-height bars on every take that had a waveform at all.
+ * Input is the contract's -128..127 integers; output is each bar's ABSOLUTE
+ * fraction of full scale. Reading the integers AS fractions — which is what
+ * this did — clamped every bar to 1 and drew a solid block of full-height
+ * bars on every take that had a waveform at all.
  *
- * The result is then normalised so the loudest bar of THIS source fills the
- * height. A waveform is a picture of shape, not a calibrated meter: the stored
- * values are honest absolute amplitudes, and a rehearsal mixed with headroom
- * peaks around half of full scale, so drawing them absolutely wastes half the
- * rail and squashes the shape into a band. Normalising is also per source, so
- * soloing a quiet stem shows its dynamics rather than a flat line near the
- * floor.
+ * Absolute, and normalised separately, because the two readers want different
+ * normalisation and only one of them is the player. See `normalisePeaks`.
  */
-export function downsamplePeaks(peaks: number[], bars: number): number[] {
+export function downsamplePeaksAbsolute(peaks: number[], bars: number): number[] {
   if (peaks.length === 0) {
     return [];
   }
   const out: number[] = [];
-  let loudest = 0;
   for (let i = 0; i < bars; i++) {
     const start = Math.floor((i * peaks.length) / bars);
     const end = Math.max(start + 1, Math.floor(((i + 1) * peaks.length) / bars));
@@ -114,16 +108,40 @@ export function downsamplePeaks(peaks: number[], bars: number): number[] {
     }
     // Clamped against the contract's range rather than trusted, since this is
     // a file from object storage.
-    const bar = Math.max(0, Math.min(1, max / PEAK_FULL_SCALE));
+    out.push(Math.max(0, Math.min(1, max / PEAK_FULL_SCALE)));
+  }
+  return out;
+}
+
+/**
+ * Scale bars so the loudest one fills the height.
+ *
+ * A waveform is a picture of shape, not a calibrated meter: the stored values
+ * are honest absolute amplitudes, and a rehearsal mixed with headroom peaks
+ * around half of full scale, so drawing them absolutely wastes half the rail
+ * and squashes the shape into a band.
+ *
+ * PER SOURCE, which is right for the player — it draws one source at a time,
+ * and soloing a quiet stem should show its dynamics rather than a flat line
+ * near the floor. It is NOT right for a stack of mixer lanes read against
+ * each other; that case divides the whole set by one number instead.
+ */
+export function normalisePeaks(bars: number[]): number[] {
+  let loudest = 0;
+  for (const bar of bars) {
     if (bar > loudest) {
       loudest = bar;
     }
-    out.push(bar);
   }
   // A silent source has nothing to scale to; leaving it flat at zero beats
   // dividing by zero and beats amplifying noise into a full-height picture.
   if (loudest === 0) {
-    return out;
+    return bars;
   }
-  return out.map((bar) => bar / loudest);
+  return bars.map((bar) => bar / loudest);
+}
+
+/** The player's own composition of the two: bucket, then scale to this source. */
+export function downsamplePeaks(peaks: number[], bars: number): number[] {
+  return normalisePeaks(downsamplePeaksAbsolute(peaks, bars));
 }

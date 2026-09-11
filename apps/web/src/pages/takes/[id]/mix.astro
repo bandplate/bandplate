@@ -10,6 +10,12 @@ import { messages } from "@bandplate/i18n";
 // comment for why a persisted island plus a live `AudioContext` means seven
 // stems that keep playing after you navigate away, with no control anywhere.
 //
+// NO CHROME either: no sidebar, no header, no tab bar. This is the only page
+// in the app that is a tool rather than a view of the band's things, and the
+// sidebar was spending a fifth of a desktop window on links to somewhere you
+// are not going while you play along. The way out is the back button below,
+// which lands you where the full navigation is.
+//
 // The link IN carries `data-astro-reload` for the mirror of that reason: a
 // view transition would carry a playing shell player into this page.
 import Mixer from "../../../components/Mixer.tsx";
@@ -47,7 +53,7 @@ const t = messages(locale);
   current="takes"
   transitions={false}
   shellPlayer={false}
-  wide
+  chrome={false}
 >
   <div class="bp-mixer-page">
     {/* The take page's own hero, with the way out where that page puts its

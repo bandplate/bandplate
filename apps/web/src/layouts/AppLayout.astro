@@ -45,8 +45,17 @@ export interface Props {
    */
   transitions?: boolean;
   shellPlayer?: boolean;
-  /** Relax `.bp-shell-main`'s 60rem cap — a stack of mixer lanes needs the width. */
-  wide?: boolean;
+  /**
+   * The app's navigation: the header, the sidebar and the tab bar.
+   *
+   * Off for the mixer, which is the one page that is a TOOL rather than a
+   * view of the band's things. A stack of lanes on one time axis wants every
+   * pixel of width it can have, and the sidebar was spending a fifth of a
+   * desktop window on links to somewhere you are not going while you play
+   * along. The way out is the page's own "back to the take" button, which
+   * puts you somewhere the full navigation exists.
+   */
+  chrome?: boolean;
 }
 
 const {
@@ -56,7 +65,7 @@ const {
   adminSection,
   transitions = true,
   shellPlayer = true,
-  wide = false,
+  chrome = true,
 } = Astro.props;
 
 const isAdmin = principal.role === "admin";
@@ -119,13 +128,18 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
     transition:persist="route-progress"
   ></div>
   <div class="bp-shell">
-    <header class="bp-shell-header">
-      <a href="/" class="bp-shell-wordmark">
-        <Logo size={24} id="header" class="bp-shell-mark" />
-        bandplate
-      </a>
-    </header>
+    {
+      chrome && (
+        <header class="bp-shell-header">
+          <a href="/" class="bp-shell-wordmark">
+            <Logo size={24} id="header" class="bp-shell-mark" />
+            bandplate
+          </a>
+        </header>
+      )
+    }
     <div class="bp-shell-body">
+      {chrome && (
       <nav class="bp-sidebar" aria-label={t.shell.navLabel}>
         <a href="/" class="bp-shell-wordmark">
           <Logo size={26} id="sidebar" class="bp-shell-mark" />
@@ -175,22 +189,29 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
           )
         }
       </nav>
-      <main id="main" class={`bp-shell-main${wide ? " bp-shell-main-wide" : ""}`}>
+      )}
+      <main id="main" class={`bp-shell-main${chrome ? "" : " bp-shell-main-bare"}`}>
         <slot />
       </main>
     </div>
-    <nav class="bp-tabbar" aria-label={t.shell.navLabel}>
-      {
-        tabItems.map((item) => (
-          <a href={item.href} class="bp-tabbar-item" aria-current={item.key === current ? "page" : undefined}>
-            <span class="bp-tabbar-icon">
-              <NavIcon name={item.key} />
-            </span>
-            {item.label}
-          </a>
-        ))
-      }
-    </nav>
+    {
+      chrome && (
+        <nav class="bp-tabbar" aria-label={t.shell.navLabel}>
+          {tabItems.map((item) => (
+            <a
+              href={item.href}
+              class="bp-tabbar-item"
+              aria-current={item.key === current ? "page" : undefined}
+            >
+              <span class="bp-tabbar-icon">
+                <NavIcon name={item.key} />
+              </span>
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      )
+    }
     {shellPlayer && <Player client:load transition:persist="bp-player" locale={Astro.locals.locale} />}
     <VoteFavorite client:load transition:persist="bp-vote-favorite" />
     {/* One per document, in the shell — it listens on `document` for any

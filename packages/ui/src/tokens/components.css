@@ -1177,12 +1177,27 @@ a.bp-btn {
   box-sizing: border-box;
 }
 
-/* The mixer's width. `.bp-shell-main`'s 60rem cap is right for reading and
-   wrong for a stack of lanes on one time axis — at 960px seven waveforms are
-   thumbnails. Still capped rather than full-bleed: past ~90rem the lanes stop
-   being scannable as a column. */
-.bp-shell-main-wide {
-  max-width: 90rem;
+/* The mixer's page, which renders NO sidebar, header or tab bar — see
+   `AppLayout`'s `chrome` prop for why that one page is different.
+
+   Uncapped, unlike every other page here. The reading cap is right when a
+   page is a column of prose or rows, and wrong when the page IS one time
+   axis: every pixel of width is more waveform, and the lanes are read across
+   rather than down. No bottom reservation either — neither the tab bar nor
+   the shell player exists on this page to sit underneath.
+
+   Compound selector on purpose. The `min-width: 64rem` block far below sets
+   `.bp-shell-main`'s own cap, and at equal specificity the later rule wins —
+   which is exactly what quietly defeated the `wide` variant this replaces. */
+.bp-shell-main.bp-shell-main-bare {
+  max-width: none;
+  padding: 1.25rem 1.25rem 2.5rem;
+}
+
+@media (min-width: 64rem) {
+  .bp-shell-main.bp-shell-main-bare {
+    padding: 1.75rem 2rem 2.5rem;
+  }
 }
 
 /* Bottom tab bar — phones and tablets. */

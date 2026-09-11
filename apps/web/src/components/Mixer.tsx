@@ -29,6 +29,7 @@ import {
   decideSync,
   resetSyncState,
 } from "../client/mixer-sync.js";
+import { timelineTicks } from "../client/mixer-ticks.js";
 import {
   type MixerState,
   initialMixerState,
@@ -87,12 +88,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   const [mix, setMix] = useState<MixerState>(() => initialMixerState(tracks));
   const [phase, setPhase] = useState<Phase>("idle");
   const [failure, setFailure] = useState<string>("");
-  // Position and the live spread across tracks. The spread is not debug
-  // output: this engine cannot promise phase coherence, so the one honest
-  // thing to do is show how far apart the tracks actually are rather than
-  // let someone assume it is zero.
   const [position, setPosition] = useState(0);
-  const [spreadMs, setSpreadMs] = useState(0);
   const [lanes, setLanes] = useState<(number[] | null)[]>(() => tracks.map(() => null));
   const [bars, setBars] = useState(160);
   const [duration, setDuration] = useState(0);
@@ -175,6 +171,13 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       // the node was created before the element loaded — six of seven stems
       // still play, which is the worst kind of partial failure.
       el.addEventListener("loadedmetadata", () => {
+        // The axis is the LONGEST track, never the first: a stem is allowed
+        // to be shorter than the take. Read HERE as well as in the sync tick,
+        // or the ruler has no scale and draws no ticks until someone presses
+        // play — which is exactly when they are least useful.
+        if (Number.isFinite(el.duration)) {
+          setDuration((current) => Math.max(current, el.duration));
+        }
         if (wired[index] || ctxRef.current !== ctx) {
           return;
         }
@@ -336,7 +339,6 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       const leader =
         decision.leaderIndex === null ? null : (samples[decision.leaderIndex]?.mediaTime ?? null);
       setPosition(leader ?? 0);
-      setSpreadMs(decision.worstErrorS * 1000);
       // The axis is the LONGEST track, never the first: a stem is allowed to
       // be shorter than the take. Read here rather than in an effect of its
       // own because this is the one place that already knows metadata has
@@ -431,6 +433,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   // rate is not the design — and the value is a fraction so the lanes can
   // position it without knowing their own width.
   const progress = duration > 0 ? Math.min(1, position / duration) : 0;
+  const ticks = timelineTicks(duration);
 
   const scrubTo = useCallback(
     (fraction: number) => {
@@ -448,6 +451,8 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
 
   return (
     <div class="bp-mixer">
+      {/* Play, and the preset. The CLOCK is not here — it belongs on the
+          ruler's line, beside the axis it reads. */}
       <div class="bp-mixer-transport">
         <button
           type="button"
@@ -457,16 +462,10 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
         >
           {busy ? t.starting : playing ? t.pause : t.play}
         </button>
-        <span class="bp-mixer-clock">
-          {clock(position)}
-          {/* Named, not a bare number: "3 ms" beside a transport means nothing
-              on its own, and the figure is the one caveat this engine has. */}
-          <span class="bp-mixer-spread">±{spreadMs.toFixed(0)} ms</span>
-        </span>
         {canMuteMine && (
           <button
             type="button"
-            class={`bp-btn bp-btn-secondary${mix.muteMine ? " is-active" : ""}`}
+            class={`bp-btn bp-btn-secondary bp-btn-sm${mix.muteMine ? " is-active" : ""}`}
             aria-pressed={mix.muteMine}
             onClick={() => setMix(toggleMuteMine)}
           >
@@ -489,22 +488,54 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             controls are still there, still focusable, and completely
             unclickable. A ruler is also the thing a DAW actually has. */}
         <div class="bp-mixer-ruler">
-          <span class="bp-mixer-ruler-rail" aria-hidden="true">
-            <span class="bp-mixer-ruler-fill" />
+          {/* The clock lives HERE, in the gutter cell above the track names,
+              not up in the page header: it reads the axis beside it, so that
+              is the line it belongs on. */}
+          <span class="bp-mixer-clock">
+            {clock(position)}
+            {duration > 0 && <span class="bp-mixer-duration">/ {clock(duration)}</span>}
           </span>
-          <input
-            type="range"
-            class="bp-mixer-scrub"
-            min={0}
-            max={1}
-            step={0.001}
-            value={progress}
-            disabled={duration <= 0}
-            aria-label={t.seek}
-            aria-valuetext={clock(position)}
-            onChange={(event) => scrubTo(Number((event.target as HTMLInputElement).value))}
-          />
+          <div class="bp-mixer-axis">
+            <span class="bp-mixer-ruler-rail" aria-hidden="true">
+              <span class="bp-mixer-ruler-fill" />
+            </span>
+            {ticks.map((tick) => (
+              <span
+                key={tick.atS}
+                class="bp-mixer-tick"
+                style={{ left: `${tick.fraction * 100}%` }}
+                aria-hidden="true"
+              >
+                {tick.label}
+              </span>
+            ))}
+            <input
+              type="range"
+              class="bp-mixer-scrub"
+              min={0}
+              max={1}
+              step={0.001}
+              value={progress}
+              disabled={duration <= 0}
+              aria-label={t.seek}
+              aria-valuetext={clock(position)}
+              onChange={(event) => scrubTo(Number((event.target as HTMLInputElement).value))}
+            />
+          </div>
         </div>
+        {/* The time grid, spanning every lane and sitting BEHIND them — a
+            played portion covers its line, an unplayed one shows it through.
+            Driven by the SAME `ticks` as the ruler above, so a number and its
+            line cannot disagree. */}
+        <span class="bp-mixer-grid" aria-hidden="true">
+          {ticks.map((tick) => (
+            <span
+              key={tick.atS}
+              class={`bp-mixer-gridline${tick.major ? " is-major" : ""}`}
+              style={{ left: `${tick.fraction * 100}%` }}
+            />
+          ))}
+        </span>
         <ul class="bp-mixer-tracks">
           {mix.tracks.map((control, index) => {
             const track = tracks[index];
@@ -514,51 +545,59 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             return (
               <li
                 key={control.assetId}
-                class="bp-mixer-track"
+                class={`bp-mixer-track${control.muted ? " is-muted" : ""}`}
                 style={`--bp-swatch: ${trackColorVar(track.color)}`}
               >
-                <span class="bp-mixer-track-name">
-                  <span class="bp-color-dot" aria-hidden="true" />
-                  {track.label}
+                {/* The two-line control block: name and M/S on the first line,
+                    the fader under them. On a phone it IS the lane; past the
+                    breakpoint it becomes the lane's first column, so there is
+                    one shape at every width. */}
+                <span class="bp-mixer-controls">
+                  {/* No colour chip. The fader directly beneath is already
+                      this instrument's colour; a chip would say it twice. */}
+                  <span class="bp-mixer-track-name">{track.label}</span>
+                  {/* M and S as ONE segmented control, not two tiles with a gap:
+                    the same two decisions in far less gutter, and they read as
+                    a pair. Full 44px halves on a phone — see the stylesheet. */}
+                  <span class="bp-mixer-track-buttons">
+                    <button
+                      type="button"
+                      class={`bp-mixer-btn${control.muted ? " is-active" : ""}`}
+                      aria-pressed={control.muted}
+                      aria-label={control.muted ? t.unmute(track.label) : t.mute(track.label)}
+                      onClick={() => setMix((s) => setMuted(s, control.assetId, !control.muted))}
+                    >
+                      {t.muteShort}
+                    </button>
+                    <button
+                      type="button"
+                      class={`bp-mixer-btn${control.soloed ? " is-active" : ""}`}
+                      aria-pressed={control.soloed}
+                      aria-label={control.soloed ? t.unsolo(track.label) : t.solo(track.label)}
+                      onClick={() => setMix((s) => setSoloed(s, control.assetId, !control.soloed))}
+                    >
+                      {t.soloShort}
+                    </button>
+                  </span>
+                  <input
+                    type="range"
+                    class="bp-mixer-fader"
+                    min={0}
+                    max={1.4}
+                    step={0.01}
+                    value={control.fader}
+                    aria-label={t.volume(track.label)}
+                    onInput={(event) =>
+                      setMix((s) =>
+                        setFader(
+                          s,
+                          control.assetId,
+                          Number((event.target as HTMLInputElement).value),
+                        ),
+                      )
+                    }
+                  />
                 </span>
-                <span class="bp-mixer-track-buttons">
-                  <button
-                    type="button"
-                    class={`bp-mixer-btn${control.muted ? " is-active" : ""}`}
-                    aria-pressed={control.muted}
-                    aria-label={control.muted ? t.unmute(track.label) : t.mute(track.label)}
-                    onClick={() => setMix((s) => setMuted(s, control.assetId, !control.muted))}
-                  >
-                    {t.muteShort}
-                  </button>
-                  <button
-                    type="button"
-                    class={`bp-mixer-btn${control.soloed ? " is-active" : ""}`}
-                    aria-pressed={control.soloed}
-                    aria-label={control.soloed ? t.unsolo(track.label) : t.solo(track.label)}
-                    onClick={() => setMix((s) => setSoloed(s, control.assetId, !control.soloed))}
-                  >
-                    {t.soloShort}
-                  </button>
-                </span>
-                <input
-                  type="range"
-                  class="bp-mixer-fader"
-                  min={0}
-                  max={1.4}
-                  step={0.01}
-                  value={control.fader}
-                  aria-label={t.volume(track.label)}
-                  onInput={(event) =>
-                    setMix((s) =>
-                      setFader(
-                        s,
-                        control.assetId,
-                        Number((event.target as HTMLInputElement).value),
-                      ),
-                    )
-                  }
-                />
                 {/* The lane's own shape. `aria-hidden` throughout: a waveform is
                   a picture of the audio and says nothing a screen reader can
                   use — the track's name, its controls and the scrub position
@@ -588,7 +627,6 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       {onlyInMaster.length > 0 && (
         <p class="bp-mixer-note">{t.onlyInMaster(onlyInMaster.join(", "))}</p>
       )}
-      <p class="bp-mixer-note">{t.fullMixNote}</p>
       <p class="bp-mixer-note">{t.silenceHint}</p>
     </div>
   );

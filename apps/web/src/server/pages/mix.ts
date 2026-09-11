@@ -43,9 +43,13 @@ export interface MixData {
   title: string;
   subtitle: string;
   /**
-   * Stems first, master LAST and muted by default — see `getMixData` for why
-   * the master is here at all when playing it alongside the stems plays the
-   * band twice.
+   * The stems, in the instrument vocabulary's order. NOT the master.
+   *
+   * It was here once, last and muted, so that A/B against the reference mix
+   * was one press away. Cutting it removes a hazard as well as a row: playing
+   * it alongside the stems sums two copies of one performance, which
+   * comb-filters at any timing error at all, and the take page already plays
+   * the master on its own.
    */
   tracks: MixTrack[];
   /**
@@ -119,13 +123,7 @@ export async function getMixData(
     return sa - sb;
   });
 
-  // The master goes LAST and starts muted. It is here so that A/B against the
-  // reference mix is one press away; it is muted because the stems already
-  // sum to roughly the same performance, and playing both plays the band
-  // twice — two correlated copies that comb-filter at any timing error above
-  // a fraction of a millisecond, which is to say always.
-  const master = sources.find((s) => s.kind === "master");
-  const tracks = [...ordered.map(trackFor), ...(master ? [trackFor(master)] : [])];
+  const tracks = ordered.map(trackFor);
 
   const withStems = new Set(stems.map((s) => s.instrumentId));
   const onlyInMaster = detail.instruments

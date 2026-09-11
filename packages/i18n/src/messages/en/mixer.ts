@@ -29,12 +29,6 @@ export const mixer = {
   unmuteMine: "Bring my instruments back",
 
   /**
-   * The take's own mixed-down version, offered as a muted track so that A/B
-   * against the reference is one press away.
-   */
-  fullMixNote: "The full mix, muted — unmute it to compare, not to play alongside.",
-
-  /**
    * Instruments that were played on this take but have no isolated file.
    *
    * Named because muting cannot remove them, and without saying so the mixer

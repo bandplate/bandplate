@@ -125,7 +125,7 @@ describe("getMixData", () => {
     expect(mix?.tracks.map((track) => track.label)).toEqual(["Bass", "Vocal"]);
   });
 
-  it("puts the master LAST, behind the stems it would otherwise double", async () => {
+  it("leaves the master out entirely — it would double the band it sits beside", async () => {
     const me = await member("a@example.com");
     const bass = await instrumentsRepo.create(db, { slug: "bass", label: "Bass", sortOrder: 1 });
     const gtr = await instrumentsRepo.create(db, { slug: "gtr", label: "Guitar", sortOrder: 2 });
@@ -137,7 +137,7 @@ describe("getMixData", () => {
     ]);
 
     const mix = await getMixData(db, t.id, me.id, "en");
-    expect(mix?.tracks.map((track) => track.kind)).toEqual(["stem", "stem", "master"]);
+    expect(mix?.tracks.map((track) => track.kind)).toEqual(["stem", "stem"]);
   });
 
   it("marks the member's own instruments, and never the master", async () => {
@@ -156,7 +156,6 @@ describe("getMixData", () => {
     expect(mix?.tracks.map((track) => [track.label, track.mine])).toEqual([
       ["Bass", true],
       ["Guitar", false],
-      ["Master", false],
     ]);
     expect(mix?.canMuteMine).toBe(true);
   });

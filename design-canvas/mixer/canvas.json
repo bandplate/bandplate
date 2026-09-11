@@ -1,0 +1,96 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Mixer"
+    },
+    {
+      "id": "page-2",
+      "name": "Directions"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Mixer \u2014 desktop",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 1240,
+      "h": 640
+    },
+    {
+      "file": "Phone.dc.html",
+      "title": "Mixer \u2014 390px",
+      "page": "page-1",
+      "x": 1360,
+      "y": 0,
+      "w": 390,
+      "h": 800
+    },
+    {
+      "file": "Desk.dc.html",
+      "title": "B \u2014 Desk (not taken)",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 1240,
+      "h": 700
+    },
+    {
+      "file": "Score.dc.html",
+      "title": "C \u2014 Score (not taken)",
+      "page": "page-2",
+      "x": 1360,
+      "y": 0,
+      "w": 1240,
+      "h": 700
+    }
+  ],
+  "annotations": [
+    {
+      "id": "compact",
+      "x": 0,
+      "y": -230,
+      "w": 470,
+      "page": "page-1",
+      "text": "Two lines per lane: name and M/S on the first, the fader under them.\n\nThat is EXACTLY the phone's lane, so there is now one lane shape at both widths and the breakpoint only decides whether the waveform is there \u2014 one DOM, one set of rules, half the CSS.\n\nThe gutter went 468px -> 312px -> 162px across the three passes, and the waveform took all of it: wide enough now to carry ticks every 30 seconds and 56px tall instead of 44px.\n\nThe colour chip beside each name is gone: the fader directly under it is already that instrument's colour, so the chip was saying it twice."
+    },
+    {
+      "id": "targets",
+      "x": 1860,
+      "y": 0,
+      "w": 380,
+      "page": "page-1",
+      "text": "On the phone the halves go back to a full 44px each. Width is what the desktop gutter could not spare; height is what a thumb actually needs, and the phone has the room.\n\nPer-lane waveforms still drop out here \u2014 one shared strip carries the position.\n\nPlay, clock and the preset share one line here too. At 390px that is about 345px of content in 350px \u2014 it fits, so the row WRAPS rather than overflows: a longer instrument set or a larger system font pushes the preset to its own line instead of off the screen."
+    },
+    {
+      "id": "master-gone",
+      "x": 0,
+      "y": 1020,
+      "w": 470,
+      "page": "page-1",
+      "text": "Dropping the master removes a hazard as well as a row: playing it alongside the stems sums two copies of the same performance, which comb-filters at any timing error at all. It was only ever there to A/B against the reference, and the take page already plays it on its own.\n\nOne code follow-up: getMixData still appends it as a muted last track."
+    },
+    {
+      "id": "not-taken",
+      "x": 0,
+      "y": -160,
+      "w": 420,
+      "page": "page-2",
+      "text": "Kept for the record, not for building. B put long vertical faders first and gave up the waveform belonging to a track; C made the waveforms the interface and gave up balancing to a hover."
+    },
+    {
+      "id": "grid",
+      "x": 0,
+      "y": 720,
+      "w": 470,
+      "page": "page-1",
+      "text": "The time grid.\n\nOne list of ticks drives both the ruler labels and the lines, so a number and its line cannot disagree \u2014 and the labels sit at their true fraction of the take rather than being spaced evenly by the browser, which is how they drifted off the lines before.\n\nMinutes take the #3A2413 hairline the rest of the app rules with; half-minutes take half that. Behind the waveforms, so a played portion covers the line and an unplayed one shows it through.\n\nThe clock sits in the ruler row now, in the cell above the track names \u2014 it reads the axis beside it, so that is the line it belongs on. The spread-in-milliseconds reading is gone: it was engine diagnostics, not something to read while playing."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

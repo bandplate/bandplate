@@ -35,9 +35,6 @@ export const mixer = {
   muteMine: "Ztlumit moje nástroje", // en: Mute my instruments
   unmuteMine: "Vrátit moje nástroje", // en: Bring my instruments back
 
-  // en: The full mix, muted — unmute it to compare, not to play alongside.
-  fullMixNote: "Celý mix, ztlumený — pusť ho na porovnání, ne k tomu ostatnímu.",
-
   // en: `Only in the full mix, so muting will not remove them: ${instruments}.`
   onlyInMaster: (instruments: string): string =>
     `Jsou jen v celém mixu, takže je ztlumení neodstraní: ${instruments}.`,

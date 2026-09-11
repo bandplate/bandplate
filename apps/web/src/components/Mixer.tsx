@@ -104,6 +104,16 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   /** Any track waiting on bytes. The servo already computes this; the page should say it. */
   const [buffering, setBuffering] = useState(false);
   const lanesRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * The ruler's axis — the same grid track the waveforms occupy.
+   *
+   * The bar count is measured from THIS, not from the lane stack: the stack
+   * includes the 11.5rem control gutter, so measuring it asked for a third
+   * again as many bars as the column can hold. They came out 1.2px wide with
+   * a 1px gap between them and the waveform read as grey haze rather than as
+   * a shape.
+   */
+  const axisRef = useRef<HTMLDivElement | null>(null);
 
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
@@ -513,7 +523,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   }, [tracks, bars]);
 
   useEffect(() => {
-    const el = lanesRef.current;
+    const el = axisRef.current;
     if (!el || typeof ResizeObserver === "undefined") {
       return;
     }
@@ -550,58 +560,6 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
 
   return (
     <div class="bp-mixer">
-      {/* Play, and the preset. The CLOCK is not here — it belongs on the
-          ruler's line, beside the axis it reads. */}
-      <div class="bp-mixer-transport">
-        {/* The gold disc every other play control in this app is — the take
-            hero's, a take row's, the home shelf's. A pill said "button"
-            where everything else says "play". `.bp-play-toggle` carries the
-            disc, the ring and the icon swap; `aria-pressed` is what flips it,
-            exactly as `syncButtons` drives the shell player's. */}
-        <button
-          type="button"
-          class="bp-play-toggle bp-play-toggle-lg"
-          aria-pressed={playing}
-          aria-label={playing ? t.pause : t.play}
-          disabled={busy}
-          onClick={playing ? pause : start}
-        >
-          <svg
-            class="bp-play-icon-play"
-            aria-hidden="true"
-            width="28"
-            height="28"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-          >
-            <path d="M4 2.5v11l10-5.5-10-5.5z" />
-          </svg>
-          <svg
-            class="bp-play-icon-pause"
-            aria-hidden="true"
-            width="28"
-            height="28"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-          >
-            <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
-          </svg>
-        </button>
-        {/* The transport's own word, beside the disc rather than inside it:
-            "lining the tracks up" is a state, not a label for a control. */}
-        {(busy || buffering) && <output class="bp-mixer-status">{t.starting}</output>}
-        {canMuteMine && (
-          <button
-            type="button"
-            class={`bp-btn bp-btn-secondary bp-btn-sm${mix.muteMine ? " is-active" : ""}`}
-            aria-pressed={mix.muteMine}
-            onClick={() => setMix(toggleMuteMine)}
-          >
-            {mix.muteMine ? t.unmuteMine : t.muteMine}
-          </button>
-        )}
-      </div>
-
       {/* `<output>`, not a `<p role="status">`: it IS the element for a
           result the page computed, and it carries the live region for free. */}
       {failure && <output class="bp-mixer-note bp-mixer-failure">{failure}</output>}
@@ -616,14 +574,89 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             controls are still there, still focusable, and completely
             unclickable. A ruler is also the thing a DAW actually has. */}
         <div class="bp-mixer-ruler">
-          {/* The clock lives HERE, in the gutter cell above the track names,
-              not up in the page header: it reads the axis beside it, so that
-              is the line it belongs on. */}
-          <span class="bp-mixer-clock">
-            {clock(position)}
-            {duration > 0 && <span class="bp-mixer-duration">/ {clock(duration)}</span>}
+          {/* EVERY control lives in the gutter cell, on the ruler's own line:
+              play, the preset, and the clock right against the axis it reads.
+              A separate transport row above sat on no edge that anything else
+              shared and read as page furniture rather than as this tool's
+              controls. */}
+          <span class="bp-mixer-controls-cell">
+            {/* The gold disc every other play control in this app is — the
+                take hero's, a take row's, the home shelf's. `.bp-play-toggle`
+                carries the disc, the ring and the icon swap; `aria-pressed`
+                flips it, exactly as `syncButtons` drives the shell player's. */}
+            <button
+              type="button"
+              class="bp-play-toggle"
+              aria-pressed={playing}
+              aria-label={playing ? t.pause : t.play}
+              disabled={busy}
+              onClick={playing ? pause : start}
+            >
+              <svg
+                class="bp-play-icon-play"
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+              >
+                <path d="M4 2.5v11l10-5.5-10-5.5z" />
+              </svg>
+              <svg
+                class="bp-play-icon-pause"
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+              >
+                <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
+              </svg>
+            </button>
+            {canMuteMine && (
+              /* Icon-only, because the gutter is 184px and the sentence does
+                 not fit beside a transport. The label is not lost — it is the
+                 button's accessible name and its tooltip; what is lost is
+                 reading it without hovering, which is the price of keeping
+                 every control on one line. */
+              <button
+                type="button"
+                class={`bp-mixer-preset${mix.muteMine ? " is-active" : ""}`}
+                aria-pressed={mix.muteMine}
+                aria-label={mix.muteMine ? t.unmuteMine : t.muteMine}
+                title={mix.muteMine ? t.unmuteMine : t.muteMine}
+                onClick={() => setMix(toggleMuteMine)}
+              >
+                <svg
+                  aria-hidden="true"
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="8" r="3.4" />
+                  <path d="M5 20c0-3.6 3.1-5.6 7-5.6c1.2 0 2.3.2 3.2.5" />
+                  <path d="M17 15l5 5M22 15l-5 5" />
+                </svg>
+              </button>
+            )}
+            <span class="bp-mixer-clock">
+              {clock(position)}
+              {/* While the tracks are still lining up, the total is the least
+                  useful thing this line could say — so the state takes its
+                  place rather than finding a row of its own. */}
+              {busy || buffering ? (
+                <output class="bp-mixer-status">{t.starting}</output>
+              ) : (
+                duration > 0 && <span class="bp-mixer-duration">/ {clock(duration)}</span>
+              )}
+            </span>
           </span>
-          <div class="bp-mixer-axis">
+          <div class="bp-mixer-axis" ref={axisRef}>
             <span class="bp-mixer-ruler-rail" aria-hidden="true">
               <span class="bp-mixer-ruler-fill" />
             </span>

@@ -7,6 +7,14 @@
     {
       "id": "page-2",
       "name": "Directions"
+    },
+    {
+      "id": "page-3",
+      "name": "Toolbar"
+    },
+    {
+      "id": "page-4",
+      "name": "Mute myself"
     }
   ],
   "artboards": [
@@ -45,6 +53,60 @@
       "y": 0,
       "w": 1240,
       "h": 700
+    },
+    {
+      "file": "ToolbarGrid.dc.html",
+      "title": "T1 \u2014 One grid (leading)",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 1240,
+      "h": 430
+    },
+    {
+      "file": "ToolbarBar.dc.html",
+      "title": "T2 \u2014 Console bar",
+      "page": "page-3",
+      "x": 0,
+      "y": 560,
+      "w": 1240,
+      "h": 430
+    },
+    {
+      "file": "ToolbarRuler.dc.html",
+      "title": "T3 \u2014 Ruler carries it",
+      "page": "page-3",
+      "x": 0,
+      "y": 1120,
+      "w": 1240,
+      "h": 430
+    },
+    {
+      "file": "MuteRow.dc.html",
+      "title": "P1 \u2014 A line above the stack (leading)",
+      "page": "page-4",
+      "x": 0,
+      "y": 0,
+      "w": 1240,
+      "h": 470
+    },
+    {
+      "file": "MuteHead.dc.html",
+      "title": "P2 \u2014 Head of the M column",
+      "page": "page-4",
+      "x": 0,
+      "y": 600,
+      "w": 1240,
+      "h": 470
+    },
+    {
+      "file": "MuteIcon.dc.html",
+      "title": "P3 \u2014 Beside play",
+      "page": "page-4",
+      "x": 0,
+      "y": 1200,
+      "w": 1240,
+      "h": 470
     }
   ],
   "annotations": [
@@ -87,10 +149,74 @@
       "w": 470,
       "page": "page-1",
       "text": "The time grid.\n\nOne list of ticks drives both the ruler labels and the lines, so a number and its line cannot disagree \u2014 and the labels sit at their true fraction of the take rather than being spaced evenly by the browser, which is how they drifted off the lines before.\n\nMinutes take the #3A2413 hairline the rest of the app rules with; half-minutes take half that. Behind the waveforms, so a played portion covers the line and an unplayed one shows it through.\n\nThe clock sits in the ruler row now, in the cell above the track names \u2014 it reads the axis beside it, so that is the line it belongs on. The spread-in-milliseconds reading is gone: it was engine diagnostics, not something to read while playing."
+    },
+    {
+      "id": "orphan",
+      "x": 1340,
+      "y": 0,
+      "w": 440,
+      "page": "page-3",
+      "text": "The problem: play and \u201cmute my instruments\u201d float above everything, on no edge that anything else shares. They read as page furniture rather than as the mixer's controls \u2014 orphaned.\n\nAll three put the transport and the time measure on the same object. They differ in WHICH object."
+    },
+    {
+      "id": "t1",
+      "x": 1340,
+      "y": 200,
+      "w": 440,
+      "page": "page-3",
+      "text": "T1 \u2014 ONE GRID. The transport sits on the lanes' own two columns: play and clock in the gutter, the ruler in the waveform column. Every row on the page then shares one vertical edge, and the clock is already beside the axis it reads.\n\n\u201cMute my instruments\u201d moves up beside the way out \u2014 it is a setting for the session, not a transport control, and it is what was making the row too wide to align.\n\nGives up: nothing structural. It is the quietest of the three, which is either the point or too quiet."
+    },
+    {
+      "id": "t2",
+      "x": 1340,
+      "y": 760,
+      "w": 440,
+      "page": "page-3",
+      "text": "T2 \u2014 CONSOLE BAR. One bounded strip holds play, clock, ruler and the preset: a tinted fill and a hairline make it read as a piece of equipment sitting above the tracks.\n\nGives up: its internal rhythm is its own, so the ruler inside it does not line up with the lanes below \u2014 the grid that makes a timeline readable stops at the box. And it is the heaviest thing on a page whose system has no shadows and few boxes."
+    },
+    {
+      "id": "t3",
+      "x": 1340,
+      "y": 1320,
+      "w": 440,
+      "page": "page-3",
+      "text": "T3 \u2014 RULER CARRIES IT. No separate transport row at all: play sits in the gutter, and the CLOCK RIDES THE PLAYHEAD as a gold pill, so the number is always at the place it describes.\n\nThe preset shrinks to \u201cJen ostatn\u00ed\u201d (just the others) to fit beside play.\n\nGives up: a moving number is harder to read than a fixed one, and it collides with the tick labels it passes. The shortened preset label is also less clear than the sentence it replaces."
+    },
+    {
+      "id": "mute-brief",
+      "x": 1340,
+      "y": 0,
+      "w": 440,
+      "page": "page-4",
+      "text": "Where \u201cmute my instruments\u201d goes now that play and the clock own the gutter.\n\nAll three fix something T1 did not: nothing on this page says WHICH lanes are yours, so the preset's effect is unpredictable until you press it. Each direction answers that as well as placing the button."
+    },
+    {
+      "id": "p1",
+      "x": 1340,
+      "y": 180,
+      "w": 440,
+      "page": "page-4",
+      "text": "P1 \u2014 A LINE ABOVE THE STACK. One quiet row between the ruler and the lanes: it names your instrument and offers the action on it.\n\nIt earns its height by saying something no other element does \u2014 \u201cBass je tv\u016fj n\u00e1stroj\u201d \u2014 so the button's effect is known before it is pressed, and the label can be short because the sentence carries the meaning.\n\nWith several instruments it becomes \u201cBass a Organ jsou tvoje n\u00e1stroje\u201d, and with none the row simply is not there.\n\nGives up: a whole row, on a page that is already a stack of rows."
+    },
+    {
+      "id": "p2",
+      "x": 1340,
+      "y": 780,
+      "w": 440,
+      "page": "page-4",
+      "text": "P2 \u2014 HEAD OF THE M COLUMN. The preset is a bulk mute, so it sits at the top of the mute column, in the same segmented shape as the M it operates. A person glyph marks your lanes.\n\nThe adjacency does the explaining: a ZTLUMIT sitting over a column of M buttons needs no sentence.\n\nGives up: it is small, and a column header on a table with no other column headers is a lone label. At 10px the word is also near the floor for a control."
+    },
+    {
+      "id": "p3",
+      "x": 1340,
+      "y": 1380,
+      "w": 440,
+      "page": "page-4",
+      "text": "P3 \u2014 BESIDE PLAY. A 34px icon button in the gutter, next to the transport it belongs with. Shown engaged here, so the Bass lane is muted and dimmed.\n\nCheapest in space by far, and it keeps every control on one line.\n\nGives up: the label. A person-with-a-cross glyph is a guess until you hover it, and this is the feature's whole reason for existing \u2014 the one control that should not need explaining is the one losing its words."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-1"
+    "page": "page-4"
   }
 }

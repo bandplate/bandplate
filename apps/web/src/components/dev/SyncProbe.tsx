@@ -31,6 +31,18 @@ const SAMPLE_INTERVAL_MS = 250;
 /** Nothing below the poll interval can be observed; see `minStepMs`. */
 const QUANTISATION_POLL = "requestAnimationFrame (~16.7ms at 60Hz)";
 
+/**
+ * How long a start is allowed to settle before it counts towards the worst
+ * spread.
+ *
+ * Elements become playable at different moments, so the first seconds measure
+ * how ragged the START was, not how far the clocks drift. Those are different
+ * problems with different fixes -- one is solved by waiting for every element
+ * to buffer before playing, the other needs a servo -- and a single running
+ * maximum conflates them into a number that sends you to build the wrong one.
+ */
+const SETTLE_S = 2;
+
 interface Source {
   assetId: string;
   kind: "master" | "stem";
@@ -73,6 +85,9 @@ interface Report {
   elapsedS: number;
   spreadMs: number;
   spreadMaxMs: number;
+  /** Worst spread measured after `SETTLE_S` — drift, as opposed to a ragged start. */
+  settledMaxMs: number;
+  polls: number;
   rows: Row[];
 }
 
@@ -111,6 +126,12 @@ export default function SyncProbe() {
   const ctxRef = useRef<AudioContext | null>(null);
   const startedAtRef = useRef<number>(0);
   const spreadMaxRef = useRef<number>(0);
+  const settledMaxRef = useRef<number>(0);
+  // Whether the quantisation poll is actually running. `requestAnimationFrame`
+  // does not fire while the page is not being rendered, so a hidden window
+  // measures no step at all -- indistinguishable from a clock that never
+  // ticks, unless the page says which it is.
+  const pollsRef = useRef<number>(0);
   // Backed by an explicit ArrayBuffer: `new Float32Array(n)` is typed over
   // ArrayBufferLike, which the Web Audio lib signature refuses. Length matches
   // `fftSize` so the analyser fills the whole window.
@@ -150,6 +171,8 @@ export default function SyncProbe() {
     setReport(null);
     setPhase("loading");
     spreadMaxRef.current = 0;
+    settledMaxRef.current = 0;
+    pollsRef.current = 0;
 
     let sources: Source[];
     try {
@@ -307,6 +330,7 @@ export default function SyncProbe() {
         }
         p.lastPolled = t;
       }
+      pollsRef.current++;
       raf = requestAnimationFrame(poll);
     };
     raf = requestAnimationFrame(poll);
@@ -357,14 +381,20 @@ export default function SyncProbe() {
       }
 
       const spreadMs = Number.isFinite(hi - lo) ? (hi - lo) * 1000 : 0;
+      const elapsedS = (performance.now() - startedAtRef.current) / 1000;
       if (spreadMs > spreadMaxRef.current) {
         spreadMaxRef.current = spreadMs;
       }
+      if (elapsedS > SETTLE_S && spreadMs > settledMaxRef.current) {
+        settledMaxRef.current = spreadMs;
+      }
 
       setReport({
-        elapsedS: (performance.now() - startedAtRef.current) / 1000,
+        elapsedS,
         spreadMs,
         spreadMaxMs: spreadMaxRef.current,
+        settledMaxMs: settledMaxRef.current,
+        polls: pollsRef.current,
         rows: probes.map((p, i) => ({
           label: p.source.label,
           currentTime: times[i] ?? 0,
@@ -450,9 +480,18 @@ export default function SyncProbe() {
       {report && (
         <>
           <p>
-            <strong>spread now {report.spreadMs.toFixed(1)} ms</strong> · worst so far{" "}
+            <strong>spread now {report.spreadMs.toFixed(1)} ms</strong> · drift (worst after the
+            first {SETTLE_S}s) {report.settledMaxMs.toFixed(1)} ms · including the start{" "}
             {report.spreadMaxMs.toFixed(1)} ms · elapsed {report.elapsedS.toFixed(0)} s
           </p>
+          {report.polls === 0 && (
+            <p class="bp-field-hint">
+              The quantisation poll has not run — {QUANTISATION_POLL} does not fire while this
+              window is not being rendered, so "min step" stays empty. Bring the window to the front
+              and press Play again to measure it. Spread and drift are unaffected: they come from a
+              timer, not a frame callback.
+            </p>
+          )}
           <div style={{ overflowX: "auto" }}>
             <table class="bp-table">
               <thead>

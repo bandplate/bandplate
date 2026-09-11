@@ -15,12 +15,14 @@
 // arrive already computed (see `mixer-tracks.ts`), so the engine never learns
 // what a mute is and the rule stays in a module a node-only test can reach.
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { type LoopRegion, loopEngagedFrom, loopWrapTarget } from "./mixer-loop.js";
 import {
   DEFAULT_SYNC_TUNING,
   INITIAL_SYNC_STATE,
   type SyncState,
   type TrackSample,
   decideSync,
+  pickLeader,
   resetSyncState,
 } from "./mixer-sync.js";
 
@@ -48,6 +50,8 @@ export interface MixerEngineInput {
   sources: readonly MixerSource[];
   /** Effective gain per asset id, already resolved from mute, solo and fader. */
   gains: Map<string, number>;
+  /** The region to repeat, or null to play straight through. */
+  loop?: LoopRegion | null;
 }
 
 export interface MixerEngine {
@@ -65,7 +69,7 @@ export interface MixerEngine {
   seekTo: (seconds: number) => void;
 }
 
-export function useMixerEngine({ sources, gains }: MixerEngineInput): MixerEngine {
+export function useMixerEngine({ sources, gains, loop = null }: MixerEngineInput): MixerEngine {
   const [phase, setPhase] = useState<MixerPhase>("idle");
   const [failure, setFailure] = useState<MixerFailure | null>(null);
   const [position, setPosition] = useState(0);
@@ -106,6 +110,19 @@ export function useMixerEngine({ sources, gains }: MixerEngineInput): MixerEngin
    * the things the operation itself suspends.
    */
   const shouldPlayRef = useRef(false);
+  /** Where the transport is, readable from a loop that must not re-render to see it. */
+  const positionRef = useRef(0);
+  const loopRef = useRef<LoopRegion | null>(null);
+  /**
+   * Whether the loop is holding THIS playback, decided each time playback
+   * lands somewhere.
+   *
+   * Not derived from the position at the moment of the check: landing past
+   * the region's end means you have left it, and something that only asked
+   * "are we past the end?" would yank you back the one time you jumped ahead
+   * to hear the ending.
+   */
+  const engagedRef = useRef(false);
 
   // --- graph ---------------------------------------------------------------
 
@@ -247,6 +264,8 @@ export function useMixerEngine({ sources, gains }: MixerEngineInput): MixerEngin
         // started — which is most of the time someone spends clicking a
         // timeline.
         setPosition(targetS);
+        positionRef.current = targetS;
+        engagedRef.current = loopEngagedFrom(targetS, loopRef.current);
         for (const el of elements) {
           el.pause();
           el.currentTime = targetS;
@@ -410,18 +429,25 @@ export function useMixerEngine({ sources, gains }: MixerEngineInput): MixerEngin
         return;
       }
       const elements = elementsRef.current;
-      const samples: TrackSample[] = elements.map((el) => ({
-        mediaTime: el.readyState >= 1 ? el.currentTime : null,
-        ended: el.ended,
-        // `readyState < HAVE_FUTURE_DATA` while playing IS buffering.
-        stalled: !el.paused && el.readyState < 3,
-      }));
+      const samples = sampleTracks(elements);
       setBuffering(samples.some((sample) => sample.stalled));
+      // Before the alignment decision, and it returns early when it acts: a
+      // wrap is itself a stop-the-world seek, and asking for a resync in the
+      // same tick would fight it.
+      if (checkEnd(samples, elements)) {
+        return;
+      }
       const { state, decision } = decideSync(samples, syncRef.current, DEFAULT_SYNC_TUNING);
       syncRef.current = state;
       const leader =
         decision.leaderIndex === null ? null : (samples[decision.leaderIndex]?.mediaTime ?? null);
-      setPosition(leader ?? 0);
+      // Only when there IS one. Falling back to zero meant that a moment
+      // where every track was buffering at once threw the playhead back to
+      // the start of the take, and the end of a take parked it there.
+      if (leader !== null) {
+        setPosition(leader);
+        positionRef.current = leader;
+      }
       // The axis is the LONGEST track, never the first: a stem is allowed to
       // be shorter than the take. Read here rather than in an effect of its
       // own because this is the one place that already knows metadata has
@@ -439,6 +465,108 @@ export function useMixerEngine({ sources, gains }: MixerEngineInput): MixerEngin
     }, SYNC_INTERVAL_MS);
     return () => window.clearInterval(id);
   }, [phase, alignTo]);
+
+  // --- loop ----------------------------------------------------------------
+
+  useEffect(() => {
+    loopRef.current = loop;
+    // A region that MOVES under a running transport has to re-decide whether
+    // it is holding this playback. Without it, dragging the end past the
+    // playhead leaves a loop that never catches, and dragging it back leaves
+    // one that catches when it should not.
+    engagedRef.current = loopEngagedFrom(positionRef.current, loop);
+  }, [loop]);
+
+  /**
+   * The end of the region, and the end of the take.
+   *
+   * Called from BOTH loops below, which is the point: one of them is precise
+   * and one of them survives the tab going away, and a practice tool needs
+   * each of those at different moments.
+   */
+  const checkEnd = useCallback(
+    (samples: readonly TrackSample[], elements: readonly HTMLAudioElement[]): boolean => {
+      // Every track out of audio, which is NOT the same as no leader: all of
+      // them buffering at once also leaves none, and stopping there would
+      // turn a network hiccup into the end of the song.
+      const allEnded = samples.length > 0 && samples.every((sample) => sample.ended);
+      const leaderIndex = pickLeader(samples);
+      const positionS = leaderIndex === null ? null : samples[leaderIndex]?.mediaTime;
+      if (!allEnded && (positionS === null || positionS === undefined)) {
+        return false;
+      }
+      const target = loopWrapTarget({
+        positionS: positionS ?? 0,
+        region: loopRef.current,
+        engaged: engagedRef.current,
+        ended: allEnded,
+      });
+      if (target !== null) {
+        alignTo(target);
+        return true;
+      }
+      if (allEnded) {
+        // Ran off the end with no loop to catch it. Without this the tracks
+        // stop while the transport still says playing, and the playhead sits
+        // wherever the last tick happened to leave it.
+        const longest = elements.reduce(
+          (max, el) => (Number.isFinite(el.duration) ? Math.max(max, el.duration) : max),
+          0,
+        );
+        pause();
+        if (longest > 0) {
+          setPosition(longest);
+          positionRef.current = longest;
+        }
+        return true;
+      }
+      return false;
+    },
+    [alignTo, pause],
+  );
+
+  const sampleTracks = useCallback(
+    (elements: readonly HTMLAudioElement[]): TrackSample[] =>
+      elements.map((el) => ({
+        mediaTime: el.readyState >= 1 ? el.currentTime : null,
+        ended: el.ended,
+        // `readyState < HAVE_FUTURE_DATA` while playing IS buffering.
+        stalled: !el.paused && el.readyState < 3,
+      })),
+    [],
+  );
+
+  /**
+   * The precise watch: rAF, so a wrap lands within a frame of the region's
+   * end rather than up to a quarter of a second past it. A 250ms tick would
+   * let the next bar start before every repeat, which is musically absurd.
+   *
+   * It stops dead in a background tab — which is why it is not the only
+   * watch. The alignment timer below carries the same check at 250ms, and a
+   * practice loop that keeps going while you read a chord chart in another
+   * tab, a little late at the seam, beats one that quietly stops looping.
+   */
+  useEffect(() => {
+    if (phase !== "playing") {
+      return;
+    }
+    let frame = 0;
+    const tick = () => {
+      frame = requestAnimationFrame(tick);
+      // Mid-seek the elements still report where they WERE — including the
+      // wrap's own seek, which would otherwise re-fire on every frame until
+      // it landed.
+      if (pendingSeeksRef.current > 0) {
+        return;
+      }
+      const elements = elementsRef.current;
+      if (elements.length > 0) {
+        checkEnd(sampleTracks(elements), elements);
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [phase, checkEnd, sampleTracks]);
 
   // --- lifecycle -----------------------------------------------------------
 

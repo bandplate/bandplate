@@ -84,6 +84,7 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "mixer.volume": [{ label: "i", args: ["Bass"] }],
   "mixer.trackFailed": [{ label: "i", args: ["Bass"] }],
   "mixer.onlyInMaster": [{ label: "list", args: ["Sax, Organ"] }],
+  "mixer.loopRegion": [{ label: "range", args: ["0:12", "0:34"] }],
   "events.kindLabel": [
     { label: "rehearsal", args: ["rehearsal"] },
     { label: "concert", args: ["concert"] },

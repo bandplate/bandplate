@@ -33,6 +33,23 @@ export const mixer = {
   muteShort: "M",
   soloShort: "S",
 
+  /**
+   * The loop.
+   *
+   * Two ways in, because they suit different hands: drag across the loop bar
+   * with a mouse, or mark each edge at the playhead — which is one-handed,
+   * needs no precision, and is the one that works on a phone against a music
+   * stand.
+   */
+  loopFrom: "Loop from here",
+  loopTo: "Loop to here",
+  loopClear: "Clear the loop",
+  loopStartHandle: "Loop start",
+  loopEndHandle: "Loop end",
+  loopRegion: (from: string, to: string): string => `Looping ${from} to ${to}`,
+  /** On the empty bar, where there is nothing yet to explain itself. */
+  loopHint: "Drag here to repeat a passage",
+
   muteMine: "Mute my instruments",
   unmuteMine: "Bring my instruments back",
 

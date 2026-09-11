@@ -20,6 +20,16 @@ import { type Locale, mixerMessages } from "@bandplate/i18n";
 import { trackColorVar } from "@bandplate/ui/tokens/track-colors.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
+import {
+  LOOP_NUDGE_S,
+  type LoopEdge,
+  type LoopRegion,
+  canLoop,
+  loopFractions,
+  makeLoop,
+  nudgeLoopEdge,
+  setLoopEdge,
+} from "../client/mixer-loop.js";
 import { type LanePeaks, mixerLaneBars } from "../client/mixer-peaks.js";
 import { timelineTicks } from "../client/mixer-ticks.js";
 import {
@@ -53,6 +63,8 @@ export interface MixerProps {
 
 /** One bar per this many CSS pixels, matching the player's waveform. */
 const BAR_PITCH_PX = 3;
+/** How far a pointer must travel on the loop bar before it counts as a drag rather than a tap. */
+const DRAG_SLOP_PX = 4;
 const MIN_BARS = 40;
 const MAX_BARS = 600;
 
@@ -114,7 +126,14 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   // position four times a second, and a fresh Map each time would re-ramp
   // every GainNode on every tick for no change at all.
   const gains = useMemo(() => trackGains(mix.tracks), [mix.tracks]);
-  const engine = useMixerEngine({ sources: tracks, gains });
+  /**
+   * The loop region, or null.
+   *
+   * Its EXISTENCE is what arms it — there is no separate on switch. Two
+   * states where one will do, and clearing is one press either way.
+   */
+  const [loop, setLoop] = useState<LoopRegion | null>(null);
+  const engine = useMixerEngine({ sources: tracks, gains, loop });
   const { phase, position, duration, buffering, failure } = engine;
 
   // --- waveforms -----------------------------------------------------------
@@ -186,6 +205,106 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       }
     },
     [engine, duration],
+  );
+
+  // --- the loop bar --------------------------------------------------------
+
+  const loopBarRef = useRef<HTMLDivElement | null>(null);
+  const loopable = canLoop(duration);
+  const band = loopFractions(loop, duration);
+
+  /** Where on the take a pointer is, or null when there is no axis to read yet. */
+  const timeAtX = useCallback(
+    (clientX: number): number | null => {
+      const bar = loopBarRef.current;
+      if (!bar || duration <= 0) {
+        return null;
+      }
+      const box = bar.getBoundingClientRect();
+      if (box.width <= 0) {
+        return null;
+      }
+      return Math.max(0, Math.min(1, (clientX - box.left) / box.width)) * duration;
+    },
+    [duration],
+  );
+
+  /**
+   * One gesture for both jobs: dragging across empty bar makes a region, and
+   * dragging a handle moves one edge.
+   *
+   * `fixedS` is the edge that stays — the far handle when adjusting, the
+   * place the drag began when creating. `makeLoop` anchors on it, so the
+   * minimum length always gives on the edge under the finger, and dragging
+   * one handle past the other swaps them instead of jamming.
+   */
+  const dragFrom = useCallback(
+    (event: PointerEvent, fixedS: number) => {
+      const bar = loopBarRef.current;
+      if (!bar || !loopable) {
+        return;
+      }
+      // Captured on the BAR, not on the handle: a drag that leaves a 10px
+      // handle must keep tracking, and it will leave it immediately.
+      // Guarded because capture throws outright if the pointer is already
+      // gone, which takes the whole gesture down with it.
+      try {
+        bar.setPointerCapture(event.pointerId);
+      } catch {
+        // Tracking still works without capture; it just stops at the edge.
+      }
+      const fromX = event.clientX;
+      let dragging = false;
+      const onMove = (e: PointerEvent) => {
+        // A press that never travels is a press, not a drag. Without the
+        // threshold a stray tap drops a 1.5-second region in and playback
+        // starts jumping for no reason the member can see.
+        dragging = dragging || Math.abs(e.clientX - fromX) >= DRAG_SLOP_PX;
+        const to = dragging ? timeAtX(e.clientX) : null;
+        if (to !== null) {
+          setLoop(makeLoop(fixedS, to, duration));
+        }
+      };
+      const onUp = () => {
+        bar.removeEventListener("pointermove", onMove);
+        bar.removeEventListener("pointerup", onUp);
+        bar.removeEventListener("pointercancel", onUp);
+        if (bar.hasPointerCapture(event.pointerId)) {
+          bar.releasePointerCapture(event.pointerId);
+        }
+      };
+      bar.addEventListener("pointermove", onMove);
+      bar.addEventListener("pointerup", onUp);
+      bar.addEventListener("pointercancel", onUp);
+    },
+    [duration, loopable, timeAtX],
+  );
+
+  /**
+   * Arrow keys on a handle — and the reason the handles are hand-rolled at
+   * all. This project's rule is never to rebuild an interaction the platform
+   * ships, but there IS no two-thumb range input: ARIA's own answer to a
+   * range slider is two elements with `role="slider"`, so that is what these
+   * are, keyboard included.
+   */
+  const onHandleKey = useCallback(
+    (event: KeyboardEvent, edge: LoopEdge) => {
+      const step = event.shiftKey ? LOOP_NUDGE_S * 4 : LOOP_NUDGE_S;
+      const delta =
+        event.key === "ArrowLeft" || event.key === "ArrowDown"
+          ? -step
+          : event.key === "ArrowRight" || event.key === "ArrowUp"
+            ? step
+            : 0;
+      if (delta === 0) {
+        return;
+      }
+      // Only once we have decided to act, so an arrow key still scrolls the
+      // page everywhere else.
+      event.preventDefault();
+      setLoop((region) => nudgeLoopEdge(region, edge, delta, duration));
+    },
+    [duration],
   );
 
   // --- render --------------------------------------------------------------
@@ -320,6 +439,151 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
               aria-valuetext={clock(position)}
               onChange={(event) => scrubTo(Number((event.target as HTMLInputElement).value))}
             />
+          </div>
+        </div>
+        {/* The loop bar, on its OWN strip rather than on the axis.
+            It cannot share the axis: the scrub input owns every pointer
+            there, so a drag across it would move the playhead instead of
+            marking a passage. A DAW puts its cycle on a separate ruler for
+            exactly this reason.
+
+            Two ways in, because they suit different hands. Dragging is quick
+            with a mouse. The two mark buttons need no precision and no second
+            hand, which is what makes the loop usable on a phone propped
+            against a music stand — the one thing this feature could not be
+            allowed to lose at the small breakpoint. */}
+        <div class="bp-mixer-loop">
+          <span class="bp-mixer-loop-cell">
+            <span class="bp-mixer-loop-buttons">
+              <button
+                type="button"
+                class="bp-mixer-btn"
+                aria-label={t.loopFrom}
+                title={t.loopFrom}
+                disabled={!loopable}
+                onClick={() => setLoop((r) => setLoopEdge(r, "start", position, duration))}
+              >
+                <svg
+                  aria-hidden="true"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                >
+                  <path d="M3 2h2v12H3zM7 4.5l6 3.5-6 3.5z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="bp-mixer-btn"
+                aria-label={t.loopTo}
+                title={t.loopTo}
+                disabled={!loopable}
+                onClick={() => setLoop((r) => setLoopEdge(r, "end", position, duration))}
+              >
+                <svg
+                  aria-hidden="true"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                >
+                  <path d="M11 2h2v12h-2zM9 4.5l-6 3.5 6 3.5z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="bp-mixer-btn"
+                aria-label={t.loopClear}
+                title={t.loopClear}
+                disabled={!loop}
+                onClick={() => setLoop(null)}
+              >
+                <svg
+                  aria-hidden="true"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M4 4l8 8M12 4l-8 8" />
+                </svg>
+              </button>
+            </span>
+            {loop && (
+              <span class="bp-mixer-loop-times">
+                {clock(loop.startS)}–{clock(loop.endS)}
+              </span>
+            )}
+          </span>
+          {/* No click handler, so no keyboard equivalent is owed here: the
+              two handles below carry the keyboard path, and the mark buttons
+              beside it carry the pointer-free one. */}
+          <div
+            class="bp-mixer-loopbar"
+            ref={loopBarRef}
+            onPointerDown={(event) => {
+              if (event.button !== 0 && event.pointerType === "mouse") {
+                return;
+              }
+              const at = timeAtX(event.clientX);
+              if (at !== null) {
+                dragFrom(event, at);
+              }
+            }}
+          >
+            {band && loop ? (
+              <>
+                <span
+                  class="bp-mixer-loop-band"
+                  aria-hidden="true"
+                  title={t.loopRegion(clock(loop.startS), clock(loop.endS))}
+                  style={`--bp-loop-a: ${band.start}; --bp-loop-b: ${band.end}`}
+                />
+                {/* Hand-rolled, and this is the one place in the app where
+                    that is the correct answer rather than the lazy one: there
+                    is no two-thumb range input to reach for, and ARIA's own
+                    pattern for a range slider IS two elements with
+                    `role="slider"`. Arrow keys included — see `onHandleKey`. */}
+                <span
+                  class="bp-mixer-loop-handle is-start"
+                  role="slider"
+                  tabIndex={0}
+                  aria-label={t.loopStartHandle}
+                  aria-valuemin={0}
+                  aria-valuemax={duration}
+                  aria-valuenow={loop.startS}
+                  aria-valuetext={clock(loop.startS)}
+                  style={`--bp-loop-at: ${band.start}`}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                    dragFrom(event, loop.endS);
+                  }}
+                  onKeyDown={(event) => onHandleKey(event, "start")}
+                />
+                <span
+                  class="bp-mixer-loop-handle is-end"
+                  role="slider"
+                  tabIndex={0}
+                  aria-label={t.loopEndHandle}
+                  aria-valuemin={0}
+                  aria-valuemax={duration}
+                  aria-valuenow={loop.endS}
+                  aria-valuetext={clock(loop.endS)}
+                  style={`--bp-loop-at: ${band.end}`}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                    dragFrom(event, loop.startS);
+                  }}
+                  onKeyDown={(event) => onHandleKey(event, "end")}
+                />
+              </>
+            ) : (
+              loopable && <span class="bp-mixer-loop-hint">{t.loopHint}</span>
+            )}
           </div>
         </div>
         {/* The time grid, spanning every lane and sitting BEHIND them — a

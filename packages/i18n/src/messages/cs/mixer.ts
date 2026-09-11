@@ -5,6 +5,7 @@
 // │ Register je NEFORMÁLNÍ (tykání).                                        │
 // │                                                                        │
 // │ GLOSÁŘ: stem → stopa · master → master · take → nahrávka · mix → mix    │
+// │         loop → smyčka                                                  │
 // │                                                                        │
 // │ ZA ZVÁŽENÍ:                                                             │
 // │   "Mixér" vs "Mixážní pult" — zvolen "Mixér", protože je to jméno té    │
@@ -33,6 +34,15 @@ export const mixer = {
   volume: (instrument: string): string => `Hlasitost ${instrument}`, // en: `${instrument} volume`
   muteShort: "M", // en: M — stejné, popisek tlačítka jako v každé DAW
   soloShort: "S", // en: S — stejné, popisek tlačítka jako v každé DAW
+
+  loopFrom: "Smyčka odtud", // en: Loop from here
+  loopTo: "Smyčka sem", // en: Loop to here
+  loopClear: "Zrušit smyčku", // en: Clear the loop
+  loopStartHandle: "Začátek smyčky", // en: Loop start
+  loopEndHandle: "Konec smyčky", // en: Loop end
+  // en: `Looping ${from} to ${to}`
+  loopRegion: (from: string, to: string): string => `Smyčka ${from} až ${to}`,
+  loopHint: "Tažením tady zopakuješ pasáž", // en: Drag here to repeat a passage
 
   muteMine: "Ztlumit moje nástroje", // en: Mute my instruments
   unmuteMine: "Vrátit moje nástroje", // en: Bring my instruments back

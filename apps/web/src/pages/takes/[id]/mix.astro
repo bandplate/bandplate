@@ -1,0 +1,82 @@
+---
+import { messages } from "@bandplate/i18n";
+// `/takes/[id]/mix` — every stem of one take, running together, so a member
+// can play along with the band minus their own part.
+//
+// Its own route rather than a panel on the take page, for two reasons. A
+// stack of lanes on one time axis needs the width, and — the load-bearing one
+// — this page must own the document's audio outright. `AppLayout` is told to
+// render NO `ClientRouter` and NO shell player here; see the props' own
+// comment for why a persisted island plus a live `AudioContext` means seven
+// stems that keep playing after you navigate away, with no control anywhere.
+//
+// The link IN carries `data-astro-reload` for the mirror of that reason: a
+// view transition would carry a playing shell player into this page.
+import Mixer from "../../../components/Mixer.tsx";
+import AppLayout from "../../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../../server/app.js";
+import { getMixData } from "../../../server/pages/mix.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const { id } = Astro.params;
+if (!id) {
+  return new Response("Not found.", { status: 404 });
+}
+
+const { db } = await getAppDeps();
+const locale = Astro.locals.locale;
+const mix = await getMixData(db, id, principal.memberId, locale);
+
+// Undefined covers both "no such take" and "fewer than two stems". The second
+// is not an error: the take page's Solo drawer already is the right tool
+// there, so send them to it rather than explaining a mixer they cannot use.
+if (!mix) {
+  return Astro.redirect(`/takes/${id}`);
+}
+
+const t = messages(locale);
+---
+
+<AppLayout
+  title={`${t.mixer.title} — ${mix.title}`}
+  principal={principal}
+  current="takes"
+  transitions={false}
+  shellPlayer={false}
+  wide
+>
+  <div class="bp-mixer-page">
+    <header class="bp-mixer-head">
+      <p class="bp-eyebrow">{t.mixer.title}</p>
+      <h1 class="bp-page-title bp-m0">{mix.title}</h1>
+      {mix.subtitle && <p class="bp-mixer-sub bp-m0">{mix.subtitle}</p>}
+      <a href={`/takes/${mix.takeId}`} class="bp-mixer-back">{t.mixer.backToTake}</a>
+    </header>
+
+    {/* The mixer cannot work without script, and an inert one is worse than
+        none — the take page really does play each stem on its own. Same
+        convention the filter sheet uses. */}
+    <noscript>
+      <p class="bp-mixer-note">{t.mixer.noScript}</p>
+    </noscript>
+
+    <Mixer
+      client:load
+      takeId={mix.takeId}
+      tracks={mix.tracks.map((track) => ({
+        assetId: track.assetId,
+        kind: track.kind,
+        label: track.label,
+        color: track.color,
+        mine: track.mine,
+      }))}
+      canMuteMine={mix.canMuteMine}
+      onlyInMaster={mix.onlyInMaster}
+      locale={locale}
+    />
+  </div>
+</AppLayout>

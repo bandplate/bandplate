@@ -11,13 +11,17 @@ import { canPublish, hasAllScopes } from "@bandplate/core";
 // "Solo" drawer both render conditionally on real, ready assets existing,
 // never a disabled stand-in.
 //
-// Stems ship SOLO, not a mixer: the drawer swaps the player's single
-// source while preserving playback position, one stream at a time — never
-// synchronised multi-track playback (`HTMLMediaElement`s drift audibly
-// within seconds with no sample-accurate sync, and a real fix needs Web
-// Audio decoding every stem to an `AudioBuffer`, ~7×45MB of PCM for a
-// four-minute take — enough to kill a mobile Safari tab). See
-// task-7-report.md.
+// The Solo drawer swaps the player's single source, one stream at a time,
+// preserving position. Playing every stem TOGETHER is a different feature
+// with a different engine, and it lives on its own page — `/takes/:id/mix`,
+// linked below once a take has two stems to balance.
+//
+// This comment used to rule that out, and half of its reasoning still
+// stands: decoding every stem to an `AudioBuffer` really would cost about a
+// gigabyte for one of this band's eight-minute takes. What it got wrong was
+// the conclusion. Streaming elements through a Web Audio graph costs almost
+// no memory, and `/dev/sync` measured the sync penalty rather than assuming
+// it: zero ppm of drift over five minutes on Chrome. See `Mixer.tsx`.
 //
 // `transition:name={`take-${take.id}`}` on the song-title hero matches the
 // same name `TakeRow.astro` puts on its own link — clicking a take row
@@ -48,6 +52,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { eventLabel, formatDuration, takeNote } from "../../server/format.js";
+import { MIN_MIXER_STEMS } from "../../server/pages/mix.js";
 import {
   type TakeField,
   deleteAssetConsequence,
@@ -550,6 +555,22 @@ function assetLabel(asset: assetsRepo.Asset): string {
                   );
                 })}
               </div>
+            )}
+            {playableStems.length >= MIN_MIXER_STEMS && (
+              /* `data-astro-reload` is load-bearing, not a preference. The
+                 shell player is `transition:persist`, so a view transition
+                 would carry a PLAYING `<audio>` into a page that builds its
+                 own audio graph — two engines, one pair of ears. A real
+                 document load cannot. The cost is that this link gets no
+                 shared-element transition; that is the price of the
+                 invariant, and it is not a bug to fix. */
+              <a
+                href={`/takes/${take.id}/mix`}
+                class="bp-btn bp-btn-secondary bp-btn-sm"
+                data-astro-reload
+              >
+                {t.mixer.title}
+              </a>
             )}
           </div>
         </section>

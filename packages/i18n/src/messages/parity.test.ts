@@ -37,6 +37,10 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // set up the server. Same word in Czech.
   "admin.colSlug",
   "admin.colRole",
+  // The button glyphs every DAW in the country uses. Translating M and S
+  // would make the mixer harder to read for the people it is built for.
+  "mixer.muteShort",
+  "mixer.soloShort",
   // A track colour named after the dye. Czech writes it the same way, and
   // inventing "modrofialová" to avoid an identical string would name the
   // colour worse in order to satisfy a test.
@@ -72,6 +76,13 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "many", args: [7] },
   ],
   "auth.slowLede": [{ label: "seconds", args: ["45"] }],
+  "mixer.mute": [{ label: "i", args: ["Bass"] }],
+  "mixer.unmute": [{ label: "i", args: ["Bass"] }],
+  "mixer.solo": [{ label: "i", args: ["Bass"] }],
+  "mixer.unsolo": [{ label: "i", args: ["Bass"] }],
+  "mixer.volume": [{ label: "i", args: ["Bass"] }],
+  "mixer.trackFailed": [{ label: "i", args: ["Bass"] }],
+  "mixer.onlyInMaster": [{ label: "list", args: ["Sax, Organ"] }],
   "events.kindLabel": [
     { label: "rehearsal", args: ["rehearsal"] },
     { label: "concert", args: ["concert"] },

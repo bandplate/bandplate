@@ -1177,6 +1177,14 @@ a.bp-btn {
   box-sizing: border-box;
 }
 
+/* The mixer's width. `.bp-shell-main`'s 60rem cap is right for reading and
+   wrong for a stack of lanes on one time axis — at 960px seven waveforms are
+   thumbnails. Still capped rather than full-bleed: past ~90rem the lanes stop
+   being scannable as a column. */
+.bp-shell-main-wide {
+  max-width: 90rem;
+}
+
 /* Bottom tab bar — phones and tablets. */
 .bp-tabbar {
   position: fixed;
@@ -1879,10 +1887,9 @@ a.bp-btn {
 }
 
 /* The stems ("Solo") drawer — a row of source-select chips, "Full mix"
-   plus one per available stem. Deliberately labelled "Solo", never
-   "Mixer": switching sources plays exactly one stream at a time (see
-   task-7-report.md for why synchronised multi-track playback isn't
-   attempted). */
+   plus one per available stem. Switching sources plays exactly one stream at
+   a time; playing them TOGETHER is the mixer, which is its own page and its
+   own engine (`/takes/:id/mix`). The link to it sits beside this drawer. */
 .bp-solo-drawer {
   display: flex;
   flex-wrap: wrap;
@@ -5067,6 +5074,223 @@ html:has(dialog.bp-filter-sheet[open]) body {
   vertical-align: 1px;
   background: var(--bp-swatch, var(--bp-track-none));
   flex: none;
+}
+
+/* ---------------------------------------------------------------------- */
+/* The mixer — /takes/:id/mix                                             */
+/* ---------------------------------------------------------------------- */
+
+.bp-mixer-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bp-mixer-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bp-mixer-sub {
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-mixer-back {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-accent);
+}
+
+.bp-mixer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.bp-mixer-transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bp-mixer-clock {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: var(--text-ui, 0.9375rem);
+  font-weight: 600;
+  color: var(--bp-color-fg);
+  /* Equal-width digits and a floor, so a ticking clock does not shove the
+     controls beside it left and right. */
+  font-variant-numeric: tabular-nums;
+  min-width: 4rem;
+}
+
+.bp-mixer-spread {
+  font-size: var(--text-note, 0.71875rem);
+  font-weight: 400;
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-mixer-tracks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--bp-color-border);
+}
+
+/* One row per track. A grid rather than a flex row: the fader must take the
+   remaining width at every breakpoint, and the name must be allowed to
+   truncate rather than shove it. */
+.bp-mixer-track {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name buttons"
+    "fader fader";
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.75rem 0.25rem;
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-track {
+    grid-template-columns: minmax(6rem, 12rem) auto minmax(0, 1fr);
+    grid-template-areas: "name buttons fader";
+  }
+}
+
+.bp-mixer-track-name {
+  grid-area: name;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-size: var(--text-ui, 0.9375rem);
+  font-weight: 600;
+  color: var(--bp-color-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-mixer-track-buttons {
+  grid-area: buttons;
+  display: flex;
+  gap: 0.375rem;
+}
+
+/* M and S. Square rather than pill, so they read as a pair of switches rather
+   than as two more of the app's many chips. */
+.bp-mixer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 900;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+/* Engaged state carries weight and a fill, not hue alone — these two buttons
+   sit beside each other and must not differ by colour only. */
+.bp-mixer-btn.is-active {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+}
+
+.bp-mixer-btn:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* The fader. A real `<input type="range">` — see `.bp-player-track`'s comment
+   for why this project never hand-rolls the interaction — but unlike the
+   player's seek it is not laid over a drawing, so here the native track is
+   styled directly and the thumb is visible. */
+.bp-mixer-fader {
+  grid-area: fader;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bp-mixer-fader::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  /* The instrument's own colour, so a lane's fader belongs to it at a glance. */
+  background: linear-gradient(
+    to right,
+    var(--bp-swatch, var(--bp-track-none)) 0%,
+    var(--bp-swatch, var(--bp-track-none)) 71.4%,
+    var(--bp-fill-subtle) 71.4%
+  );
+}
+
+.bp-mixer-fader::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+}
+
+.bp-mixer-fader::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bp-swatch, var(--bp-track-none));
+}
+
+.bp-mixer-fader::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--bp-color-fg);
+}
+
+.bp-mixer-fader::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bp-color-fg);
+}
+
+.bp-mixer-fader:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* `<output>` is inline by default, and this one is a paragraph. */
+.bp-mixer-failure {
+  display: block;
+  color: var(--bp-color-danger);
+}
+
+.bp-mixer-note {
+  margin: 0;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  line-height: 1.45;
 }
 
 /* Attribution. CC BY 3.0 requires visible credit wherever the work is used,

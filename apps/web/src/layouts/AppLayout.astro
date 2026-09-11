@@ -25,9 +25,39 @@ export interface Props {
   // the four of them directly (see below), so it needs to know which one is
   // the page rather than just that the page is somewhere under /admin.
   adminSection?: "overview" | "members" | "instruments" | "tokens";
+  /**
+   * `/takes/:id/mix` owns its page's audio outright, and both of these exist
+   * for that one page.
+   *
+   * NO ROUTER: `ClientRouter` replaces the body without unmounting islands, so
+   * a Preact cleanup never runs — and removing an `<audio>` from the DOM does
+   * not stop it. It plays until garbage collection, and it is never collected,
+   * because a live `AudioContext` holds a `MediaElementAudioSourceNode` which
+   * holds the element. Navigate away from the mixer under a view transition
+   * and seven stems keep playing off-screen with no control anywhere.
+   *
+   * NO SHELL PLAYER: two engines, one pair of ears.
+   *
+   * Turning the router off makes EVERY link off that page a full navigation,
+   * which is the point: the invariant holds for the sidebar, the tab bar, the
+   * back link and whatever someone adds next year, without anyone having to
+   * remember `data-astro-reload` on it.
+   */
+  transitions?: boolean;
+  shellPlayer?: boolean;
+  /** Relax `.bp-shell-main`'s 60rem cap — a stack of mixer lanes needs the width. */
+  wide?: boolean;
 }
 
-const { title, principal, current, adminSection } = Astro.props;
+const {
+  title,
+  principal,
+  current,
+  adminSection,
+  transitions = true,
+  shellPlayer = true,
+  wide = false,
+} = Astro.props;
 
 const isAdmin = principal.role === "admin";
 
@@ -81,7 +111,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
 ---
 
 <Layout title={title}>
-  <ClientRouter />
+  {transitions && <ClientRouter />}
   <div
     class="bp-route-progress"
     id="route-progress"
@@ -145,7 +175,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
           )
         }
       </nav>
-      <main id="main" class="bp-shell-main">
+      <main id="main" class={`bp-shell-main${wide ? " bp-shell-main-wide" : ""}`}>
         <slot />
       </main>
     </div>
@@ -161,7 +191,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
         ))
       }
     </nav>
-    <Player client:load transition:persist="bp-player" locale={Astro.locals.locale} />
+    {shellPlayer && <Player client:load transition:persist="bp-player" locale={Astro.locals.locale} />}
     <VoteFavorite client:load transition:persist="bp-vote-favorite" />
     {/* One per document, in the shell — it listens on `document` for any
         `[data-confirm]` click, so a second copy would open two dialogs. It

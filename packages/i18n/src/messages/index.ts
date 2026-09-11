@@ -17,6 +17,7 @@ import { homeByLocale } from "./home.js";
 import { islandsByLocale } from "./islands.js";
 import { mailByLocale } from "./mail.js";
 import { meByLocale } from "./me.js";
+import { mixerByLocale } from "./mixer.js";
 import { playerByLocale } from "./player.js";
 import { shellByLocale } from "./shell.js";
 import { songsByLocale } from "./songs.js";
@@ -34,6 +35,7 @@ const CATALOG = {
     islands: islandsByLocale.en,
     mail: mailByLocale.en,
     me: meByLocale.en,
+    mixer: mixerByLocale.en,
     player: playerByLocale.en,
     shell: shellByLocale.en,
     songs: songsByLocale.en,
@@ -50,6 +52,7 @@ const CATALOG = {
     islands: islandsByLocale.cs,
     mail: mailByLocale.cs,
     me: meByLocale.cs,
+    mixer: mixerByLocale.cs,
     player: playerByLocale.cs,
     shell: shellByLocale.cs,
     songs: songsByLocale.cs,

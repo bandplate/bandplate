@@ -31,4 +31,17 @@ export const player = {
   sourceGroup: "Source",
   close: "Stop and close the player",
   seek: "Seek",
+  /**
+   * The way into the mixer, from the bar and from a take's own page.
+   *
+   * In THIS catalog rather than `mixer`'s, even though it names that tool:
+   * the shell player is on every page in the app, and pulling the mixer's
+   * whole catalog into it to read one line is the cost `player.ts` exists to
+   * avoid. The take page reads it from here too, so there is one copy of the
+   * words rather than two that can drift.
+   *
+   * Not just "Mixer": it sits beside other controls now, and a button next to
+   * a button has to say what pressing it does — including that it LEAVES.
+   */
+  openInMixer: "Open in mixer",
 };

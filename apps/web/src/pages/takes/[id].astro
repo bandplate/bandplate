@@ -595,10 +595,35 @@ function assetLabel(asset: assetsRepo.Asset): string {
                  invariant, and it is not a bug to fix. */
               <a
                 href={`/takes/${take.id}/mix`}
-                class="bp-btn bp-btn-secondary bp-btn-sm"
+                class="bp-take-play-lead bp-take-play-link"
                 data-astro-reload
               >
-                {t.mixer.openInMixer}
+                {/* The same disc the play control wears — see the stylesheet
+                    for why it is borrowed by selector rather than by class. */}
+                <span class="bp-mixer-open bp-play-toggle-lg" aria-hidden="true">
+                  {/* Faders. Not a second triangle: this does not start
+                      anything, it opens the place where you decide what
+                      plays. */}
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  >
+                    <path d="M6 3v6M6 15v6M12 3v10M12 19v2M18 3v2M18 11v10" />
+                    <path d="M3 12h6M9 16h6M15 8h6" />
+                  </svg>
+                </span>
+                <span class="bp-take-play-lead-text">
+                  <p class="bp-take-play-title bp-m0">{t.player.openInMixer}</p>
+                  {/* Names the SOURCE, exactly as "master mix" does beside the
+                      play control — which is the one thing that separates the
+                      two ways of hearing this take. */}
+                  <p class="bp-take-play-sub bp-m0">{t.mixer.stemCount(playableStems.length)}</p>
+                </span>
               </a>
             )}
           </div>
@@ -651,8 +676,13 @@ function assetLabel(asset: assetsRepo.Asset): string {
                   <span class="bp-asset-row-label">{assetLabel(asset)}</span>
                   <span class="bp-asset-row-meta bp-mono">
                     <span class="bp-asset-row-meta-item">{asset.format}</span>
-                    <span class="bp-asset-row-meta-item">{asset.tier}</span>
-                    <span class="bp-asset-row-meta-item">{formatBytes(locale, asset.bytes)}</span>
+                    {/* Dropped on a phone — see the stylesheet. The status
+                        below is NOT: a file that is still uploading or has
+                        failed has to say so at every width. */}
+                    <span class="bp-asset-row-meta-item bp-asset-row-meta-detail">{asset.tier}</span>
+                    <span class="bp-asset-row-meta-item bp-asset-row-meta-detail">
+                      {formatBytes(locale, asset.bytes)}
+                    </span>
                     {asset.status !== "ready" && (
                       <span class="bp-asset-row-meta-item">{asset.status}</span>
                     )}

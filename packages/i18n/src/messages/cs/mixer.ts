@@ -13,14 +13,23 @@
 // │   `muteShort`/`soloShort` zůstávají M a S: jsou to popisky na tlačítkách│
 // │   a v každé DAW v zemi jsou takhle.                                     │
 // └────────────────────────────────────────────────────────────────────────┘
+import { plural } from "../../plural.js";
 import type { mixer as enMixer } from "../en/mixer.js";
+
+const STEM_FORMS = {
+  one: "stopa",
+  few: "stopy",
+  many: "stopy",
+  other: "stop",
+};
 
 export const mixer = {
   title: "Mixér", // en: Mixer
   // en: `Mixer: ${take}`
   pageTitle: (take: string): string => `Mixér: ${take}`,
   backToTake: "Zpátky na nahrávku", // en: Back to the take
-  openInMixer: "Otevřít v mixéru", // en: Open in mixer
+  // en: `${count} ${count === 1 ? "stem" : "stems"}`
+  stemCount: (count: number): string => `${count} ${plural("cs", count, STEM_FORMS)}`,
 
   play: "Přehrát", // en: Play
   pause: "Pozastavit", // en: Pause

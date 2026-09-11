@@ -28,4 +28,5 @@ export const player = {
   sourceGroup: "Zdroj", // en: Source
   close: "Zastavit a zavřít přehrávač", // en: Stop and close the player
   seek: "Přetočit", // en: Seek
+  openInMixer: "Otevřít v mixéru", // en: Open in mixer
 } satisfies typeof enPlayer;

@@ -35,6 +35,7 @@ import { useStore } from "@nanostores/preact";
 import { Fragment } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
+import { MIN_MIXER_STEMS } from "../client/mixer-tracks.js";
 import { decidePlayerClickAction } from "../client/player-actions.js";
 import {
   AUDIO_SOURCE_ATTR,
@@ -186,6 +187,8 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   const [peaks, setPeaks] = useState<number[] | null>(null);
   const [barCount, setBarCount] = useState(WAVEFORM_BARS);
   const [sources, setSources] = useState<PlayerSource[] | null>(null);
+  /** How many of them are stems — what decides whether a mixer is worth offering. */
+  const stemCount = sources?.filter((source) => source.kind === "stem").length ?? 0;
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   // Wires the real DOM events (not our own click handler's optimistic
@@ -641,6 +644,46 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           <span class="bp-player-title">{track?.title ?? ""}</span>
           <span class="bp-player-subtitle">{track?.subtitle ?? ""}</span>
         </div>
+
+        {/* The way into the mixer, beside the source switcher because they
+            answer the same question — which parts of this take do I want to
+            hear. The switcher plays ONE of them; the mixer plays all of them
+            at once, which is the thing this bar can never do.
+
+            Same threshold the take page uses, from the same module: below two
+            stems there is nothing to balance and the switcher already does
+            the job.
+
+            `data-astro-reload` is load-bearing. This island is
+            `transition:persist`, so a view transition would carry THIS
+            PLAYING `<audio>` into the page that builds its own audio graph —
+            two engines, one pair of ears. A real document load cannot. */}
+        {track && sources !== null && stemCount >= MIN_MIXER_STEMS && (
+          <a
+            href={`/takes/${track.takeId}/mix`}
+            class="bp-player-mixer"
+            data-astro-reload
+            title={t.openInMixer}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 3v6M6 15v6M12 3v10M12 19v2M18 3v2M18 11v10" />
+              <path d="M3 12h6M9 16h6M15 8h6" />
+            </svg>
+            {/* Read at every width; SEEN only where the bar has room for it.
+                A real element rather than an `aria-label`, so the name is in
+                the accessibility tree either way — see the stylesheet. */}
+            <span class="bp-player-mixer-label">{t.openInMixer}</span>
+          </a>
+        )}
 
         {/* Only on a take that HAS more than one source. The list loads with
             the track rather than on the press, so the control cannot vanish

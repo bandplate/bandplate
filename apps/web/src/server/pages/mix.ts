@@ -4,11 +4,11 @@ import { membersRepo } from "@bandplate/db";
 // `/takes/[id]/mix` — every stem of one take, running together, so a member
 // can play along with the band minus their own part.
 //
-// The archive's other answer to that is the Solo drawer on the take page,
-// which swaps the player's single source: you can hear ONLY the bass, never
-// everything EXCEPT the bass. Pre-rendering an inverse mix per member per
-// take was the alternative, and it multiplies render time and storage by the
-// size of the band while going stale the moment a stem is re-rendered.
+// The archive's other answer to that is the player's own source switcher,
+// which swaps its single source: you can hear ONLY the bass, never everything
+// EXCEPT the bass. Pre-rendering an inverse mix per member per take was the
+// alternative, and it multiplies render time and storage by the size of the
+// band while going stale the moment a stem is re-rendered.
 //
 // Read-only, and deliberately thin: it composes `getTakeDetail` (the take,
 // its song, its event, its assets) with the requesting member's own
@@ -16,8 +16,16 @@ import { membersRepo } from "@bandplate/db";
 // itself — what the tracks are, which of them are YOURS, and which
 // instruments have no track at all.
 import { type Locale, formatLongDate, messages } from "@bandplate/i18n";
+// Imported AND re-exported, not `export ... from`: that form re-exports the
+// name without binding it in this module, so `getMixData` below saw an
+// undefined identifier at runtime while the build stayed quiet.
+import { MIN_MIXER_STEMS } from "../../client/mixer-tracks.js";
 import { eventLabel } from "../format.js";
 import { getTakeDetail } from "./takes.js";
+
+// Defined in the pure client module so the player island can read it too,
+// re-exported here because this is where the pages already look for it.
+export { MIN_MIXER_STEMS };
 
 export interface MixTrack {
   assetId: string;
@@ -76,15 +84,6 @@ export interface MixData {
    */
   onlyInMaster: string[];
 }
-
-/**
- * The minimum number of ready stems that makes a mixer worth opening.
- *
- * Below this the Solo drawer on the take page already is the right tool: with
- * one stem there is nothing to balance it against, and a mixer would be a
- * fader and a mute where a chip used to be.
- */
-export const MIN_MIXER_STEMS = 2;
 
 export async function getMixData(
   db: Db,

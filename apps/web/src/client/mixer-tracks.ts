@@ -23,6 +23,20 @@ export interface TrackControl {
 
 export const MAX_FADER = 1.4;
 
+/**
+ * The fewest ready stems that make a mixer worth opening.
+ *
+ * With one stem there is nothing to balance it against — the player's own
+ * source switcher already swaps to it, and a mixer would be a fader and a
+ * mute where a menu item used to be.
+ *
+ * Here rather than beside the loader that first needed it, because three
+ * places now decide whether to offer the mixer: that loader, the take page's
+ * listen strip, and the player bar. This module is pure and imports nothing,
+ * so an island can read it without pulling a database in behind it.
+ */
+export const MIN_MIXER_STEMS = 2;
+
 export interface MixerState {
   tracks: readonly TrackControl[];
   /** Whether the "mute my instruments" preset is engaged. */

@@ -359,9 +359,15 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments, loca
             share one row and cannot drift apart. It is server-rendered like the
             rest of the island, so it survives a failure to hydrate. */}
         <h2 class="bp-strip-label">{ti(locale).uploadFilesHeading}</h2>
+        {/* `-xs`, which is the variant written for exactly this: an action
+            beside a section heading rather than acting on the page, and ALONE
+            — the condition that variant requires, since its hit area reaches
+            past its fill and two of them would collide. A 44px pill next to an
+            11px eyebrow read as the section's subject rather than its
+            afterthought. The TARGET is still 44px; only the paint shrinks. */}
         <button
           type="button"
-          class="bp-btn bp-btn-secondary bp-btn-sm"
+          class="bp-btn bp-btn-secondary bp-btn-xs"
           onClick={() => inputRef.current?.click()}
         >
           <svg

@@ -85,6 +85,13 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "mixer.trackFailed": [{ label: "i", args: ["Bass"] }],
   "mixer.onlyInMaster": [{ label: "list", args: ["Sax, Organ"] }],
   "mixer.loopRegion": [{ label: "range", args: ["0:12", "0:34"] }],
+  // Every Czech plural class, because "stopa/stopy/stop" is exactly the kind
+  // of thing that gets one form and is never looked at again.
+  "mixer.stemCount": [
+    { label: "one", args: [1] },
+    { label: "few", args: [3] },
+    { label: "other", args: [7] },
+  ],
   "events.kindLabel": [
     { label: "rehearsal", args: ["rehearsal"] },
     { label: "concert", args: ["concert"] },

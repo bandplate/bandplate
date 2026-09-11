@@ -3,6 +3,8 @@
 // Its OWN area, not part of `takes`, for the reason `player.ts` gives: this
 // is a `client:load` island's copy, and an island ships its imports. The
 // mixer is one page; the take catalog is nine kilobytes.
+import { plural } from "../../plural.js";
+
 export const mixer = {
   title: "Mixer",
   /**
@@ -22,7 +24,13 @@ export const mixer = {
    * to another button has to say what pressing it does. It also says that
    * this one LEAVES — which it does, for reasons the take page explains.
    */
-  openInMixer: "Open in mixer",
+  /**
+   * Under the mixer's own control, where the play button says "master mix".
+   * Both name their SOURCE, which is the one thing that separates the two
+   * ways of hearing a take.
+   */
+  stemCount: (count: number): string =>
+    `${count} ${plural("en", count, { one: "stem", other: "stems" })}`,
 
   play: "Play",
   pause: "Pause",

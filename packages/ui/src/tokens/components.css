@@ -1192,6 +1192,89 @@ a.bp-btn {
   }
 }
 
+/* The way into the mixer, beside the source switcher in the player bar. They
+   answer the same question — which parts of this take do I want to hear — so
+   it is built from the switcher trigger's own fill, type and height and the
+   two read as one pair of controls.
+
+   A CIRCLE below the bar's phone breakpoint and a labelled pill at and above
+   it. The bar is permanent chrome on every page and already carries a
+   transport, a title, a switcher and a close; on a phone there is no room for
+   another set of words, and on a desktop there is no excuse for withholding
+   them. The words are never taken out of the accessibility tree, only out of
+   sight, so the control has a name at both widths.
+
+   40px, not 36 like its neighbour, and the `::after` reaches the remaining
+   4px: a circle is the one shape here with no label to widen it, so it is the
+   one that would otherwise fall under the touch floor in both axes. The bar's
+   own 0.875rem row gap leaves the expanded targets 10px clear. */
+.bp-player-mixer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex: none;
+  width: 40px;
+  min-height: 40px;
+  border-radius: 50%;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-ui, 0.9375rem);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.bp-player-mixer::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+}
+
+.bp-player-mixer:hover {
+  background: var(--bp-fill-raised);
+}
+
+.bp-player-mixer:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* Out of sight, not out of the accessibility tree — the same treatment
+   `.bp-visually-hidden` gives, undone at the breakpoint below. */
+.bp-player-mixer-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 40rem) {
+  .bp-player-mixer {
+    width: auto;
+    min-height: 36px;
+    padding: 0.375rem 0.8125rem;
+    border-radius: var(--radius-pill, 999px);
+  }
+
+  .bp-player-mixer::after {
+    content: none;
+  }
+
+  .bp-player-mixer-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+}
+
 /* Bottom tab bar — phones and tablets. */
 .bp-tabbar {
   position: fixed;
@@ -1747,7 +1830,8 @@ a.bp-btn {
    It was a 48px circle of its own, which made one action look like two
    different controls on a single screen. */
 .bp-play-toggle,
-.bp-player-play {
+.bp-player-play,
+.bp-mixer-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1770,12 +1854,14 @@ a.bp-btn {
    it can be smaller than the 44px touch target; `--bp-play-disc` is the only
    thing the large variant has to change. */
 .bp-play-toggle,
-.bp-player-play {
+.bp-player-play,
+.bp-mixer-open {
   position: relative;
 }
 
 .bp-play-toggle::before,
-.bp-player-play::before {
+.bp-player-play::before,
+.bp-mixer-open::before {
   content: "";
   position: absolute;
   width: var(--bp-play-disc, 34px);
@@ -1798,12 +1884,15 @@ a.bp-btn {
 .bp-play-toggle:hover::before,
 .bp-play-toggle:focus-visible::before,
 .bp-player-play:hover::before,
-.bp-player-play:focus-visible::before {
+.bp-player-play:focus-visible::before,
+.bp-take-play-link:hover .bp-mixer-open::before,
+.bp-take-play-link:focus-visible .bp-mixer-open::before {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
 }
 
 .bp-play-toggle svg,
-.bp-player-play svg {
+.bp-player-play svg,
+.bp-mixer-open svg {
   position: relative;
 }
 
@@ -1863,7 +1952,11 @@ a.bp-btn {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.875rem 1rem;
+  /* A wider column gap than row gap, deliberately. Each of these is a disc
+     plus two lines of text, so at the page's usual 1rem the second disc
+     crowded the first one's caption and the four elements read as one run
+     rather than as two choices. */
+  gap: 0.875rem 2rem;
 }
 
 /* The disc alone said nothing about what pressing it would do — on a strip
@@ -1874,6 +1967,23 @@ a.bp-btn {
   display: flex;
   align-items: center;
   gap: 0.875rem;
+}
+
+/* The way into the mixer, given the same shape as the play control it sits
+   beside: a filled accent disc, a title, and a sub-line naming the source.
+   They are the two ways to hear this take, and a pill beside a disc made one
+   of them look like a footnote to the other.
+
+   It borrows the disc by adding `.bp-mixer-open` to the shared rules above
+   rather than by wearing `.bp-play-toggle` — that class is what a route test
+   reads as "this take HAS a play control", and a link that opens another page
+   must not answer that question. */
+.bp-take-play-link {
+  /* No underline, on hover either: the disc answers a hover with the same
+     halo the play control uses, and a second signal on the words would make
+     two controls that sit side by side behave differently. */
+  text-decoration: none;
+  color: inherit;
 }
 
 .bp-take-play-lead-text {
@@ -4241,13 +4351,72 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-take-hero-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  /* The same 0.875rem the ways below and the listen row use. This page had
+     three different gaps between buttons before it was noticed; the vote
+     pair's own 6px is the one deliberate exception, because those two are
+     halves of ONE choice rather than three separate actions. */
+  gap: 0.875rem;
   flex: none;
 }
 
+/* The heading and the actions wrap apart when they stop fitting — at ANY
+   width, not at a chosen breakpoint: a long song title or a narrowed desktop
+   window runs out of room just as a phone does.
+ *
+ * `flex-wrap` alone did nothing here, which is the part worth writing down.
+ * `.bp-title-row > :first-child` is `flex: 1; min-width: 0` so a heading can
+ * truncate, and an item that may shrink to zero never triggers a wrap — the
+ * row kept both on one line and broke "Čoudy: take 2" across three. The floor
+ * below is what makes the row wrap instead.
+ *
+ * It is `flex-basis`, not `min-width`, and that distinction is the whole fix.
+ * Flex decides where a line breaks from each item's HYPOTHETICAL size, which
+ * is its basis — so a basis of `max-content` says "this heading would like
+ * its natural width", and the buttons drop to the next line exactly when they
+ * cannot have what is left. `min-width` stays 0, so once the heading is alone
+ * on its line it still wraps its own text instead of overflowing: a song
+ * title longer than a phone is wide must never push the page into a
+ * horizontal scroll.
+ *
+ * Two things were tried first and are recorded so they are not tried again.
+ * A fixed `min-width: 14rem` is only ever right for one title — at 640px the
+ * heading squeezed to 243px and broke across two lines anyway, just under the
+ * floor rather than over it. And `min-width: min(100%, max-content)` is not
+ * CSS at all: `min()` takes lengths, not keywords, so the browser dropped the
+ * declaration and the row behaved exactly as it had before. */
+.bp-take-detail-hero .bp-title-row {
+  flex-wrap: wrap;
+}
+
+.bp-take-detail-hero .bp-title-row > :first-child {
+  flex-basis: max-content;
+}
+
+/* Small variants once the row has dropped under the heading. Three full pills
+   across a phone is a band of colour heavier than the take's own name.
+ *
+ * Sized like `.bp-btn-xs` but NOT by borrowing it, because that variant's own
+ * comment rules out this use: its `::after` reaches 6px past the fill on every
+ * side, so two of them at a 0.5rem gap have hit areas that OVERLAP, and WCAG
+ * 2.5.8's spacing condition is what a sub-44px target leans on. The row's own
+ * 0.875rem gap is what makes this safe — 14px less two 6px reaches leaves the
+ * 44px targets 2px clear of each other — so that gap is load-bearing here,
+ * not styling. The four metrics below are a deliberate copy of
+ * `.bp-btn-xs`'s and have to stay in step with it. */
 @media (max-width: 39.999rem) {
-  .bp-take-detail-hero .bp-title-row {
-    flex-wrap: wrap;
+  .bp-take-hero-actions .bp-btn {
+    position: relative;
+    min-height: 32px;
+    min-width: 0;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .bp-take-hero-actions .bp-btn::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: inherit;
   }
 }
 
@@ -4436,6 +4605,27 @@ html:has(dialog.bp-filter-sheet[open]) body {
   border-inline-start: 1px solid var(--bp-color-border);
 }
 
+/* The tier and the size are desktop detail. On a phone this row is a file
+   name and three machine strings fighting for one line, and the name is what
+   anyone is actually looking for — `mp3` alone answers "what is this", while
+   whether it is lossy and how many kilobytes it runs to are questions asked
+   with a download in mind, on a machine you would download it to.
+ *
+ * CSS decides it, not `matchMedia`: one DOM at every width, no hydration
+ * mismatch, no flash — the same convention `.bp-mixer-grid` follows. Hiding
+ * an item leaves the separators correct because the rule that draws them
+ * sits on the FOLLOWING item, so the first visible one never carries a
+ * leading rule. */
+.bp-asset-row-meta-detail {
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .bp-asset-row-meta-detail {
+    display: revert;
+  }
+}
+
 /* The download. An icon and a 44px target rather than a labelled button: there
    is one per row and up to eight rows, and eight buttons reading "Download"
    down the right edge is a column of shouting. The row already names the file;
@@ -4613,7 +4803,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
   flex-wrap: wrap;
   justify-content: flex-start;
   align-items: center;
-  gap: 0.375rem;
+  /* 0.875rem, the gap every other row of controls on the take page uses —
+     the hero's actions, the ways, the listen row. It was 0.375rem, which read
+     as two halves of one segmented control rather than two answers you pick
+     between, and made this the one strip on the page spaced differently from
+     the rest. */
+  gap: 0.875rem;
   min-width: 0;
   max-width: 100%;
 }

@@ -18,17 +18,9 @@
 // this repo can run.
 import { type Locale, mixerMessages } from "@bandplate/i18n";
 import { trackColorVar } from "@bandplate/ui/tokens/track-colors.js";
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import { type LanePeaks, mixerLaneBars } from "../client/mixer-peaks.js";
-import {
-  DEFAULT_SYNC_TUNING,
-  INITIAL_SYNC_STATE,
-  type SyncState,
-  type TrackSample,
-  decideSync,
-  resetSyncState,
-} from "../client/mixer-sync.js";
 import { timelineTicks } from "../client/mixer-ticks.js";
 import {
   type MixerState,
@@ -39,6 +31,7 @@ import {
   toggleMuteMine,
   trackGains,
 } from "../client/mixer-tracks.js";
+import { type MixerFailure, useMixerEngine } from "../client/use-mixer-engine.js";
 
 export interface MixerTrackProps {
   assetId: string;
@@ -57,21 +50,10 @@ export interface MixerProps {
   locale?: Locale;
 }
 
-/** How often alignment is checked. A timer, not rAF: rAF stops dead in a background tab. */
-const SYNC_INTERVAL_MS = 250;
-
-/** Mutes and un-mutes ramp rather than jump, or every press is a click. */
-const GAIN_RAMP_S = 0.015;
-
-/** Give up waiting for a track to become playable. Long, because this is a cold start over the network. */
-const START_TIMEOUT_MS = 20_000;
-
 /** One bar per this many CSS pixels, matching the player's waveform. */
 const BAR_PITCH_PX = 3;
 const MIN_BARS = 40;
 const MAX_BARS = 600;
-
-type Phase = "idle" | "starting" | "playing" | "paused" | "failed";
 
 /** mm:ss. Floored, because it is a running clock and rounding it up shows a second that has not happened. */
 function clock(seconds: number): string {
@@ -82,13 +64,26 @@ function clock(seconds: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
+/**
+ * The engine reports WHY it stopped; the words are chosen here, in the
+ * reader's language. Same division this app keeps everywhere between a
+ * decision and the sentence for it.
+ */
+function failureText(
+  t: ReturnType<typeof mixerMessages>,
+  tracks: MixerTrackProps[],
+  failure: MixerFailure,
+): string {
+  if (failure.kind === "cant-start") {
+    return t.cantStart;
+  }
+  return t.trackFailed(tracks[failure.index]?.label ?? "");
+}
+
 export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: MixerProps) {
   const t = mixerMessages(currentLocale(locale));
 
   const [mix, setMix] = useState<MixerState>(() => initialMixerState(tracks));
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [failure, setFailure] = useState<string>("");
-  const [position, setPosition] = useState(0);
   const [lanes, setLanes] = useState<(number[] | null)[]>(() => tracks.map(() => null));
   /**
    * Whether the waveforms are still arriving.
@@ -100,418 +95,26 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
    */
   const [lanesLoading, setLanesLoading] = useState(true);
   const [bars, setBars] = useState(160);
-  const [duration, setDuration] = useState(0);
-  /** Any track waiting on bytes. The servo already computes this; the page should say it. */
-  const [buffering, setBuffering] = useState(false);
   const lanesRef = useRef<HTMLDivElement | null>(null);
   /**
    * The ruler's axis — the same grid track the waveforms occupy.
    *
    * The bar count is measured from THIS, not from the lane stack: the stack
-   * includes the 11.5rem control gutter, so measuring it asked for a third
-   * again as many bars as the column can hold. They came out 1.2px wide with
-   * a 1px gap between them and the waveform read as grey haze rather than as
-   * a shape.
+   * includes the control gutter, so measuring it asked for a third again as
+   * many bars as the column can hold, and they came out 1.2px wide with a 1px
+   * gap between them.
    */
   const axisRef = useRef<HTMLDivElement | null>(null);
 
-  const ctxRef = useRef<AudioContext | null>(null);
-  const masterRef = useRef<GainNode | null>(null);
-  const elementsRef = useRef<HTMLAudioElement[]>([]);
-  const gainsRef = useRef<GainNode[]>([]);
-  const wiredRef = useRef<boolean[]>([]);
-  const syncRef = useRef<SyncState>(INITIAL_SYNC_STATE);
-  /**
-   * Which seek is current, and whether one is running.
-   *
-   * Both exist because the sync loop writes `position` from the elements
-   * every 250ms. Land a seek between the write and the elements actually
-   * arriving, and the loop reports the OLD position and the playhead snaps
-   * back — which is why clicking the timeline appeared to work only every
-   * second or third try. The loop stands down while a seek is in flight, and
-   * the generation lets a superseded seek abandon its own tail rather than
-   * restoring the gain a newer one is still ramping.
-   */
-  const seekGenerationRef = useRef(0);
-  /**
-   * How many seeks are in flight. A COUNT, not a flag.
-   *
-   * A flag looked equivalent and was not: a superseded seek returned early
-   * without clearing it, so after two overlapping clicks the sync loop stood
-   * down permanently. The clock froze, the playhead stopped following the
-   * audio, and every later click moved a dead indicator — which is why
-   * seeking looked unreliable only while playing, and only when clicks came
-   * close enough together to overlap.
-   *
-   * Incremented once per call and decremented in a `finally`, so no early
-   * return can leave it raised.
-   */
-  const pendingSeeksRef = useRef(0);
-  /**
-   * Whether playback is INTENDED, as opposed to whether the elements happen
-   * to be running right now.
-   *
-   * `alignTo` pauses every element before it seeks, so a second seek arriving
-   * mid-flight asked "are they playing?" and was told no — by the first
-   * seek's own pause. It then finished without resuming, leaving the audio
-   * stopped while the transport still said playing and the clock sat frozen.
-   * Intent cannot be read off the things the operation itself suspends.
-   */
-  const shouldPlayRef = useRef(false);
-  // The live mix, for the sync loop and the gain effect to read without
-  // either of them becoming a dependency that re-runs the other.
-  const mixRef = useRef(mix);
-  mixRef.current = mix;
-
-  // --- graph ---------------------------------------------------------------
-
-  const teardown = useCallback(() => {
-    for (const el of elementsRef.current) {
-      el.pause();
-      el.removeAttribute("src");
-      el.load();
-    }
-    elementsRef.current = [];
-    gainsRef.current = [];
-    wiredRef.current = [];
-    const ctx = ctxRef.current;
-    ctxRef.current = null;
-    masterRef.current = null;
-    // Chrome caps simultaneous AudioContexts at around six, so leaking one per
-    // visit bricks the page after a handful of trips — which looks like a
-    // browser bug rather than ours.
-    if (ctx && ctx.state !== "closed") {
-      void ctx.close();
-    }
-  }, []);
-
-  useEffect(() => {
-    const ctx = new AudioContext();
-    const master = ctx.createGain();
-    // Seven stems sum to roughly the original master, so unity is right —
-    // until three faders go up. Web Audio's destination hard-clips, which
-    // sounds like destruction rather than loudness, so one compressor of
-    // insurance sits in front of it.
-    const guard = ctx.createDynamicsCompressor();
-    guard.threshold.value = -1;
-    guard.ratio.value = 20;
-    master.connect(guard);
-    guard.connect(ctx.destination);
-    ctxRef.current = ctx;
-    masterRef.current = master;
-
-    const elements: HTMLAudioElement[] = [];
-    const gains: GainNode[] = [];
-    const wired: boolean[] = [];
-
-    tracks.forEach((track, index) => {
-      const el = new Audio();
-      // Mandatory, and the single thing most likely to make this silently
-      // produce nothing: the src is same-origin but 302s to the bucket, and
-      // without this the response is opaque, the element is tainted, and
-      // `createMediaElementSource` outputs silence with no error at all.
-      el.crossOrigin = "anonymous";
-      // Not `none` (the shell player's convention) and not `auto`. Metadata
-      // means the duration is known before anyone presses anything and the
-      // CORS handshake happens up front, so a misconfiguration surfaces as an
-      // `error` event rather than as eight minutes of silence. `auto` would be
-      // seven full downloads whether or not play is ever pressed, and iOS
-      // downgrades it to metadata anyway.
-      el.preload = "metadata";
-      el.src = `/api/assets/${track.assetId}/audio`;
-
-      const gain = ctx.createGain();
-      gain.gain.value = 0;
-      gain.connect(master);
-
-      // Lazily, on `loadedmetadata`, never at construction: Safari has
-      // historically returned permanent silence for THAT ELEMENT ALONE when
-      // the node was created before the element loaded — six of seven stems
-      // still play, which is the worst kind of partial failure.
-      el.addEventListener("loadedmetadata", () => {
-        // The axis is the LONGEST track, never the first: a stem is allowed
-        // to be shorter than the take. Read HERE as well as in the sync tick,
-        // or the ruler has no scale and draws no ticks until someone presses
-        // play — which is exactly when they are least useful.
-        if (Number.isFinite(el.duration)) {
-          setDuration((current) => Math.max(current, el.duration));
-        }
-        if (wired[index] || ctxRef.current !== ctx) {
-          return;
-        }
-        wired[index] = true;
-        ctx.createMediaElementSource(el).connect(gain);
-      });
-      el.addEventListener("error", () => {
-        setFailure(t.trackFailed(track.label));
-      });
-
-      el.load();
-      elements.push(el);
-      gains.push(gain);
-      wired.push(false);
-    });
-
-    elementsRef.current = elements;
-    gainsRef.current = gains;
-    wiredRef.current = wired;
-    return teardown;
-    // Built once for this take. `t` is read only inside handlers.
-  }, [tracks, teardown, t.trackFailed]);
-
-  // --- gains ---------------------------------------------------------------
-
-  useEffect(() => {
-    const ctx = ctxRef.current;
-    if (!ctx) {
-      return;
-    }
-    const wanted = trackGains(mix.tracks);
-    mix.tracks.forEach((track, index) => {
-      const gain = gainsRef.current[index];
-      if (!gain) {
-        return;
-      }
-      // Ramped, not assigned: an instant gain change is a click.
-      gain.gain.setTargetAtTime(wanted.get(track.assetId) ?? 0, ctx.currentTime, GAIN_RAMP_S);
-    });
-  }, [mix]);
-
-  // --- transport -----------------------------------------------------------
-
-  /**
-   * Put every element on the same instant.
-   *
-   * Stop-the-world, never a compensated `currentTime = leader + guess`: the
-   * seek latency is unknowable and wrong differently on every engine. Costs a
-   * short hole in the audio, which is rare and beats a long detune.
-   */
-  const alignTo = useCallback(async (targetS: number) => {
-    const elements = elementsRef.current;
-    const master = masterRef.current;
-    const ctx = ctxRef.current;
-    if (!ctx || !master) {
-      return;
-    }
-    const generation = ++seekGenerationRef.current;
-    pendingSeeksRef.current++;
-    try {
-      master.gain.setTargetAtTime(0, ctx.currentTime, GAIN_RAMP_S);
-      // The playhead moves HERE, not only from the sync loop. That loop runs
-      // while playing, so leaving it to report the new position meant a seek
-      // did nothing visible whenever the mixer was paused or had never been
-      // started — which is most of the time someone spends clicking a
-      // timeline.
-      setPosition(targetS);
-      for (const el of elements) {
-        el.pause();
-        el.currentTime = targetS;
-      }
-      await Promise.all(
-        elements.map(
-          (el) =>
-            new Promise<void>((resolve) => {
-              if (el.seeking === false) {
-                resolve();
-                return;
-              }
-              const done = () => {
-                el.removeEventListener("seeked", done);
-                resolve();
-              };
-              el.addEventListener("seeked", done);
-              setTimeout(done, 2000);
-            }),
-        ),
-      );
-      // A newer seek started while this one waited on `seeked`. Its target is
-      // the one that should win, and it will restore the gain itself —
-      // finishing here would fight it.
-      if (seekGenerationRef.current !== generation) {
-        return;
-      }
-      if (shouldPlayRef.current) {
-        for (const el of elements) {
-          void el.play().catch(() => undefined);
-        }
-      }
-      syncRef.current = resetSyncState();
-      master.gain.setTargetAtTime(1, ctx.currentTime, GAIN_RAMP_S);
-    } finally {
-      pendingSeeksRef.current = Math.max(0, pendingSeeksRef.current - 1);
-    }
-  }, []);
-
-  const start = useCallback(() => {
-    const ctx = ctxRef.current;
-    const master = masterRef.current;
-    const elements = elementsRef.current;
-    if (!ctx || !master || elements.length === 0) {
-      return;
-    }
-    setFailure("");
-    setPhase("starting");
-    shouldPlayRef.current = true;
-    // Everything reachable from the gesture, synchronously. iOS unlocks per
-    // element per document, and Safari loses the gesture across an `await` —
-    // so no await, no fetch, no Promise.all before this loop.
-    void ctx.resume();
-    // Silently: elements become playable at different moments, and starting
-    // audibly means seven ragged entrances.
-    master.gain.value = 0;
-    let rejected = false;
-    for (const el of elements) {
-      el.preservesPitch = false;
-      el.playbackRate = 1;
-      void el.play().catch(() => {
-        rejected = true;
-      });
-    }
-
-    const began = performance.now();
-    const settle = window.setInterval(() => {
-      const ready = elements.every((el) => el.readyState >= 3 /* HAVE_FUTURE_DATA */);
-      const timedOut = performance.now() - began > START_TIMEOUT_MS;
-      if (!ready && !timedOut) {
-        return;
-      }
-      window.clearInterval(settle);
-      if (rejected || (!ready && timedOut)) {
-        // Six stems playing and one refusing is worse than nothing playing.
-        shouldPlayRef.current = false;
-        for (const el of elements) {
-          el.pause();
-        }
-        setPhase("failed");
-        setFailure(t.cantStart);
-        return;
-      }
-      void alignTo(elements[0]?.currentTime ?? 0).then(() => setPhase("playing"));
-    }, 100);
-  }, [alignTo, t.cantStart]);
-
-  const pause = useCallback(() => {
-    shouldPlayRef.current = false;
-    for (const el of elementsRef.current) {
-      el.pause();
-    }
-    setPhase("paused");
-    setBuffering(false);
-  }, []);
-
-  // Space starts and stops, which is what every transport in every DAW does
-  // and the first thing anyone tries with an instrument in their hands.
-  //
-  // Two things it must NOT do. It must not fire while a control has focus —
-  // Space is already how you press a focused button and how you nudge a
-  // focused range, and stealing it there breaks the keyboard path the faders
-  // and M/S depend on. And it must not run while a text field or a
-  // contenteditable has focus anywhere on the page.
-  //
-  // `preventDefault` only once we have decided to act, so Space still scrolls
-  // the page when the mixer is not what you are using.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      // `code`, not `key`: `code` is the physical key regardless of layout or
-      // modifier state, and `key` for the space bar is a single space that is
-      // easy to mistype and that some senders spell differently. `key` stays
-      // as a fallback for anything that reports no `code`.
-      const isSpace = event.code === "Space" || event.key === " ";
-      if (!isSpace || event.repeat || event.metaKey || event.ctrlKey || event.altKey) {
-        return;
-      }
-      const target = event.target as HTMLElement | null;
-      // Stand down where Space already MEANS something: it presses a focused
-      // button or link, toggles a checkbox, and types into a field.
-      //
-      // A range is the exception, and it matters here: dragging the scrub
-      // leaves it focused, and Space has no standard action on a range — so
-      // guarding every INPUT meant that after one scrub the transport's own
-      // key silently stopped working, which is exactly when someone reaches
-      // for it.
-      const isRange = target instanceof HTMLInputElement && target.type === "range";
-      if (
-        !isRange &&
-        (target?.isContentEditable ||
-          (target && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(target.tagName)))
-      ) {
-        return;
-      }
-      if (phase === "starting") {
-        return;
-      }
-      event.preventDefault();
-      if (phase === "playing") {
-        pause();
-      } else {
-        start();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [phase, pause, start]);
-
-  // --- alignment -----------------------------------------------------------
-
-  useEffect(() => {
-    if (phase !== "playing") {
-      return;
-    }
-    const id = window.setInterval(() => {
-      // Mid-seek the elements still report where they WERE. Reading them here
-      // is what made a click on the timeline look unreliable.
-      if (pendingSeeksRef.current > 0) {
-        return;
-      }
-      const elements = elementsRef.current;
-      const samples: TrackSample[] = elements.map((el) => ({
-        mediaTime: el.readyState >= 1 ? el.currentTime : null,
-        ended: el.ended,
-        // `readyState < HAVE_FUTURE_DATA` while playing IS buffering.
-        stalled: !el.paused && el.readyState < 3,
-      }));
-      setBuffering(samples.some((sample) => sample.stalled));
-      const { state, decision } = decideSync(samples, syncRef.current, DEFAULT_SYNC_TUNING);
-      syncRef.current = state;
-      const leader =
-        decision.leaderIndex === null ? null : (samples[decision.leaderIndex]?.mediaTime ?? null);
-      setPosition(leader ?? 0);
-      // The axis is the LONGEST track, never the first: a stem is allowed to
-      // be shorter than the take. Read here rather than in an effect of its
-      // own because this is the one place that already knows metadata has
-      // arrived — `duration` is NaN until it has.
-      const longest = elements.reduce(
-        (max, el) => (Number.isFinite(el.duration) ? Math.max(max, el.duration) : max),
-        0,
-      );
-      if (longest > 0) {
-        setDuration((current) => (current === longest ? current : longest));
-      }
-      if (decision.kind === "resync") {
-        void alignTo(decision.targetS);
-      }
-    }, SYNC_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [phase, alignTo]);
-
-  // --- lifecycle -----------------------------------------------------------
-
-  useEffect(() => {
-    // The only hook the Back button reaches. Without it, leaving the page
-    // leaves seven streams running with no control anywhere.
-    const onHide = (event: PageTransitionEvent) => {
-      shouldPlayRef.current = false;
-      for (const el of elementsRef.current) {
-        el.pause();
-      }
-      setPhase("paused");
-      if (!event.persisted) {
-        teardown();
-      }
-    };
-    window.addEventListener("pagehide", onHide);
-    return () => window.removeEventListener("pagehide", onHide);
-  }, [teardown]);
+  // Mute, solo and fader resolve to one number per track HERE, in a pure
+  // module, and the engine is handed the result — so it never learns what a
+  // mute is, and the rule stays somewhere a node-only test can reach.
+  // Memoised on the CONTROLS, not recomputed per render: the engine reports a
+  // position four times a second, and a fresh Map each time would re-ramp
+  // every GainNode on every tick for no change at all.
+  const gains = useMemo(() => trackGains(mix.tracks), [mix.tracks]);
+  const engine = useMixerEngine({ sources: tracks, gains });
+  const { phase, position, duration, buffering, failure } = engine;
 
   // --- waveforms -----------------------------------------------------------
 
@@ -578,10 +181,10 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   const scrubTo = useCallback(
     (fraction: number) => {
       if (duration > 0) {
-        void alignTo(fraction * duration);
+        engine.seekTo(fraction * duration);
       }
     },
-    [alignTo, duration],
+    [engine, duration],
   );
 
   // --- render --------------------------------------------------------------
@@ -593,7 +196,9 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     <div class="bp-mixer">
       {/* `<output>`, not a `<p role="status">`: it IS the element for a
           result the page computed, and it carries the live region for free. */}
-      {failure && <output class="bp-mixer-note bp-mixer-failure">{failure}</output>}
+      {failure && (
+        <output class="bp-mixer-note bp-mixer-failure">{failureText(t, tracks, failure)}</output>
+      )}
 
       <div class="bp-mixer-lanes" ref={lanesRef} style={`--bp-mix-progress: ${progress}`}>
         {/* One playhead for the stack, not one per lane. `aria-hidden` because
@@ -621,7 +226,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
               aria-pressed={playing}
               aria-label={playing ? t.pause : t.play}
               disabled={busy}
-              onClick={playing ? pause : start}
+              onClick={playing ? engine.pause : engine.play}
             >
               <svg
                 class="bp-play-icon-play"

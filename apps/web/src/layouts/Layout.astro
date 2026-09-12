@@ -19,15 +19,20 @@ const { title, noindex = false, description } = Astro.props;
 /**
  * What a shared bandplate link says about itself.
  *
- * The same sentence `/login` renders, and for the same reason: it is the one
- * place the product describes itself, and a preview card has exactly that job.
+ * The DEFAULT is the same sentence `/login` renders, and for the same reason:
+ * it is the one place the product describes itself, and a preview card has
+ * exactly that job. Pages that know what they are about — a take, a song, an
+ * event — pass their own instead, built from what they already render, so the
+ * card and the page cannot drift apart.
  *
- * It is also, in practice, the only description anyone outside the band will
- * ever see. Every page is behind the session middleware, so an unauthenticated
- * crawler following a link to `/songs/dub-corner` is redirected to `/login` and
- * previews THAT — which is the correct outcome for a private archive (a card
- * that named the song would leak the archive to every chat the link is pasted
- * into) and the reason there is one card here rather than a per-page one.
+ * A per-page description leaks nothing, and the reason is worth keeping
+ * written down. Every page is behind the session middleware, so an
+ * unauthenticated crawler following a link to `/songs/dub-corner` is
+ * redirected to `/login` and previews THAT — the product pitch, never the
+ * song. What these sentences actually serve is the signed-in reader: the
+ * browser tab, the history entry, the bookmark, and an unfurl inside a tool
+ * that carries the session. If any page of this archive is ever made public,
+ * THAT is the change that needs this decision revisited, not this one.
  */
 const t = messages(Astro.locals.locale);
 

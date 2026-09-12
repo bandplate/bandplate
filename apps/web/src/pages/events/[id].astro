@@ -126,6 +126,17 @@ const heldAtValue = `${heldAtDate.getFullYear()}-${String(heldAtDate.getMonth() 
 // A take added from an event's own page defaults to the day of the event —
 // which is what it was, nearly always.
 const takeDateValue = heldAtValue;
+
+// Kind, date, venue and how many takes came out of it — the four things that
+// tell one rehearsal from another in a list of them. Venue drops out when
+// there isn't one rather than leaving a dangling separator.
+const shareDescription = [
+  `${kindTitle} — ${formatLongDate(locale, event.heldAt)}`,
+  event.venue,
+  t.takes.count(takeTotal),
+]
+  .filter(Boolean)
+  .join(" · ");
 const justTakeDeleted = Astro.url.searchParams.get("take_deleted") === "1";
 const justMerged = Astro.url.searchParams.get("merged") === "1";
 // The duplicate this app cannot prevent, offered a repair. Shown to anyone —
@@ -138,7 +149,12 @@ const [allSongs, allInstruments] = await Promise.all([
 ]);
 ---
 
-<AppLayout title={event.title ?? kindTitle} principal={principal} current="events">
+<AppLayout
+  title={event.title ?? kindTitle}
+  description={shareDescription}
+  principal={principal}
+  current="events"
+>
   <div class="bp-stack">
     {isArchived && (
       <Banner kind="info" title={t.events.archivedBanner}>

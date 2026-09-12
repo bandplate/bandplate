@@ -185,6 +185,9 @@ const heroSubtitle = event
   ? `${kindLabel} — ${formatLongDate(locale, event.heldAt)}`
   : formatLongDate(locale, take.recordedAt);
 
+// The link preview's sentence is the page's own lede. A second one written
+// for the card is a second one to keep true.
+
 /** An admin, on a take the band has not yet ruled on. */
 const canDecide = isAdmin && (take.state === "published" || take.state === "new");
 
@@ -234,7 +237,12 @@ function assetLabel(asset: assetsRepo.Asset): string {
 }
 ---
 
-<AppLayout title={song ? t.takes.pageTitle(heroTitle) : t.takes.pageTitleUnknown} principal={principal} current="home">
+<AppLayout
+  title={song ? t.takes.pageTitle(heroTitle) : t.takes.pageTitleUnknown}
+  description={heroLede}
+  principal={principal}
+  current="home"
+>
   {/* Direction T3 from the design canvas: labelled STRIPS hanging off one
       edge, divided by rules, no cards. It is the same grammar the song page
       uses, which is the whole argument for it — a member moving between the

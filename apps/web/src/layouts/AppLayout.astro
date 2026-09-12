@@ -19,6 +19,16 @@ import Layout from "./Layout.astro";
 
 export interface Props {
   title: string;
+  /**
+   * The one sentence under the title in a link preview, and the page's own
+   * `<meta name="description">`.
+   *
+   * Forwarded to `Layout`, which is where the default lives. A page that
+   * knows what it is about — a take, a song, an event — should say so rather
+   * than repeat the product pitch; see `Layout`'s own note for why that is
+   * safe to do on a private archive.
+   */
+  description?: string;
   principal: MemberPrincipal;
   current: NavKey;
   // Which admin section is open, when `current` is "admin". The sidebar lists
@@ -60,6 +70,7 @@ export interface Props {
 
 const {
   title,
+  description,
   principal,
   current,
   adminSection,
@@ -119,7 +130,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
   : navItems;
 ---
 
-<Layout title={title}>
+<Layout title={title} description={description}>
   {transitions && <ClientRouter />}
   <div
     class="bp-route-progress"

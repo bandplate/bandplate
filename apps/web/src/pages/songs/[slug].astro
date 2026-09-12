@@ -133,6 +133,12 @@ const metaParts = [song.musicalKey, song.tempoBpm ? t.songs.bpm(song.tempoBpm) :
 // is recognized — see the `SongChart` union in server/song-text.ts for why
 // those are two different shapes rather than one that always tries to
 // interleave.
+// What this song IS in the archive: how much of it there is, in what key, at
+// what tempo. Built from strings the page already renders, so the link
+// preview cannot drift from what you see when you open it. `takeTotal`, not
+// `takes.length` — the latter is one page of them.
+const shareDescription = [t.takes.count(takeTotal), ...metaParts].join(" · ");
+
 const chart = buildSongChart(song.chordProgression, song.lyrics);
 
 // The edit sheet's rows, parsed server-side so the island has nothing to work
@@ -179,7 +185,12 @@ function eventOptionLabel(event: eventsRepo.Event): string {
 }
 ---
 
-<AppLayout title={song.title} principal={principal} current="songs">
+<AppLayout
+  title={song.title}
+  description={shareDescription}
+  principal={principal}
+  current="songs"
+>
   <div class="bp-stack">
     {/* An archived song still renders at its own URL rather than 404ing —
         every take of it links here, and a working link that answers "not

@@ -104,6 +104,18 @@ export const admin = {
   revokedCount: (count: number): string => `${count} revoked.`,
   archiveInstrumentNote:
     "Archiving an instrument hides it from new takes but keeps every past take that used it rendering correctly.",
+  /**
+   * The archived ones are behind a toggle rather than mixed into the table.
+   *
+   * The count is in the label because that is the whole question the toggle
+   * answers — whether there is anything back there worth a click. It is
+   * parenthesised rather than written into a sentence so neither language
+   * needs a plural form for it.
+   */
+  showArchived: (count: number): string => `Show archived (${count})`,
+  hideArchived: "Hide archived",
+  /** Every instrument this band has is archived — distinct from having none. */
+  emptyActiveInstruments: "Every instrument is archived.",
   /** Attribution for the icon set. The set's NAME and licence stay as they are. */
   iconCreditBefore: "Instrument icons from",
   iconCreditLicensed: ", licensed",

@@ -120,6 +120,10 @@ export const admin = {
   // en: Archiving an instrument hides it from new takes but keeps every past take that used it rendering correctly.
   archiveInstrumentNote:
     "Archivovaný nástroj zmizí z nových nahrávek, ale všechny starší, které ho použily, se dál zobrazují správně.",
+  // en: `Show archived (${count})`
+  showArchived: (count: number): string => `Zobrazit archivované (${count})`,
+  hideArchived: "Skrýt archivované", // en: Hide archived
+  emptyActiveInstruments: "Všechny nástroje jsou archivované.", // en: Every instrument is archived.
   iconCreditBefore: "Ikony nástrojů od", // en: Instrument icons from
   iconCreditLicensed: ", licence", // en: , licensed
 

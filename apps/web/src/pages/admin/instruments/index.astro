@@ -54,7 +54,24 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const instruments = await listInstruments(appDeps.db);
+// Archived instruments are fetched but not SHOWN by default. They are a
+// retired list, not a working one — an instrument is archived precisely so it
+// stops being one of the choices — and mixing them in put the band's real
+// instruments in a table they had to read past.
+//
+// One query, partitioned here rather than two: the count is what the toggle
+// below is for, so the hidden ones have to be known even while hidden.
+//
+// `show`, not `archived`: `?archived=1` already means "you just archived
+// one", and one parameter carrying two meanings is how a flash message ends
+// up doubling as a filter.
+const allInstruments = await listInstruments(appDeps.db);
+const archivedCount = allInstruments.filter((instrument) => instrument.archivedAt).length;
+const showArchived = Astro.url.searchParams.get("show") === "archived";
+const instruments = showArchived
+  ? allInstruments
+  : allInstruments.filter((instrument) => !instrument.archivedAt);
+
 const justCreated = Astro.url.searchParams.get("created") === "1";
 const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justArchived = Astro.url.searchParams.get("archived") === "1";
@@ -91,9 +108,23 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
     <p class="bp-field-hint bp-m0">
       {ta.archiveInstrumentNote}
     </p>
+
+    {/* Only when there is something back there. A toggle that reveals nothing
+        is a control that answers its own question before you press it. */}
+    {archivedCount > 0 && (
+      <p class="bp-field-hint bp-m0">
+        <a href={showArchived ? "/admin/instruments" : "/admin/instruments?show=archived"}>
+          {showArchived ? ta.hideArchived : ta.showArchived(archivedCount)}
+        </a>
+      </p>
+    )}
+
     {instruments.length === 0 ? (
       <div class="bp-empty-state">
-        <p>{ta.emptyInstruments}</p>
+        {/* "None yet" and "all of them are archived" are different facts, and
+            the first one tells someone with a full archive to go and add
+            their first instrument. */}
+        <p>{archivedCount > 0 ? ta.emptyActiveInstruments : ta.emptyInstruments}</p>
       </div>
     ) : (
       <div class="bp-table-wrap">
@@ -104,7 +135,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
               <th scope="col">{ta.colLabel}</th>
               <th scope="col">{ta.colSlug}</th>
               <th scope="col">{ta.colOrder}</th>
-              <th scope="col">{ta.colStatus}</th>
+              {showArchived && <th scope="col">{ta.colStatus}</th>}
               <th scope="col">{ta.colActions}</th>
             </tr>
           </thead>
@@ -135,13 +166,15 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                 </td>
                 <td data-label={ta.colSlug} class="bp-table-quiet">{instrument.slug}</td>
                 <td data-label={ta.colOrder} class="bp-table-quiet">{instrument.sortOrder}</td>
-                {/* Archived is the exception worth seeing; "active" as a badge
-                    on every other row was a column of decoration. */}
-                {/* One line, no surrounding whitespace: an unarchived
+                {/* Only in the archived view, where the column can say
+                    something: with archived rows hidden it was a header over
+                    a column of blanks on every single row.
+
+                    One line, no surrounding whitespace: an unarchived
                     instrument must leave this cell with NO child nodes so the
                     phone layout's `td:empty` rule can drop it, rather than
                     rendering a STATUS label with a blank beside it. */}
-                <td data-label={ta.colStatus}>{instrument.archivedAt && <span class="bp-kind">{ta.statusArchived}</span>}</td>
+                {showArchived && <td data-label={ta.colStatus}>{instrument.archivedAt && <span class="bp-kind">{ta.statusArchived}</span>}</td>}
                 <td data-label={ta.colActions}>
                   <button
                     type="button"

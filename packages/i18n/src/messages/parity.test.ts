@@ -84,6 +84,7 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "mixer.volume": [{ label: "i", args: ["Bass"] }],
   "mixer.trackFailed": [{ label: "i", args: ["Bass"] }],
   "mixer.onlyInMaster": [{ label: "list", args: ["Sax, Organ"] }],
+  "admin.showArchived": [{ label: "count", args: [3] }],
   "mixer.loopRegion": [{ label: "range", args: ["0:12", "0:34"] }],
   // Every Czech plural class, because "stopa/stopy/stop" is exactly the kind
   // of thing that gets one form and is never looked at again.

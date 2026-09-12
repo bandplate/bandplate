@@ -1,9 +1,17 @@
 import type { Db } from "@bandplate/db";
 import { instrumentsRepo } from "@bandplate/db";
 // `/admin/instruments` page logic — mirrors
-// `packages/api/src/routes/admin-instruments.ts`. Instruments are archived,
-// never deleted, so historical takes keep rendering an instrument the band
-// has dropped (see the schema comment in `packages/db`).
+// `packages/api/src/routes/admin-instruments.ts`.
+//
+// ARCHIVING is the ordinary retirement: the instrument stops being a choice
+// and every past take that used it keeps rendering. That is what a band wants
+// for an instrument it has stopped playing.
+//
+// DELETING exists for the other case — a typo, a duplicate, or a stub ingest
+// invented from a Reaper track name nobody meant to keep — and is only
+// offered while NOTHING references the instrument. It cannot cascade: an
+// instrument does not own a song's chart, a take's instrument list, or a
+// take's stem, so deleting one must never quietly edit any of them.
 import { INSTRUMENT_GLYPHS } from "@bandplate/ui/icons/instruments.js";
 import { isTrackColorKey } from "@bandplate/ui/tokens/track-colors.js";
 import { z } from "zod";
@@ -12,6 +20,38 @@ type Instrument = instrumentsRepo.Instrument;
 
 export async function listInstruments(db: Db): Promise<Instrument[]> {
   return instrumentsRepo.list(db, { includeArchived: true });
+}
+
+/**
+ * What each instrument is holding, for the admin list.
+ *
+ * Fetched for the whole table in one go: the delete action is only offered on
+ * an instrument nothing references, and "is this one safe to delete" is a
+ * question about every row on screen.
+ */
+export type InstrumentUsage = instrumentsRepo.InstrumentUsage;
+
+export async function instrumentUsage(db: Db): Promise<Map<string, InstrumentUsage>> {
+  return instrumentsRepo.usageByInstrument(db);
+}
+
+/**
+ * An instrument's usage, zeroes included.
+ *
+ * The map only carries instruments something references, so most rows are
+ * absent from it — and "absent" is the answer that matters most, since it is
+ * the one that allows a delete. Exported here rather than reached for through
+ * `instrumentsRepo` so the page keeps importing from one module.
+ */
+export function usageOf(
+  usage: Map<string, InstrumentUsage>,
+  instrumentId: string,
+): InstrumentUsage {
+  return usage.get(instrumentId) ?? instrumentsRepo.NO_USAGE;
+}
+
+export function isInstrumentUnused(usage: InstrumentUsage): boolean {
+  return instrumentsRepo.isUnused(usage);
 }
 
 export async function getInstrument(db: Db, id: string): Promise<Instrument | undefined> {
@@ -114,6 +154,35 @@ export async function updateInstrument(
     update.isStub = false;
   }
   await instrumentsRepo.update(db, id, update);
+  return { kind: "ok" };
+}
+
+export type DeleteInstrumentResult =
+  | { kind: "ok" }
+  | { kind: "not_found" }
+  /** Still referenced. The counts are the message — they say what is in the way. */
+  | { kind: "in_use"; usage: instrumentsRepo.InstrumentUsage };
+
+/**
+ * Delete an instrument, but only while nothing points at it.
+ *
+ * The usage is counted AGAIN here rather than trusted from the page that drew
+ * the button. Nothing stops a bridge run from declaring a take with this
+ * instrument between the list rendering and the press, and `PRAGMA
+ * foreign_keys` is off for D1 parity — so the database would accept the
+ * delete and leave the new take pointing at nothing. This re-check is the
+ * only thing standing between those two facts.
+ */
+export async function deleteInstrument(db: Db, id: string): Promise<DeleteInstrumentResult> {
+  const existing = await instrumentsRepo.getById(db, id);
+  if (!existing) {
+    return { kind: "not_found" };
+  }
+  const usage = (await instrumentsRepo.usageByInstrument(db)).get(id) ?? instrumentsRepo.NO_USAGE;
+  if (!instrumentsRepo.isUnused(usage)) {
+    return { kind: "in_use", usage };
+  }
+  await instrumentsRepo.remove(db, id);
   return { kind: "ok" };
 }
 

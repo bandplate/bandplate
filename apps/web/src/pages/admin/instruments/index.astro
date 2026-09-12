@@ -11,9 +11,13 @@ import AppLayout from "../../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
 import {
+  type InstrumentUsage,
   createInstrument,
+  instrumentUsage,
+  isInstrumentUnused,
   listInstruments,
   updateInstrument,
+  usageOf,
 } from "../../../server/pages/admin-instruments.js";
 
 const ta = adminMessages(Astro.locals.locale);
@@ -65,7 +69,34 @@ if (Astro.request.method === "POST") {
 // `show`, not `archived`: `?archived=1` already means "you just archived
 // one", and one parameter carrying two meanings is how a flash message ends
 // up doubling as a filter.
-const allInstruments = await listInstruments(appDeps.db);
+const [allInstruments, usage] = await Promise.all([
+  listInstruments(appDeps.db),
+  // For the whole table at once. Whether an instrument can be deleted is a
+  // question about every row on screen, and asking per row would be four
+  // queries times twelve.
+  instrumentUsage(appDeps.db),
+]);
+
+/**
+ * What is holding an instrument, as "takes (3) · members (2)".
+ *
+ * Only the non-zero parts, because a list of four zeroes says nothing. The
+ * counts sit in parentheses rather than in a sentence so neither language
+ * needs a plural form for four different nouns.
+ */
+function usageParts(u: InstrumentUsage): string {
+  return (
+    [
+      [ta.usedByTakes, u.takes],
+      [ta.usedByMembers, u.members],
+      [ta.usedByCharts, u.charts],
+      [ta.usedByStems, u.assets],
+    ] as const
+  )
+    .filter(([, n]) => n > 0)
+    .map(([noun, n]) => `${noun} (${n})`)
+    .join(" · ");
+}
 const archivedCount = allInstruments.filter((instrument) => instrument.archivedAt).length;
 const showArchived = Astro.url.searchParams.get("show") === "archived";
 const instruments = showArchived
@@ -80,6 +111,8 @@ const anyStatus = instruments.some((instrument) => instrument.archivedAt || inst
 const justCreated = Astro.url.searchParams.get("created") === "1";
 const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justArchived = Astro.url.searchParams.get("archived") === "1";
+const justDeleted = Astro.url.searchParams.get("deleted") === "1";
+const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
 ---
 
 <AppLayout title={ta.instrumentsTitle} principal={principal} current="admin" adminSection="instruments">
@@ -89,6 +122,8 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
     {justCreated && <Banner kind="success">{ta.instrumentAdded}</Banner>}
     {justUpdated && <Banner kind="success">{ta.instrumentUpdated}</Banner>}
     {justArchived && <Banner kind="success">{ta.instrumentArchived}</Banner>}
+    {justDeleted && <Banner kind="success">{ta.instrumentDeleted}</Banner>}
+    {deleteBlocked && <Banner kind="error">{ta.instrumentDeleteBlocked}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <form method="post" class="bp-admin-add" novalidate>
@@ -290,6 +325,29 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                         </fieldset>
 
                         <div class="bp-sheet-extras">
+                          {/* Delete sits beside Archive because they answer
+                              the same question from opposite ends: archive
+                              retires an instrument the band has stopped
+                              playing, delete removes one that should never
+                              have existed. Offered ONLY while nothing points
+                              at it — otherwise the reason takes its place, so
+                              nobody presses a button that cannot work. */}
+                          {isInstrumentUnused(usageOf(usage, instrument.id)) ? (
+                            <a
+                              href={`/admin/instruments/${instrument.id}/delete`}
+                              class="bp-sheet-danger"
+                              data-confirm
+                              data-confirm-title={`${ta.deleteInstrument}: ${instrument.label}`}
+                              data-confirm-body={ta.deleteInstrumentBody(instrument.label)}
+                              data-confirm-action={`/admin/instruments/${instrument.id}/delete`}
+                              data-confirm-cta={ta.deleteInstrument}
+                              data-confirm-redirect="/admin/instruments?deleted=1"
+                            >{ta.deleteThisInstrument}</a>
+                          ) : (
+                            <p class="bp-sheet-hint bp-m0">
+                              {ta.instrumentInUse(usageParts(usageOf(usage, instrument.id)))}
+                            </p>
+                          )}
                           {instrument.archivedAt ? (
                             <button
                               type="submit"

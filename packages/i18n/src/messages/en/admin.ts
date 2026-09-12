@@ -125,6 +125,35 @@ export const admin = {
   hideArchived: "Hide archived",
   /** Every instrument this band has is archived — distinct from having none. */
   emptyActiveInstruments: "Every instrument is archived.",
+
+  /**
+   * Deleting, which is not archiving.
+   *
+   * Archiving is retirement and keeps every past take rendering. Deleting is
+   * for the mistakes — a typo, a duplicate, a stub ingest invented from a
+   * Reaper track name — and is only possible while nothing points at the
+   * instrument at all.
+   */
+  deleteInstrument: "Delete instrument",
+  deleteThisInstrument: "Delete this instrument",
+  deleteInstrumentBody: (label: string): string =>
+    `${label} is gone for good. Nothing uses it, so nothing else changes.`,
+  /**
+   * Why the delete is not on offer, as a list of what is holding it.
+   *
+   * Counts in parentheses rather than written into the sentence, the same way
+   * the archived toggle does it — so neither language needs a plural form for
+   * four different nouns.
+   */
+  instrumentInUse: (parts: string): string =>
+    `In use, so it can't be deleted — ${parts}. Archive it instead.`,
+  usedByTakes: "takes",
+  usedByMembers: "members",
+  usedByCharts: "song charts",
+  usedByStems: "stems",
+  instrumentDeleted: "Instrument deleted.",
+  /** Something started using it between the page being drawn and the press. */
+  instrumentDeleteBlocked: "Something started using that instrument — nothing was deleted.",
   /** Attribution for the icon set. The set's NAME and licence stay as they are. */
   iconCreditBefore: "Instrument icons from",
   iconCreditLicensed: ", licensed",

@@ -1,8 +1,16 @@
-import { type Db, instrumentsRepo } from "@bandplate/db";
+import {
+  type Db,
+  eventsRepo,
+  instrumentsRepo,
+  membersRepo,
+  songsRepo,
+  takesRepo,
+} from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   createInstrument,
+  deleteInstrument,
   listInstruments,
   setInstrumentArchived,
   updateInstrument,
@@ -111,6 +119,76 @@ describe("admin instruments page logic", () => {
 
     await updateInstrument(db, instrument.id, formData({ label: "Bass guitar" }));
     expect((await instrumentsRepo.getById(db, instrument.id))?.isStub).toBe(false);
+  });
+
+  it("deletes an instrument nothing points at", async () => {
+    await createInstrument(db, formData({ slug: "melodica", label: "Melodica" }));
+    const [instrument] = await listInstruments(db);
+    if (!instrument) throw new Error("expected an instrument");
+
+    expect((await deleteInstrument(db, instrument.id)).kind).toBe("ok");
+    expect(await listInstruments(db)).toHaveLength(0);
+  });
+
+  it("refuses while a take still references it, and says what is in the way", async () => {
+    // The case the whole guard exists for: FKs are never enforced here
+    // (`PRAGMA foreign_keys` stays off for D1 parity), so the database would
+    // accept this delete and leave the take pointing at nothing.
+    await createInstrument(db, formData({ slug: "bass", label: "Bass" }));
+    const [instrument] = await listInstruments(db);
+    if (!instrument) throw new Error("expected an instrument");
+
+    // Real song and event rows: `createTestDb` turns foreign keys ON, which
+    // production and D1 do not. Worth knowing when reading this guard — the
+    // harness is STRICTER than the thing it is testing, so a test can never
+    // be the evidence that the orphan case is handled.
+    const song = await songsRepo.create(db, {
+      title: "Song",
+      slug: "song",
+      createdAt: 1_000,
+      updatedAt: 1_000,
+    });
+    const event = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: 1_000,
+      createdAt: 1_000,
+      updatedAt: 1_000,
+    });
+    await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: 1_000,
+      createdAt: 1_000,
+      updatedAt: 1_000,
+      instrumentIds: [instrument.id],
+    });
+
+    const result = await deleteInstrument(db, instrument.id);
+    expect(result.kind).toBe("in_use");
+    if (result.kind !== "in_use") throw new Error("expected in_use");
+    expect(result.usage.takes).toBe(1);
+    expect(result.usage.members).toBe(0);
+    // Still there. A refused delete must change nothing at all.
+    expect(await listInstruments(db)).toHaveLength(1);
+  });
+
+  it("counts a member's instrument as use", async () => {
+    await createInstrument(db, formData({ slug: "sax", label: "Sax" }));
+    const [instrument] = await listInstruments(db);
+    if (!instrument) throw new Error("expected an instrument");
+
+    const member = await membersRepo.create(db, {
+      email: "player@example.test",
+      displayName: "Player",
+      slug: "player",
+      createdAt: 1_000,
+    });
+    await membersRepo.setInstruments(db, member.id, [instrument.id]);
+
+    const result = await deleteInstrument(db, instrument.id);
+    expect(result.kind).toBe("in_use");
+    if (result.kind !== "in_use") throw new Error("expected in_use");
+    expect(result.usage.members).toBe(1);
   });
 
   it("reports not_found for an unknown instrument id", async () => {

@@ -1,7 +1,13 @@
 import { uuidv7 } from "@bandplate/core";
-import { eq, isNull } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
-import { instruments } from "../schema/sqlite/index.js";
+import {
+  assets,
+  instruments,
+  memberInstruments,
+  songInstrumentNotes,
+  takeInstruments,
+} from "../schema/sqlite/index.js";
 
 export type Instrument = typeof instruments.$inferSelect;
 
@@ -95,4 +101,89 @@ export async function update(db: Db, id: string, input: UpdateInstrumentInput): 
 export async function getById(db: Db, id: string): Promise<Instrument | undefined> {
   const [row] = await db.select().from(instruments).where(eq(instruments.id, id)).limit(1);
   return row;
+}
+
+/**
+ * What would break if an instrument were deleted, counted per table.
+ *
+ * Every one of these is a row that would be ORPHANED rather than removed.
+ * `PRAGMA foreign_keys` is off here so it matches D1, which does not enforce
+ * them either — so nothing in the database would refuse the delete, and a
+ * chord chart or a stem would simply end up pointing at an id that is not
+ * there. The check has to live in code, which is the same conclusion
+ * `songsRepo.remove` and `takesRepo.remove` reached.
+ *
+ * Counted for every instrument at once, four grouped queries rather than four
+ * per row: the admin list needs this for each instrument it draws, and a
+ * query per instrument per table is forty round trips on a twelve-instrument
+ * band.
+ */
+export interface InstrumentUsage {
+  /** Members who list it among their instruments. */
+  members: number;
+  /** Takes that were recorded with it. */
+  takes: number;
+  /** Songs with a chart written for it — the only one holding authored text. */
+  charts: number;
+  /** Audio files that ARE this instrument's stem. */
+  assets: number;
+}
+
+export const NO_USAGE: InstrumentUsage = { members: 0, takes: 0, charts: 0, assets: 0 };
+
+export function isUnused(usage: InstrumentUsage): boolean {
+  return usage.members === 0 && usage.takes === 0 && usage.charts === 0 && usage.assets === 0;
+}
+
+export async function usageByInstrument(db: Db): Promise<Map<string, InstrumentUsage>> {
+  const [members, takes, charts, assetRows] = await Promise.all([
+    db
+      .select({ id: memberInstruments.instrumentId, n: sql<number>`count(*)` })
+      .from(memberInstruments)
+      .groupBy(memberInstruments.instrumentId),
+    db
+      .select({ id: takeInstruments.instrumentId, n: sql<number>`count(*)` })
+      .from(takeInstruments)
+      .groupBy(takeInstruments.instrumentId),
+    db
+      .select({ id: songInstrumentNotes.instrumentId, n: sql<number>`count(*)` })
+      .from(songInstrumentNotes)
+      .groupBy(songInstrumentNotes.instrumentId),
+    db
+      .select({ id: assets.instrumentId, n: sql<number>`count(*)` })
+      .from(assets)
+      .groupBy(assets.instrumentId),
+  ]);
+
+  const usage = new Map<string, InstrumentUsage>();
+  const bump = (id: string | null, key: keyof InstrumentUsage, n: number) => {
+    // `assets.instrument_id` is nullable — every master in the archive lands
+    // in that group, and it belongs to no instrument.
+    if (!id) {
+      return;
+    }
+    const current = usage.get(id) ?? { ...NO_USAGE };
+    current[key] = Number(n);
+    usage.set(id, current);
+  };
+  for (const row of members) bump(row.id, "members", row.n);
+  for (const row of takes) bump(row.id, "takes", row.n);
+  for (const row of charts) bump(row.id, "charts", row.n);
+  for (const row of assetRows) bump(row.id, "assets", row.n);
+  return usage;
+}
+
+/**
+ * Delete an instrument outright.
+ *
+ * Deliberately NOT a cascade, and deliberately no dependent deletes beside
+ * it: an instrument does not OWN any of the rows that reference it. A chord
+ * chart belongs to a song, a take's instrument list belongs to the take, a
+ * stem belongs to a take's assets. Removing an instrument must never quietly
+ * edit any of them, which is why the only safe delete is one with nothing
+ * pointing at it — the caller checks `usageByInstrument` first, and checks it
+ * again at the moment of deleting.
+ */
+export async function remove(db: Db, id: string): Promise<void> {
+  await db.delete(instruments).where(eq(instruments.id, id));
 }

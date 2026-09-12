@@ -125,6 +125,22 @@ export const admin = {
   showArchived: (count: number): string => `Zobrazit archivované (${count})`,
   hideArchived: "Skrýt archivované", // en: Hide archived
   emptyActiveInstruments: "Všechny nástroje jsou archivované.", // en: Every instrument is archived.
+
+  deleteInstrument: "Smazat nástroj", // en: Delete instrument
+  deleteThisInstrument: "Smazat tenhle nástroj", // en: Delete this instrument
+  // en: `${label} is gone for good. Nothing uses it, so nothing else changes.`
+  deleteInstrumentBody: (label: string): string =>
+    `${label} bude nenávratně pryč. Nic ho nepoužívá, takže se nic dalšího nezmění.`,
+  // en: `In use, so it can't be deleted — ${parts}. Archive it instead.`
+  instrumentInUse: (parts: string): string =>
+    `Používá se, takže ho nejde smazat — ${parts}. Radši ho archivuj.`,
+  usedByTakes: "nahrávky", // en: takes
+  usedByMembers: "členové", // en: members
+  usedByCharts: "zápisy skladeb", // en: song charts
+  usedByStems: "stopy", // en: stems
+  instrumentDeleted: "Nástroj smazán.", // en: Instrument deleted.
+  // en: Something started using that instrument — nothing was deleted.
+  instrumentDeleteBlocked: "Nástroj se mezitím začal používat — nic se nesmazalo.",
   iconCreditBefore: "Ikony nástrojů od", // en: Instrument icons from
   iconCreditLicensed: ", licence", // en: , licensed
 

@@ -1,0 +1,61 @@
+---
+import { adminMessages } from "@bandplate/i18n";
+// No-JS fallback confirm page for deleting an instrument, beside this
+// folder's `archive.astro` and built the same way.
+//
+// Deleting is NOT archiving. Archiving retires an instrument and keeps every
+// past take rendering; this removes the row outright, and is only ever
+// reachable while nothing references it. `deleteInstrument` re-counts the
+// references itself rather than trusting the page that drew the button — a
+// bridge run can declare a take with this instrument between the two.
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import { deleteInstrument, getInstrument } from "../../../../server/pages/admin-instruments.js";
+
+const ta = adminMessages(Astro.locals.locale);
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/admin/instruments");
+}
+
+const appDeps = await getAppDeps();
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const { kind } = await deleteInstrument(appDeps.db, id);
+  if (isFetch) {
+    return new Response(kind, { status: kind === "ok" ? 200 : kind === "in_use" ? 409 : 404 });
+  }
+  // `in_use` lands back on the list rather than on an error page: something
+  // started using the instrument while this page was open, which is a change
+  // of fact rather than a mistake anyone made.
+  return Astro.redirect(`/admin/instruments?${kind === "ok" ? "deleted=1" : "in_use=1"}`);
+}
+
+const instrument = await getInstrument(appDeps.db, id);
+if (!instrument) {
+  return new Response("Instrument not found.", { status: 404 });
+}
+---
+
+<Layout title={ta.deleteInstrument}>
+  <ConfirmActionPage
+    bannerTitle={`${ta.deleteInstrument}: ${instrument.label}`}
+    cta={ta.deleteInstrument}
+    cancelHref="/admin/instruments"
+    cancelLabel={ta.cancel}
+  >
+    {ta.deleteInstrumentBody(instrument.label)}
+  </ConfirmActionPage>
+</Layout>

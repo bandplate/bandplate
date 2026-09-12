@@ -105,6 +105,16 @@ export const createTakeSchema = z.object({
   durationMs: z.number().int().nonnegative().nullish(),
   label: z.string().trim().min(1).max(500).nullish(),
   instruments: z.array(instrumentSlugSchema).default([]),
+  /**
+   * Let an unrecognised slug become a STUB instrument instead of failing.
+   *
+   * Opt-in and default false, mirroring `song.createIfMissing` exactly — a
+   * bridge that ships a mapping file keeps its typo protection, and one that
+   * does not can ask for the slugs it declares to be created. What arrives is
+   * a stub: the slug, a label taken from it, and nothing else, flagged in the
+   * admin table until a human finishes it.
+   */
+  createMissingInstruments: z.boolean().default(false),
   assets: z.array(assetInputSchema).min(1),
 });
 export type CreateTakeBody = z.infer<typeof createTakeSchema>;

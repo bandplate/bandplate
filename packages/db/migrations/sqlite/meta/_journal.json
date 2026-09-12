@@ -50,6 +50,13 @@
       "when": 1789110624327,
       "tag": "0006_add_instrument_color",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789207797204,
+      "tag": "0007_add_instrument_is_stub",
+      "breakpoints": true
     }
   ]
 }

@@ -161,6 +161,22 @@ export const instruments = sqliteTable("instruments", {
    * beside the field it belongs with rather than being pinned last.
    */
   color: text("color"),
+  /**
+   * Created by ingest for a slug that was not in the vocabulary yet, and not
+   * yet confirmed by a human.
+   *
+   * The same shape `songs.isStub` has, for the same reason: a bridge run must
+   * not fail because the band miked something new, but a Reaper track name is
+   * not a curated vocabulary entry either. A stub carries the slug it arrived
+   * as and nothing else — no icon, no colour, a label to be written — and the
+   * admin table says so until someone finishes it.
+   *
+   * It is what makes auto-creation safe at all. Rejecting unknown slugs was
+   * the old answer (contract v1 §7) and the objection it was built on —
+   * "BASS DI 2 would corrupt the filter vocabulary within one rehearsal" — is
+   * answered by the row being visibly unfinished rather than by refusing it.
+   */
+  isStub: integer("is_stub", { mode: "boolean" }).notNull().default(false),
   archivedAt: ts("archived_at"),
 });
 

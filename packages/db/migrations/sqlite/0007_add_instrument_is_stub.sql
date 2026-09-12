@@ -1,0 +1,14 @@
+-- Created by ingest for a slug that was not in the vocabulary, and not yet
+-- confirmed by a human. The same shape `songs.is_stub` has, for the same
+-- reason: a bridge run must not fail because the band miked something new,
+-- but a Reaper track name is not a curated vocabulary entry either.
+--
+-- This is what makes auto-creation safe. Contract v1 §7 rejected unknown
+-- slugs outright on the grounds that "BASS DI 2 would corrupt the filter
+-- vocabulary within one rehearsal" -- answered now by the row arriving
+-- visibly unfinished rather than by refusing it.
+--
+-- NOT NULL with a default, unlike `icon` and `color` beside it: there is no
+-- meaningful third state here, and every row that exists today was put there
+-- by a human, which is exactly what `false` says.
+ALTER TABLE `instruments` ADD `is_stub` integer DEFAULT false NOT NULL;

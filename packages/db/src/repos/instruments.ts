@@ -13,6 +13,8 @@ export interface CreateInstrumentInput {
   icon?: string | null;
   /** A key from `@bandplate/ui/tokens/track-colors`, or null for the neutral. */
   color?: string | null;
+  /** Created by ingest for an unrecognised slug, and not yet finished by a human. */
+  isStub?: boolean;
 }
 
 export async function create(db: Db, input: CreateInstrumentInput): Promise<Instrument> {
@@ -25,6 +27,7 @@ export async function create(db: Db, input: CreateInstrumentInput): Promise<Inst
       sortOrder: input.sortOrder ?? 0,
       icon: input.icon ?? null,
       color: input.color ?? null,
+      isStub: input.isStub ?? false,
     })
     .returning();
 
@@ -55,6 +58,14 @@ export async function archive(db: Db, id: string, archivedAt: number): Promise<v
 }
 
 export interface UpdateInstrumentInput {
+  /**
+   * Set false by the admin edit that finishes a stub.
+   *
+   * Saving the sheet IS the confirmation — there is no separate "approve"
+   * press, because the thing a stub is missing is exactly what that form
+   * asks for: a label worth reading, an icon, a colour, a place in the order.
+   */
+  isStub?: boolean;
   label?: string;
   sortOrder?: number;
   /** `null` unarchives; a number archives at that timestamp. */

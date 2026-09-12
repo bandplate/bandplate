@@ -554,6 +554,124 @@ describe("ingest API", () => {
       const instruments = await instrumentsRepo.list(testApp.db);
       expect(instruments.map((i) => i.slug).sort()).toEqual(["bass", "drums"]);
     });
+
+    it("creates a stub instrument when the declaration asks for it", async () => {
+      const testApp = await buildTestApp();
+      await seedInstruments(testApp);
+      const auth = await ingestToken(testApp);
+      await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "proj-stub",
+          kind: "rehearsal",
+          heldAt: "2026-09-05T19:30:00+02:00",
+        }),
+      });
+
+      const res = await testApp.app.request("/ingest/v1/takes", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "take-stub",
+          eventClientRef: "proj-stub",
+          song: { title: "Stub Song", createIfMissing: true },
+          recordedAt: "2026-09-05T20:14:33+02:00",
+          instruments: ["melodica"],
+          createMissingInstruments: true,
+          assets: [{ kind: "master", tier: "lossy", format: "opus", bytes: 10 }],
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      // The bridge is told what it just invented, on the run that invented it.
+      expect(body.createdInstruments).toEqual(["melodica"]);
+
+      const created = (await instrumentsRepo.list(testApp.db)).find((i) => i.slug === "melodica");
+      expect(created?.isStub).toBe(true);
+      // A label taken from the slug, and nothing else decided on anyone's
+      // behalf — the admin table's whole job is to show this as unfinished.
+      expect(created?.label).toBe("Melodica");
+      expect(created?.icon).toBeNull();
+      expect(created?.color).toBeNull();
+    });
+
+    it("resolves a stem against the stub it just created, rather than filing it as a master", async () => {
+      const testApp = await buildTestApp();
+      await seedInstruments(testApp);
+      const auth = await ingestToken(testApp);
+      await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "proj-stub2",
+          kind: "rehearsal",
+          heldAt: "2026-09-05T19:30:00+02:00",
+        }),
+      });
+
+      const res = await testApp.app.request("/ingest/v1/takes", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "take-stub2",
+          eventClientRef: "proj-stub2",
+          song: { title: "Stub Song 2", createIfMissing: true },
+          recordedAt: "2026-09-05T20:14:33+02:00",
+          createMissingInstruments: true,
+          assets: [
+            { kind: "master", tier: "lossy", format: "opus", bytes: 10 },
+            { kind: "stem", instrument: "cuica", tier: "lossy", format: "opus", bytes: 10 },
+          ],
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.createdInstruments).toEqual(["cuica"]);
+
+      // The vocabulary is RELOADED after the inserts, so the stem resolves to
+      // the new row. Patching the map in memory instead is how a stem ends up
+      // with a null instrument and reads as a second master.
+      const created = (await instrumentsRepo.list(testApp.db)).find((i) => i.slug === "cuica");
+      const rows = await assetsRepo.listByTake(testApp.db, body.takeId);
+      const stem = rows.find((a) => a.kind === "stem");
+      expect(stem?.instrumentId).toBe(created?.id);
+    });
+
+    it("still refuses when the declaration did not ask", async () => {
+      const testApp = await buildTestApp();
+      await seedInstruments(testApp);
+      const auth = await ingestToken(testApp);
+      await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "proj-stub3",
+          kind: "rehearsal",
+          heldAt: "2026-09-05T19:30:00+02:00",
+        }),
+      });
+
+      const res = await testApp.app.request("/ingest/v1/takes", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "take-stub3",
+          eventClientRef: "proj-stub3",
+          song: { title: "Stub Song 3", createIfMissing: true },
+          recordedAt: "2026-09-05T20:14:33+02:00",
+          instruments: ["theremin"],
+          createMissingInstruments: false,
+          assets: [{ kind: "master", tier: "lossy", format: "opus", bytes: 10 }],
+        }),
+      });
+      // The default is unchanged, which is the promise made to every bridge
+      // that ships a mapping file.
+      expect(res.status).toBe(422);
+      expect((await instrumentsRepo.list(testApp.db)).some((i) => i.slug === "theremin")).toBe(
+        false,
+      );
+    });
   });
 
   describe("idempotency — repeated runs converge, never duplicate", () => {

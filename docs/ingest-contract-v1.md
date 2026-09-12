@@ -354,10 +354,31 @@ vocabulary**, which an admin manages in the bandplate UI.
 `GET /api/ingest/v1/instruments` returns the live list — use it to build the
 bridge's mapping UI rather than hardcoding.
 
-An unknown slug is rejected with `422` listing the valid ones. This is deliberate:
-Reaper track names are messy, and letting `BASS DI 2` silently become a new
-instrument would corrupt the filter vocabulary within one rehearsal. Ship a
-user-editable mapping file (Reaper track name → bandplate slug) in the bridge.
+An unknown slug is rejected with `422` listing the valid ones. This is the
+default and it is deliberate: Reaper track names are messy, and letting
+`BASS DI 2` silently become a new instrument would corrupt the filter
+vocabulary within one rehearsal. Ship a user-editable mapping file (Reaper
+track name → bandplate slug) in the bridge.
+
+**`createMissingInstruments: true`** on the take declaration opts out of that
+refusal, the same way `song.createIfMissing` does for songs (§6 case 4). Each
+unrecognised slug becomes a **stub instrument**: the slug as given, a label
+derived from it (`drums-subkick` → `Drums Subkick`), no icon, no colour, and
+a flag that marks it unfinished in the admin UI until a human writes a real
+label and picks the rest. The response lists what it created:
+
+```json
+{ "takeId": "...", "songMatch": "created-stub", "createdInstruments": ["melodica"] }
+```
+
+`createdInstruments` is always present and is `[]` on the ordinary run. Watch
+it: a slug appearing there that nobody meant to add is a mapping file that has
+drifted, and it is far cheaper to see that on the run that caused it than as a
+strange row in the admin table weeks later.
+
+The stub is what makes this safe rather than the refusal — an auto-created row
+arrives visibly unfinished instead of posing as curated vocabulary. A bridge
+that ships a mapping file should still leave the flag off and keep the 422.
 
 ---
 

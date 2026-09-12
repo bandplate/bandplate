@@ -72,6 +72,11 @@ const instruments = showArchived
   ? allInstruments
   : allInstruments.filter((instrument) => !instrument.archivedAt);
 
+// The status column earns its place from the ROWS, not from the view: an
+// unfinished instrument is not archived, so tying the column to the archived
+// view would have hidden the one status anybody needs to act on.
+const anyStatus = instruments.some((instrument) => instrument.archivedAt || instrument.isStub);
+
 const justCreated = Astro.url.searchParams.get("created") === "1";
 const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justArchived = Astro.url.searchParams.get("archived") === "1";
@@ -135,7 +140,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
               <th scope="col">{ta.colLabel}</th>
               <th scope="col">{ta.colSlug}</th>
               <th scope="col">{ta.colOrder}</th>
-              {showArchived && <th scope="col">{ta.colStatus}</th>}
+              {anyStatus && <th scope="col">{ta.colStatus}</th>}
               <th scope="col">{ta.colActions}</th>
             </tr>
           </thead>
@@ -166,15 +171,15 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
                 </td>
                 <td data-label={ta.colSlug} class="bp-table-quiet">{instrument.slug}</td>
                 <td data-label={ta.colOrder} class="bp-table-quiet">{instrument.sortOrder}</td>
-                {/* Only in the archived view, where the column can say
-                    something: with archived rows hidden it was a header over
-                    a column of blanks on every single row.
+                {/* Only when some row on screen has a status to report: with
+                    nothing archived and nothing unfinished it was a header
+                    over a column of blanks on every single row.
 
-                    One line, no surrounding whitespace: an unarchived
+                    One line, no surrounding whitespace: an ordinary
                     instrument must leave this cell with NO child nodes so the
                     phone layout's `td:empty` rule can drop it, rather than
                     rendering a STATUS label with a blank beside it. */}
-                {showArchived && <td data-label={ta.colStatus}>{instrument.archivedAt && <span class="bp-kind">{ta.statusArchived}</span>}</td>}
+                {anyStatus && <td data-label={ta.colStatus}>{instrument.isStub && <span class="bp-kind bp-kind-stub">{ta.statusStub}</span>}{instrument.archivedAt && <span class="bp-kind">{ta.statusArchived}</span>}</td>}
                 <td data-label={ta.colActions}>
                   <button
                     type="button"

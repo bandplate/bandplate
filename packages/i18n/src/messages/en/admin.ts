@@ -98,6 +98,15 @@ export const admin = {
   archiveInstrument: "Archive instrument",
   /** Row states. Lowercase — they render inside `.bp-kind`, which uppercases. */
   statusArchived: "archived",
+  /**
+   * An instrument ingest created for a slug it did not recognise.
+   *
+   * "unfinished", not "new" or "pending": nothing is waiting on approval —
+   * the row already works and takes already reference it. What it lacks is a
+   * label worth reading, an icon, a colour and a place in the order, and
+   * saving the edit sheet is what completes it.
+   */
+  statusStub: "unfinished",
   statusRevoked: "revoked",
   statusInvited: "invited",
   statusDisabled: "disabled",

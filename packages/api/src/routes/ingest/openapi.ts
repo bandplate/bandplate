@@ -92,8 +92,20 @@ function buildOperationSpecs(): OperationSpec[] {
       },
       state: { type: "string", enum: ["uploading", "new", "published"] },
       uploads: { type: "array", items: uploadItemSchema },
+      // Always present, `[]` on the ordinary run — see contract §7. A slug in
+      // here that nobody meant to add is a drifted mapping file, reported on
+      // the run that caused it.
+      createdInstruments: { type: "array", items: { type: "string" } },
     },
-    required: ["takeId", "songId", "songCreated", "songMatch", "state", "uploads"],
+    required: [
+      "takeId",
+      "songId",
+      "songCreated",
+      "songMatch",
+      "state",
+      "uploads",
+      "createdInstruments",
+    ],
   };
 
   const commitResponse: JsonSchema = {
@@ -132,7 +144,7 @@ function buildOperationSpecs(): OperationSpec[] {
         "200": { description: "Take resolved.", schema: takeResponse },
         "409": { description: "song_not_found or assets_incomplete.", schema: errorSchema },
         "422": {
-          description: "unknown_instrument or validation_failed.",
+          description: "unknown_instrument (unless createMissingInstruments) or validation_failed.",
           schema: errorSchema,
         },
       },

@@ -34,7 +34,16 @@ function instrument(
   icon: string | null,
   color: string | null = null,
 ): instrumentsRepo.Instrument {
-  return { id: `i-${slug}`, slug, label, sortOrder: 0, icon, color, archivedAt: null };
+  return {
+    id: `i-${slug}`,
+    slug,
+    label,
+    sortOrder: 0,
+    icon,
+    color,
+    archivedAt: null,
+    isStub: false,
+  };
 }
 
 const BAND = [

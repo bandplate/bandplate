@@ -1,4 +1,4 @@
-import type { Db } from "@bandplate/db";
+import { type Db, instrumentsRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
@@ -85,6 +85,32 @@ describe("admin instruments page logic", () => {
     const [updated] = await listInstruments(db);
     expect(updated?.label).toBe("Bass guitar");
     expect(updated?.sortOrder).toBe(3);
+  });
+
+  it("saving the sheet is what finishes a stub", async () => {
+    // Ingest creates these; nothing in the admin does, so the flag has one
+    // direction of travel and the edit form is the end of it.
+    const created = await instrumentsRepo.create(db, {
+      slug: "melodica",
+      label: "Melodica",
+      isStub: true,
+    });
+
+    const result = await updateInstrument(db, created.id, formData({ label: "Melodica" }));
+    expect(result.kind).toBe("ok");
+
+    const updated = await instrumentsRepo.getById(db, created.id);
+    expect(updated?.isStub).toBe(false);
+  });
+
+  it("leaves an ordinary instrument alone — nothing in the admin MAKES a stub", async () => {
+    await createInstrument(db, formData({ slug: "bass", label: "Bass" }));
+    const [instrument] = await listInstruments(db);
+    if (!instrument) throw new Error("expected an instrument");
+    expect(instrument.isStub).toBe(false);
+
+    await updateInstrument(db, instrument.id, formData({ label: "Bass guitar" }));
+    expect((await instrumentsRepo.getById(db, instrument.id))?.isStub).toBe(false);
   });
 
   it("reports not_found for an unknown instrument id", async () => {

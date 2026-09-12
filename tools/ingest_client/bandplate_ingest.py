@@ -52,6 +52,7 @@ here is Reaper-specific.
         --project /path/to/session1 \\
         --event-kind rehearsal --venue "Zkušebna Vysočany" \\
         --create-missing-songs
+        --create-missing-instruments
 
 Re-running the exact same command is always safe — see the module's own
 idempotency comments below.
@@ -295,6 +296,7 @@ def ingest_project(
     venue: str | None,
     notes: str | None,
     create_missing_songs: bool,
+    create_missing_instruments: bool,
     max_uploads: int | None = None,
     log=print,
 ) -> dict[str, Any]:
@@ -328,10 +330,17 @@ def ingest_project(
             },
             "recordedAt": held_at,
             "instruments": [a.instrument for a in declared if a.kind == "stem"],
+            "createMissingInstruments": create_missing_instruments,
             "assets": [a.to_json() for a in declared],
         }
         take = client.post_take(take_body)
         log(f"  take {take_dir.name}: takeId={take['takeId']} state={take['state']} songMatch={take.get('songMatch')}")
+        # Said out loud, every time. A slug here that nobody meant to add is a
+        # mapping file that has drifted, and this run is the cheapest moment
+        # anyone will ever have to notice it.
+        created_instruments = take.get("createdInstruments") or []
+        if created_instruments:
+            log(f"    created instruments: {', '.join(created_instruments)} (unfinished — finish them in bandplate)")
 
         asset_by_id = {}
         # Pair each declared asset back to its server-assigned assetId by
@@ -378,6 +387,10 @@ def main() -> int:
     parser.add_argument("--venue", default=None)
     parser.add_argument("--notes", default=None)
     parser.add_argument("--create-missing-songs", action="store_true")
+    # Off by default, exactly as the server is: a bridge with a mapping file
+    # wants the 422, because a slug it does not recognise is a mapping bug and
+    # not a new instrument. Contract v1 §7.
+    parser.add_argument("--create-missing-instruments", action="store_true")
     parser.add_argument(
         "--simulate-crash-after-uploads",
         type=int,
@@ -402,6 +415,7 @@ def main() -> int:
             venue=args.venue,
             notes=args.notes,
             create_missing_songs=args.create_missing_songs,
+            create_missing_instruments=args.create_missing_instruments,
             max_uploads=args.simulate_crash_after_uploads,
         )
     except IngestError as e:

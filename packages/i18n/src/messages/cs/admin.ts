@@ -111,6 +111,7 @@ export const admin = {
   },
   archiveInstrument: "Archivovat nástroj", // en: Archive instrument
   statusArchived: "archivováno", // en: archived
+  statusStub: "nedokončeno", // en: unfinished
   statusRevoked: "zneplatněno", // en: revoked
   statusInvited: "pozván", // en: invited
   statusDisabled: "vypnutý", // en: disabled

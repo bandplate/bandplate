@@ -6039,6 +6039,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
    row, which IS a decision and keeps its pill. Tighter tracking than
    `.bp-eyebrow` because it appears inline next to running text rather than
    alone above a block. */
+/* An unfinished instrument, the one status on this table that asks for
+   something. Archived is a resting state and stays in the muted ink `.bp-kind`
+   gives every other badge; this one takes the accent, because a row nobody
+   finishes is a row the mixer paints grey and the filters label with a slug. */
+.bp-kind-stub {
+  color: var(--bp-color-accent);
+}
+
 .bp-kind {
   font-family: var(--bp-font-body);
   font-weight: 900;

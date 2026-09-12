@@ -102,6 +102,17 @@ export async function updateInstrument(
   if (colorField !== undefined) {
     update.color = colorField === "" ? null : colorField;
   }
+  // Saving the sheet IS the confirmation of a stub, so there is no separate
+  // "approve" press to forget: what a stub lacks is a label worth reading, an
+  // icon, a colour and a place in the order, and this form is exactly those
+  // four fields. Someone who opened it and pressed save has looked.
+  //
+  // Only ever set FALSE here. Nothing in the admin makes a stub — that is
+  // ingest's word for "I invented this" — so the flag has one direction of
+  // travel and this is the end of it.
+  if (existing.isStub) {
+    update.isStub = false;
+  }
   await instrumentsRepo.update(db, id, update);
   return { kind: "ok" };
 }

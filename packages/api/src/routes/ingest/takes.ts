@@ -3,11 +3,11 @@
 // contract v1 §4 "Phase 2 — declare a take", "Phase 3 — commit", and §8.
 import type { Clock, Storage } from "@bandplate/core";
 import { buildUploadItems } from "@bandplate/core";
-import { type Db, assetsRepo, eventsRepo, takesRepo } from "@bandplate/db";
+import { type Db, assetsRepo, eventsRepo, instrumentsRepo, takesRepo } from "@bandplate/db";
 import { errorResponse } from "../../errors.js";
 import { type GuardedRouter, requireServiceScopes } from "../../route-registry.js";
 import { syncDeclaredAssets } from "./asset-sync.js";
-import { loadInstrumentVocab, unknownSlugs } from "./instrument-vocab.js";
+import { loadInstrumentVocab, stubLabelFromSlug, unknownSlugs } from "./instrument-vocab.js";
 import { commitTakeSchema, createTakeSchema } from "./schemas.js";
 import { resolveSong } from "./song-resolution.js";
 import { parseIsoToEpochMs } from "./support.js";
@@ -43,7 +43,7 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
     const input = parsed.data;
     const now = deps.clock.now();
 
-    const vocab = await loadInstrumentVocab(deps.db);
+    let vocab = await loadInstrumentVocab(deps.db);
     const declaredSlugs = [
       ...input.instruments,
       ...input.assets.filter((a) => a.kind === "stem").map((a) => a.instrument),
@@ -53,12 +53,41 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
       ...input.assets.flatMap((a) => (a.kind === "peaks" && a.instrument ? [a.instrument] : [])),
     ];
     const unknown = unknownSlugs(vocab, declaredSlugs);
-    if (unknown.length > 0) {
+    // Created BEFORE anything else in this request touches the database, and
+    // the vocabulary is reloaded rather than patched in memory — everything
+    // downstream resolves slugs through `vocab`, and a half-updated map would
+    // file a stem against the wrong instrument in the one case hardest to
+    // notice.
+    //
+    // Sequentially, not in a batch: the slug is UNIQUE, so two bridges
+    // declaring the same new slug at once means one insert loses. Reloading
+    // afterwards is what converges them — the loser's slug is in the
+    // vocabulary either way, which is the outcome that matters.
+    let createdInstruments: string[] = [];
+    if (unknown.length > 0 && input.createMissingInstruments) {
+      for (const slug of unknown) {
+        try {
+          await instrumentsRepo.create(deps.db, {
+            slug,
+            label: stubLabelFromSlug(slug),
+            isStub: true,
+          });
+        } catch {
+          // Lost the race on the UNIQUE slug. The reload below picks up
+          // whichever insert won, so this declaration proceeds regardless.
+        }
+      }
+      createdInstruments = unknown;
+      vocab = await loadInstrumentVocab(deps.db);
+    }
+
+    const stillUnknown = unknownSlugs(vocab, declaredSlugs);
+    if (stillUnknown.length > 0) {
       return c.json(
         {
           error: {
             code: "unknown_instrument",
-            message: `Unknown instrument slug(s): ${unknown.join(", ")}.`,
+            message: `Unknown instrument slug(s): ${stillUnknown.join(", ")}.`,
           },
           validSlugs: vocab.validSlugs,
         },
@@ -173,7 +202,14 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
       instrumentIdToSlugMap(vocab),
     );
 
-    return c.json({ takeId, songId, songCreated, songMatch, state, uploads }, 200);
+    // `createdInstruments` is how a bridge learns it just invented vocabulary
+    // — the mirror of `songMatch: "created-stub"`. A mapping file that has
+    // drifted shows up here as a slug nobody meant to add, on the run that
+    // added it, rather than as a strange row in the admin table weeks later.
+    return c.json(
+      { takeId, songId, songCreated, songMatch, state, uploads, createdInstruments },
+      200,
+    );
   });
 
   router.get(

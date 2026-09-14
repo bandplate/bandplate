@@ -13,7 +13,7 @@ import { adminMessages, formatShortDate } from "@bandplate/i18n";
 // between the two can add a stem that collides, and what runs has to be what
 // is true now.
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
-import AppLayout from "../../../../layouts/AppLayout.astro";
+import Layout from "../../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import {
@@ -50,23 +50,36 @@ if (!preview) {
 }
 const { source, target, losingSongs, losingTakes } = preview;
 const losesSomething = losingSongs.length > 0 || losingTakes.length > 0;
+
+const details = [
+  ...losingSongs.map((song) => ta.mergeLosesChart(song.title)),
+  ...losingTakes.map((take) =>
+    ta.mergeLosesStem(take.songTitle, formatShortDate(Astro.locals.locale, take.recordedAt)),
+  ),
+];
+
+// The same consequence the page below renders, as data — this is what the
+// confirm DIALOG asks for. Merging is the one confirm whose cost cannot be a
+// static string on the trigger: it depends on what the two instruments
+// happen to share, which only the server knows. The page stays as the no-JS
+// path, exactly like every other confirm in this app.
+if ((Astro.request.headers.get("accept") ?? "").includes("application/json")) {
+  return new Response(
+    JSON.stringify({
+      title: ta.mergeConfirmTitle(source.label, target.label),
+      body: ta.mergeBody(source.label, target.label),
+      details: losesSomething ? details : [ta.mergeNoCollisions],
+    }),
+    { headers: { "content-type": "application/json" } },
+  );
+}
 ---
 
-{/* In the SHELL, unlike this folder's `archive` and `delete` confirms. Those
-    are no-JS fallbacks nobody with script reaches — `ConfirmDialog` catches
-    their `data-confirm` trigger first. This one is the primary path, because
-    what it has to show (which charts and which audio files the merge
-    destroys) is computed on the server and cannot be a static string on a
-    trigger. A bare confirm page reached deliberately looks like a modal that
-    lost its backdrop. See `docs/frontend-traps.md`. */}
-<AppLayout
-  title={ta.mergeInstrument}
-  principal={principal}
-  current="admin"
-  adminSection="instruments"
->
+{/* The no-JS path, and nothing more — same as this folder's `archive` and
+    `delete`. With script, `ConfirmDialog` intercepts the trigger and asks the
+    JSON branch above for this same consequence, so nobody navigates here. */}
+<Layout title={ta.mergeInstrument}>
   <ConfirmActionPage
-    inShell
     bannerTitle={ta.mergeConfirmTitle(source.label, target.label)}
     cta={ta.mergeInstrument}
     cancelHref="/admin/instruments"
@@ -89,4 +102,4 @@ const losesSomething = losingSongs.length > 0 || losingTakes.length > 0;
       )
     }
   </ConfirmActionPage>
-</AppLayout>
+</Layout>

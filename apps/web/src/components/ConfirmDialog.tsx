@@ -39,6 +39,18 @@ interface ConfirmState {
    * action cannot be dressed as a safe one by forgetting an attribute.
    */
   danger: boolean;
+  /**
+   * Where to fetch the consequence from, when it cannot be a static string.
+   *
+   * Most confirms state their consequence in the markup, because the trigger
+   * already knows it. Some cannot: merging two instruments has to look at
+   * what the pair actually share before it can say which chord chart and
+   * which audio file the merge destroys. That answer lives on the server, so
+   * the dialog opens first and asks.
+   */
+  bodyUrl?: string;
+  /** Lines under the body — one per thing that will not survive. */
+  details?: string[];
 }
 
 export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
@@ -85,13 +97,26 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
       if (!action) {
         return;
       }
+      // A trigger whose action depends on a control beside it — a picker
+      // choosing what to merge into — names that control here, and its
+      // `name=value` is appended to both the action and the body URL. The
+      // alternative was a `data-confirm-action` the markup cannot know,
+      // because the value is chosen after the page renders.
+      const from = target.dataset.confirmQueryFrom;
+      const control = from ? document.querySelector<HTMLSelectElement>(from) : null;
+      const query = control?.name
+        ? `?${encodeURIComponent(control.name)}=${encodeURIComponent(control.value)}`
+        : "";
+
+      const bodyUrl = target.dataset.confirmBodyUrl;
       setState({
         title: target.dataset.confirmTitle ?? ti().confirmTitle,
-        body: target.dataset.confirmBody ?? ti().confirmBody,
-        action,
+        body: target.dataset.confirmBody ?? (bodyUrl ? ti().confirmLoading : ti().confirmBody),
+        action: `${action}${query}`,
         cta: target.dataset.confirmCta ?? ti().confirmCta,
         redirect: target.dataset.confirmRedirect,
         danger: target.dataset.confirmTone !== "neutral",
+        bodyUrl: bodyUrl ? `${bodyUrl}${query}` : undefined,
       });
     }
     document.addEventListener("click", onClick, true);
@@ -109,6 +134,63 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
       dialog.close();
     }
   }, [state]);
+
+  /**
+   * Fetch the consequence for a dialog that could not state it in markup.
+   *
+   * The dialog is already open while this runs: waiting for a round trip
+   * before showing anything would make the press feel broken on a slow
+   * connection, and the title is already true. `live` guards the case where
+   * it is closed and reopened before the answer lands.
+   */
+  useEffect(() => {
+    const url = state?.bodyUrl;
+    if (!url) {
+      return;
+    }
+    let live = true;
+    void (async () => {
+      try {
+        const res = await fetch(url, {
+          credentials: "same-origin",
+          headers: { accept: "application/json" },
+        });
+        if (!res.ok) {
+          throw new Error(String(res.status));
+        }
+        const payload = (await res.json()) as {
+          title?: string;
+          body?: string;
+          details?: string[];
+        };
+        if (!live) {
+          return;
+        }
+        setState((current) =>
+          current && current.bodyUrl === url
+            ? {
+                ...current,
+                title: payload.title ?? current.title,
+                body: payload.body ?? current.body,
+                details: payload.details,
+              }
+            : current,
+        );
+      } catch {
+        if (live) {
+          // The confirm stays usable: the server re-checks the consequence on
+          // POST anyway, so a failed preview must not block the action — it
+          // just means this dialog cannot show the detail.
+          setState((current) =>
+            current && current.bodyUrl === url ? { ...current, body: ti().confirmBody } : current,
+          );
+        }
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [state?.bodyUrl]);
 
   function handleClose() {
     setState(null);
@@ -168,6 +250,16 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
         <>
           <h2 id="bp-confirm-title">{state.title}</h2>
           <p>{state.body}</p>
+          {state.details && state.details.length > 0 && (
+            /* A list, not a sentence: each line is a different thing that
+               will not survive, and running them together is how someone
+               approves one without reading the others. */
+            <ul class="bp-dialog-details">
+              {state.details.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
           {error && (
             <p class="bp-field-error" role="alert">
               {error}
@@ -180,7 +272,7 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
               onClick={handleClose}
               disabled={pending}
             >
-              Cancel
+              {ti().confirmCancel}
             </button>
             <button
               type="button"
@@ -206,7 +298,7 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
                   <path d="M10.3 3.2 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
                 </svg>
               )}
-              {pending ? "{ti().confirmWorking}" : state.cta}
+              {pending ? ti().confirmWorking : state.cta}
             </button>
           </div>
         </>

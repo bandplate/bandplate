@@ -144,6 +144,7 @@ export const admin = {
     "Slugy, které má ingest brát jako tenhle nástroj — stopa, co se ve tvé session jmenuje jinak, nebo slug nástroje, který jsi do tohohle sloučil.",
   addAlias: "Přidat", // en: Add
   aliasSlugLabel: "Další slug", // en: Another slug
+  aliasSlugPlaceholder: "dalsi-slug", // en: another-slug
   removeAlias: (slug: string): string => `Odebrat ${slug}`, // en: `Remove ${slug}`
   aliasAdded: "Slug přidán.", // en: Slug added.
   aliasRemoved: "Slug odebrán.", // en: Slug removed.

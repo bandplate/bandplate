@@ -84,6 +84,7 @@ export const islands = {
   confirmCta: "Potvrdit", // en: Confirm
   confirmCancel: "Zrušit", // en: Cancel
   confirmWorking: "Pracuju…", // en: Working…
+  confirmLoading: "Zjišťuju, čeho se to týká…", // en: Checking what this affects…
   confirmFailed: "Nepovedlo se. Zkus to znovu.", // en: That didn't work. Try again.
   // en: `That didn't work (status ${status}). Try again.`
   confirmFailedStatus: (status: number): string => `Nepovedlo se (stav ${status}). Zkus to znovu.`,

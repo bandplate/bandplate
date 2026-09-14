@@ -3050,6 +3050,41 @@ html:has(dialog.bp-filter-sheet[open]) body {
   border-top: 1px solid var(--bp-color-border);
 }
 
+/* What a confirm would destroy, inside the dialog. A list rather than a run
+   of sentences: each line is a different thing that will not survive, and
+   running them together is how someone approves one without reading the
+   others. */
+.bp-dialog-details {
+  margin: 0.5rem 0 0;
+  padding-left: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--bp-color-muted);
+  font-size: var(--text-note, 0.71875rem);
+  line-height: 1.5;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+/* The two lifecycle actions, kept together. Archive retires an instrument the
+   band stopped playing; delete removes one that should never have existed —
+   the same question from opposite ends, so they belong in the same corner of
+   the sheet rather than with a picker between them. */
+.bp-sheet-lifecycle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+/* Why delete is not on offer. Full width, under the pair: a sentence sitting
+   IN a row of controls reads as a label for whichever one is next to it. */
+.bp-sheet-blocked {
+  flex-basis: 100%;
+  max-width: 54ch;
+}
+
 /* An empty form that exists only to be targeted by a `form=` button. */
 .bp-sheet-aux {
   display: none;

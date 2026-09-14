@@ -101,22 +101,68 @@ with the comment beside it. The second is usually better anyway.
 
 ---
 
+## "The typechecker is green and the page is 500"
+
+### `astro check` does not parse `.astro` templates the way the renderer does
+
+An unbalanced tag in a template — a `</div>` lost while moving a block — passed
+`astro check` cleanly and threw `Expected ")" but found "}"` at request time.
+The reported line is where the surrounding *expression* began, which can be two
+hundred lines above the actual damage.
+
+**Rule.** `pnpm typecheck` is not evidence that a page renders. Load it. If the
+dev server's console is not in reach, a throwaway one puts the real message in
+a file you can read:
+
+```bash
+cd apps/web && pnpm exec astro dev --port 4455 > /tmp/probe.log 2>&1 &
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4455/the/page
+grep -iA 12 error /tmp/probe.log
+```
+
+A 500 on one route while its siblings 302 means the module failed, not the
+request — look for a syntax error, not a data problem.
+
+---
+
+## "I checked the DOM and the attribute is missing"
+
+### Check that you selected the element you think you did
+
+`input[name="slug"]` matched the page's *create* form long before it reached
+the alias field further down, and reported the placeholder missing on an
+element that never had one. Select by something unique to the thing under test
+(`input[id^="alias-"]`) before concluding the code is wrong.
+
+---
+
 ## "It looks like a modal that lost its backdrop"
 
-### A confirm page reached on purpose must render inside the shell
+### Every confirm in this app is a modal. The page is only the no-JS path
 
-`ConfirmActionPage` defaults to a bare page with no nav and no header. That is
-correct for what it was built for: a **no-JS fallback** that nobody with
-script ever reaches, because `ConfirmDialog` intercepts the `data-confirm`
-trigger first.
+`ConfirmActionPage` draws a bare page — no nav, no header — and that is
+correct, because with script **nobody ever sees it**: `ConfirmDialog`
+intercepts the `data-confirm` trigger in the capture phase and opens the
+dialog instead. Landing on that page with script enabled means the
+interception did not happen, and the page will look like a modal that lost
+its backdrop, because that is effectively what it is.
 
-A confirm page that is the **primary path** — one whose consequence has to be
-computed on the server, so it cannot be a static `data-confirm-body` string —
-must pass `inShell` and render inside `AppLayout`. Otherwise the reader clicks
-a button and lands on a card floating in the dark.
+So the fix is never "make the page prettier" or "put the page in the shell".
+The fix is to make the trigger a real `data-confirm` trigger.
 
-`/admin/instruments/[id]/merge` is the one that is primary, and why: it lists
-the charts and audio files the merge would destroy.
+**When the consequence is computed on the server** — merging two instruments
+has to look at what the pair share before it can name the chord chart and the
+audio file that will not survive — the dialog fetches it:
+
+- `data-confirm-body-url` — fetched with `accept: application/json` on open,
+  answering `{title?, body?, details?}`. The dialog opens immediately with a
+  loading line rather than waiting on the round trip.
+- `data-confirm-query-from` — a selector for a control whose `name=value` is
+  appended to both the action and the body URL, for an action whose target is
+  chosen after the page renders (a picker beside the button).
+
+The same route serves both: JSON for the dialog, the bare page for no-JS.
+`/admin/instruments/[id]/merge` is the worked example.
 
 ---
 

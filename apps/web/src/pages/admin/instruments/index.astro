@@ -408,7 +408,7 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                               id={`alias-${instrument.id}`}
                               name="slug"
                               form={`add-alias-${instrument.id}`}
-                              placeholder={ta.aliasSlugLabel}
+                              placeholder={ta.aliasSlugPlaceholder}
                             />
                             <button
                               type="submit"
@@ -420,35 +420,10 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                         </fieldset>
 
                         <div class="bp-sheet-extras">
-                          {/* Delete sits beside Archive because they answer
-                              the same question from opposite ends: archive
-                              retires an instrument the band has stopped
-                              playing, delete removes one that should never
-                              have existed. Offered ONLY while nothing points
-                              at it — otherwise the reason takes its place, so
-                              nobody presses a button that cannot work. */}
-                          {isInstrumentUnused(usageOf(usage, instrument.id)) ? (
-                            <a
-                              href={`/admin/instruments/${instrument.id}/delete`}
-                              class="bp-sheet-danger"
-                              data-confirm
-                              data-confirm-title={`${ta.deleteInstrument}: ${instrument.label}`}
-                              data-confirm-body={ta.deleteInstrumentBody(instrument.label)}
-                              data-confirm-action={`/admin/instruments/${instrument.id}/delete`}
-                              data-confirm-cta={ta.deleteInstrument}
-                              data-confirm-redirect="/admin/instruments?deleted=1"
-                            >{ta.deleteThisInstrument}</a>
-                          ) : (
-                            <p class="bp-sheet-hint bp-m0">
-                              {ta.instrumentInUse(usageParts(usageOf(usage, instrument.id)))}
-                            </p>
-                          )}
-                          {/* Merging is the answer when deleting is refused:
-                              an instrument something DOES point at can still
-                              stop existing, by becoming another one. A plain
-                              GET to the confirm page, because the page's whole
-                              job is to show what the merge would destroy
-                              before anything happens. */}
+                          {/* Merging first, and on its own line: it is the
+                              only one of the three that is a picker rather
+                              than a press, and left between the other two it
+                              split the pair below apart. */}
                           {allInstruments.length > 1 && (
                             <div class="bp-merge-form">
                               <label class="bp-visually-hidden" for={`merge-${instrument.id}`}>
@@ -466,31 +441,83 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                                     <option value={other.id}>{other.label}</option>
                                   ))}
                               </select>
+                              {/* A `data-confirm` trigger like every other
+                                  destructive action here, so it opens the
+                                  same modal rather than navigating. What it
+                                  cannot do is state its own consequence:
+                                  which chart and which audio file a merge
+                                  destroys depends on what the two instruments
+                                  share, so the dialog fetches it from the URL
+                                  below. `confirm-query-from` is how both URLs
+                                  learn the target, which is only chosen after
+                                  the page renders.
+
+                                  `type="submit"` with `form=` is kept as the
+                                  no-JS path: without script the press falls
+                                  through to the confirm PAGE. */}
                               <button
                                 type="submit"
                                 form={`merge-${instrument.id}-form`}
                                 class="bp-btn bp-btn-secondary bp-btn-sm"
+                                data-confirm
+                                data-confirm-action={`/admin/instruments/${instrument.id}/merge`}
+                                data-confirm-body-url={`/admin/instruments/${instrument.id}/merge`}
+                                data-confirm-query-from={`#merge-${instrument.id}`}
+                                data-confirm-title={ta.mergeInstrument}
+                                data-confirm-cta={ta.mergeInstrument}
+                                data-confirm-redirect="/admin/instruments?merged=1"
                               >
                                 {ta.mergeInto}
                               </button>
                             </div>
                           )}
-                          {instrument.archivedAt ? (
-                            <button
-                              type="submit"
-                              form={`unarchive-${instrument.id}`}
-                              class="bp-btn bp-btn-quiet bp-btn-sm"
-                            >{ta.unarchive}</button>
-                          ) : (
-                            <a
-                              href={`/admin/instruments/${instrument.id}/archive`}
-                              class="bp-sheet-danger"
-                              data-confirm
-                              data-confirm-title={`Archive ${instrument.label}?`}
-                              data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}
-                              data-confirm-action={`/admin/instruments/${instrument.id}/archive`}
-                              data-confirm-cta={ta.archive}
-                            >{ta.archive}</a>
+
+                          {/* Delete BESIDE Archive, because they answer the
+                              same question from opposite ends: archive
+                              retires an instrument the band has stopped
+                              playing, delete removes one that should never
+                              have existed. Whichever applies, it is the same
+                              corner of the sheet. */}
+                          <span class="bp-sheet-lifecycle">
+                            {isInstrumentUnused(usageOf(usage, instrument.id)) ? (
+                              <a
+                                href={`/admin/instruments/${instrument.id}/delete`}
+                                class="bp-sheet-danger"
+                                data-confirm
+                                data-confirm-title={`${ta.deleteInstrument}: ${instrument.label}`}
+                                data-confirm-body={ta.deleteInstrumentBody(instrument.label)}
+                                data-confirm-action={`/admin/instruments/${instrument.id}/delete`}
+                                data-confirm-cta={ta.deleteInstrument}
+                                data-confirm-redirect="/admin/instruments?deleted=1"
+                              >{ta.deleteThisInstrument}</a>
+                            ) : null}
+                            {instrument.archivedAt ? (
+                              <button
+                                type="submit"
+                                form={`unarchive-${instrument.id}`}
+                                class="bp-btn bp-btn-quiet bp-btn-sm"
+                              >{ta.unarchive}</button>
+                            ) : (
+                              <a
+                                href={`/admin/instruments/${instrument.id}/archive`}
+                                class="bp-sheet-danger"
+                                data-confirm
+                                data-confirm-title={`Archive ${instrument.label}?`}
+                                data-confirm-body={`${instrument.label} won't be selectable for new takes. Past takes that used it keep rendering fine.`}
+                                data-confirm-action={`/admin/instruments/${instrument.id}/archive`}
+                                data-confirm-cta={ta.archive}
+                              >{ta.archive}</a>
+                            )}
+                          </span>
+
+                          {/* The reason delete is not on offer, on its own
+                              line under the pair: it is a sentence, and a
+                              sentence in a row of controls reads as a label
+                              for the control beside it. */}
+                          {!isInstrumentUnused(usageOf(usage, instrument.id)) && (
+                            <p class="bp-sheet-hint bp-m0 bp-sheet-blocked">
+                              {ta.instrumentInUse(usageParts(usageOf(usage, instrument.id)))}
+                            </p>
                           )}
                         </div>
                       </div>

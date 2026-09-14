@@ -84,6 +84,8 @@ export const islands = {
   confirmCta: "Confirm",
   confirmCancel: "Cancel",
   confirmWorking: "Working…",
+  /** While the dialog asks the server what the action would actually cost. */
+  confirmLoading: "Checking what this affects…",
   confirmFailed: "That didn't work. Try again.",
   confirmFailedStatus: (status: number): string =>
     `That didn't work (status ${status}). Try again.`,

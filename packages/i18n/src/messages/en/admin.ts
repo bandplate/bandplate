@@ -163,6 +163,14 @@ export const admin = {
     "Slugs ingest should treat as this instrument — a track your session names differently, or the slug of an instrument merged into this one.",
   addAlias: "Add",
   aliasSlugLabel: "Another slug",
+  /**
+   * The placeholder, which shows the SHAPE rather than repeating the label.
+   *
+   * A slug is lowercase and hyphenated, and a field whose placeholder is
+   * prose invites prose. The accessible name is still `aliasSlugLabel` — this
+   * is an example, not a second label.
+   */
+  aliasSlugPlaceholder: "another-slug",
   removeAlias: (slug: string): string => `Remove ${slug}`,
   aliasAdded: "Slug added.",
   aliasRemoved: "Slug removed.",

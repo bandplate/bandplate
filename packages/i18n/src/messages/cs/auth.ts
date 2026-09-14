@@ -73,7 +73,7 @@ export const auth = {
 
   setupMailOkTitle: "Testovací e-mail odeslán", // en: Test email sent
   // en: The mailer works — a confirmation email went out to your address.
-  setupMailOkBody: "Odesílání funguje — potvrzovací e-mail šel na tvoji adresu.",
+  setupMailOkBody: "Odesílání funguje. Potvrzovací e-mail šel na tvoji adresu.",
 
   setupMailFailTitle: "Testovací e-mail se nepodařilo odeslat", // en: Test email failed to send
   // en: Members won't be able to sign in by email until this is fixed. You're still signed in, so you can fix it and carry on.

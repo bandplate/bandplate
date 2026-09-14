@@ -41,12 +41,12 @@ export const home = {
   emptyPinnedLead: "Zatím nic připnutého.", // en: Nothing pinned yet.
   // en: Tap the star on a song, take or event and it lands here — this is the shelf you reach for.
   emptyPinnedBody:
-    "Klepni na hvězdičku u skladby, nahrávky nebo akce a objeví se to tady — tohle je police, po které saháš.",
+    "Klepni na hvězdičku u skladby, nahrávky nebo akce a objeví se to tady. Tohle je police, po které saháš.",
   emptyPinnedLink: "Projdi archiv", // en: Browse the archive
   emptyPinnedTail: "a něco si najdi.", // en: to find something.
 
   recentEvents: "Poslední akce", // en: Recent events
   // en: No events yet. Ask whoever's running the session to log the next rehearsal or show — it'll show up here as soon as they do.
   emptyEvents:
-    "Zatím žádné akce. Řekni tomu, kdo nahrává, ať příští zkoušku nebo koncert založí — objeví se to tu hned.",
+    "Zatím žádné akce. Řekni tomu, kdo nahrává, ať příští zkoušku nebo koncert založí. Objeví se to tu hned.",
 } satisfies typeof enHome;

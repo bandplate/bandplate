@@ -49,7 +49,7 @@ export const admin = {
   bandMembers: "Členové kapely", // en: Band members
   addMember: "Přidat člena", // en: Add member
   editingMember: "Úprava člena", // en: Editing member
-  emptyMembers: "Zatím žádní členové — přidej prvního nahoře.", // en: No members yet — add the first one above.
+  emptyMembers: "Zatím žádní členové. Přidej prvního nahoře.", // en: No members yet — add the first one above.
   memberAdded: "Člen přidán.", // en: Member added.
   // en: Member added, and their invitation is on its way.
   memberAddedInvited: "Člen přidán a pozvánka je na cestě.",
@@ -62,38 +62,38 @@ export const admin = {
   inviteFailedTitle: "Pozvánka se neodeslala", // en: The invitation email didn't send
   duplicateEmail: "Člen s tímhle e-mailem už existuje.", // en: A member with this email already exists.
   // en: Couldn't find that member — reload and try again.
-  memberNotFound: "Toho člena se nepodařilo najít — načti stránku znovu.",
+  memberNotFound: "Toho člena se nepodařilo najít. Načti stránku znovu.",
   // en: Couldn't update that member — reload and try again.
-  memberUpdateFailed: "Toho člena se nepodařilo upravit — načti stránku znovu.",
+  memberUpdateFailed: "Toho člena se nepodařilo upravit. Načti stránku znovu.",
   // en: That instrument selection didn't look right — reload and try again.
-  instrumentsInvalid: "Ten výběr nástrojů nevypadal dobře — načti stránku znovu.",
+  instrumentsInvalid: "Tomu výběru nástrojů nerozumím. Načti stránku znovu.",
   // en: That would leave the band with no active admin. Promote someone else first.
   lastAdmin: "Kapela by zůstala bez aktivního správce. Nejdřív povyš někoho jiného.",
   // en: This is you — another admin has to change your role or status.
-  selfRowNote: "Tohle jsi ty — tvoji roli nebo stav musí změnit jiný správce.",
+  selfRowNote: "Tohle jsi ty. Tvoji roli nebo stav musí změnit jiný správce.",
   // en: You can't change your own role or status — ask another admin to do it.
-  selfError: "Vlastní roli ani stav si změnit nemůžeš — požádej jiného správce.",
+  selfError: "Vlastní roli ani stav si změnit nemůžeš. Požádej jiného správce.",
 
   addInstrument: "Přidat nástroj", // en: Add instrument
   editingInstrument: "Úprava nástroje", // en: Editing instrument
   // en: No instruments yet — add the first one above.
-  emptyInstruments: "Zatím žádné nástroje — přidej první nahoře.",
+  emptyInstruments: "Zatím žádné nástroje. Přidej první nahoře.",
   instrumentAdded: "Nástroj přidán.", // en: Instrument added.
   instrumentUpdated: "Nástroj upraven.", // en: Instrument updated.
   // en: Instrument archived. Its past takes still render fine.
   instrumentArchived: "Nástroj archivován. Starší nahrávky se pořád zobrazují správně.",
   // en: Couldn't update that instrument — reload and try again.
-  instrumentUpdateFailed: "Ten nástroj se nepodařilo upravit — načti stránku znovu.",
-  labelHint: "Co uvidí členové — např. Doprovodná kytara", // en: What members see — e.g. Rhythm guitar
-  slugHint: "Malá písmena, bez mezer — např. doprovodna-kytara", // en: Lowercase, no spaces — e.g. rhythm-guitar
+  instrumentUpdateFailed: "Ten nástroj se nepodařilo upravit. Načti stránku znovu.",
+  labelHint: "Co uvidí členové, třeba Doprovodná kytara", // en: What members see — e.g. Rhythm guitar
+  slugHint: "Malá písmena, bez mezer, třeba doprovodna-kytara", // en: Lowercase, no spaces — e.g. rhythm-guitar
   sortOrder: "Pořadí řazení", // en: Sort order
   sortOrderHint: "Co členové vidí u nahrávky.", // en: What members see on a take.
   iconNone: "Žádná", // en: None
-  iconNoneHint: "Bez ikony — zobrazí se iniciály", // en: No icon — show initials
+  iconNoneHint: "Bez ikony se zobrazí iniciály", // en: No icon — show initials
   colColor: "Barva", // en: Color
   colorNone: "Žádná", // en: None
   // en: No color — the mixer uses a neutral
-  colorNoneHint: "Bez barvy — mixér použije neutrální",
+  colorNoneHint: "Bez barvy použije mixér neutrální",
   // en: What the mixer paints this instrument's track with.
   colorHint: "Čím mixér obarví stopu tohohle nástroje.",
   // Názvy, ne kódy — správce vybírá identitu nástroje, ne odstín.
@@ -173,22 +173,22 @@ export const admin = {
 
   instrumentDeleted: "Nástroj smazán.", // en: Instrument deleted.
   // en: Something started using that instrument — nothing was deleted.
-  instrumentDeleteBlocked: "Nástroj se mezitím začal používat — nic se nesmazalo.",
+  instrumentDeleteBlocked: "Nástroj se mezitím začal používat. Nic se nesmazalo.",
   iconCreditBefore: "Ikony nástrojů od", // en: Instrument icons from
   iconCreditLicensed: ", licence", // en: , licensed
 
   tokens: "Tokeny", // en: Tokens
   createToken: "Vytvořit token", // en: Create token
   editingToken: "Úprava tokenu", // en: Editing token
-  emptyTokens: "Zatím žádné servisní tokeny — vytvoř jeden nahoře.", // en: No service tokens yet — create one above.
+  emptyTokens: "Zatím žádné servisní tokeny. Vytvoř jeden nahoře.", // en: No service tokens yet — create one above.
   tokenCreatedTitle: "Token vytvořen", // en: Token created
   copySecret: "Zkopírovat tajný klíč", // en: Copy secret
   // en: Copy this secret now — it will not be shown again.
-  copySecretNow: "Zkopíruj si klíč hned — už se znovu nezobrazí.",
-  tokenLabelHint: "K čemu ten token je — např. reaper-bridge", // en: What this token is for — e.g. reaper-bridge
+  copySecretNow: "Zkopíruj si klíč hned. Už se znovu nezobrazí.",
+  tokenLabelHint: "K čemu ten token je, třeba reaper-bridge", // en: What this token is for — e.g. reaper-bridge
   scopesUpdated: "Oprávnění upravena.", // en: Scopes updated.
   // en: Couldn't update that token's scopes — choose at least one and try again.
-  scopesInvalid: "Oprávnění se nepodařilo upravit — vyber aspoň jedno a zkus to znovu.",
+  scopesInvalid: "Oprávnění se nepodařilo upravit. Vyber aspoň jedno a zkus to znovu.",
   revokeToken: "Zneplatnit token", // en: Revoke token
   revokeThisToken: "Zneplatnit tenhle token", // en: Revoke this token
   // en: Token revoked. Anything using it will stop working immediately.
@@ -205,7 +205,7 @@ export const admin = {
   mergeEvents: "Sloučit akce", // en: Merge events
   mergeThem: "Sloučit", // en: Merge them
   // en: It has no takes, so nothing moves — it is just archived.
-  mergeNoTakes: "Nemá žádné nahrávky, takže se nic nepřesouvá — jen se archivuje.",
+  mergeNoTakes: "Nemá žádné nahrávky, takže se nic nepřesouvá, jen se archivuje.",
   deleteTake: "Smazat nahrávku", // en: Delete take
   deleteFile: "Smazat soubor", // en: Delete file
   promoteToKeeper: "Označit jako držák", // en: Promote to keeper

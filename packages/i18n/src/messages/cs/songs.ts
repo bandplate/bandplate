@@ -22,11 +22,11 @@ export const songs = {
   addSongEyebrow: "Nová skladba", // en: New song
   addSongTitle: "Přidat skladbu", // en: Add a song
   // en: A title is all you need — the rest can wait until someone knows it.
-  addSongSubtitle: "Stačí název — zbytek počká, až to bude někdo vědět.",
+  addSongSubtitle: "Stačí název. Zbytek počká, až to bude někdo vědět.",
 
   titleLabel: "Název", // en: Title
   keyLabel: "Tónina", // en: Key
-  keyHint: "Jak to říkáš ty — Am, F# dorská.", // en: However you say it — Am, F# dorian.
+  keyHint: "Jak to říkáš ty: Am, F# dorská.", // en: However you say it — Am, F# dorian.
   tempoLabel: "Tempo", // en: Tempo
   tempoHint: "Údery za minutu.", // en: Beats per minute.
   notesLabel: "Poznámky", // en: Notes
@@ -83,12 +83,12 @@ export const songs = {
   created: "Přidáno. Zbytek doplň, až budeš chtít.", // en: Added. Fill in the rest whenever you like.
   saved: "Uloženo.", // en: Saved.
   gone: "Tahle skladba už tu není.", // en: That song is no longer here.
-  takeGone: "Tohle už tu není — načti stránku znovu.", // en: That's no longer here — reload and try again.
+  takeGone: "Tohle už tu není. Načti stránku znovu.", // en: That's no longer here — reload and try again.
 
   editEyebrow: "Úprava skladby", // en: Editing song
   editSubtitle: "Kromě názvu je všechno nepovinné.", // en: Everything here is optional except the title.
   // en: The web address stays as it is — renaming won't break links anyone has.
-  slugHint: "Adresa zůstane stejná — přejmenování nerozbije odkazy, které kdo má.",
+  slugHint: "Adresa zůstane stejná. Přejmenování nerozbije odkazy, které kdo má.",
 
   addTakeEyebrow: "Nová nahrávka", // en: New take
   addTakeTitle: "Přidat nahrávku", // en: Add a take
@@ -97,7 +97,7 @@ export const songs = {
   eventPickLabel: "Akce", // en: Session
   recordedLabel: "Nahráno", // en: Recorded
   takeLabelLabel: "Označení", // en: Label
-  takeLabelHint: "Který pokus to byl — třetí, s dechy. Nepovinné.", // en: Which pass it was — take 3, with the horns. Optional.
+  takeLabelHint: "Který pokus to byl: třetí, s dechy. Nepovinné.", // en: Which pass it was — take 3, with the horns. Optional.
 
   chartHeading: "Akordy a text", // en: Chords & lyrics
   chordsHeading: "Akordy", // en: Chords
@@ -117,7 +117,7 @@ export const songs = {
 
   takesHeading: "Nahrávky", // en: Takes
   // en: No takes of this one yet — record a rehearsal and it'll show up here.
-  takesEmpty: "Zatím žádná nahrávka — nahrajte zkoušku a objeví se tady.",
+  takesEmpty: "Zatím žádná nahrávka. Nahraj zkoušku a objeví se tady.",
   showMore: (count: number): string => `Zobrazit dalších ${count}`, // en: `Show ${count} more`
   showFewer: "Zobrazit méně", // en: Show fewer
 
@@ -171,18 +171,18 @@ export const songs = {
     byteTotal: string;
   }): string => {
     if (takeCount === 0) {
-      return "Tohle nejde vzít zpět. Nemá žádné nahrávky, takže se neztratí nic nahraného — zmizí jen skladba, její aliasy a poznámky.";
+      return "Tohle nejde vzít zpět. Nemá žádné nahrávky, takže se neztratí nic nahraného. Zmizí jen skladba, její aliasy a poznámky.";
     }
     const takes = `${takeCount} ${plural("cs", takeCount, { one: "nahrávka", few: "nahrávky", many: "nahrávky", other: "nahrávek" })}`;
     const files =
       fileCount === 0
         ? ""
         : ` a ${fileCount} ${plural("cs", fileCount, { one: "zvukový soubor", few: "zvukové soubory", many: "zvukového souboru", other: "zvukových souborů" })} (${byteTotal})`;
-    return `Tohle nejde vzít zpět. Natrvalo smaže ${takes}${files}, všechny hlasy o nich i všechna připnutí. Jestli ji chceš jen dostat z knihovny, radši ji archivuj — tím se nahrávky zachovají.`;
+    return `Tohle nejde vzít zpět. Natrvalo smaže ${takes}${files}, všechny hlasy o nich i všechna připnutí. Jestli ji chceš jen dostat z knihovny, radši ji archivuj, tím se nahrávky zachovají.`;
   },
 
   errTitleRequired: "Zadej název.", // en: Enter a title.
   errTempoPositive: "Tempo musí být kladné číslo.", // en: Tempo has to be a positive number.
   // en: That tempo looks wrong — 400 bpm is the ceiling.
-  errTempoCeiling: "Tohle tempo nevypadá dobře — strop je 400 bpm.",
+  errTempoCeiling: "Takové tempo nedává smysl. Strop je 400 bpm.",
 } satisfies typeof enSongs;

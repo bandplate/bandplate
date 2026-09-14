@@ -2,7 +2,7 @@
 //
 // ┌─ PROOFREADING ─────────────────────────────────────────────────────────┐
 // │ Angličtina na každém řádku v komentáři. Oprav tady; ta oprava JE fix.   │
-// │ Register je NEFORMÁLNÍ (tykání).                                        │
+// │ Register je NEFORMÁLNÍ (tykání).                                        │                                        │
 // │                                                                        │
 // │ GLOSÁŘ: stem → stopa · master → master · take → nahrávka · mix → mix    │
 // │         loop → smyčka                                                  │

@@ -21,7 +21,7 @@ export const validation = {
 
   heldAtRequired: "Zadej datum, kdy se to konalo.", // en: Enter the date it was held.
   recordedAtRequired: "Zadej datum nahrávky.", // en: Enter the date it was recorded.
-  dateInvalid: "To datum nevypadalo dobře.", // en: That date didn't look right.
+  dateInvalid: "Tomu datu nerozumím.", // en: That date didn't look right.
 
   songRequired: "Vyber, o kterou skladbu jde.", // en: Choose which song this is.
   eventRequired: "Vyber, ze které akce to je.", // en: Choose which session this came from.
@@ -30,7 +30,7 @@ export const validation = {
 
   tempoPositive: "Tempo musí být kladné číslo.", // en: Tempo has to be a positive number.
   // en: That tempo looks wrong — 400 bpm is the ceiling.
-  tempoCeiling: "Tohle tempo nevypadá dobře — strop je 400 bpm.",
+  tempoCeiling: "Takové tempo nedává smysl. Strop je 400 bpm.",
 
   // en: At least one of status or role is required.
   statusOrRoleRequired: "Musí být zadaný aspoň stav nebo role.",

@@ -41,7 +41,7 @@ export const mail = {
   // "Pokud to nebylo od tebe" rather than "pokud jsi to nebyl ty": the past
   // tense would declare the reader's gender.
   loginFooter:
-    "Někdo zadal tuhle adresu na přihlašovací stránce bandplate. Pokud to nebylo od tebe, zprávu ignoruj — bez odkazu se nikdo nepřihlásí.",
+    "Někdo zadal tuhle adresu na přihlašovací stránce bandplate. Pokud to nebylo od tebe, zprávu ignoruj. Bez odkazu se nikdo nepřihlásí.",
 
   // Present tense — "zve". The past tense Czech would otherwise want
   // ("pozval" / "pozvala") carries the sender's gender, and nothing here

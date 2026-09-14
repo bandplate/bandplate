@@ -60,7 +60,7 @@ export const takes = {
   sortRating: "Nejvíc hlasů pro držák", // en: Most keeper votes
 
   // en: No takes match those filters — try turning one off.
-  emptyFiltered: "Těmhle filtrům neodpovídá žádná nahrávka — zkus některý vypnout.",
+  emptyFiltered: "Těmhle filtrům neodpovídá žádná nahrávka. Zkus některý vypnout.",
   empty: "V archivu zatím nic není.", // en: No takes in the archive yet.
 
   pageTitle: (songTitle: string): string => `Nahrávka: ${songTitle}`, // en: `Take of ${songTitle}`
@@ -84,7 +84,7 @@ export const takes = {
   fileDeleted: "Soubor smazán.", // en: File deleted.
   gone: "Tahle nahrávka už tu není.", // en: That take is no longer here.
   // en: That song is no longer here — reload and pick another.
-  songGone: "Tahle skladba už tu není — načti stránku a vyber jinou.",
+  songGone: "Tahle skladba už tu není. Načti stránku a vyber jinou.",
 
   nothingToPlayTitle: "Není co přehrát", // en: Nothing left to play
   // en: This take is published but has no playable file. Add one, or unpublish it.
@@ -119,7 +119,7 @@ export const takes = {
   recordedLabel: "Nahráno", // en: Recorded
   takeLabelLabel: "Označení", // en: Label
   // en: Which pass it was — take 3, with the horns. Leave it empty if there's nothing to say.
-  takeLabelHint: "Který pokus to byl — třetí, s dechy. Nech prázdné, když není co dodat.",
+  takeLabelHint: "Který pokus to byl: třetí, s dechy. Nech prázdné, když není co dodat.",
   notesLabel: "Poznámky", // en: Notes
   saveChanges: "Uložit změny", // en: Save changes
   cancel: "Zrušit", // en: Cancel
@@ -147,7 +147,7 @@ export const takes = {
 
   keeperCta: "Označit jako držák", // en: Promote to keeper
   // en: This take will be marked keeper — the band's pick for this song at this event.
-  keeperBody: "Nahrávka se označí jako držák — volba kapely pro tuhle skladbu z téhle akce.",
+  keeperBody: "Nahrávka se označí jako držák, volba kapely pro tuhle skladbu z téhle akce.",
   rejectCta: "Odmítnout", // en: Reject
   // en: This take will be marked rejected and dropped from 'needs your vote'. It stays in the archive.
   rejectBody: "Nahrávka se označí jako odmítnutá a zmizí z „čeká na tvůj hlas“. V archivu zůstává.",

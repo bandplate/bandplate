@@ -50,7 +50,7 @@ export const events = {
   addEventEyebrow: "Nová akce", // en: New event
   addEventTitle: "Přidat akci", // en: Add an event
   // en: A rehearsal, a concert, or a studio session — whatever the takes came from.
-  addEventSubtitle: "Zkouška, koncert nebo studio — odkudkoli nahrávky přišly.",
+  addEventSubtitle: "Zkouška, koncert nebo studio, odkudkoli nahrávky přišly.",
 
   kindRehearsal: "Zkouška", // en: Rehearsal
   kindConcert: "Koncert", // en: Concert
@@ -64,15 +64,15 @@ export const events = {
   // en: Where you played. Leave it empty for the usual room.
   venueHint: "Kde jste hráli. Pro obvyklou zkušebnu nech prázdné.",
   titleLabel: "Název", // en: Title
-  titleHint: "Jen pokud to mělo název — většina zkoušek ne.", // en: Only if it had a name — most rehearsals don't.
+  titleHint: "Jen pokud to mělo název. Většina zkoušek ho nemá.", // en: Only if it had a name — most rehearsals don't.
   notesLabel: "Poznámky", // en: Notes
   cancel: "Zrušit", // en: Cancel
   saveChanges: "Uložit změny", // en: Save changes
 
   // en: Nothing of that kind yet — turn another one back on.
-  emptyFiltered: "Nic takového tu zatím není — zapni zpátky jiný druh.",
+  emptyFiltered: "Nic takového tu zatím není. Zapni zpátky jiný druh.",
   // en: No events yet — they'll show up here once a rehearsal or show is logged.
-  empty: "Zatím žádné akce — objeví se tu, jakmile někdo založí zkoušku nebo koncert.",
+  empty: "Zatím žádné akce. Objeví se tu, jakmile někdo založí zkoušku nebo koncert.",
 
   archivedBanner: "Archivováno", // en: Archived
   // en: Archived. It's out of the archive; its takes are untouched.
@@ -80,7 +80,7 @@ export const events = {
   created: "Přidáno. Nahrávky pořízené ten den patří sem.", // en: Added. Takes recorded that day go here.
   saved: "Uloženo.", // en: Saved.
   gone: "Tahle akce už tu není.", // en: That event is no longer here.
-  takeGone: "Tohle už tu není — načti stránku znovu.", // en: That's no longer here — reload and try again.
+  takeGone: "Tohle už tu není. Načti stránku znovu.", // en: That's no longer here — reload and try again.
   takeDeleted: "Nahrávka smazaná i se soubory.", // en: Take deleted, along with its files.
   merged: "Sloučeno. Všechno je teď na téhle.", // en: Merged. Everything is on this one now.
 
@@ -99,10 +99,10 @@ export const events = {
   // The kind stays nominative — see `unarchiveConfirmTitle` for why nothing
   // here may assume it can inflect it.
   duplicateWarnBody: ({ kind, date }: { kind: string; date: string }): string =>
-    `Na ${date} už je založená jiná akce (${kind}). To je v pořádku, jestli jste fakt hráli dvakrát — ale jestli je to ta samá, použij tu, co už tam byla, jinak k ní bridge založí nahrávky a tahle zůstane prázdná.`,
+    `Na ${date} už je založená jiná akce (${kind}). To je v pořádku, jestli jste fakt hráli dvakrát, ale jestli je to ta samá, použij tu, co už tam byla, jinak k ní bridge založí nahrávky a tahle zůstane prázdná.`,
   // en: `Another ${kind} sits on ${date}. If you both played twice that's right — but if it's the same session, the takes are split between them and the bridge will keep filing against whichever one holds its key.`
   duplicateFiledTwiceBody: ({ kind, date }: { kind: string; date: string }): string =>
-    `Na ${date} sedí ještě jiná akce (${kind}). Jestli jste hráli dvakrát, je to správně — ale jestli je to ta samá, nahrávky se mezi ně rozdělily a bridge bude dál zakládat k té, která drží jeho klíč.`,
+    `Na ${date} sedí ještě jiná akce (${kind}). Jestli jste hráli dvakrát, je to správně, ale jestli je to ta samá, nahrávky se mezi ně rozdělily a bridge bude dál zakládat k té, která drží jeho klíč.`,
 
   editEyebrow: "Úprava akce", // en: Editing event
   editSubtitle: "Povinné jsou jen datum a druh.", // en: Only the date and the kind are required.
@@ -112,7 +112,7 @@ export const events = {
   addTakeSubtitle: "Patří k téhle akci; zvuk se přidá potom.", // en: It goes on this session; the audio comes afterwards.
   recordedLabel: "Nahráno", // en: Recorded
   takeLabelLabel: "Označení", // en: Label
-  takeLabelHint: "Který pokus to byl — take 3, s dechy. Nepovinné.", // en: Which pass it was — take 3, with the horns. Optional.
+  takeLabelHint: "Který pokus to byl: take 3, s dechy. Nepovinné.", // en: Which pass it was — take 3, with the horns. Optional.
 
   archiveThis: "Archivovat tuhle akci", // en: Archive this event
   putItBack: "Vrátit zpět", // en: Put it back
@@ -159,10 +159,10 @@ export const events = {
       takeCount === 0
         ? ""
         : ` ${plural("cs", takeCount, {
-            one: "Její jedna nahrávka zůstává a dál se dá přehrát — dostaneš se k ní přes její skladbu.",
-            few: `Její ${takeCount} nahrávky zůstávají a dál se dají přehrát — dostaneš se k nim přes jejich skladby.`,
-            many: `Jejích ${takeCount} nahrávky zůstává a dál se dají přehrát — dostaneš se k nim přes jejich skladby.`,
-            other: `Jejích ${takeCount} nahrávek zůstává a dál se dají přehrát — dostaneš se k nim přes jejich skladby.`,
+            one: "Její jedna nahrávka zůstává a dál se dá přehrát, dostaneš se k ní přes její skladbu.",
+            few: `Její ${takeCount} nahrávky zůstávají a dál se dají přehrát, dostaneš se k nim přes jejich skladby.`,
+            many: `Jejích ${takeCount} nahrávky zůstává a dál se dají přehrát, dostaneš se k nim přes jejich skladby.`,
+            other: `Jejích ${takeCount} nahrávek zůstává a dál se dají přehrát, dostaneš se k nim přes jejich skladby.`,
           })}`;
     return `${head}${takes} Kdykoli ji můžeš vrátit.`;
   },

@@ -69,14 +69,14 @@ export const islands = {
   uploadPhaseWaiting: "Čeká", // en: Waiting
 
   // en: Not audio this app stores — mp3, opus, flac or wav.
-  uploadErrNotAudio: "Tohle není zvuk, který aplikace ukládá — mp3, opus, flac nebo wav.",
+  uploadErrNotAudio: "Tohle není zvuk, který aplikace ukládá. Bere mp3, opus, flac a wav.",
   uploadErrGone: "Tenhle soubor už není k dispozici.", // en: That file is no longer available.
   uploadErrConnection: "Spadlo spojení.", // en: The connection dropped.
   uploadErrStopped: "Nahrávání bylo zastaveno.", // en: The upload was stopped.
   uploadErrRefused: (status: number): string => `Soubor byl odmítnut (${status}).`, // en: `The file was refused (${status}).`
   uploadErrRejected: "Server ten soubor nepřijal.", // en: The server wouldn't take that file.
   // en: The upload didn't finish. Nothing was saved — it starts again from the beginning.
-  uploadErrUnfinished: "Nahrávání se nedokončilo. Nic se neuložilo — začíná se znovu od začátku.",
+  uploadErrUnfinished: "Nahrávání se nedokončilo. Nic se neuložilo, začíná se znovu od začátku.",
   uploadErrGeneric: "Něco se pokazilo.", // en: Something went wrong.
 
   confirmTitle: "Určitě?", // en: Are you sure?

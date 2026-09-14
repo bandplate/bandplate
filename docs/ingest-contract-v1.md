@@ -393,6 +393,11 @@ older bridge working, not to become a second vocabulary to build against. An
 alias of an *archived* instrument does not resolve at all — archiving means "not
 a choice for new takes", and an alias must not be a side door around that.
 
+An admin can also **merge** one instrument into another, which moves everything
+that referenced it and leaves its slug behind as an alias. That last part is
+what a bridge cares about: a slug your session has always sent keeps resolving
+after the band tidies its vocabulary, and no run has to be reconfigured.
+
 ---
 
 ## 8. Other endpoints

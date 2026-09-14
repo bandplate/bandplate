@@ -1,0 +1,79 @@
+---
+import { adminMessages, formatShortDate } from "@bandplate/i18n";
+// Confirming a merge, and the reason merging is TWO steps rather than one.
+//
+// Most of a merge costs nothing: a member who plays both instruments, or a
+// take that lists both, simply stops listing one. The two that DO cost
+// something both hold what a person made — a song's chart for the instrument,
+// and a take's stem, which is an audio file in the bucket. Neither comes back.
+//
+// So this page exists to show that list before anything happens. It is
+// reached with `?into=<id>` from the instrument's sheet, and the plan is
+// recomputed on POST rather than carried in a hidden field: a bridge run
+// between the two can add a stem that collides, and what runs has to be what
+// is true now.
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../../server/app.js";
+import { isSameOrigin } from "../../../../server/csrf.js";
+import {
+  mergeInstruments,
+  previewInstrumentMerge,
+} from "../../../../server/pages/admin-instruments.js";
+
+const ta = adminMessages(Astro.locals.locale);
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const id = Astro.params.id;
+const into = Astro.url.searchParams.get("into");
+if (!id || !into) {
+  return Astro.redirect("/admin/instruments");
+}
+
+const appDeps = await getAppDeps();
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const { kind } = await mergeInstruments(appDeps.db, appDeps.storage, id, into);
+  return Astro.redirect(`/admin/instruments?${kind === "ok" ? "merged=1" : "in_use=1"}`);
+}
+
+const preview = await previewInstrumentMerge(appDeps.db, id, into);
+if (!preview) {
+  return new Response("Instrument not found.", { status: 404 });
+}
+const { source, target, losingSongs, losingTakes } = preview;
+const losesSomething = losingSongs.length > 0 || losingTakes.length > 0;
+---
+
+<Layout title={ta.mergeInstrument}>
+  <ConfirmActionPage
+    bannerTitle={ta.mergeConfirmTitle(source.label, target.label)}
+    cta={ta.mergeInstrument}
+    cancelHref="/admin/instruments"
+    cancelLabel={ta.cancel}
+  >
+    <p class="bp-m0">{ta.mergeBody(source.label, target.label)}</p>
+    {
+      losesSomething ? (
+        <>
+          <p class="bp-mt bp-m0"><strong>{ta.mergeCollisions}</strong></p>
+          <ul class="bp-merge-losses">
+            {losingSongs.map((song) => <li>{ta.mergeLosesChart(song.title)}</li>)}
+            {losingTakes.map((take) => (
+              <li>{ta.mergeLosesStem(take.songTitle, formatShortDate(Astro.locals.locale, take.recordedAt))}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p class="bp-mt bp-m0">{ta.mergeNoCollisions}</p>
+      )
+    }
+  </ConfirmActionPage>
+</Layout>

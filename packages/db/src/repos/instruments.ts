@@ -1,5 +1,5 @@
 import { uuidv7 } from "@bandplate/core";
-import { eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
   assets,
@@ -283,4 +283,224 @@ export async function addAlias(db: Db, input: AddAliasInput): Promise<AddAliasRe
 
 export async function removeAlias(db: Db, aliasId: string): Promise<void> {
   await db.delete(instrumentAliases).where(eq(instrumentAliases.id, aliasId));
+}
+
+// --- merge -----------------------------------------------------------------
+
+/**
+ * What merging one instrument into another would cost.
+ *
+ * Most of a merge is free: a member who plays both, or a take that lists
+ * both, simply stops listing one — nothing is lost, because "plays bass" was
+ * already true. The two that are NOT free share a shape — a slot that only
+ * one row can occupy — and both hold something a person made:
+ *
+ *   CHARTS   a song with a chart for each instrument. `song_instrument_notes`
+ *            is keyed (song, instrument), so one of the two bodies of
+ *            authored text has to go.
+ *   STEMS    a take with a stem for each. `assets_slot_idx` is keyed
+ *            (take, kind, instrument, tier), so one of two AUDIO FILES has to
+ *            go — and its object in the bucket with it.
+ *
+ * Which is why this is planned before it is done. Nothing here writes; the
+ * caller shows the plan, and a human decides whether losing those rows is
+ * what they meant. The target always wins: you merge a source INTO a target,
+ * so the target is the survivor in every sense, and the plan names exactly
+ * what the source loses.
+ */
+export interface MergePlan {
+  /** Source charts the target already has one for. Their bodies are lost. */
+  chartSongIds: string[];
+  /** Source assets whose slot the target already fills. The FILES are lost. */
+  collidingAssetIds: string[];
+  /** Non-colliding rows, which simply move across. */
+  movedCharts: number;
+  movedAssets: number;
+  movedMembers: number;
+  movedTakes: number;
+}
+
+export async function planMerge(db: Db, sourceId: string, targetId: string): Promise<MergePlan> {
+  const [srcCharts, tgtCharts, srcAssets, tgtAssets, srcMembers, tgtMembers, srcTakes, tgtTakes] =
+    await Promise.all([
+      db
+        .select({ songId: songInstrumentNotes.songId })
+        .from(songInstrumentNotes)
+        .where(eq(songInstrumentNotes.instrumentId, sourceId)),
+      db
+        .select({ songId: songInstrumentNotes.songId })
+        .from(songInstrumentNotes)
+        .where(eq(songInstrumentNotes.instrumentId, targetId)),
+      db
+        .select({ id: assets.id, takeId: assets.takeId, kind: assets.kind, tier: assets.tier })
+        .from(assets)
+        .where(eq(assets.instrumentId, sourceId)),
+      db
+        .select({ takeId: assets.takeId, kind: assets.kind, tier: assets.tier })
+        .from(assets)
+        .where(eq(assets.instrumentId, targetId)),
+      db
+        .select({ memberId: memberInstruments.memberId })
+        .from(memberInstruments)
+        .where(eq(memberInstruments.instrumentId, sourceId)),
+      db
+        .select({ memberId: memberInstruments.memberId })
+        .from(memberInstruments)
+        .where(eq(memberInstruments.instrumentId, targetId)),
+      db
+        .select({ takeId: takeInstruments.takeId })
+        .from(takeInstruments)
+        .where(eq(takeInstruments.instrumentId, sourceId)),
+      db
+        .select({ takeId: takeInstruments.takeId })
+        .from(takeInstruments)
+        .where(eq(takeInstruments.instrumentId, targetId)),
+    ]);
+
+  // Intersected here rather than in SQL: these are one instrument's rows, so
+  // the sets are small, and the slot key is easier to get right in one place
+  // than spread across four correlated subqueries.
+  const targetSongs = new Set(tgtCharts.map((r) => r.songId));
+  const chartSongIds = srcCharts.map((r) => r.songId).filter((id) => targetSongs.has(id));
+
+  const slot = (r: { takeId: string; kind: string; tier: string }) =>
+    `${r.takeId}\u0000${r.kind}\u0000${r.tier}`;
+  const targetSlots = new Set(tgtAssets.map(slot));
+  const collidingAssetIds = srcAssets.filter((r) => targetSlots.has(slot(r))).map((r) => r.id);
+
+  const targetMembers = new Set(tgtMembers.map((r) => r.memberId));
+  const targetTakes = new Set(tgtTakes.map((r) => r.takeId));
+
+  return {
+    chartSongIds,
+    collidingAssetIds,
+    movedCharts: srcCharts.length - chartSongIds.length,
+    movedAssets: srcAssets.length - collidingAssetIds.length,
+    movedMembers: srcMembers.filter((r) => !targetMembers.has(r.memberId)).length,
+    movedTakes: srcTakes.filter((r) => !targetTakes.has(r.takeId)).length,
+  };
+}
+
+/**
+ * Fold one instrument into another and delete it.
+ *
+ * The plan is passed in rather than recomputed so that what a human approved
+ * is what runs. Storage is NOT touched here — a repo has no business reaching
+ * for a bucket, the same rule `songsRepo.remove` states — so the caller
+ * deletes the objects for `collidingAssetIds` after this returns.
+ *
+ * The source's slug becomes an alias of the target, and the source's own
+ * aliases move across. That is the point of the whole operation: without it
+ * the next ingest run meets the old slug, finds nothing, and re-creates the
+ * instrument that was just merged away.
+ */
+export async function mergeInto(
+  db: Db,
+  sourceId: string,
+  targetId: string,
+  plan: MergePlan,
+): Promise<void> {
+  const source = await getById(db, sourceId);
+  if (!source) {
+    return;
+  }
+  const collidingSongs = new Set(plan.chartSongIds);
+  const collidingAssets = new Set(plan.collidingAssetIds);
+
+  // Read the join rows the target already holds, so the source's duplicates
+  // can be DELETED rather than repointed into a primary-key collision.
+  const [tgtMembers, tgtTakes] = await Promise.all([
+    db
+      .select({ memberId: memberInstruments.memberId })
+      .from(memberInstruments)
+      .where(eq(memberInstruments.instrumentId, targetId)),
+    db
+      .select({ takeId: takeInstruments.takeId })
+      .from(takeInstruments)
+      .where(eq(takeInstruments.instrumentId, targetId)),
+  ]);
+  const targetMembers = tgtMembers.map((r) => r.memberId);
+  const targetTakes = tgtTakes.map((r) => r.takeId);
+
+  // One batch, so the whole fold is one transaction: a merge that half
+  // happened would leave charts and audio deleted with the instrument still
+  // standing.
+  //
+  // `db.batch` wants a NON-EMPTY tuple, which an array built conditionally
+  // cannot satisfy at the type level even though the unconditional block
+  // below guarantees it. One cast, here, rather than splitting this into two
+  // batches that could tear.
+  type BatchStatement = Parameters<typeof db.batch>[0][number];
+  const statements: BatchStatement[] = [];
+
+  // 1. The rows that cannot survive, gone first — so nothing below can land
+  //    on a slot they still occupy.
+  if (collidingSongs.size > 0) {
+    statements.push(
+      db
+        .delete(songInstrumentNotes)
+        .where(
+          and(
+            eq(songInstrumentNotes.instrumentId, sourceId),
+            inArray(songInstrumentNotes.songId, [...collidingSongs]),
+          ),
+        ),
+    );
+  }
+  if (collidingAssets.size > 0) {
+    statements.push(db.delete(assets).where(inArray(assets.id, [...collidingAssets])));
+  }
+  if (targetMembers.length > 0) {
+    statements.push(
+      db
+        .delete(memberInstruments)
+        .where(
+          and(
+            eq(memberInstruments.instrumentId, sourceId),
+            inArray(memberInstruments.memberId, targetMembers),
+          ),
+        ),
+    );
+  }
+  if (targetTakes.length > 0) {
+    statements.push(
+      db
+        .delete(takeInstruments)
+        .where(
+          and(
+            eq(takeInstruments.instrumentId, sourceId),
+            inArray(takeInstruments.takeId, targetTakes),
+          ),
+        ),
+    );
+  }
+
+  // 2. Everything left over moves across.
+  statements.push(
+    db
+      .update(songInstrumentNotes)
+      .set({ instrumentId: targetId })
+      .where(eq(songInstrumentNotes.instrumentId, sourceId)),
+    db.update(assets).set({ instrumentId: targetId }).where(eq(assets.instrumentId, sourceId)),
+    db
+      .update(memberInstruments)
+      .set({ instrumentId: targetId })
+      .where(eq(memberInstruments.instrumentId, sourceId)),
+    db
+      .update(takeInstruments)
+      .set({ instrumentId: targetId })
+      .where(eq(takeInstruments.instrumentId, sourceId)),
+    // 3. Its aliases move too, and its own slug becomes one. Before the
+    //    delete below, which would otherwise take them with it.
+    db
+      .update(instrumentAliases)
+      .set({ instrumentId: targetId })
+      .where(eq(instrumentAliases.instrumentId, sourceId)),
+    db
+      .insert(instrumentAliases)
+      .values({ id: uuidv7(), instrumentId: targetId, slug: source.slug, source: "manual" }),
+    db.delete(instruments).where(eq(instruments.id, sourceId)),
+  );
+
+  await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
 }

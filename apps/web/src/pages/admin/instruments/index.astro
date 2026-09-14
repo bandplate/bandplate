@@ -135,6 +135,7 @@ const justArchived = Astro.url.searchParams.get("archived") === "1";
 const justDeleted = Astro.url.searchParams.get("deleted") === "1";
 const aliasAdded = Astro.url.searchParams.get("alias_added") === "1";
 const aliasRemoved = Astro.url.searchParams.get("alias_removed") === "1";
+const justMerged = Astro.url.searchParams.get("merged") === "1";
 const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
 ---
 
@@ -148,6 +149,7 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
     {justDeleted && <Banner kind="success">{ta.instrumentDeleted}</Banner>}
     {aliasAdded && <Banner kind="success">{ta.aliasAdded}</Banner>}
     {aliasRemoved && <Banner kind="success">{ta.aliasRemoved}</Banner>}
+    {justMerged && <Banner kind="success">{ta.merged}</Banner>}
     {deleteBlocked && <Banner kind="error">{ta.instrumentDeleteBlocked}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
@@ -252,14 +254,28 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                     title={instrument.label}
                     subtitle={instrument.slug}
                   >
-                    {/* Empty, and targeted by `form=` below: HTML forbids a
-                        form inside a form, and these two are their own POSTs
-                        rather than fields of the edit. Same trick the take
-                        page's unpublish uses. */}
+                    {/* Empty, and targeted by `form=` below. HTML forbids a
+                        form inside a form and the PARSER DROPS THE INNER ONE
+                        SILENTLY — the markup is in the response and simply
+                        absent from the DOM, so the control renders and does
+                        nothing. Everything here that is its own submission
+                        lives out here for that reason. */}
                     <form method="post" id={`add-alias-${instrument.id}`} class="bp-sheet-aux">
                       <input type="hidden" name="intent" value="add-alias" />
                       <input type="hidden" name="instrumentId" value={instrument.id} />
                     </form>
+                    {(aliases.get(instrument.id) ?? []).map((alias) => (
+                      <form method="post" id={`drop-alias-${alias.id}`} class="bp-sheet-aux">
+                        <input type="hidden" name="intent" value="remove-alias" />
+                        <input type="hidden" name="aliasId" value={alias.id} />
+                      </form>
+                    ))}
+                    <form
+                      method="get"
+                      action={`/admin/instruments/${instrument.id}/merge`}
+                      id={`merge-${instrument.id}-form`}
+                      class="bp-sheet-aux"
+                    ></form>
                     <form method="post" class="bp-sheet-form">
                       <input type="hidden" name="intent" value="update" />
                       <input type="hidden" name="instrumentId" value={instrument.id} />
@@ -372,19 +388,13 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                               {(aliases.get(instrument.id) ?? []).map((alias) => (
                                 <li class="bp-alias-row">
                                   <span class="bp-mono">{alias.slug}</span>
-                                  {/* Its own single-field form. A remove is
-                                      one press and carries only the id of the
-                                      thing it removes. */}
-                                  <form method="post" class="bp-alias-remove">
-                                    <input type="hidden" name="intent" value="remove-alias" />
-                                    <input type="hidden" name="aliasId" value={alias.id} />
-                                    <button
-                                      type="submit"
-                                      class="bp-btn bp-btn-quiet bp-btn-xs"
-                                      aria-label={ta.removeAlias(alias.slug)}
-                                      title={ta.removeAlias(alias.slug)}
-                                    >&times;</button>
-                                  </form>
+                                  <button
+                                    type="submit"
+                                    form={`drop-alias-${alias.id}`}
+                                    class="bp-btn bp-btn-quiet bp-btn-xs"
+                                    aria-label={ta.removeAlias(alias.slug)}
+                                    title={ta.removeAlias(alias.slug)}
+                                  >&times;</button>
                                 </li>
                               ))}
                             </ul>
@@ -432,6 +442,38 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                             <p class="bp-sheet-hint bp-m0">
                               {ta.instrumentInUse(usageParts(usageOf(usage, instrument.id)))}
                             </p>
+                          )}
+                          {/* Merging is the answer when deleting is refused:
+                              an instrument something DOES point at can still
+                              stop existing, by becoming another one. A plain
+                              GET to the confirm page, because the page's whole
+                              job is to show what the merge would destroy
+                              before anything happens. */}
+                          {allInstruments.length > 1 && (
+                            <div class="bp-merge-form">
+                              <label class="bp-visually-hidden" for={`merge-${instrument.id}`}>
+                                {ta.mergeTargetLabel}
+                              </label>
+                              <select
+                                class="bp-select"
+                                id={`merge-${instrument.id}`}
+                                name="into"
+                                form={`merge-${instrument.id}-form`}
+                              >
+                                {allInstruments
+                                  .filter((other) => other.id !== instrument.id)
+                                  .map((other) => (
+                                    <option value={other.id}>{other.label}</option>
+                                  ))}
+                              </select>
+                              <button
+                                type="submit"
+                                form={`merge-${instrument.id}-form`}
+                                class="bp-btn bp-btn-secondary bp-btn-sm"
+                              >
+                                {ta.mergeInto}
+                              </button>
+                            </div>
                           )}
                           {instrument.archivedAt ? (
                             <button

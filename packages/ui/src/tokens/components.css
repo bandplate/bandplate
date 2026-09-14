@@ -6039,6 +6039,31 @@ html:has(dialog.bp-filter-sheet[open]) body {
    row, which IS a decision and keeps its pill. Tighter tracking than
    `.bp-eyebrow` because it appears inline next to running text rather than
    alone above a block. */
+/* Merge: a target picker and its button on one line, inside the sheet's
+   destructive block. */
+.bp-merge-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.bp-merge-form .bp-select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* What a merge destroys, on its confirm page. A list, not a sentence: each
+   line is a different song losing a different thing, and running them
+   together is how someone approves one without reading the others. */
+.bp-merge-losses {
+  margin: 0.5rem 0 0;
+  padding-left: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 /* The alias list inside an instrument's sheet. Slugs are machine strings, so
    they take the mono face the asset rows already use for a format and a tier
    — this project's rule is that mono means "a computer reads this", and a

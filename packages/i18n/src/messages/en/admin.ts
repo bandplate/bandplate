@@ -169,6 +169,27 @@ export const admin = {
   aliasTaken: (label: string): string => `That slug already belongs to ${label}.`,
   noAliases: "None yet.",
 
+  /**
+   * Merging one instrument into another.
+   *
+   * Two steps, always: the collisions are the reason. A song with a chart for
+   * both loses one body of authored text; a take with a stem for each loses
+   * an audio file. Neither comes back, so the second step lists them.
+   */
+  mergeInto: "Merge into",
+  mergeInstrument: "Merge instrument",
+  mergeConfirmTitle: (source: string, target: string): string => `Merge ${source} into ${target}?`,
+  mergeBody: (source: string, target: string): string =>
+    `${source} stops existing. Everything that used it is moved to ${target}, and its slug keeps working — ingest will resolve it as ${target} from now on.`,
+  /** The heading over what cannot survive. Plain, because the list under it is the point. */
+  mergeCollisions: "This cannot be undone:",
+  mergeLosesChart: (song: string): string => `${song}'s chart for this instrument is deleted.`,
+  mergeLosesStem: (song: string, date: string): string =>
+    `A stem on the ${date} take of ${song} is deleted — the audio file too.`,
+  mergeNoCollisions: "Nothing is lost — no take or song has both.",
+  merged: "Instruments merged.",
+  mergeTargetLabel: "Merge into which instrument",
+
   instrumentDeleted: "Instrument deleted.",
   /** Something started using it between the page being drawn and the press. */
   instrumentDeleteBlocked: "Something started using that instrument — nothing was deleted.",

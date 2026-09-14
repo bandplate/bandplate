@@ -151,6 +151,25 @@ export const admin = {
   aliasTaken: (label: string): string => `Tenhle slug už patří nástroji ${label}.`,
   noAliases: "Zatím žádné.", // en: None yet.
 
+  mergeInto: "Sloučit do", // en: Merge into
+  mergeInstrument: "Sloučit nástroj", // en: Merge instrument
+  // en: `Merge ${source} into ${target}?`
+  mergeConfirmTitle: (source: string, target: string): string =>
+    `Sloučit ${source} do nástroje ${target}?`,
+  // en: `${source} stops existing. Everything that used it is moved to ${target}, and its slug keeps working — ingest will resolve it as ${target} from now on.`
+  mergeBody: (source: string, target: string): string =>
+    `${source} přestane existovat. Všechno, co ho používalo, přejde na ${target}, a jeho slug dál funguje — ingest ho od teď bude brát jako ${target}.`,
+  mergeCollisions: "Tohle už nevrátíš:", // en: This cannot be undone:
+  // en: `${song}'s chart for this instrument is deleted.`
+  mergeLosesChart: (song: string): string => `Zápis skladby ${song} pro tenhle nástroj se smaže.`,
+  // en: `A stem on the ${date} take of ${song} is deleted — the audio file too.`
+  mergeLosesStem: (song: string, date: string): string =>
+    `Stopa u nahrávky skladby ${song} z ${date} se smaže — i zvukový soubor.`,
+  // en: Nothing is lost — no take or song has both.
+  mergeNoCollisions: "Nic se neztratí — žádná nahrávka ani skladba nemá oba.",
+  merged: "Nástroje sloučeny.", // en: Instruments merged.
+  mergeTargetLabel: "Do kterého nástroje sloučit", // en: Merge into which instrument
+
   instrumentDeleted: "Nástroj smazán.", // en: Instrument deleted.
   // en: Something started using that instrument — nothing was deleted.
   instrumentDeleteBlocked: "Nástroj se mezitím začal používat — nic se nesmazalo.",

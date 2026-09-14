@@ -1,5 +1,6 @@
+import type { Storage } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
-import { instrumentsRepo } from "@bandplate/db";
+import { assetsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 // `/admin/instruments` page logic — mirrors
 // `packages/api/src/routes/admin-instruments.ts`.
 //
@@ -240,6 +241,118 @@ export async function addInstrumentAlias(
 
 export async function removeInstrumentAlias(db: Db, aliasId: string): Promise<void> {
   await instrumentsRepo.removeAlias(db, aliasId);
+}
+
+// --- merge -----------------------------------------------------------------
+
+export type MergePlan = instrumentsRepo.MergePlan;
+
+export interface MergePreview {
+  source: Instrument;
+  target: Instrument;
+  plan: MergePlan;
+  /** Songs whose chart for the source is lost, by title — the page names them. */
+  losingSongs: { id: string; title: string }[];
+  /**
+   * Takes losing a stem file.
+   *
+   * Carries the DATE as well as the song, because a band records the same
+   * song many times: without it, seven lines of "a stem on a take of Čoudy"
+   * are seven identical sentences, and a list nobody can tell apart is a list
+   * nobody reads before approving.
+   */
+  losingTakes: { assetId: string; takeId: string; songTitle: string; recordedAt: number }[];
+}
+
+/**
+ * What a merge would do, before it does it.
+ *
+ * Read-only on purpose: the collisions are the whole reason this is two
+ * steps. A song with a chart for both instruments loses one BODY OF AUTHORED
+ * TEXT; a take with a stem for each loses an AUDIO FILE and its object in the
+ * bucket. Neither is recoverable, so a human sees the list and decides.
+ */
+export async function previewInstrumentMerge(
+  db: Db,
+  sourceId: string,
+  targetId: string,
+): Promise<MergePreview | undefined> {
+  const [source, target] = await Promise.all([
+    instrumentsRepo.getById(db, sourceId),
+    instrumentsRepo.getById(db, targetId),
+  ]);
+  if (!source || !target || source.id === target.id) {
+    return undefined;
+  }
+  const plan = await instrumentsRepo.planMerge(db, sourceId, targetId);
+
+  const losingSongs =
+    plan.chartSongIds.length === 0
+      ? []
+      : (await songsRepo.getByIds(db, plan.chartSongIds)).map((song) => ({
+          id: song.id,
+          title: song.title,
+        }));
+
+  const losingTakes: MergePreview["losingTakes"] = [];
+  for (const assetId of plan.collidingAssetIds) {
+    const asset = await assetsRepo.getById(db, assetId);
+    if (!asset) {
+      continue;
+    }
+    const take = await takesRepo.getById(db, asset.takeId);
+    const song = take ? await songsRepo.getById(db, take.songId) : undefined;
+    losingTakes.push({
+      assetId,
+      takeId: asset.takeId,
+      songTitle: song?.title ?? "",
+      recordedAt: take?.recordedAt ?? 0,
+    });
+  }
+
+  return { source, target, plan, losingSongs, losingTakes };
+}
+
+export type MergeInstrumentsResult = { kind: "ok" } | { kind: "not_found" };
+
+/**
+ * Fold one instrument into another.
+ *
+ * The plan is recomputed here rather than carried through the form: what runs
+ * has to be what the database looks like NOW, and a bridge run between the
+ * preview and the press can add a stem that collides. The preview is what a
+ * human agreed to in principle; this is what is true.
+ *
+ * DB first, bucket best-effort — the same order `deleteAsset` uses, and for
+ * the same reason: a row pointing at a missing object is a broken download,
+ * while an object with no row is invisible and cheap.
+ */
+export async function mergeInstruments(
+  db: Db,
+  storage: Storage,
+  sourceId: string,
+  targetId: string,
+): Promise<MergeInstrumentsResult> {
+  const preview = await previewInstrumentMerge(db, sourceId, targetId);
+  if (!preview) {
+    return { kind: "not_found" };
+  }
+  // Read the keys BEFORE the merge deletes the rows that hold them.
+  const doomed = await Promise.all(
+    preview.plan.collidingAssetIds.map((id) => assetsRepo.getById(db, id)),
+  );
+  const keys = doomed.flatMap((asset) => (asset ? [asset.storageKey] : []));
+
+  await instrumentsRepo.mergeInto(db, sourceId, targetId, preview.plan);
+
+  if (keys.length > 0) {
+    try {
+      await storage.delete(keys);
+    } catch (err) {
+      console.error("failed to delete merged-away storage objects", keys, err);
+    }
+  }
+  return { kind: "ok" };
 }
 
 export type ArchiveInstrumentResult = { kind: "ok" } | { kind: "not_found" };

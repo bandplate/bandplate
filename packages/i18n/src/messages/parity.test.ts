@@ -89,6 +89,10 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "admin.instrumentInUse": [{ label: "parts", args: ["takes (3)"] }],
   "admin.removeAlias": [{ label: "slug", args: ["bass-di-2"] }],
   "admin.aliasTaken": [{ label: "label", args: ["Bass"] }],
+  "admin.mergeConfirmTitle": [{ label: "pair", args: ["Gtr2", "Guitar"] }],
+  "admin.mergeBody": [{ label: "pair", args: ["Gtr2", "Guitar"] }],
+  "admin.mergeLosesChart": [{ label: "song", args: ["Čoudy"] }],
+  "admin.mergeLosesStem": [{ label: "song", args: ["Čoudy", "27. 8. 2026"] }],
   "mixer.loopRegion": [{ label: "range", args: ["0:12", "0:34"] }],
   // Every Czech plural class, because "stopa/stopy/stop" is exactly the kind
   // of thing that gets one form and is never looked at again.

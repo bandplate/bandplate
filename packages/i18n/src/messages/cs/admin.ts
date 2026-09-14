@@ -131,17 +131,17 @@ export const admin = {
   // en: `${label} is gone for good. Nothing uses it, so nothing else changes.`
   deleteInstrumentBody: (label: string): string =>
     `${label} bude nenávratně pryč. Nic ho nepoužívá, takže se nic dalšího nezmění.`,
-  // en: `In use, so it can't be deleted — ${parts}. Archive it instead.`
+  // en: `In use, so it can't be deleted. Still on ${parts}. Archive it instead.`
   instrumentInUse: (parts: string): string =>
-    `Používá se, takže ho nejde smazat — ${parts}. Radši ho archivuj.`,
+    `Používá se, takže ho nejde smazat. Zbývá: ${parts}. Radši ho archivuj.`,
   usedByTakes: "nahrávky", // en: takes
   usedByMembers: "členové", // en: members
   usedByCharts: "zápisy skladeb", // en: song charts
   usedByStems: "stopy", // en: stems
   aliasesHeading: "Taky známý jako", // en: Also known as
-  // en: Slugs ingest should treat as this instrument — a track your session names differently, or the slug of an instrument merged into this one.
+  // en: Slugs ingest should treat as this instrument: a track your session names differently, or the slug of an instrument merged into this one.
   aliasesHint:
-    "Slugy, které má ingest brát jako tenhle nástroj — stopa, co se ve tvé session jmenuje jinak, nebo slug nástroje, který jsi do tohohle sloučil.",
+    "Slugy, které má ingest brát jako tenhle nástroj: stopa, co se ve tvé session jmenuje jinak, nebo slug nástroje, který jsi do tohohle sloučil.",
   addAlias: "Přidat", // en: Add
   aliasSlugLabel: "Další slug", // en: Another slug
   aliasSlugPlaceholder: "dalsi-slug", // en: another-slug
@@ -157,17 +157,17 @@ export const admin = {
   // en: `Merge ${source} into ${target}?`
   mergeConfirmTitle: (source: string, target: string): string =>
     `Sloučit ${source} do nástroje ${target}?`,
-  // en: `${source} stops existing. Everything that used it is moved to ${target}, and its slug keeps working — ingest will resolve it as ${target} from now on.`
+  // en: `${source} stops existing. Everything that used it moves to ${target}. Its slug keeps working: ingest will resolve it as ${target} from now on.`
   mergeBody: (source: string, target: string): string =>
-    `${source} přestane existovat. Všechno, co ho používalo, přejde na ${target}, a jeho slug dál funguje — ingest ho od teď bude brát jako ${target}.`,
+    `${source} přestane existovat. Všechno, co ho používalo, přejde na ${target}. Jeho slug dál funguje: ingest ho od teď bude brát jako ${target}.`,
   mergeCollisions: "Tohle už nevrátíš:", // en: This cannot be undone:
   // en: `${song}'s chart for this instrument is deleted.`
   mergeLosesChart: (song: string): string => `Zápis skladby ${song} pro tenhle nástroj se smaže.`,
-  // en: `A stem on the ${date} take of ${song} is deleted — the audio file too.`
+  // en: `A stem on the ${date} take of ${song} is deleted, audio file and all.`
   mergeLosesStem: (song: string, date: string): string =>
-    `Stopa u nahrávky skladby ${song} z ${date} se smaže — i zvukový soubor.`,
-  // en: Nothing is lost — no take or song has both.
-  mergeNoCollisions: "Nic se neztratí — žádná nahrávka ani skladba nemá oba.",
+    `Stopa u nahrávky skladby ${song} z ${date} se smaže i se zvukovým souborem.`,
+  // en: Nothing is lost. No take and no song has both of them.
+  mergeNoCollisions: "Nic se neztratí. Žádná nahrávka ani skladba nemá oba.",
   merged: "Nástroje sloučeny.", // en: Instruments merged.
   mergeTargetLabel: "Do kterého nástroje sloučit", // en: Merge into which instrument
 

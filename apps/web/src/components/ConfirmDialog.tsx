@@ -49,8 +49,16 @@ interface ConfirmState {
    * the dialog opens first and asks.
    */
   bodyUrl?: string;
-  /** Lines under the body — one per thing that will not survive. */
+  /** Lines under the body, one per thing that will not survive. */
   details?: string[];
+  /**
+   * A single prominent line, for the answer that is GOOD news.
+   *
+   * Not a `details` entry: that list is muted, small and scrollable, which is
+   * right for a tally of losses and wrong for "nothing is lost" — the one
+   * sentence someone opening a destructive dialog most wants to find.
+   */
+  note?: string;
 }
 
 export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
@@ -162,6 +170,7 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
           title?: string;
           body?: string;
           details?: string[];
+          note?: string;
         };
         if (!live) {
           return;
@@ -173,6 +182,7 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
                 title: payload.title ?? current.title,
                 body: payload.body ?? current.body,
                 details: payload.details,
+                note: payload.note,
               }
             : current,
         );
@@ -250,6 +260,7 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
         <>
           <h2 id="bp-confirm-title">{state.title}</h2>
           <p>{state.body}</p>
+          {state.note && <p class="bp-dialog-note">{state.note}</p>}
           {state.details && state.details.length > 0 && (
             /* A list, not a sentence: each line is a different thing that
                will not survive, and running them together is how someone

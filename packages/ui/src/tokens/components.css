@@ -3050,6 +3050,19 @@ html:has(dialog.bp-filter-sheet[open]) body {
   border-top: 1px solid var(--bp-color-border);
 }
 
+/* The reassuring answer, when there is one. Body size and a tinted band, not
+   the muted small type of the loss list beside it: "nothing is lost" is the
+   sentence someone opening a destructive dialog is looking for, and it was
+   set smaller than everything around it. */
+.bp-dialog-note {
+  margin: 0.75rem 0 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bp-fill-ok);
+  color: var(--bp-color-fg);
+  font-weight: 600;
+}
+
 /* What a confirm would destroy, inside the dialog. A list rather than a run
    of sentences: each line is a different thing that will not survive, and
    running them together is how someone approves one without reading the

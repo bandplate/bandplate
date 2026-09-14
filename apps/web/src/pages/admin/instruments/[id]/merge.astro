@@ -68,7 +68,11 @@ if ((Astro.request.headers.get("accept") ?? "").includes("application/json")) {
     JSON.stringify({
       title: ta.mergeConfirmTitle(source.label, target.label),
       body: ta.mergeBody(source.label, target.label),
-      details: losesSomething ? details : [ta.mergeNoCollisions],
+      // The good news is a NOTE, not a detail. `details` is the muted,
+      // scrollable tally of what dies; putting "nothing is lost" in it made
+      // the one reassuring sentence the smallest text in the dialog.
+      details: losesSomething ? details : undefined,
+      note: losesSomething ? undefined : ta.mergeNoCollisions,
     }),
     { headers: { "content-type": "application/json" } },
   );
@@ -98,7 +102,9 @@ if ((Astro.request.headers.get("accept") ?? "").includes("application/json")) {
           </ul>
         </>
       ) : (
-        <p class="bp-mt bp-m0">{ta.mergeNoCollisions}</p>
+        /* The same weight the dialog gives it — this is the sentence someone
+           came here to find. */
+        <p class="bp-dialog-note">{ta.mergeNoCollisions}</p>
       )
     }
   </ConfirmActionPage>

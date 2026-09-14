@@ -146,7 +146,7 @@ export const admin = {
    * four different nouns.
    */
   instrumentInUse: (parts: string): string =>
-    `In use, so it can't be deleted — ${parts}. Archive it instead.`,
+    `In use, so it can't be deleted. Still on ${parts}. Archive it instead.`,
   usedByTakes: "takes",
   usedByMembers: "members",
   usedByCharts: "song charts",
@@ -160,7 +160,7 @@ export const admin = {
    */
   aliasesHeading: "Also known as",
   aliasesHint:
-    "Slugs ingest should treat as this instrument — a track your session names differently, or the slug of an instrument merged into this one.",
+    "Slugs ingest should treat as this instrument: a track your session names differently, or the slug of an instrument merged into this one.",
   addAlias: "Add",
   aliasSlugLabel: "Another slug",
   /**
@@ -188,13 +188,13 @@ export const admin = {
   mergeInstrument: "Merge instrument",
   mergeConfirmTitle: (source: string, target: string): string => `Merge ${source} into ${target}?`,
   mergeBody: (source: string, target: string): string =>
-    `${source} stops existing. Everything that used it is moved to ${target}, and its slug keeps working — ingest will resolve it as ${target} from now on.`,
+    `${source} stops existing. Everything that used it moves to ${target}. Its slug keeps working: ingest will resolve it as ${target} from now on.`,
   /** The heading over what cannot survive. Plain, because the list under it is the point. */
   mergeCollisions: "This cannot be undone:",
   mergeLosesChart: (song: string): string => `${song}'s chart for this instrument is deleted.`,
   mergeLosesStem: (song: string, date: string): string =>
-    `A stem on the ${date} take of ${song} is deleted — the audio file too.`,
-  mergeNoCollisions: "Nothing is lost — no take or song has both.",
+    `A stem on the ${date} take of ${song} is deleted, audio file and all.`,
+  mergeNoCollisions: "Nothing is lost. No take and no song has both of them.",
   merged: "Instruments merged.",
   mergeTargetLabel: "Merge into which instrument",
 

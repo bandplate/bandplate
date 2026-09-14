@@ -11,7 +11,7 @@ import {
 } from "./mail-messages.js";
 
 const OUT = process.env.MAIL_PREVIEW_OUT;
-const ORIGIN = "https://bandplate.xaralis93.workers.dev";
+const ORIGIN = "https://bandplate.example";
 
 const CASES = [
   {

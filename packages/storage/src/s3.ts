@@ -189,7 +189,7 @@ export function createS3Storage(config: S3StorageConfig): Storage {
   return { signedUploadUrl, signedDownloadUrl, head, delete: del, put };
 }
 
-// --- Why not the Workers R2 binding (increment 7) --------------------------
+// --- Why not the Workers R2 binding ----------------------------------------
 //
 // R2's binding API (`env.MY_BUCKET.put/get/...`) cannot presign a URL at
 // all — presigning is an S3-compatible-endpoint-only feature. Building the
@@ -200,4 +200,4 @@ export function createS3Storage(config: S3StorageConfig): Storage {
 // the container profile's own tests. `createS3Storage` against R2's
 // S3-compatible endpoint (same SigV4 signing MinIO and real S3 use) is the
 // one path both profiles run, so the same conformance suite exercises what
-// increment 7 actually ships.
+// the Workers profile actually ships.

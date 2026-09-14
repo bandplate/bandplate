@@ -265,7 +265,7 @@ async function main() {
       musicalKey: "Am",
       chordProgression: NEON_SKYLINE_CHORDS,
       lyrics: NEON_SKYLINE_LYRICS,
-      notes: "Set closer. Bring the tempo up slightly live — it drags at 128 with a full room.",
+      notes: "Set closer. Bring the tempo up slightly live. It drags at 128 with a full room.",
     },
     {
       slug: "basement-tapes",
@@ -291,7 +291,7 @@ async function main() {
       title: "Because the Night (cover)",
       tempoBpm: 100,
       musicalKey: "Em",
-      notes: "One-off for the New Year Bash encore. Never rehearsed again — worth a second look.",
+      notes: "One-off for the New Year Bash encore. Never rehearsed again, worth a second look.",
     },
     { slug: "untitled-jam-1", title: "Untitled Jam #1", isStub: true },
   ];
@@ -350,7 +350,7 @@ async function main() {
     db,
     song("neon-skyline"),
     instrument("bass"),
-    "Walking bass under the chorus — resist the urge to fill.",
+    "Walking bass under the chorus. Resist the urge to fill.",
     daysAgo(90),
   );
   await songsRepo.setInstrumentNote(
@@ -364,7 +364,7 @@ async function main() {
     db,
     song("wildfire"),
     instrument("vocals"),
-    "Melody sits high in the second verse — drop it an octave if the singer's voice is tired.",
+    "Melody sits high in the second verse. Drop it an octave if the singer's voice is tired.",
     daysAgo(60),
   );
 
@@ -397,7 +397,7 @@ async function main() {
       heldAt: daysAgo(60),
       title: "Live at The Attic",
       venue: "The Attic",
-      notes: "Sold out. PA mix was muddy in the low end — bass needs cutting live next time.",
+      notes: "Sold out. PA mix was muddy in the low end. Bass needs cutting live next time.",
     },
     { clientRef: "seed-event-9", kind: "rehearsal" as const, heldAt: daysAgo(30) },
     {

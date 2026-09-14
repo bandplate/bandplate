@@ -1,178 +1,194 @@
 # bandplate
 
-A self-hostable web app where a band browses, plays, and votes on its
-rehearsal recordings.
+**A self-hosted archive for a band's own rehearsal recordings.** Browse
+every take you have ever played, hear it, argue about which one was the
+keeper, and practise against it with your own part muted.
 
-## Toolchain
+[![CI](https://github.com/bandplate/bandplate/actions/workflows/ci.yml/badge.svg)](https://github.com/bandplate/bandplate/actions/workflows/ci.yml)
 
-- Node 20.18.1 (see `.nvmrc`)
-- pnpm 10.33.0, managed via corepack (`"packageManager"` in `package.json`)
-- TypeScript (strict), ESM throughout
-- Astro 5 (`apps/web`), Hono (`packages/api`), Tailwind CSS v4 (`packages/ui`)
-- Biome for lint + format
-- Vitest for unit tests
+![The take list, filtered by song, instrument and date](docs/screenshots/takes.png)
 
-## Install & run
+## Why this exists
+
+Recording a rehearsal is easy now. Every band with an interface and a laptop
+has years of multitrack audio sitting somewhere.
+
+What nobody has is a way to *use* it. The recordings end up in a shared drive
+as `2024-11-07 rehearsal 2.wav`, four gigabytes at a time, and the honest
+truth is that nobody opens them again. You cannot find the take of the song
+you are trying to remember. You cannot tell which of the six attempts was the
+one everyone liked, because that was decided out loud in a room eight months
+ago. And the drummer who wants to practise the new arrangement at home has
+nothing to play along to except a mix with the drums already in it.
+
+The commercial options are band-management suites: setlists, gig calendars,
+file storage, a monthly bill, and your band's unreleased material on somebody
+else's server. None of them treat a rehearsal recording as the thing worth
+keeping.
+
+So bandplate does one job. It is a library of **takes** — one run-through of
+one song, on one date — with the metadata that makes a take findable, a vote
+so the band can agree in writing which ones are keepers, and a mixer that
+plays the separate instrument tracks together so you can mute your own and
+play along. It runs on your own hosting, and the whole thing is a few
+megabytes plus however much audio you feed it.
+
+It was built for one band's weekly rehearsals and is in real use. It is not a
+product, and there is no hosted version.
+
+## What you get
+
+**A take is the unit.** Not a file, not a session: one performance of one
+song. It carries the song, the date, the event it came from, its length, the
+instruments audible in it, a note ("with new bridge", "second encore"), and
+the band's votes.
+
+![A take: play it, open it in the mixer, vote on it, download the files](docs/screenshots/take.png)
+
+**A stem mixer**, when the recording came in with separate instrument tracks.
+Every stem plays together on one timeline, each with mute, solo and a fader,
+plus a loop region for the eight bars you keep getting wrong. One button
+mutes the instruments *you* play, which is the whole point: rehearsal at home
+against the band you actually play with.
+
+![The stem mixer: four instrument lanes, each with mute, solo and a fader](docs/screenshots/mixer.png)
+
+It streams rather than decoding. Seven stems of a seven-minute take would be
+about a gigabyte of decoded audio, so the engine runs one `<audio>` element
+per stem through Web Audio and corrects the drift between them. The tradeoff
+is honest and written down: this is a practice tool, not a DAW, and the loop
+jumps rather than being seamless.
+
+**Songs carry the working knowledge** — chords, lyrics, key and tempo,
+per-instrument notes, alternate titles — and list every take of that song in
+one place.
+
+![A song page: chords and lyrics beside every take of it](docs/screenshots/song.png)
+
+**Events group takes** as they were actually played: a rehearsal, or a gig in
+running order.
+
+![An event: three takes from a live show, in the order they were played](docs/screenshots/event.png)
+
+**It works on a phone**, because that is where you use it — in the rehearsal
+room, or on the way there. The mixer degrades to a track list and one shared
+position strip rather than a miniature DAW, and the loop still works.
+
+<p>
+  <img src="docs/screenshots/mobile-take.png" width="45%" alt="A take on a phone">
+  <img src="docs/screenshots/mobile-mixer.png" width="45%" alt="The mixer on a phone">
+</p>
+
+**Everything else is deliberately small.** Sign-in is a link in an email, no
+passwords. Members are added by an admin. Two languages ship (English and
+Czech) and adding a third is a file. There is no chat, no calendar, no
+invoicing.
+
+## The other half: reapertoire
+
+Getting audio *in* is its own problem, and it lives in a separate repo.
+
+[**reapertoire**](https://github.com/bandplate/reapertoire) works inside
+REAPER: it finds where each run-through starts and stops in an hour of
+continuous recording, recognises which song it was against the takes you
+named last time, renders a master plus per-instrument stems, and pushes the
+lot to bandplate over the ingest API.
+
+The two are independent. bandplate's ingest API is a documented HTTP contract
+([`docs/ingest-contract-v1.md`](docs/ingest-contract-v1.md)), and anything
+that can speak it will do. reapertoire is the reference client, not a
+dependency — and you can upload files by hand in the web UI instead.
+
+## Try it locally
 
 ```sh
 corepack enable
 pnpm install
+
+# audio has to live in a bucket; this starts MinIO and creates one
+cd deploy/node && docker compose up -d minio minio-init && cd ../..
+
+cp apps/web/.env.example apps/web/.env      # the defaults match the above
+BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+  pnpm --filter @bandplate/db run migrate
+
+# a demo band: songs, events, takes, votes — and, with ffmpeg on PATH,
+# real playable audio behind them
+BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+  pnpm --filter @bandplate/db run seed
+BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+  pnpm --filter @bandplate/db run dev:upload-audio
+
 pnpm --filter web dev
 ```
 
-Other scripts (fan out across the workspace with `pnpm -r`):
+Then open `/setup` and create yourself as the first admin, using the
+bootstrap token from your `.env`. Login links are printed to the server
+console in dev, so no mail server is needed.
 
-```sh
-pnpm typecheck
-pnpm lint
-pnpm format
-pnpm test
-pnpm build
-```
+**For a real deployment**, follow [`docs/self-hosting.md`](docs/self-hosting.md)
+instead — it covers the configuration that matters, including the one
+variable (`BANDPLATE_TRUSTED_PROXY_DEPTH`) that is a security decision rather
+than a value.
 
-## First run (a fresh deployment or a local scratch database)
+## How it is built
 
-1. **Configure.** Copy `apps/web/.env.example` to `apps/web/.env` and fill it
-   in — every variable is documented there. The app validates this config
-   once, at startup, and refuses to start with a message naming the specific
-   variable if something required is missing — including refusing to start
-   with no way to send login emails (set `BANDPLATE_SMTP_*`, or
-   `BANDPLATE_ALLOW_DEV_MAILER=true` for local dev only, which is also
-   refused outright once `NODE_ENV=production`) and with no object storage
-   configured (`S3_*` — see the next step; there is no "no storage" mode,
-   every take's audio lives there).
-
-   **Object storage (audio).** For local dev, `deploy/node/compose.yml`
-   starts a MinIO container and creates the bucket for you:
-   ```sh
-   cd deploy/node && docker compose up -d minio minio-init
-   ```
-   Then fill in the `.env`'s `S3_*` block — the defaults there
-   (`S3_ENDPOINT=http://localhost:9000`, `S3_PUBLIC_ENDPOINT=http://localhost:9000`,
-   `S3_BUCKET=bandplate`, `S3_ACCESS_KEY_ID=bandplate-dev`,
-   `S3_SECRET_ACCESS_KEY=bandplate-dev-secret`) already match this path —
-   `apps/web` running directly on the host (`pnpm --filter web dev`, or
-   `pnpm build && pnpm start`), reaching the compose-started MinIO at
-   `localhost`. The one case that needs a DIFFERENT `S3_ENDPOINT` is
-   running `apps/web` itself inside `deploy/node/compose.yml`'s own `app`
-   service — point `S3_ENDPOINT` at `http://minio:9000` there instead
-   (the compose network's internal hostname; `S3_PUBLIC_ENDPOINT` stays
-   `http://localhost:9000` regardless, since the browser is never on that
-   network). **`S3_ENDPOINT` and `S3_PUBLIC_ENDPOINT` are allowed to
-   differ, and inside that `app` service they must** — see the `.env.example`
-   comment on those two variables for exactly why (a presigned URL signed
-   against the wrong one 403s/hangs in the browser with no obvious cause).
-
-   One variable needs a deployment-time decision, not just a value:
-   **`BANDPLATE_TRUSTED_PROXY_DEPTH`** controls how many reverse-proxy hops in
-   front of bandplate are trusted to have appended their own observed peer
-   address to `X-Forwarded-For` — this is how the login rate limiter picks
-   the real client IP. It defaults to `1`, correct for the common case of
-   one edge/proxy (a CDN, a PaaS router, a single nginx/Caddy) in front of
-   the app. **If bandplate has no reverse proxy in front of it at all —
-   it receives connections directly from clients — set this to `0`.** Left
-   at `1` with no fronting proxy, a client can set `X-Forwarded-For` on
-   their own request with nothing trustworthy having appended to it, letting
-   an attacker pick an arbitrary rate-limit bucket per request and bypass
-   the login rate limit entirely. Get it backwards the other way (`0` behind
-   a real proxy) and the rate limit bucket becomes the proxy's own address,
-   shared across everyone behind it.
-2. **Run migrations** against `BANDPLATE_DATABASE_URL`:
-   ```sh
-   BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
-     pnpm --filter @bandplate/db run migrate
-   ```
-3. **(Optional) Seed example data** — a generic demo band lineup (songs,
-   events, takes, votes), useful for trying the app or for local dev.
-   **Skip this against a real deployment's database.** It reads the same
-   `BANDPLATE_DATABASE_URL` as the migration step above (or the bare
-   `DATABASE_URL`, accepted as a fallback) and now fails loudly, naming the
-   variable, if neither is set — it will NOT silently write to some default
-   local file if you forget it:
-   ```sh
-   BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
-     pnpm --filter @bandplate/db run seed
-   ```
-   The seed creates asset ROWS (so the UI has something to show) but not
-   real audio bytes behind them — run the dev upload script (needs
-   `ffmpeg` on PATH, and the same `S3_*` config as the app) to put real,
-   playable encoded audio behind every seeded take, so the player actually
-   has something to play:
-   ```sh
-   BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
-     S3_ENDPOINT=http://localhost:9000 S3_PUBLIC_ENDPOINT=http://localhost:9000 \
-     S3_BUCKET=bandplate S3_REGION=auto \
-     S3_ACCESS_KEY_ID=bandplate-dev S3_SECRET_ACCESS_KEY=bandplate-dev-secret \
-     pnpm --filter @bandplate/db run dev:upload-audio
-   ```
-4. **Build and start the app.** For local dev, `pnpm --filter web dev` is
-   fine. For a real deployment, build (`pnpm --filter web build`) and start
-   with **`pnpm --filter web start`** — NOT `astro preview` (dev-only) and
-   NOT `node dist/server/entry.mjs` directly. `start` runs `node
-   dist/start.mjs`, a small dependency-free wrapper (bundled by `pnpm
-   build` itself — see `apps/web/scripts/build-start.mjs`) that validates
-   configuration and fails loudly *before* the server binds a port; running
-   the built adapter entry directly skips that check, binds the port,
-   prints "Server listening" regardless of whether configuration is valid,
-   and only 500s once the first real request arrives — which looks like a
-   healthy boot to a supervisor or `docker run` health check. `dist/` is
-   the only thing this needs beyond production `node_modules`: no dev
-   tooling, no `src/` — verified by running it from a scratch directory
-   containing nothing but `dist/`, `package.json`, and a `pnpm install
-   --prod` node_modules (see task-4-report.md). (Astro's own
-   `security.checkOrigin` CSRF guard is disabled in `astro.config.mjs` for
-   a related reason: under the standalone Node adapter it checks the wrong
-   origin and 403s every real form POST in the built server — see the
-   comment there. The app's own `isSameOrigin` check, applied by every
-   mutating page route, is what actually guards CSRF here — backed up by a
-   structural check in `apps/web/src/middleware.ts` that rejects any
-   mutating page request with a mismatched `Origin` regardless of whether
-   the specific page remembered its own check.)
-
-   Once it's running, visit `/setup`. This page only exists until the first
-   member is created — it 404s permanently afterward. Enter the bootstrap
-   token from your env config plus your own name and email; on success
-   you're signed in as the first admin and told whether the mail self-test
-   succeeded, so a broken mailer is caught here rather than by the first
-   member who can't log in.
-5. From `/admin/members`, add the rest of the band. Each member signs in by
-   requesting a link at `/login` with their email — there is no password.
-
-## Workspace layout
+Astro 5 in server mode with Preact islands, Hono for the JSON API, Drizzle
+over SQLite, Tailwind v4, TypeScript throughout, Biome, Vitest.
 
 ```
 apps/
-  web/            Astro app (server output, @astrojs/node adapter) — the
-                   composition root: reads env, builds the db/mailer/rate
-                   limiter, hosts the auth pages and admin screens, and
-                   mounts packages/api's JSON API under /api/*.
+  web/            The Astro app, and the composition root: reads env, builds
+                  the db/mailer/rate limiter, hosts the auth and admin
+                  screens, and mounts packages/api under /api/*.
 packages/
-  core/           Domain layer — runtime-agnostic, no node:* imports
-  db/             Drizzle schema + repos — runtime-agnostic, no node:* imports
-  api/            Hono app (createApp), mounted under /api by apps/web
-  mail/           Mailer implementations (console/null/capturing + SMTP,
-                   the SMTP one behind its own `@bandplate/mail/smtp` entry
-                   point so importing the barrel never pulls in nodemailer)
-  storage/        Object storage — `S3Storage` (aws4fetch, MinIO/R2-compatible
-                   SigV4 signing), runtime-agnostic. `InMemoryStorage` (a
-                   conformance-tested fake, `./testing` entry point only)
-                   is the one place in this package that uses `node:*`.
-  ui/             Design tokens + shared UI primitives (button/field/banner,
-                   Tailwind v4 theme)
+  core/           Domain layer. Runtime-agnostic, no node:* imports.
+  db/             Drizzle schema, repos and migrations. Runtime-agnostic.
+  api/            Hono app (createApp), mounted under /api by apps/web.
+  mail/           Mailers: console/null/capturing, plus SMTP behind its own
+                  @bandplate/mail/smtp entry point, so importing the barrel
+                  never pulls in nodemailer.
+  storage/        Object storage. S3Storage (aws4fetch SigV4, works against
+                  MinIO and R2) is runtime-agnostic; InMemoryStorage, a
+                  conformance-tested fake on the ./testing entry point, is
+                  the one place here that touches node:*.
+  i18n/           Message catalogs, English and Czech, with a parity test.
+  ui/             Design tokens and shared primitives (Tailwind v4 theme).
 deploy/
-  node/           `compose.yml` — local-dev MinIO + bucket creation (see
-                   "First run" above); not a production deploy recipe.
-e2e/              (reserved for end-to-end tests, not yet populated)
+  node/           compose.yml — local-dev MinIO and bucket creation. Not a
+                  production deploy recipe.
+  worker/         The R2 CORS rule the mixer needs.
+tools/
+  ingest_client/  A minimal reference ingest client, in Python.
 ```
 
-`packages/core`, `packages/db`, `packages/api` and `packages/storage` must
-run unmodified on Cloudflare Workers — no `node:*` imports or Node-only
-globals. `apps/web` runs on Node today and is where Node-specific code (env
-reads, the SMTP mailer, the libSQL client) is confined, so a future Workers
-profile (increment 7) can swap just that composition root — including
-swapping `packages/storage`'s `S3Storage` for one pointed at R2's
-S3-compatible endpoint (same class, no code change; see that package's own
-header comment for why NOT the R2 binding).
+`core`, `db`, `api` and `storage` must run unmodified on Cloudflare Workers:
+no `node:*` imports, no Node-only globals, enforced by a test. Node-specific
+code (env reads, the SMTP mailer, the libSQL client) is confined to
+`apps/web`, which is what lets the same tree build for either target.
 
-Brand values (colors, fonts) are not hardwired into components — they live in
-`packages/ui/src/tokens/*.css` as a swappable token layer.
+Brand values are not hardwired into components. Colours and fonts live in
+`packages/ui/src/tokens/*.css` as a swappable layer, so a band that wants a
+different look changes that and nothing else.
+
+Two documents are worth reading before changing anything:
+[`CLAUDE.md`](CLAUDE.md) for the conventions, and
+[`docs/frontend-traps.md`](docs/frontend-traps.md) for the things in this
+stack that fail silently.
+
+## Status
+
+In real weekly use by the band it was built for, which means the paths that
+band walks are solid and the ones it does not are less so. Expect rough edges
+outside the core loop.
+
+Issues and pull requests are welcome. `pnpm typecheck && pnpm lint &&
+pnpm test` should pass before you open one; lint has a known baseline of 18
+pre-existing errors, so match it rather than fixing it as a side effect.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE).
+
+Instrument icons are from [Game Icons](https://game-icons.net/), licensed
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).

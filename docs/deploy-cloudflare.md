@@ -1,7 +1,7 @@
 # Deploying bandplate to Cloudflare Workers
 
-This is the Workers deploy profile (increment 7), alongside the existing
-Node/container profile (`deploy/node/compose.yml`). Both build from the
+This is the Workers deploy profile, alongside the Node/container profile
+(see [`self-hosting.md`](self-hosting.md)). Both build from the
 same source tree; the adapter is selected per build via the
 `BANDPLATE_ADAPTER` env var (see `apps/web/astro.config.mjs`).
 
@@ -105,8 +105,10 @@ Do these in order — each later step needs something from the one before it.
    MinIO allows `*` by default, so a local dev setup works whether or not
    you have done this — the same trap this page already names for `PUT`.
 
-   Or from the CLI, which is what `deploy/worker/r2-cors.json` is for
-   (edit the origin in it first):
+   Or from the CLI, which is what `deploy/worker/r2-cors.json` is for.
+   **Edit the origin in it first** — it ships as `https://bandplate.example`,
+   and `cors set` replaces the whole rule set, so running this with the
+   placeholder in place silences the mixer on a working deployment:
 
    ```
    pnpm exec wrangler r2 bucket cors set bandplate --file ../../deploy/worker/r2-cors.json

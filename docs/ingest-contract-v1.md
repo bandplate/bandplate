@@ -1,11 +1,14 @@
 # bandplate ingest API — contract v1
 
-**Status: frozen for parallel development.** This document is the interface
+**Status: frozen. Implemented on both sides.** This document is the interface
 between two independently built projects:
 
-- **bandplate** (this repo) — implements the server side in increment 6.
-- **the Reaper bridge**, `bandplate/reapertoire` (separate repo) — renders takes
-  locally and pushes them here.
+- **bandplate** (this repo) — implements the server side, under `/api/ingest/v1/`.
+- **[reapertoire](https://github.com/bandplate/reapertoire)** (separate repo) —
+  renders takes locally in REAPER and pushes them here.
+
+It is a plain HTTP contract, so reapertoire is a reference client rather than a
+requirement: anything that can speak what follows can feed a bandplate library.
 
 Either side may be built first. Where this document and an implementation
 disagree, this document wins until it is deliberately revised. Revisions bump the

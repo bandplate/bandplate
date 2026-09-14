@@ -1,9 +1,8 @@
 // Storage port — the only seam between deploy profiles for object storage.
-// The container profile (increment 4, `packages/storage`'s `S3Storage`)
-// implements this against MinIO/R2's S3-compatible API via `aws4fetch`; a
-// future Workers profile (increment 7) implements it again, still via the
-// same S3-compatible signing (see `packages/storage`'s header comment for
-// why NOT the R2 binding). Nothing outside `packages/storage` (and its
+// Both profiles use the SAME implementation: `packages/storage`'s
+// `S3Storage`, against MinIO/R2's S3-compatible API via `aws4fetch`. The
+// Workers profile points it at R2's S3 endpoint and changes no code (see
+// `packages/storage`'s header comment for why NOT the R2 binding). Nothing outside `packages/storage` (and its
 // implementations) constructs a presigned URL or talks to a bucket
 // directly — routes and repos only ever see this interface.
 //

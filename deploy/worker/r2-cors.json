@@ -2,7 +2,7 @@
   "rules": [
     {
       "allowed": {
-        "origins": ["https://bandplate.xaralis93.workers.dev"],
+        "origins": ["https://bandplate.example"],
         "methods": ["GET", "PUT"],
         "headers": ["content-type", "range"]
       },

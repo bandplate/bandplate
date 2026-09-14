@@ -14,7 +14,8 @@
       "node_modules",
       ".remember",
       ".claude",
-      ".superpowers"
+      ".superpowers",
+      "design-canvas"
     ]
   },
   "formatter": {
@@ -29,6 +30,13 @@
       "recommended": true
     }
   },
+  "overrides": [
+    {
+      "include": ["packages/ui/src/tokens/components.css"],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double",

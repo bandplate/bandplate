@@ -183,8 +183,7 @@ band walks are solid and the ones it does not are less so. Expect rough edges
 outside the core loop.
 
 Issues and pull requests are welcome. `pnpm typecheck && pnpm lint &&
-pnpm test` should pass before you open one; lint has a known baseline of 18
-pre-existing errors, so match it rather than fixing it as a side effect.
+pnpm test` should all exit 0 before you open one.
 
 ## Licence
 

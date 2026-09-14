@@ -384,6 +384,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
 
   // A switch belongs to the take it was opened on; changing take closes it,
   // and so does Escape or a click anywhere else.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: takeId is the trigger, not an input — the body never reads it, and dropping it leaves the previous take's source list open over the new take.
   useEffect(() => {
     setSwitcherOpen(false);
     setSources(null);
@@ -714,6 +715,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
               </svg>
             </button>
             {switcherOpen && (
+              // biome-ignore lint/a11y/useSemanticElements: <fieldset> groups form controls; these are toolbar buttons, and a fieldset brings a legend contract and default rendering to undo.
               <div class="bp-player-sources" role="group" aria-label={t.sourceGroup}>
                 {sources.map((source) => (
                   // A plain `[data-audio-source]` control, exactly like the

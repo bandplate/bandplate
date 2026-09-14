@@ -75,6 +75,14 @@ this, with the glossary and the plural rules, is in
 
 ## The gate
 
-`pnpm typecheck && pnpm lint && pnpm test` before every commit. Lint has a
-known baseline of **18** pre-existing errors — match it, do not "fix" it as a
-side effect of unrelated work.
+`pnpm typecheck && pnpm lint && pnpm test` before every commit. **All three
+exit 0.** There is no error baseline to match any more; a lint error is a
+lint error.
+
+Two exclusions in `biome.json` are load-bearing, and neither is a licence to
+add more. `packages/ui/src/tokens/components.css` is skipped because Biome
+1.9's CSS parser rejects `@starting-style` and `@-moz-document url-prefix()`
+— both correct, both deliberate — and one unparseable file used to abort the
+whole run, which is how 16 phantom "errors" hid two real ones. `design-canvas`
+is skipped because it is design scratch, not app source. Revisit the CSS one
+when Biome's CSS support catches up.

@@ -231,7 +231,19 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                     />{instrument.label}
                   </span>
                 </td>
-                <td data-label={ta.colSlug} class="bp-table-quiet">{instrument.slug}</td>
+                {/* Every slug that resolves to this instrument, not just its
+                    own. An alias is the answer to "why did ingest file a
+                    track here", and looking it up meant opening the sheet.
+                    The canonical one leads and keeps full weight; the rest
+                    sit behind it, because only one of them is the name. */}
+                <td data-label={ta.colSlug} class="bp-table-quiet">
+                  <span class="bp-slug-list">
+                    <span class="bp-slug-own">{instrument.slug}</span>
+                    {(aliases.get(instrument.id) ?? []).map((alias) => (
+                      <span class="bp-slug-alias" title={ta.aliasesHeading}>{alias.slug}</span>
+                    ))}
+                  </span>
+                </td>
                 <td data-label={ta.colOrder} class="bp-table-quiet">{instrument.sortOrder}</td>
                 {/* Only when some row on screen has a status to report: with
                     nothing archived and nothing unfinished it was a header

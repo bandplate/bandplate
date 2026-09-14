@@ -6112,6 +6112,28 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 0.25rem;
 }
 
+/* Every slug that resolves to one instrument, in the admin table's slug
+   column. Wraps rather than truncates: an instrument that has collected four
+   aliases is exactly the one whose row you are reading them off. */
+.bp-slug-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+}
+
+/* The canonical slug leads at full weight. The aliases sit behind it, dimmed
+   and preceded by a hairline dot, because only ONE of them is the name and a
+   row of equals would say the opposite. */
+.bp-slug-alias {
+  color: color-mix(in srgb, var(--bp-color-muted) 65%, transparent);
+}
+
+.bp-slug-alias::before {
+  content: "·";
+  margin-right: 0.375rem;
+}
+
 /* The alias list inside an instrument's sheet. Slugs are machine strings, so
    they take the mono face the asset rows already use for a format and a tier
    — this project's rule is that mono means "a computer reads this", and a

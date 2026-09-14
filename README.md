@@ -91,7 +91,7 @@ rehearsal that produced fourteen takes with stems, you want the DAW to push
 them, and **that is a documented, versioned HTTP contract anyone can write
 against** — not a plugin API, not an integration you have to be blessed for.
 
-The happy path is three calls:
+The happy path is three calls to the app, plus the upload itself:
 
 ```
 POST /api/ingest/v1/events           → declare the rehearsal, get its id
@@ -136,7 +136,7 @@ per-instrument stems, and pushes the lot over the contract above.
 
 It is a separate repo and not a dependency. If you use a different DAW, the
 contract is the whole interface — and the bridge you write is a render step
-plus those three calls.
+plus the four lines above.
 
 ## Try it locally
 

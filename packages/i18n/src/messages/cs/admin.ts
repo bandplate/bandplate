@@ -138,6 +138,19 @@ export const admin = {
   usedByMembers: "členové", // en: members
   usedByCharts: "zápisy skladeb", // en: song charts
   usedByStems: "stopy", // en: stems
+  aliasesHeading: "Taky známý jako", // en: Also known as
+  // en: Slugs ingest should treat as this instrument — a track your session names differently, or the slug of an instrument merged into this one.
+  aliasesHint:
+    "Slugy, které má ingest brát jako tenhle nástroj — stopa, co se ve tvé session jmenuje jinak, nebo slug nástroje, který jsi do tohohle sloučil.",
+  addAlias: "Přidat", // en: Add
+  aliasSlugLabel: "Další slug", // en: Another slug
+  removeAlias: (slug: string): string => `Odebrat ${slug}`, // en: `Remove ${slug}`
+  aliasAdded: "Slug přidán.", // en: Slug added.
+  aliasRemoved: "Slug odebrán.", // en: Slug removed.
+  // en: `That slug already belongs to ${label}.`
+  aliasTaken: (label: string): string => `Tenhle slug už patří nástroji ${label}.`,
+  noAliases: "Zatím žádné.", // en: None yet.
+
   instrumentDeleted: "Nástroj smazán.", // en: Instrument deleted.
   // en: Something started using that instrument — nothing was deleted.
   instrumentDeleteBlocked: "Nástroj se mezitím začal používat — nic se nesmazalo.",

@@ -638,6 +638,102 @@ describe("ingest API", () => {
       expect(stem?.instrumentId).toBe(created?.id);
     });
 
+    it("resolves an alias to its instrument, and creates nothing", async () => {
+      // The property a merge depends on. Without it every merge lasts until
+      // the next bridge run, which re-creates the row the merge removed.
+      const testApp = await buildTestApp();
+      await seedInstruments(testApp);
+      const bass = (await instrumentsRepo.list(testApp.db)).find((i) => i.slug === "bass");
+      if (!bass) throw new Error("expected the seeded bass");
+      await instrumentsRepo.addAlias(testApp.db, {
+        instrumentId: bass.id,
+        slug: "bass-di-2",
+        source: "manual",
+      });
+
+      const auth = await ingestToken(testApp);
+      await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "proj-alias",
+          kind: "rehearsal",
+          heldAt: "2026-09-05T19:30:00+02:00",
+        }),
+      });
+
+      const res = await testApp.app.request("/ingest/v1/takes", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "take-alias",
+          eventClientRef: "proj-alias",
+          song: { title: "Alias Song", createIfMissing: true },
+          recordedAt: "2026-09-05T20:14:33+02:00",
+          // Opted IN, to prove the alias resolves BEFORE anything is created.
+          createMissingInstruments: true,
+          assets: [
+            { kind: "master", tier: "lossy", format: "opus", bytes: 10 },
+            { kind: "stem", instrument: "bass-di-2", tier: "lossy", format: "opus", bytes: 10 },
+          ],
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.createdInstruments).toEqual([]);
+
+      const stem = (await assetsRepo.listByTake(testApp.db, body.takeId)).find(
+        (a) => a.kind === "stem",
+      );
+      expect(stem?.instrumentId).toBe(bass.id);
+      // And no second instrument appeared under the alias's own name.
+      expect((await instrumentsRepo.list(testApp.db)).map((i) => i.slug).sort()).toEqual([
+        "bass",
+        "drums",
+      ]);
+    });
+
+    it("does not advertise aliases as valid slugs", async () => {
+      // They resolve, but a bridge must map onto the instruments as they are
+      // — an alias exists to keep an OLD bridge working, not to become a
+      // second vocabulary someone builds against.
+      const testApp = await buildTestApp();
+      await seedInstruments(testApp);
+      const bass = (await instrumentsRepo.list(testApp.db)).find((i) => i.slug === "bass");
+      if (!bass) throw new Error("expected the seeded bass");
+      await instrumentsRepo.addAlias(testApp.db, {
+        instrumentId: bass.id,
+        slug: "bass-di-2",
+        source: "manual",
+      });
+
+      const auth = await ingestToken(testApp);
+      await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "proj-alias2",
+          kind: "rehearsal",
+          heldAt: "2026-09-05T19:30:00+02:00",
+        }),
+      });
+      const res = await testApp.app.request("/ingest/v1/takes", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: "take-alias2",
+          eventClientRef: "proj-alias2",
+          song: { title: "Alias Song 2", createIfMissing: true },
+          recordedAt: "2026-09-05T20:14:33+02:00",
+          instruments: ["nope"],
+          assets: [{ kind: "master", tier: "lossy", format: "opus", bytes: 10 }],
+        }),
+      });
+      expect(res.status).toBe(422);
+      const body = await res.json();
+      expect(body.validSlugs.sort()).toEqual(["bass", "drums"]);
+    });
+
     it("still refuses when the declaration did not ask", async () => {
       const testApp = await buildTestApp();
       await seedInstruments(testApp);

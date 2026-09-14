@@ -3,6 +3,7 @@ import { eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
   assets,
+  instrumentAliases,
   instruments,
   memberInstruments,
   songInstrumentNotes,
@@ -185,5 +186,101 @@ export async function usageByInstrument(db: Db): Promise<Map<string, InstrumentU
  * again at the moment of deleting.
  */
 export async function remove(db: Db, id: string): Promise<void> {
-  await db.delete(instruments).where(eq(instruments.id, id));
+  // Its aliases go too, explicitly. The schema declares `ON DELETE cascade`
+  // and that cascade never runs: `PRAGMA foreign_keys` is off here to match
+  // D1, so the rows would simply be left pointing at an id that is gone — and
+  // an orphaned alias is worse than a leak, because it still RESOLVES. The
+  // next ingest run would map a slug onto a deleted instrument.
+  await db.batch([
+    db.delete(instrumentAliases).where(eq(instrumentAliases.instrumentId, id)),
+    db.delete(instruments).where(eq(instruments.id, id)),
+  ]);
+}
+
+// --- aliases ---------------------------------------------------------------
+
+export type InstrumentAlias = typeof instrumentAliases.$inferSelect;
+
+export interface AddAliasInput {
+  instrumentId: string;
+  slug: string;
+  source: "manual" | "ingest";
+}
+
+export type AddAliasResult =
+  | { kind: "ok"; alias: InstrumentAlias }
+  /** The slug is already an instrument's own, or already an alias of one. */
+  | { kind: "taken"; by: Instrument };
+
+export async function listAliases(db: Db, instrumentId: string): Promise<InstrumentAlias[]> {
+  return db
+    .select()
+    .from(instrumentAliases)
+    .where(eq(instrumentAliases.instrumentId, instrumentId))
+    .orderBy(instrumentAliases.slug);
+}
+
+export async function listAllAliases(db: Db): Promise<InstrumentAlias[]> {
+  return db.select().from(instrumentAliases).orderBy(instrumentAliases.slug);
+}
+
+/**
+ * Resolve a slug to an instrument, canonical name or alias.
+ *
+ * One namespace across two tables, which is the whole reason this exists as a
+ * function rather than as a lookup somewhere: a caller that checks
+ * `instruments.slug` alone will quietly fail to find an instrument that has
+ * been merged away, and re-create the row the merge just removed.
+ */
+export async function findBySlug(db: Db, slug: string): Promise<Instrument | undefined> {
+  const [own] = await db.select().from(instruments).where(eq(instruments.slug, slug)).limit(1);
+  if (own) {
+    return own;
+  }
+  const [alias] = await db
+    .select()
+    .from(instrumentAliases)
+    .where(eq(instrumentAliases.slug, slug))
+    .limit(1);
+  if (!alias) {
+    return undefined;
+  }
+  return getById(db, alias.instrumentId);
+}
+
+/**
+ * Record another slug for an instrument.
+ *
+ * Refuses rather than throws when the slug is spoken for, and says BY WHAT —
+ * the caller is either a human typing into a form or a merge, and both need
+ * to name the instrument already holding it. The check covers instruments and
+ * aliases together because they share one namespace; the UNIQUE index only
+ * covers half of it.
+ *
+ * Not a transaction, and it does not need to be: the index is the backstop.
+ * A racing writer means the insert throws, which is a crash rather than a
+ * corrupted lookup — and the lookup is the thing that must never be wrong.
+ */
+export async function addAlias(db: Db, input: AddAliasInput): Promise<AddAliasResult> {
+  const holder = await findBySlug(db, input.slug);
+  if (holder) {
+    return { kind: "taken", by: holder };
+  }
+  const [row] = await db
+    .insert(instrumentAliases)
+    .values({
+      id: uuidv7(),
+      instrumentId: input.instrumentId,
+      slug: input.slug,
+      source: input.source,
+    })
+    .returning();
+  if (!row) {
+    throw new Error("insert into instrument_aliases returned no row");
+  }
+  return { kind: "ok", alias: row };
+}
+
+export async function removeAlias(db: Db, aliasId: string): Promise<void> {
+  await db.delete(instrumentAliases).where(eq(instrumentAliases.id, aliasId));
 }

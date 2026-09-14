@@ -6039,6 +6039,44 @@ html:has(dialog.bp-filter-sheet[open]) body {
    row, which IS a decision and keeps its pill. Tighter tracking than
    `.bp-eyebrow` because it appears inline next to running text rather than
    alone above a block. */
+/* The alias list inside an instrument's sheet. Slugs are machine strings, so
+   they take the mono face the asset rows already use for a format and a tier
+   — this project's rule is that mono means "a computer reads this", and a
+   slug is exactly that. */
+.bp-alias-list {
+  list-style: none;
+  margin: 0 0 0.625rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bp-alias-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+.bp-alias-remove {
+  flex: none;
+  display: inline-flex;
+}
+
+.bp-alias-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bp-alias-add .bp-input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* An unfinished instrument, the one status on this table that asks for
    something. Archived is a resting state and stays in the muted ink `.bp-kind`
    gives every other badge; this one takes the accent, because a row nobody

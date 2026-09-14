@@ -186,6 +186,62 @@ export async function deleteInstrument(db: Db, id: string): Promise<DeleteInstru
   return { kind: "ok" };
 }
 
+// --- aliases ---------------------------------------------------------------
+
+export type InstrumentAlias = instrumentsRepo.InstrumentAlias;
+
+/** Every alias, grouped by the instrument it belongs to — one query for the whole table. */
+export async function aliasesByInstrument(db: Db): Promise<Map<string, InstrumentAlias[]>> {
+  const grouped = new Map<string, InstrumentAlias[]>();
+  for (const alias of await instrumentsRepo.listAllAliases(db)) {
+    const list = grouped.get(alias.instrumentId);
+    if (list) {
+      list.push(alias);
+    } else {
+      grouped.set(alias.instrumentId, [alias]);
+    }
+  }
+  return grouped;
+}
+
+const aliasSchema = z.object({
+  // The same shape an instrument's own slug has, because that is exactly what
+  // it is — another name in the one namespace they share.
+  slug: z.string().trim().min(1, "slugRequired").max(100),
+});
+
+export type AddAliasResult =
+  | { kind: "ok" }
+  | { kind: "invalid"; error: string }
+  | { kind: "not_found" }
+  /** Already an instrument's own slug, or already an alias. Named, so the page can say which. */
+  | { kind: "taken"; byLabel: string };
+
+export async function addInstrumentAlias(
+  db: Db,
+  instrumentId: string,
+  formData: FormData,
+): Promise<AddAliasResult> {
+  const parsed = aliasSchema.safeParse({ slug: formData.get("slug")?.toString() });
+  if (!parsed.success) {
+    return { kind: "invalid", error: parsed.error.issues[0]?.message ?? "slugRequired" };
+  }
+  const instrument = await instrumentsRepo.getById(db, instrumentId);
+  if (!instrument) {
+    return { kind: "not_found" };
+  }
+  const result = await instrumentsRepo.addAlias(db, {
+    instrumentId,
+    slug: parsed.data.slug,
+    source: "manual",
+  });
+  return result.kind === "ok" ? { kind: "ok" } : { kind: "taken", byLabel: result.by.label };
+}
+
+export async function removeInstrumentAlias(db: Db, aliasId: string): Promise<void> {
+  await instrumentsRepo.removeAlias(db, aliasId);
+}
+
 export type ArchiveInstrumentResult = { kind: "ok" } | { kind: "not_found" };
 
 export async function setInstrumentArchived(

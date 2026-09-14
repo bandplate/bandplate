@@ -219,6 +219,38 @@ export const memberInstruments = sqliteTable(
   ],
 );
 
+/**
+ * Other slugs that mean this instrument.
+ *
+ * Two jobs, and they are the same job from opposite ends. A bridge whose
+ * Reaper session calls it `gtr2` can keep calling it that without anyone
+ * editing a mapping file. And an instrument that should never have been its
+ * own row — a stub ingest invented, a duplicate someone typed — is merged
+ * into the real one, leaving its slug behind as an alias so the next bridge
+ * run resolves it instead of inventing the stub again. Without that second
+ * part a merge is undone by the very next ingest.
+ *
+ * Modelled on `song_aliases` down to the `source` column, for the same
+ * reason it has one: an alias ingest recorded on a merge and an alias a human
+ * typed are different things when someone is deciding whether it is safe to
+ * remove.
+ *
+ * UNIQUE across the whole table, not per instrument: this is a lookup key,
+ * and the same slug meaning two instruments is not a conflict to resolve at
+ * read time but a thing that must never be written. What the schema CANNOT
+ * say is that it must not collide with `instruments.slug` either — one
+ * namespace across two tables — so `instrumentsRepo.addAlias` checks that
+ * itself, and it is the only path that may write here.
+ */
+export const instrumentAliases = sqliteTable("instrument_aliases", {
+  id: id(),
+  instrumentId: text("instrument_id")
+    .notNull()
+    .references(() => instruments.id, { onDelete: "cascade" }),
+  slug: text("slug").notNull().unique(),
+  source: text("source", { enum: ["manual", "ingest"] }).notNull(),
+});
+
 // ---------------------------------------------------------------------------
 // songs
 // ---------------------------------------------------------------------------

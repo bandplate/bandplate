@@ -380,6 +380,19 @@ The stub is what makes this safe rather than the refusal — an auto-created row
 arrives visibly unfinished instead of posing as curated vocabulary. A bridge
 that ships a mapping file should still leave the flag off and keep the 422.
 
+**Aliases.** An instrument can carry additional slugs, managed in the admin UI,
+and ingest resolves those exactly as it resolves the instrument's own. Two uses,
+which are one use from opposite ends: a session that names a track `gtr2` keeps
+working without anyone editing a mapping file, and an instrument merged into
+another leaves its slug behind so the next run resolves it rather than
+re-creating the row the merge removed.
+
+Aliases resolve but are **not advertised**: `GET /api/ingest/v1/instruments` and
+a `422`'s `validSlugs` both list canonical slugs only. An alias exists to keep an
+older bridge working, not to become a second vocabulary to build against. An
+alias of an *archived* instrument does not resolve at all — archiving means "not
+a choice for new takes", and an alias must not be a side door around that.
+
 ---
 
 ## 8. Other endpoints

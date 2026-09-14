@@ -15,15 +15,47 @@
 import { type Db, instrumentsRepo } from "@bandplate/db";
 
 export interface InstrumentVocab {
-  /** slug -> instrument row, active (non-archived) only. */
+  /**
+   * Every slug that resolves, canonical or alias -> the instrument row.
+   *
+   * Aliases are IN here, and they have to be: an instrument merged into
+   * another leaves its old slug behind as an alias precisely so the next
+   * bridge run keeps working. Resolving against canonical slugs alone would
+   * make every merge last exactly until the next ingest, which would then
+   * re-create the row the merge removed.
+   */
   bySlug: Map<string, instrumentsRepo.Instrument>;
+  /**
+   * What a bridge should be mapping ONTO — canonical slugs only.
+   *
+   * Aliases resolve but are not advertised: they exist to keep old bridges
+   * working, not to become a second vocabulary someone builds against. This
+   * is the list a 422 hands back, so it must name the instruments as they
+   * actually are.
+   */
   validSlugs: string[];
 }
 
 export async function loadInstrumentVocab(db: Db): Promise<InstrumentVocab> {
-  const rows = await instrumentsRepo.list(db);
+  const [rows, aliases] = await Promise.all([
+    instrumentsRepo.list(db),
+    instrumentsRepo.listAllAliases(db),
+  ]);
   const bySlug = new Map(rows.map((r) => [r.slug, r]));
-  return { bySlug, validSlugs: [...bySlug.keys()].sort() };
+  const validSlugs = [...bySlug.keys()].sort();
+
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  for (const alias of aliases) {
+    const target = byId.get(alias.instrumentId);
+    // An alias of an ARCHIVED instrument does not resolve: `list` excludes
+    // those, so the target is absent here. That is the right answer — an
+    // archived instrument is not a choice for a new take, and an alias must
+    // not be a side door around that.
+    if (target && !bySlug.has(alias.slug)) {
+      bySlug.set(alias.slug, target);
+    }
+  }
+  return { bySlug, validSlugs };
 }
 
 /**

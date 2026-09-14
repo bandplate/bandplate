@@ -9,6 +9,8 @@ import {
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  addInstrumentAlias,
+  aliasesByInstrument,
   createInstrument,
   deleteInstrument,
   listInstruments,
@@ -189,6 +191,65 @@ describe("admin instruments page logic", () => {
     expect(result.kind).toBe("in_use");
     if (result.kind !== "in_use") throw new Error("expected in_use");
     expect(result.usage.members).toBe(1);
+  });
+
+  it("records another slug for an instrument", async () => {
+    await createInstrument(db, formData({ slug: "gtr", label: "Guitar" }));
+    const [instrument] = await listInstruments(db);
+    if (!instrument) throw new Error("expected an instrument");
+
+    expect((await addInstrumentAlias(db, instrument.id, formData({ slug: "gtr2" }))).kind).toBe(
+      "ok",
+    );
+    expect((await aliasesByInstrument(db)).get(instrument.id)?.map((a) => a.slug)).toEqual([
+      "gtr2",
+    ]);
+    // Resolvable by either name — the property ingest depends on.
+    expect((await instrumentsRepo.findBySlug(db, "gtr2"))?.id).toBe(instrument.id);
+    expect((await instrumentsRepo.findBySlug(db, "gtr"))?.id).toBe(instrument.id);
+  });
+
+  it("refuses a slug another instrument already owns, and names it", async () => {
+    // Instruments and aliases share ONE namespace across two tables, which
+    // the UNIQUE index can only half enforce.
+    await createInstrument(db, formData({ slug: "bass", label: "Bass" }));
+    await createInstrument(db, formData({ slug: "gtr", label: "Guitar" }));
+    const guitar = (await listInstruments(db)).find((i) => i.slug === "gtr");
+    if (!guitar) throw new Error("expected the guitar");
+
+    const result = await addInstrumentAlias(db, guitar.id, formData({ slug: "bass" }));
+    expect(result.kind).toBe("taken");
+    if (result.kind !== "taken") throw new Error("expected taken");
+    expect(result.byLabel).toBe("Bass");
+  });
+
+  it("refuses a slug that is already someone's alias", async () => {
+    await createInstrument(db, formData({ slug: "bass", label: "Bass" }));
+    await createInstrument(db, formData({ slug: "gtr", label: "Guitar" }));
+    const bass = (await listInstruments(db)).find((i) => i.slug === "bass");
+    const guitar = (await listInstruments(db)).find((i) => i.slug === "gtr");
+    if (!bass || !guitar) throw new Error("expected both");
+
+    await addInstrumentAlias(db, bass.id, formData({ slug: "di-2" }));
+    const result = await addInstrumentAlias(db, guitar.id, formData({ slug: "di-2" }));
+    expect(result.kind).toBe("taken");
+    if (result.kind !== "taken") throw new Error("expected taken");
+    expect(result.byLabel).toBe("Bass");
+  });
+
+  it("takes its aliases with it when the instrument is deleted", async () => {
+    // An ORPHANED alias is worse than a leaked one, because it still
+    // resolves: the next ingest run would map a slug onto a deleted
+    // instrument. The schema says `ON DELETE cascade` and that cascade never
+    // runs in production, so the repo does it explicitly.
+    await createInstrument(db, formData({ slug: "melodica", label: "Melodica" }));
+    const [instrument] = await listInstruments(db);
+    if (!instrument) throw new Error("expected an instrument");
+    await addInstrumentAlias(db, instrument.id, formData({ slug: "melodika" }));
+
+    expect((await deleteInstrument(db, instrument.id)).kind).toBe("ok");
+    expect(await instrumentsRepo.listAllAliases(db)).toEqual([]);
+    expect(await instrumentsRepo.findBySlug(db, "melodika")).toBeUndefined();
   });
 
   it("reports not_found for an unknown instrument id", async () => {

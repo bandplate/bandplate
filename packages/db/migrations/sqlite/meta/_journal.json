@@ -57,6 +57,13 @@
       "when": 1789207797204,
       "tag": "0007_add_instrument_is_stub",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789364285852,
+      "tag": "0008_add_instrument_aliases",
+      "breakpoints": true
     }
   ]
 }

@@ -151,6 +151,24 @@ export const admin = {
   usedByMembers: "members",
   usedByCharts: "song charts",
   usedByStems: "stems",
+  /**
+   * Other slugs that mean this instrument.
+   *
+   * "Also known as" rather than "aliases": the admin reading this is deciding
+   * what their Reaper tracks are allowed to be called, not learning a data
+   * model.
+   */
+  aliasesHeading: "Also known as",
+  aliasesHint:
+    "Slugs ingest should treat as this instrument — a track your session names differently, or the slug of an instrument merged into this one.",
+  addAlias: "Add",
+  aliasSlugLabel: "Another slug",
+  removeAlias: (slug: string): string => `Remove ${slug}`,
+  aliasAdded: "Slug added.",
+  aliasRemoved: "Slug removed.",
+  aliasTaken: (label: string): string => `That slug already belongs to ${label}.`,
+  noAliases: "None yet.",
+
   instrumentDeleted: "Instrument deleted.",
   /** Something started using it between the page being drawn and the press. */
   instrumentDeleteBlocked: "Something started using that instrument — nothing was deleted.",

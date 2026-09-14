@@ -12,10 +12,13 @@ import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
 import {
   type InstrumentUsage,
+  addInstrumentAlias,
+  aliasesByInstrument,
   createInstrument,
   instrumentUsage,
   isInstrumentUnused,
   listInstruments,
+  removeInstrumentAlias,
   updateInstrument,
   usageOf,
 } from "../../../server/pages/admin-instruments.js";
@@ -54,6 +57,22 @@ if (Astro.request.method === "POST") {
         return Astro.redirect("/admin/instruments?updated=1");
       }
       formError = ta.instrumentUpdateFailed;
+    } else if (intent === "add-alias") {
+      const id = String(formData.get("instrumentId") ?? "");
+      const result = await addInstrumentAlias(appDeps.db, id, formData);
+      if (result.kind === "ok") {
+        return Astro.redirect("/admin/instruments?alias_added=1");
+      }
+      // "Taken" names the instrument holding it, because the next question is
+      // always "by what" — and often the answer is an instrument this one
+      // should be merged into instead.
+      formError =
+        result.kind === "taken"
+          ? ta.aliasTaken(result.byLabel)
+          : validationMessage(Astro.locals.locale, "slugRequired");
+    } else if (intent === "remove-alias") {
+      await removeInstrumentAlias(appDeps.db, String(formData.get("aliasId") ?? ""));
+      return Astro.redirect("/admin/instruments?alias_removed=1");
     }
   }
 }
@@ -69,12 +88,14 @@ if (Astro.request.method === "POST") {
 // `show`, not `archived`: `?archived=1` already means "you just archived
 // one", and one parameter carrying two meanings is how a flash message ends
 // up doubling as a filter.
-const [allInstruments, usage] = await Promise.all([
+const [allInstruments, usage, aliases] = await Promise.all([
   listInstruments(appDeps.db),
   // For the whole table at once. Whether an instrument can be deleted is a
   // question about every row on screen, and asking per row would be four
   // queries times twelve.
   instrumentUsage(appDeps.db),
+  // One query for the whole table, grouped here — every sheet lists its own.
+  aliasesByInstrument(appDeps.db),
 ]);
 
 /**
@@ -112,6 +133,8 @@ const justCreated = Astro.url.searchParams.get("created") === "1";
 const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justArchived = Astro.url.searchParams.get("archived") === "1";
 const justDeleted = Astro.url.searchParams.get("deleted") === "1";
+const aliasAdded = Astro.url.searchParams.get("alias_added") === "1";
+const aliasRemoved = Astro.url.searchParams.get("alias_removed") === "1";
 const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
 ---
 
@@ -123,6 +146,8 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
     {justUpdated && <Banner kind="success">{ta.instrumentUpdated}</Banner>}
     {justArchived && <Banner kind="success">{ta.instrumentArchived}</Banner>}
     {justDeleted && <Banner kind="success">{ta.instrumentDeleted}</Banner>}
+    {aliasAdded && <Banner kind="success">{ta.aliasAdded}</Banner>}
+    {aliasRemoved && <Banner kind="success">{ta.aliasRemoved}</Banner>}
     {deleteBlocked && <Banner kind="error">{ta.instrumentDeleteBlocked}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
@@ -227,6 +252,14 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                     title={instrument.label}
                     subtitle={instrument.slug}
                   >
+                    {/* Empty, and targeted by `form=` below: HTML forbids a
+                        form inside a form, and these two are their own POSTs
+                        rather than fields of the edit. Same trick the take
+                        page's unpublish uses. */}
+                    <form method="post" id={`add-alias-${instrument.id}`} class="bp-sheet-aux">
+                      <input type="hidden" name="intent" value="add-alias" />
+                      <input type="hidden" name="instrumentId" value={instrument.id} />
+                    </form>
                     <form method="post" class="bp-sheet-form">
                       <input type="hidden" name="intent" value="update" />
                       <input type="hidden" name="instrumentId" value={instrument.id} />
@@ -322,6 +355,58 @@ const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
                             })}
                           </div>
                           <p class="bp-sheet-hint bp-m0">{ta.colorHint}</p>
+                        </fieldset>
+
+                        {/* Other names for the same instrument. Sits under
+                            the appearance fields because it is about identity
+                            rather than looks, and above the destructive
+                            block because it is the thing that usually makes
+                            the destructive one unnecessary — a slug merged in
+                            here is a slug nobody has to delete a row for. */}
+                        <fieldset class="bp-sheet-field">
+                          <legend class="bp-eyebrow">{ta.aliasesHeading}</legend>
+                          {(aliases.get(instrument.id) ?? []).length === 0 ? (
+                            <p class="bp-sheet-hint bp-m0">{ta.noAliases}</p>
+                          ) : (
+                            <ul class="bp-alias-list">
+                              {(aliases.get(instrument.id) ?? []).map((alias) => (
+                                <li class="bp-alias-row">
+                                  <span class="bp-mono">{alias.slug}</span>
+                                  {/* Its own single-field form. A remove is
+                                      one press and carries only the id of the
+                                      thing it removes. */}
+                                  <form method="post" class="bp-alias-remove">
+                                    <input type="hidden" name="intent" value="remove-alias" />
+                                    <input type="hidden" name="aliasId" value={alias.id} />
+                                    <button
+                                      type="submit"
+                                      class="bp-btn bp-btn-quiet bp-btn-xs"
+                                      aria-label={ta.removeAlias(alias.slug)}
+                                      title={ta.removeAlias(alias.slug)}
+                                    >&times;</button>
+                                  </form>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          <div class="bp-alias-add">
+                            <label class="bp-visually-hidden" for={`alias-${instrument.id}`}>
+                              {ta.aliasSlugLabel}
+                            </label>
+                            <input
+                              class="bp-input"
+                              id={`alias-${instrument.id}`}
+                              name="slug"
+                              form={`add-alias-${instrument.id}`}
+                              placeholder={ta.aliasSlugLabel}
+                            />
+                            <button
+                              type="submit"
+                              form={`add-alias-${instrument.id}`}
+                              class="bp-btn bp-btn-secondary bp-btn-sm"
+                            >{ta.addAlias}</button>
+                          </div>
+                          <p class="bp-sheet-hint bp-m0">{ta.aliasesHint}</p>
                         </fieldset>
 
                         <div class="bp-sheet-extras">

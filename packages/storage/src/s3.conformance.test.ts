@@ -114,6 +114,8 @@ async function createBucket(endpoint: string): Promise<void> {
   }
 }
 
+const MINIO_IMAGE = process.env.BANDPLATE_TEST_MINIO_IMAGE ?? "quay.io/minio/minio";
+
 const hasDocker = dockerAvailable();
 
 describe.skipIf(!hasDocker)("Storage conformance: S3Storage (MinIO)", () => {
@@ -134,7 +136,12 @@ describe.skipIf(!hasDocker)("Storage conformance: S3Storage (MinIO)", () => {
       `MINIO_ROOT_USER=${ACCESS_KEY_ID}`,
       "-e",
       `MINIO_ROOT_PASSWORD=${SECRET_ACCESS_KEY}`,
-      "minio/minio",
+      // quay.io, not Docker Hub: `docker.io/minio/minio` now refuses
+      // anonymous pulls (401 even with a token), so on any machine without
+      // the image already cached — every CI runner, every new contributor —
+      // this suite failed at `docker run` rather than skipping. quay.io is
+      // MinIO's own registry and serves it unauthenticated.
+      MINIO_IMAGE,
       "server",
       "/data",
     ]);

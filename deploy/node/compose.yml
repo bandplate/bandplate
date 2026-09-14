@@ -41,7 +41,7 @@
 
 services:
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     ports:
       # Host port is configurable because 9000 is a popular default — ClickHouse,
@@ -70,7 +70,7 @@ services:
   # set` itself (up to ~30s) since `minio` has no healthcheck to gate on
   # (see the comment above) and may not be accepting connections yet.
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     depends_on:
       - minio
     entrypoint: >

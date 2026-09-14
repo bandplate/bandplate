@@ -84,20 +84,59 @@ passwords. Members are added by an admin. Two languages ship (English and
 Czech) and adding a third is a file. There is no chat, no calendar, no
 invoicing.
 
-## The other half: reapertoire
+## Feeding it from your DAW
 
-Getting audio *in* is its own problem, and it lives in a separate repo.
+You can drag files into the web UI, and for one take that is fine. For a
+rehearsal that produced fourteen takes with stems, you want the DAW to push
+them, and **that is a documented, versioned HTTP contract anyone can write
+against** — not a plugin API, not an integration you have to be blessed for.
 
-[**reapertoire**](https://github.com/bandplate/reapertoire) works inside
-REAPER: it finds where each run-through starts and stops in an hour of
-continuous recording, recognises which song it was against the takes you
-named last time, renders a master plus per-instrument stems, and pushes the
-lot to bandplate over the ingest API.
+The happy path is three calls:
 
-The two are independent. bandplate's ingest API is a documented HTTP contract
-([`docs/ingest-contract-v1.md`](docs/ingest-contract-v1.md)), and anything
-that can speak it will do. reapertoire is the reference client, not a
-dependency — and you can upload files by hand in the web UI instead.
+```
+POST /api/ingest/v1/events           → declare the rehearsal, get its id
+POST /api/ingest/v1/takes            → declare a take + its files,
+                                       get a presigned PUT URL for each
+PUT  <presigned url>                 → upload straight to the bucket
+POST /api/ingest/v1/takes/{id}/commit → hashes match, publish it
+```
+
+Audio never passes through the app: it goes to your bucket directly, so a
+bridge needs no streaming and the server needs no upload capacity.
+
+What makes it pleasant to write against:
+
+- **Everything is idempotent.** You supply the client reference for an event
+  and a take, so re-posting returns the existing row rather than a duplicate.
+  An asset whose hash and size already match is skipped. A run that died on
+  take nine resumes without re-uploading the first eight, and a presigned URL
+  that expired under a slow uplink is refreshed rather than failing the run.
+- **It validates up front.** Instrument slugs are checked against the live
+  vocabulary at `GET /api/ingest/v1/instruments`, so a bridge can fail before
+  it declares anything rather than stranding a half-ingested take.
+- **A machine-readable spec**, served by the app itself and needing no token:
+  `GET /api/ingest/v1/openapi.json`. Point a generator at your own
+  deployment.
+- **Scoped tokens.** `/admin/tokens` issues one with `ingest:write` and
+  nothing else, which is the only scope any ingest route checks. A token that
+  leaks off a laptop cannot read votes or touch members.
+
+[`docs/ingest-contract-v1.md`](docs/ingest-contract-v1.md) is the contract in
+full, and `tools/ingest_client/` is a working client in about 400 lines of
+Python with no dependencies — short enough to read in one sitting and use as
+a skeleton for your own.
+
+### reapertoire, the reference bridge
+
+[**reapertoire**](https://github.com/bandplate/reapertoire) is what that
+looks like built out properly, for REAPER. It finds where each run-through
+starts and stops in an hour of continuous recording, recognises which song it
+was against the takes you named last time, renders a master plus
+per-instrument stems, and pushes the lot over the contract above.
+
+It is a separate repo and not a dependency. If you use a different DAW, the
+contract is the whole interface — and the bridge you write is a render step
+plus those three calls.
 
 ## Try it locally
 

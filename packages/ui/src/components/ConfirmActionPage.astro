@@ -19,6 +19,7 @@
 // Ask for `tone="neutral"` when nothing is destroyed. It stays `danger` by
 // default so a new destructive action cannot be dressed as a safe one by
 // forgetting a prop.
+import { Fragment } from "astro/jsx-runtime";
 import Banner from "./Banner.astro";
 
 export interface Props {
@@ -35,13 +36,34 @@ export interface Props {
   cancelLabel: string;
   /** `"neutral"` when nothing is destroyed. Defaults to `danger`. */
   tone?: "danger" | "neutral";
+  /**
+   * Drop the `<main>` wrapper, for a page rendered INSIDE the app shell.
+   *
+   * The default is a bare page, which is right for the only thing these were
+   * built for: a no-JS fallback nobody with script ever reaches, because
+   * `ConfirmDialog` intercepts the `data-confirm` trigger first.
+   *
+   * A confirm page that is the PRIMARY path — one whose consequence has to be
+   * computed on the server, so it cannot be a `data-confirm` string — must
+   * pass this and render inside `AppLayout`. Bare, it arrives as a card
+   * floating on an empty ground with no nav and no header, which reads as a
+   * modal whose backdrop failed rather than as a page. See
+   * `docs/frontend-traps.md`.
+   */
+  inShell?: boolean;
 }
 
-const { bannerTitle, cta, cancelHref, cancelLabel, tone = "danger" } = Astro.props;
+const { bannerTitle, cta, cancelHref, cancelLabel, tone = "danger", inShell = false } = Astro.props;
 const danger = tone === "danger";
+const Wrapper = inShell ? Fragment : "main";
+// `<main id="main">` is the skip link's target and there must be exactly one:
+// inside the shell, `AppLayout` already rendered it.
+const wrapperProps = inShell
+  ? {}
+  : { id: "main", class: "bp-container", style: "max-width: 30rem; margin-top: 3rem;" };
 ---
 
-<main id="main" class="bp-container" style="max-width: 30rem; margin-top: 3rem;">
+<Wrapper {...wrapperProps}>
   <Banner kind={danger ? "error" : "info"} title={bannerTitle}>
     <slot />
   </Banner>
@@ -74,4 +96,4 @@ const danger = tone === "danger";
     </button>
     <a href={cancelHref} class="bp-btn bp-btn-secondary">{cancelLabel}</a>
   </form>
-</main>
+</Wrapper>

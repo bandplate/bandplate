@@ -13,7 +13,7 @@ import { adminMessages, formatShortDate } from "@bandplate/i18n";
 // between the two can add a stem that collides, and what runs has to be what
 // is true now.
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
-import Layout from "../../../../layouts/Layout.astro";
+import AppLayout from "../../../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../../../server/app.js";
 import { isSameOrigin } from "../../../../server/csrf.js";
 import {
@@ -52,8 +52,21 @@ const { source, target, losingSongs, losingTakes } = preview;
 const losesSomething = losingSongs.length > 0 || losingTakes.length > 0;
 ---
 
-<Layout title={ta.mergeInstrument}>
+{/* In the SHELL, unlike this folder's `archive` and `delete` confirms. Those
+    are no-JS fallbacks nobody with script reaches — `ConfirmDialog` catches
+    their `data-confirm` trigger first. This one is the primary path, because
+    what it has to show (which charts and which audio files the merge
+    destroys) is computed on the server and cannot be a static string on a
+    trigger. A bare confirm page reached deliberately looks like a modal that
+    lost its backdrop. See `docs/frontend-traps.md`. */}
+<AppLayout
+  title={ta.mergeInstrument}
+  principal={principal}
+  current="admin"
+  adminSection="instruments"
+>
   <ConfirmActionPage
+    inShell
     bannerTitle={ta.mergeConfirmTitle(source.label, target.label)}
     cta={ta.mergeInstrument}
     cancelHref="/admin/instruments"
@@ -76,4 +89,4 @@ const losesSomething = losingSongs.length > 0 || losingTakes.length > 0;
       )
     }
   </ConfirmActionPage>
-</Layout>
+</AppLayout>

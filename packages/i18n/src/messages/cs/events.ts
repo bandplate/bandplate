@@ -5,7 +5,7 @@
 // │ fix. Register is INFORMAL (tykání).                                     │
 // │                                                                        │
 // │ GLOSSARY IN USE HERE:                                                   │
-// │   event → akce · rehearsal → zkouška · concert/live → naživo            │
+// │   event → akce · rehearsal → zkouška · concert/live → živě              │
 // │   session → studio · take → take / taky / takeů                         │
 // │                                                                        │
 // │ WORTH CHECKING: `session` → "studio". The English word is ambiguous     │
@@ -22,7 +22,7 @@ import type { events as enEvents } from "../en/events.js";
 // whatever the admin typed — see the English file for why that is deliberate.
 const KIND_WORDS: Record<string, string> = {
   rehearsal: "zkouška",
-  concert: "naživo",
+  concert: "živě",
   session: "studio",
 };
 

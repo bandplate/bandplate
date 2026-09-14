@@ -11,13 +11,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Enable corepack
-        run: corepack enable
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20.18.1
+
+      # The corepack bundled with Node 20.18.1 carries an npm signing key that
+      # the registry has since rotated past, so it rejects a perfectly valid
+      # pnpm tarball with "Cannot find matching keyid" and the job dies before
+      # it installs anything. Upgrading corepack first is the fix; it also has
+      # to happen AFTER setup-node, or it upgrades the runner's default Node's
+      # copy and the pinned one still uses its own.
+      - name: Enable corepack
+        run: |
+          npm install -g corepack@latest
+          corepack enable
 
       - name: Prepare pnpm via corepack
         run: corepack prepare pnpm@10.33.0 --activate

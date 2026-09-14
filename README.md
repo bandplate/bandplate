@@ -185,6 +185,26 @@ outside the core loop.
 Issues and pull requests are welcome. `pnpm typecheck && pnpm lint &&
 pnpm test` should all exit 0 before you open one.
 
+### This was vibecoded
+
+All of it. Every line here was written by an LLM, from prompts and review
+rather than from a keyboard. That is the whole provenance and you should
+factor it in.
+
+What that does not mean: it is not a demo. It runs a real band's archive
+every week, the test suite is real and passes, and the decisions that were
+hard are argued out in comments at the point they apply — why the mixer
+streams instead of decoding, why foreign keys are off, why the CSRF check is
+hand-rolled. Those arguments are the useful part of the codebase.
+
+What it does mean: no human has read every line. Reviewed, directed and used
+in anger, yes; line-by-line audited, no. So if you are going to run this
+somewhere that matters, read the parts that would hurt you — the auth flow,
+the rate limiter, the presigning in `packages/storage`, and
+`BANDPLATE_TRUSTED_PROXY_DEPTH`, which is a security decision the config
+cannot make for you. I would say that about any small self-hosted project;
+here it is worth saying out loud.
+
 ## Licence
 
 MIT — see [LICENSE](LICENSE).

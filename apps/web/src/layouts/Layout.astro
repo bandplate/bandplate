@@ -2,6 +2,8 @@
 import { messages } from "@bandplate/i18n";
 import "@bandplate/ui/tokens/theme.css";
 import "@bandplate/ui/tokens/components.css";
+import { rootThemeAttribute, themeColorMetas } from "../client/theme.js";
+import { readThemeCookie } from "../server/cookies.js";
 
 export interface Props {
   title: string;
@@ -44,10 +46,16 @@ const shareDescription = description ?? t.shell.shareDescription;
 // rather than from configuration so a deployment behind any host describes
 // itself as the host the reader actually reached.
 const canonical = new URL(Astro.url.pathname, Astro.url);
+
+// Light, dark or the device's own setting — see `client/theme.ts`. Stamped on
+// `<html>` by the server so the first paint is already right. ClientRouter
+// swaps `<html>`'s attributes on a soft navigation, so a choice made on `/me`
+// carries to the next page without a reload.
+const themeChoice = readThemeCookie(Astro.cookies);
 const shareImage = new URL("/og-image.png", Astro.url);
 ---
 
-<html lang={Astro.locals.locale}>
+<html lang={Astro.locals.locale} data-theme={rootThemeAttribute(themeChoice)}>
   <head>
     <meta charset="utf-8" />
     {/* `viewport-fit=cover` is what turns on every `env(safe-area-inset-*)`
@@ -97,8 +105,9 @@ const shareImage = new URL("/og-image.png", Astro.url);
         `safe-area-inset-top`, so a translucent bar would lay the page under
         the clock. */}
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#f2e8d8" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#150c07" media="(prefers-color-scheme: dark)" />
+    {themeColorMetas(themeChoice).map((meta) => (
+      <meta name="theme-color" content={meta.content} media={meta.media} />
+    ))}
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

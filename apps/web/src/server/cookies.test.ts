@@ -6,7 +6,14 @@
 // was passed to `.set()`/`.delete()` — enough to assert the exact
 // attributes without booting Astro.
 import { describe, expect, it } from "vitest";
-import { SESSION_COOKIE_NAME, clearSessionCookie, setSessionCookie } from "./cookies.js";
+import { THEME_COOKIE_NAME } from "../client/theme.js";
+import {
+  SESSION_COOKIE_NAME,
+  clearSessionCookie,
+  readThemeCookie,
+  setSessionCookie,
+  setThemeCookie,
+} from "./cookies.js";
 
 interface RecordedSet {
   name: string;
@@ -22,6 +29,13 @@ interface RecordedDelete {
 class FakeCookies {
   sets: RecordedSet[] = [];
   deletes: RecordedDelete[] = [];
+
+  values = new Map<string, string>();
+
+  get(name: string): { value: string } | undefined {
+    const value = this.values.get(name);
+    return value === undefined ? undefined : { value };
+  }
 
   set(name: string, value: string, options: Record<string, unknown> = {}): void {
     this.sets.push({ name, value, options });
@@ -74,5 +88,47 @@ describe("clearSessionCookie", () => {
     expect(del?.name).toBe(SESSION_COOKIE_NAME);
     expect(del?.options.path).toBe("/");
     expect(del?.options.secure).toBe(true);
+  });
+});
+
+describe("setThemeCookie", () => {
+  // A display preference, not a credential: the picker on `/me` rewrites it
+  // from the page, so it must NOT be httpOnly, or the no-reload path could
+  // not keep it in step with what the server renders next.
+  it("sets a script-readable, year-long, lax cookie on every path", () => {
+    const cookies = new FakeCookies();
+    // biome-ignore lint/suspicious/noExplicitAny: FakeCookies only implements the methods used
+    setThemeCookie(cookies as any, "dark", { cookieSecure: true });
+    expect(cookies.sets).toEqual([
+      {
+        name: THEME_COOKIE_NAME,
+        value: "dark",
+        options: {
+          httpOnly: false,
+          secure: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge: 31536000,
+        },
+      },
+    ]);
+  });
+});
+
+describe("readThemeCookie", () => {
+  it("returns the stored choice", () => {
+    const cookies = new FakeCookies();
+    cookies.values.set(THEME_COOKIE_NAME, "light");
+    // biome-ignore lint/suspicious/noExplicitAny: FakeCookies only implements the methods used
+    expect(readThemeCookie(cookies as any)).toBe("light");
+  });
+
+  it("falls back to system when absent or not a choice", () => {
+    const cookies = new FakeCookies();
+    // biome-ignore lint/suspicious/noExplicitAny: FakeCookies only implements the methods used
+    expect(readThemeCookie(cookies as any)).toBe("system");
+    cookies.values.set(THEME_COOKIE_NAME, "sepia");
+    // biome-ignore lint/suspicious/noExplicitAny: FakeCookies only implements the methods used
+    expect(readThemeCookie(cookies as any)).toBe("system");
   });
 });

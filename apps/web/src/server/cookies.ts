@@ -6,6 +6,12 @@
 // same way through the API's own cookie parsing, and vice versa.
 import { type Locale, isLocale } from "@bandplate/i18n";
 import type { AstroCookies } from "astro";
+import {
+  THEME_COOKIE_MAX_AGE_SECONDS,
+  THEME_COOKIE_NAME,
+  type ThemeChoice,
+  isThemeChoice,
+} from "../client/theme.js";
 
 export const SESSION_COOKIE_NAME = "bp_session";
 
@@ -74,4 +80,30 @@ export function setLocaleCookie(
 export function readLocaleCookie(cookies: AstroCookies): Locale | undefined {
   const value = cookies.get(LOCALE_COOKIE_NAME)?.value;
   return isLocale(value) ? value : undefined;
+}
+
+/**
+ * Light, dark or system, for THIS browser. See `client/theme.ts` for why a
+ * cookie and why per browser rather than per member. Not httpOnly for the
+ * same reason as the locale cookie, and because `/me`'s picker writes it from
+ * the page. Not cleared on logout: the sign-in page should keep the look too.
+ */
+export function setThemeCookie(
+  cookies: AstroCookies,
+  choice: ThemeChoice,
+  security: CookieSecurity,
+): void {
+  cookies.set(THEME_COOKIE_NAME, choice, {
+    httpOnly: false,
+    secure: security.cookieSecure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: THEME_COOKIE_MAX_AGE_SECONDS,
+  });
+}
+
+/** The stored choice, or "system" when there is none (or it is not one we know). */
+export function readThemeCookie(cookies: AstroCookies): ThemeChoice {
+  const value = cookies.get(THEME_COOKIE_NAME)?.value;
+  return isThemeChoice(value) ? value : "system";
 }

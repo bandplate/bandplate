@@ -72,6 +72,18 @@ export const me = {
   /** iOS has no install button a page can offer, only these two taps. */
   installIosSteps: "Tap Share, then Add to Home Screen.",
 
+  /**
+   * `/me`'s theme picker. Three choices, not a light/dark switch: the app
+   * follows the device until someone says otherwise, and a two-way switch
+   * would take that away.
+   */
+  themeLegend: "Appearance",
+  themeLight: "Light",
+  themeDark: "Dark",
+  themeSystem: "Automatic",
+  /** Per browser, unlike the language, which follows the member everywhere. */
+  themeHint: "Remembered in this browser only. Automatic follows your phone or computer.",
+
   languageLegend: "Language",
   languageHint: "Applies on every device.",
   /** The button that is already the current language, for screen readers. */

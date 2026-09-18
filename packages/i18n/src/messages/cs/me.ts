@@ -59,6 +59,14 @@ export const me = {
   installAction: "Nainstalovat bandplate", // en: Install bandplate
   installIosSteps: "Klepni na Sdílet a pak na Přidat na plochu.", // en: Tap Share, then Add to Home Screen.
 
+  themeLegend: "Vzhled", // en: Appearance
+  themeLight: "Světlý", // en: Light
+  themeDark: "Tmavý", // en: Dark
+  themeSystem: "Podle systému", // en: Automatic
+  // en: Remembered in this browser only. Automatic follows your phone or computer.
+  themeHint:
+    "Platí jen v tomhle prohlížeči. Podle systému se řídí nastavením telefonu nebo počítače.",
+
   languageLegend: "Jazyk", // en: Language
   languageHint: "Platí na všech zařízeních.", // en: Applies on every device.
   languageCurrent: (name: string): string => `${name}, současný jazyk`, // en: `${name}, current language`

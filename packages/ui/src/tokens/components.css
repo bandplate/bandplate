@@ -7199,6 +7199,152 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 0.625rem;
 }
 
+/* `/me`'s theme picker. Three tiles, each holding a small page drawn in the
+   theme it stands for: `.bp-theme-mini` carries its own `data-theme`, so every
+   token inside it resolves to THAT theme whatever the page around it is using.
+   The tile is the sample; nothing here hardcodes a colour.
+
+   Selection is a ring and a tick, never a recolour of the tile, for the reason
+   the track-colour picker gives: the choices ARE colours. */
+.bp-theme-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
+  max-width: 26rem;
+  margin: 0 0 0.75rem;
+}
+
+.bp-theme-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--bp-color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bp-theme-tile-preview {
+  display: flex;
+  height: 84px;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--bp-color-border);
+  transition: box-shadow 150ms ease;
+}
+
+.bp-theme-tile[aria-pressed="true"] .bp-theme-tile-preview {
+  box-shadow: 0 0 0 2px var(--bp-color-accent);
+}
+
+.bp-theme-tile:focus-visible {
+  outline: none;
+}
+
+.bp-theme-tile:focus-visible .bp-theme-tile-preview {
+  box-shadow: 0 0 0 2px var(--bp-color-bg), 0 0 0 4px var(--bp-color-fg);
+}
+
+.bp-theme-tile-tick {
+  display: none;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  box-shadow: 0 0 0 3px var(--bp-color-bg);
+}
+
+.bp-theme-tile[aria-pressed="true"] .bp-theme-tile-tick {
+  display: grid;
+}
+
+.bp-theme-tile-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.bp-theme-mini {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 8px 0;
+  background: var(--bp-color-bg);
+}
+
+.bp-theme-mini-title,
+.bp-theme-mini-line,
+.bp-theme-mini-bar,
+.bp-theme-mini-pill {
+  display: block;
+  border-radius: 3px;
+}
+
+.bp-theme-mini-title {
+  width: 72%;
+  height: 7px;
+  background: var(--bp-color-fg);
+}
+
+.bp-theme-mini-line {
+  width: 46%;
+  height: 4px;
+  background: var(--bp-color-muted);
+}
+
+.bp-theme-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+.bp-theme-mini-line + .bp-theme-mini-row {
+  margin-top: 4px;
+}
+
+.bp-theme-mini-bar {
+  flex: 1;
+  height: 5px;
+  background: var(--bp-color-fg);
+  opacity: 0.75;
+}
+
+.bp-theme-mini-pill {
+  width: 16px;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--bp-color-accent);
+}
+
+.bp-theme-mini-tabbar {
+  position: absolute;
+  inset: auto 0 0;
+  height: 12px;
+  border-top: 1px solid var(--bp-color-border);
+  background: var(--bp-color-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-theme-tile-preview {
+    transition: none;
+  }
+}
+
 .bp-profile-language-select {
   min-width: 11rem;
 }

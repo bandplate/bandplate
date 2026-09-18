@@ -13,14 +13,19 @@
 // and what follows is what is pressed into it — the ledger of how you have
 // voted, then the calls themselves.
 //
-// Four parts, one column, in this order:
-//   HERO      the plate, your name, since when, what you play. Sign out sits
-//             here rather than at the bottom of a rail — it is yours, it is
-//             destructive, and it should be where you look for it.
-//   LEDGER    four figures. `agreementPct` is the one worth having: it is
-//             something the archive knows about you that you do not.
-//   VOTES     the calls, with the comment you left, which was invisible before.
-//   LANGUAGE  the one setting that lives here.
+// Six parts, one column, in this order:
+//   HERO        the plate, your name, since when, what you play. Sign out sits
+//               here rather than at the bottom of a rail — it is yours, it is
+//               destructive, and it should be where you look for it.
+//   LEDGER      four figures. `agreementPct` is the one worth having: it is
+//               something the archive knows about you that you do not.
+//   APPEARANCE  light, dark or the device's own, for this browser.
+//   LANGUAGE    for you, on every device.
+//   VOTES       the calls, with the comment you left, which was invisible before.
+//   INSTALL     only where installing can actually happen.
+//
+// The two settings sit ABOVE the votes. The votes list is paginated and grows
+// without end; a setting under it is a setting nobody finds.
 //
 // Deliberately NOT here: favourites. Home is already the shelf of exactly
 // those, and listing them twice is what this page was being cured of.
@@ -33,11 +38,12 @@ import {
 } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
+import { THEMES, isThemeChoice } from "../../client/theme.js";
 import InstallHint from "../../components/InstallHint.tsx";
 import InstrumentSet from "../../components/InstrumentSet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
-import { setLocaleCookie } from "../../server/cookies.js";
+import { readThemeCookie, setLocaleCookie, setThemeCookie } from "../../server/cookies.js";
 import { isSameOrigin } from "../../server/csrf.js";
 
 import { VOTES_PER_PAGE, getMeData, setLocaleFromForm } from "../../server/pages/me.js";
@@ -79,8 +85,22 @@ if (Astro.request.method === "POST") {
       }
       localeError = t.common.genericError;
     }
+    // The no-JS path. With scripts, the picker applies a choice in place and
+    // never submits (see the <script> below), so this only runs without them.
+    // No `?saved` banner: the page itself changing colour is the confirmation.
+    if (formData.get("intent") === "theme") {
+      const choice = formData.get("theme");
+      if (isThemeChoice(choice)) {
+        setThemeCookie(Astro.cookies, choice, { cookieSecure: appDeps.config.cookieSecure });
+        return Astro.redirect("/me");
+      }
+      localeError = t.common.genericError;
+    }
   }
 }
+
+const themeChoice = readThemeCookie(Astro.cookies);
+const themeLabels = { light: t.me.themeLight, dark: t.me.themeDark, system: t.me.themeSystem };
 
 const languageSaved = Astro.url.searchParams.get("saved") === "1";
 const { page, args: votesPage } = pageRequest(Astro.url.searchParams, VOTES_PER_PAGE);
@@ -183,6 +203,91 @@ const initials = member.displayName
       </div>
     </dl>
 
+    {/* ── Appearance ─────────────────────────────────────────────────── */}
+    {/* Each tile IS its sample: the little page inside it is drawn with the
+        app's own tokens under a nested `data-theme`, which dubplate.css
+        already supports for `/dev/ui`. So a tile cannot drift from what the
+        theme really looks like, and "system" shows both halves because it
+        can be either.
+
+        Three submit buttons in a form, so it works with no JS at all (the
+        POST branch above). With JS the submit is caught and the choice is
+        applied in place: no reload, so nothing playing stops. */}
+    <section class="bp-profile-theme" aria-labelledby="me-theme">
+      <h2 class="bp-section-title bp-profile-section" id="me-theme">{t.me.themeLegend}</h2>
+      <form method="post" class="bp-theme-picker" data-theme-picker>
+        <input type="hidden" name="intent" value="theme" />
+        {
+          THEMES.map((option) => (
+            <button
+              type="submit"
+              name="theme"
+              value={option}
+              class="bp-theme-tile"
+              aria-pressed={option === themeChoice ? "true" : "false"}
+            >
+              <span class="bp-theme-tile-preview" aria-hidden="true">
+                {(option === "system" ? ["light", "dark"] : [option]).map((half) => (
+                  <span class="bp-theme-mini" data-theme={half}>
+                    <span class="bp-theme-mini-title" />
+                    <span class="bp-theme-mini-line" />
+                    <span class="bp-theme-mini-row">
+                      <span class="bp-theme-mini-bar" />
+                      <span class="bp-theme-mini-pill" />
+                    </span>
+                    <span class="bp-theme-mini-row">
+                      <span class="bp-theme-mini-bar" />
+                    </span>
+                    <span class="bp-theme-mini-tabbar" />
+                  </span>
+                ))}
+              </span>
+              <span class="bp-theme-tile-tick" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+              </span>
+              <span class="bp-theme-tile-label">{themeLabels[option]}</span>
+            </button>
+          ))
+        }
+      </form>
+      <p class="bp-field-hint bp-m0">{t.me.themeHint}</p>
+    </section>
+
+    {/* ── Language ───────────────────────────────────────────────────── */}
+    {/* A SELECT, not a row of pills. The list of languages grows, and a row of
+        pills stops being a row at five of them.
+
+        The submit button beside it is what keeps this working with no JS: a
+        select's `change` is not a submission, and nothing else in this app has
+        a JS-only path. The language switch is a poor place to start one.
+
+        `data-astro-reload` is load-bearing, not caution — `<ClientRouter />`
+        intercepts same-origin form posts, and `Player`, `VoteFavorite` and
+        `ConfirmDialog` are `transition:persist`, so a soft navigation would
+        MOVE them across with their old language still rendered. */}
+    <section class="bp-profile-language">
+      <h2 class="bp-section-title bp-profile-section">{t.me.languageLegend}</h2>
+      <form method="post" class="bp-profile-language-form" data-astro-reload>
+        <input type="hidden" name="intent" value="locale" />
+        <label class="bp-visually-hidden" for="me-locale">{t.me.languageLegend}</label>
+        <select class="bp-select bp-profile-language-select" id="me-locale" name="locale">
+          {
+            LOCALES.map((option) => (
+              /* Autonyms — "English", "Čeština" — never translated. Somebody
+                 who picked a language they cannot read has to be able to find
+                 their way back out, and only a name in its own language does
+                 that for them. */
+              <option value={option} selected={option === locale}>{LANGUAGE_NAMES[option]}</option>
+            ))
+          }
+        </select>
+        <button type="submit" class="bp-btn bp-btn-quiet bp-btn-sm">{t.me.switchLanguage}</button>
+      </form>
+      <p class="bp-field-hint bp-m0">{t.me.languageHint} {t.me.languageStopsPlayback}</p>
+    </section>
+
     {/* ── The calls ──────────────────────────────────────────────────── */}
     <section>
       <h2 class="bp-section-title bp-profile-section">{t.me.votesHeading}</h2>
@@ -237,38 +342,6 @@ const initials = member.displayName
       <Pagination {...pages} labels={paginationLabels(pages, "vote")} />
     </section>
 
-    {/* ── Language ───────────────────────────────────────────────────── */}
-    {/* A SELECT, not a row of pills. The list of languages grows, and a row of
-        pills stops being a row at five of them.
-
-        The submit button beside it is what keeps this working with no JS: a
-        select's `change` is not a submission, and nothing else in this app has
-        a JS-only path. The language switch is a poor place to start one.
-
-        `data-astro-reload` is load-bearing, not caution — `<ClientRouter />`
-        intercepts same-origin form posts, and `Player`, `VoteFavorite` and
-        `ConfirmDialog` are `transition:persist`, so a soft navigation would
-        MOVE them across with their old language still rendered. */}
-    <section class="bp-profile-language">
-      <h2 class="bp-section-title bp-profile-section">{t.me.languageLegend}</h2>
-      <form method="post" class="bp-profile-language-form" data-astro-reload>
-        <input type="hidden" name="intent" value="locale" />
-        <label class="bp-visually-hidden" for="me-locale">{t.me.languageLegend}</label>
-        <select class="bp-select bp-profile-language-select" id="me-locale" name="locale">
-          {
-            LOCALES.map((option) => (
-              /* Autonyms — "English", "Čeština" — never translated. Somebody
-                 who picked a language they cannot read has to be able to find
-                 their way back out, and only a name in its own language does
-                 that for them. */
-              <option value={option} selected={option === locale}>{LANGUAGE_NAMES[option]}</option>
-            ))
-          }
-        </select>
-        <button type="submit" class="bp-btn bp-btn-quiet bp-btn-sm">{t.me.switchLanguage}</button>
-      </form>
-      <p class="bp-field-hint bp-m0">{t.me.languageHint} {t.me.languageStopsPlayback}</p>
-    </section>
 
     <InstallHint
       client:load
@@ -278,3 +351,58 @@ const initials = member.displayName
     />
   </div>
 </AppLayout>
+
+<script>
+  // Applies a theme choice in place instead of submitting it. A submit would
+  // reload the page, and a reload stops whatever the shell player is playing
+  // (the language switch has to say so; this one does not).
+  //
+  // One listener on `document`, in the CAPTURE phase, registered once per
+  // document: ClientRouter does not re-run this module on a soft navigation
+  // back to `/me`, and it also listens for submits itself, so this has to see
+  // the event first and mark it handled.
+  import { isThemeChoice, rootThemeAttribute, themeColorMetas, themeCookieString } from "../../client/theme.js";
+
+  document.addEventListener(
+    "submit",
+    (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || !form.hasAttribute("data-theme-picker")) {
+        return;
+      }
+      const choice = event.submitter instanceof HTMLButtonElement ? event.submitter.value : null;
+      if (!isThemeChoice(choice)) {
+        return; // let the POST handle it
+      }
+      event.preventDefault();
+
+      document.cookie = themeCookieString(choice, location.protocol === "https:");
+
+      const root = document.documentElement;
+      const attribute = rootThemeAttribute(choice);
+      if (attribute) {
+        root.dataset.theme = attribute;
+      } else {
+        delete root.dataset.theme;
+      }
+
+      for (const meta of document.head.querySelectorAll('meta[name="theme-color"]')) {
+        meta.remove();
+      }
+      for (const { content, media } of themeColorMetas(choice)) {
+        const meta = document.createElement("meta");
+        meta.name = "theme-color";
+        meta.content = content;
+        if (media) {
+          meta.media = media;
+        }
+        document.head.append(meta);
+      }
+
+      for (const button of form.querySelectorAll("button[name=theme]")) {
+        button.setAttribute("aria-pressed", String(button === event.submitter));
+      }
+    },
+    { capture: true },
+  );
+</script>

@@ -631,6 +631,48 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).toContain("Plays: Bass, Trombone");
     });
 
+    // Both settings sit above the votes: the votes list grows without end, and
+    // a setting under it is a setting nobody finds.
+    it("puts appearance and language above the votes", async () => {
+      const res = await fetch(`${ORIGIN}/me`, { headers: { cookie: sessionCookie } });
+      const body = await res.text();
+      const appearance = body.indexOf('id="me-theme"');
+      const language = body.indexOf('id="me-locale"');
+      const votes = body.indexOf("Recent votes");
+      expect(appearance).toBeGreaterThan(-1);
+      expect(language).toBeGreaterThan(appearance);
+      expect(votes).toBeGreaterThan(language);
+    });
+
+    it("renders the theme from the cookie, before any script runs", async () => {
+      const plain = await (
+        await fetch(`${ORIGIN}/me`, { headers: { cookie: sessionCookie } })
+      ).text();
+      // No choice: no attribute, so the media query decides, and both chrome colours.
+      expect(plain).not.toMatch(/<html[^>]*data-theme=/);
+      expect(plain.match(/<meta name="theme-color"/g)).toHaveLength(2);
+      expect(plain).toMatch(/value="system"[^>]*aria-pressed="true"/);
+
+      const dark = await (
+        await fetch(`${ORIGIN}/me`, { headers: { cookie: `${sessionCookie}; bp_theme=dark` } })
+      ).text();
+      expect(dark).toMatch(/<html[^>]*data-theme="dark"/);
+      expect(dark.match(/<meta name="theme-color"/g)).toHaveLength(1);
+      expect(dark).toMatch(/value="dark"[^>]*aria-pressed="true"/);
+    });
+
+    it("saves a theme posted without JS, and redirects back", async () => {
+      const res = await fetch(`${ORIGIN}/me`, {
+        method: "POST",
+        headers: { cookie: sessionCookie, origin: ORIGIN },
+        body: new URLSearchParams({ intent: "theme", theme: "light" }),
+        redirect: "manual",
+      });
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe("/me");
+      expect(res.headers.get("set-cookie")).toContain("bp_theme=light");
+    });
+
     it("no longer renders sessions or a second copy of the pinned list", async () => {
       // Both came off this page deliberately (see `me.ts`): home is the shelf,
       // and a device list answered a question nobody in a five-piece band asks.

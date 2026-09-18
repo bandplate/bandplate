@@ -274,6 +274,12 @@ export const songs = sqliteTable(
     archivedAt: ts("archived_at"),
     createdAt: ts("created_at").notNull(),
     updatedAt: ts("updated_at").notNull(),
+    // When a "chords/lyrics changed" push was last sent for this song, or
+    // NULL if never. The CAS pivot for `notificationsRepo.claimSongNotification`
+    // (`UPDATE songs SET chart_notified_at = :now WHERE id = :id AND
+    // coalesce(chart_notified_at, 0) = :prev`) — see `song_chart_changes`
+    // just below for what feeds it.
+    chartNotifiedAt: ts("chart_notified_at"),
   },
   (t) => [
     // UNIQUE (not just indexed): two concurrent stub creates for titles
@@ -375,6 +381,17 @@ export const takes = sqliteTable(
     updatedAt: ts("updated_at").notNull(),
     publishedAt: ts("published_at"),
     purgedAt: ts("purged_at"),
+    // When this take's publication was last folded into a "new takes" push
+    // batch — NULL means pending. Set alongside `publishedAt`, never
+    // watermarked against it, so the ingest re-commit quirk (keeper/rejected
+    // -> published, `publishedAt` reset) and an unpublish/republish cycle
+    // each mark this NULL again rather than silently staying "already
+    // notified". The migration backfills this to `publishedAt` for every
+    // row that predates push notifications, or the first deploy would
+    // announce the entire archive as one giant batch. See the partial index
+    // `takes_push_pending_idx`, hand-added in the migration SQL (a raw
+    // partial index isn't expressible through drizzle-kit's schema DSL).
+    pushBatchedAt: ts("push_batched_at"),
   },
   (t) => [
     index("takes_song_id_recorded_at_idx").on(t.songId, t.recordedAt),
@@ -491,3 +508,100 @@ export const favorites = sqliteTable(
     index("favorites_member_id_created_at_idx").on(t.memberId, t.createdAt),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// push notifications
+// ---------------------------------------------------------------------------
+
+/**
+ * One Push API subscription (one browser/device). `endpoint` is UNIQUE and
+ * is the upsert key — `pushSubscriptionsRepo.upsert` reassigns `memberId`
+ * on conflict, so a device that switches which member is signed in on it
+ * (a shared rehearsal-room tablet) stops notifying the old member the
+ * moment it re-subscribes, rather than accumulating a second row.
+ */
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: id(),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull().unique(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    // First 16 chars of the VAPID public key this subscription was created
+    // under — lets a key rotation identify (and prompt a re-subscribe for)
+    // subscriptions signed with a retired key, without storing the whole key
+    // on every row.
+    vapidKeyId: text("vapid_key_id").notNull(),
+    // Which auth session was live when this device subscribed, or NULL —
+    // informational only (not a foreign key enforced anywhere else either),
+    // for support/debugging "why is this device still subscribed".
+    authSessionId: text("auth_session_id"),
+    userAgent: text("user_agent"),
+    createdAt: ts("created_at").notNull(),
+    updatedAt: ts("updated_at").notNull(),
+    lastSuccessAt: ts("last_success_at"),
+  },
+  (t) => [index("push_subscriptions_member_id_idx").on(t.memberId)],
+);
+
+/**
+ * Per-member notification toggles, three booleans (default on) plus their
+ * own `updatedAt`. A dedicated table rather than columns on `members` — see
+ * `membersRepo.buildCreateIfEmptyStatement`'s positional bootstrap insert,
+ * guarded by `assertColumnCount(members, 9)`, which a new `members` column
+ * would silently misalign. No row for a member means "all three on" —
+ * `notificationPrefsRepo.get`'s default — so a member who has never opened
+ * `/me`'s notification section is still reachable.
+ */
+export const notificationPrefs = sqliteTable("notification_prefs", {
+  memberId: text("member_id")
+    .primaryKey()
+    .references(() => members.id, { onDelete: "cascade" }),
+  newTakes: integer("new_takes", { mode: "boolean" }).notNull().default(true),
+  weeklyUnvoted: integer("weekly_unvoted", { mode: "boolean" }).notNull().default(true),
+  songChanges: integer("song_changes", { mode: "boolean" }).notNull().default(true),
+  updatedAt: ts("updated_at").notNull(),
+});
+
+/**
+ * One row per chord/lyrics-changing edit (or creation) of a song — what
+ * `notificationsRepo.listPendingSongChanges`/`listSongChangesInWindow` read
+ * to decide a song push is due and who made it (excluded from the push, so
+ * nobody is notified about their own edit). Only `createSong`/`updateSong`
+ * write here (Task 7) — ingest's stub-song creation never does, so the
+ * archive's initial backfill and every ingest run stay silent.
+ */
+export const songChartChanges = sqliteTable(
+  "song_chart_changes",
+  {
+    id: id(),
+    songId: text("song_id")
+      .notNull()
+      .references(() => songs.id, { onDelete: "cascade" }),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id),
+    kind: text("kind", { enum: ["created", "edited"] }).notNull(),
+    changedAt: ts("changed_at").notNull(),
+  },
+  (t) => [index("song_chart_changes_song_id_changed_at_idx").on(t.songId, t.changedAt)],
+);
+
+/**
+ * Generic single-use claim rows for notifications that have no natural
+ * column to CAS against — today, only the weekly reminder
+ * (`weekly:{Prague date}:{memberId}`). `claimKey`'s `INSERT ... ON CONFLICT
+ * DO NOTHING RETURNING` is the same claim-then-send shape as
+ * `claimTakeBatch`/`claimSongNotification`, just keyed by an arbitrary
+ * string instead of a row's own columns. `prune` deletes rows older than 60
+ * days — the key format is only ever compared for equality, so a pruned
+ * claim never resurrects a slot: that Sunday's push already went out or
+ * never will, weeks in the past.
+ */
+export const notificationClaims = sqliteTable("notification_claims", {
+  key: text("key").primaryKey(),
+  createdAt: ts("created_at").notNull(),
+});

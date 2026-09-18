@@ -16,3 +16,6 @@ export * as favoritesRepo from "./repos/favorites.js";
 export * as loginTokensRepo from "./repos/login-tokens.js";
 export * as authSessionsRepo from "./repos/auth-sessions.js";
 export * as serviceTokensRepo from "./repos/service-tokens.js";
+export * as pushSubscriptionsRepo from "./repos/push-subscriptions.js";
+export * as notificationPrefsRepo from "./repos/notification-prefs.js";
+export * as notificationsRepo from "./repos/notifications.js";

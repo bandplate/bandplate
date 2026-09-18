@@ -1,16 +1,31 @@
 import { normalizeTitle, uuidv7 } from "@bandplate/core";
-import { type SQL, and, asc, desc, eq, gte, inArray, lte, notInArray, or, sql } from "drizzle-orm";
+import {
+  type SQL,
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
   assets,
   favorites,
   instruments,
+  members,
   songAliases,
   songs,
   takeInstruments,
   takes,
   votes,
 } from "../schema/sqlite/index.js";
+import { chunk } from "./chunk.js";
 import type { Instrument } from "./instruments.js";
 import { escapeLikePattern } from "./like-pattern.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
@@ -63,6 +78,7 @@ export async function create(db: Db, input: CreateTakeInput): Promise<Take> {
     updatedAt: input.updatedAt,
     publishedAt: null,
     purgedAt: null,
+    pushBatchedAt: null,
   };
 
   const insertTake = db.insert(takes).values(row);
@@ -735,6 +751,49 @@ export async function countByEvents(db: Db, eventIds: string[]): Promise<Map<str
     .groupBy(takes.eventId);
   for (const row of rows) {
     result.set(row.eventId, row.value);
+  }
+  return result;
+}
+
+// D1 allows at most 100 bound parameters per statement — see `chunk.ts`.
+const MEMBER_CHUNK_SIZE = 100;
+
+/**
+ * How many published takes each of the given members has NOT yet voted on —
+ * the weekly reminder tick's recipient selection ("≥1 unvoted published
+ * take"). Deliberately no cap the way `listUnvotedByMember`'s default limit
+ * caps a single member's ROWS (`DEFAULT_TAKE_LIST_CAP`): this returns one
+ * integer per member, not a row list, so there is nothing there for a cap
+ * to protect against — a member with 900 unvoted takes still needs the real
+ * number 900 in the push copy ("N nahrávek k hlasování"), not a capped one.
+ *
+ * Only members with a count > 0 appear in the returned map — a member with
+ * nothing to vote on gets no weekly push, and "0" is never a value the tick
+ * needs to see. `memberIds` is chunked (`chunk.ts`) so a large member list
+ * never exceeds D1's bound-parameter cap on one statement; each chunk's
+ * rows merge into one map, which is safe here because every member id is
+ * looked up in exactly one chunk.
+ */
+export async function countUnvotedByMembers(
+  db: Db,
+  memberIds: string[],
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (memberIds.length === 0) {
+    return result;
+  }
+
+  for (const ids of chunk(memberIds, MEMBER_CHUNK_SIZE)) {
+    const rows = await db
+      .select({ memberId: members.id, value: sql<number>`count(*)` })
+      .from(members)
+      .innerJoin(takes, eq(takes.state, "published"))
+      .leftJoin(votes, and(eq(votes.takeId, takes.id), eq(votes.memberId, members.id)))
+      .where(and(inArray(members.id, ids), isNull(votes.takeId)))
+      .groupBy(members.id);
+    for (const row of rows) {
+      result.set(row.memberId, row.value);
+    }
   }
   return result;
 }

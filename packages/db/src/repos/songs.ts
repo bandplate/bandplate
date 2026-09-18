@@ -87,6 +87,7 @@ export async function createWithAlias(
     archivedAt: null,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
+    chartNotifiedAt: null,
   };
 
   const insertSong = db.insert(songs).values(row);

@@ -1406,3 +1406,149 @@ describe("takes.update", () => {
     expect(await instrumentIdsOf(take.id)).toEqual([bassId, drumsId].sort());
   });
 });
+
+describe("takes.countUnvotedByMembers", () => {
+  let db: Db;
+  let songId: string;
+  let eventId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const now = Date.now();
+    const song = await songs.create(db, {
+      title: "Unvoted-By-Members Song",
+      slug: "unvoted-by-members-song",
+      createdAt: now,
+      updatedAt: now,
+    });
+    songId = song.id;
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    eventId = event.id;
+  });
+
+  async function createMember(slug: string) {
+    return members.create(db, {
+      displayName: slug,
+      slug,
+      email: `${slug}@example.com`,
+      createdAt: Date.now(),
+    });
+  }
+
+  it("counts published takes a member has not voted on", async () => {
+    const now = Date.now();
+    const member = await createMember("cuv-1");
+    await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+    await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+
+    const result = await takes.countUnvotedByMembers(db, [member.id]);
+    expect(result.get(member.id)).toBe(2);
+  });
+
+  it("ignores non-published takes", async () => {
+    const now = Date.now();
+    const member = await createMember("cuv-2");
+    await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "new",
+    });
+
+    const result = await takes.countUnvotedByMembers(db, [member.id]);
+    expect(result.has(member.id)).toBe(false);
+  });
+
+  it("excludes takes the member has already voted on", async () => {
+    const now = Date.now();
+    const member = await createMember("cuv-3");
+    const take = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+    await votes.castVote(db, { takeId: take.id, memberId: member.id, keeper: true, now });
+
+    const result = await takes.countUnvotedByMembers(db, [member.id]);
+    expect(result.has(member.id)).toBe(false);
+  });
+
+  it("only includes members with a count greater than zero", async () => {
+    const now = Date.now();
+    const withUnvoted = await createMember("cuv-4a");
+    const fullyVoted = await createMember("cuv-4b");
+    const take = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      state: "published",
+    });
+    await votes.castVote(db, { takeId: take.id, memberId: fullyVoted.id, keeper: true, now });
+
+    const result = await takes.countUnvotedByMembers(db, [withUnvoted.id, fullyVoted.id]);
+    expect(result.get(withUnvoted.id)).toBe(1);
+    expect(result.has(fullyVoted.id)).toBe(false);
+  });
+
+  it("returns an empty map for an empty member list", async () => {
+    const result = await takes.countUnvotedByMembers(db, []);
+    expect(result.size).toBe(0);
+  });
+
+  it("counts correctly for a member id near the end of a list over 100 ids (D1 chunking)", async () => {
+    const now = Date.now();
+    for (let i = 0; i < 5; i++) {
+      await takes.create(db, {
+        songId,
+        eventId,
+        recordedAt: now,
+        createdAt: now,
+        updatedAt: now,
+        state: "published",
+      });
+    }
+
+    const memberIds: string[] = [];
+    for (let i = 0; i < 150; i++) {
+      const m = await createMember(`cuv-many-${i}`);
+      memberIds.push(m.id);
+    }
+    // The interesting one is deliberately the LAST id — proves the second
+    // chunk (ids 101-150) is queried too, not just the first 100. Every
+    // other member id has the same 5 published takes as this one — nobody
+    // voted on anything — so they all count too; the point of this fixture
+    // is only that the LAST id's count comes back correctly at all.
+    const target = await createMember("cuv-many-target");
+    memberIds.push(target.id);
+
+    const result = await takes.countUnvotedByMembers(db, memberIds);
+    expect(result.get(target.id)).toBe(5);
+    expect(result.size).toBe(memberIds.length);
+  });
+});

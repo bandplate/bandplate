@@ -58,16 +58,23 @@ self.addEventListener("push", (event) => {
 });
 
 /**
- * Only a same-origin, root-relative path is a valid click target. Rejects
- * `//evil.example` (a protocol-relative URL a browser would treat as
- * cross-origin) and anything not starting with `/` (a full URL, `javascript:`,
- * or garbage) — those fall back to `/` rather than navigating somewhere this
- * worker didn't choose.
+ * Only a same-origin path is a valid click target. Resolving against
+ * `self.location.origin` (rather than a `startsWith("/")` check) is what
+ * catches `/\evil.example` too, not just `//evil.example` — a browser
+ * normalises a leading `/\` the same as `//`, into a protocol-relative,
+ * cross-origin URL, and a naive prefix check would have let it through.
+ * Anything that resolves off-origin, or doesn't parse at all, falls back to
+ * `/` rather than navigating somewhere this worker didn't choose.
  */
 function targetPath(data) {
-  const url = data && typeof data.url === "string" ? data.url : undefined;
-  if (url?.startsWith("/") && !url.startsWith("//")) {
-    return url;
+  const raw = data && typeof data.url === "string" ? data.url : "/";
+  try {
+    const resolved = new URL(raw, self.location.origin);
+    if (resolved.origin === self.location.origin) {
+      return resolved.pathname + resolved.search + resolved.hash;
+    }
+  } catch {
+    // Not a parseable URL at all — falls through to "/" below.
   }
   return "/";
 }
@@ -78,16 +85,29 @@ self.addEventListener("notificationclick", (event) => {
 
   event.waitUntil(
     (async () => {
+      // Prefer an already-open, same-origin tab: focus it and navigate it
+      // there, rather than piling up a new tab every time a notification is
+      // tapped. `includeUncontrolled` also matches a tab this worker hasn't
+      // claimed yet (e.g. right after an update), and `navigate()` can
+      // reject for exactly that kind of client — so focus/navigate is
+      // wrapped in its own try/catch, and ANY failure (no client, an
+      // unsupported or rejecting `navigate`) falls back to
+      // `clients.openWindow`. A click must always land somewhere.
       const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      // Prefer an already-open tab: focus it and navigate it there, rather
-      // than piling up a new tab every time a notification is tapped.
-      for (const client of clientList) {
-        if ("focus" in client) {
+      const sameOrigin = clientList.filter(
+        (client) => new URL(client.url).origin === self.location.origin,
+      );
+
+      for (const client of sameOrigin.length > 0 ? sameOrigin : clientList) {
+        try {
           await client.focus();
-          if ("navigate" in client) {
+          if (typeof client.navigate === "function") {
             await client.navigate(path);
           }
           return;
+        } catch {
+          // This client couldn't be focused/navigated — try the next one,
+          // or fall through to openWindow below if none work.
         }
       }
       await self.clients.openWindow(path);
@@ -112,10 +132,15 @@ self.addEventListener("pushsubscriptionchange", (event) => {
   event.waitUntil(
     (async () => {
       try {
-        const subscription = await self.registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: oldKey,
-        });
+        // Some browsers hand back the replacement subscription on the event
+        // itself — use it directly rather than subscribing again when it's
+        // there.
+        const subscription =
+          event.newSubscription ??
+          (await self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: oldKey,
+          }));
         const json = subscription.toJSON();
         await fetch("/api/push/subscriptions", {
           method: "POST",

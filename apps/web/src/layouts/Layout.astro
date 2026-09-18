@@ -50,7 +50,10 @@ const shareImage = new URL("/og-image.png", Astro.url);
 <html lang={Astro.locals.locale}>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* `viewport-fit=cover` is what turns on every `env(safe-area-inset-*)`
+        in components.css. Without it they all resolve to 0 on iOS, and the
+        tab bar sits on top of the home indicator once the app is installed. */}
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{shareTitle}</title>
     <meta name="description" content={shareDescription} />
     {noindex && <meta name="robots" content="noindex" />}
@@ -89,6 +92,16 @@ const shareImage = new URL("/og-image.png", Astro.url);
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {/* Installable: see public/manifest.webmanifest. The status-bar style is
+        `default`, not `black-translucent`: nothing in the shell pads for
+        `safe-area-inset-top`, so a translucent bar would lay the page under
+        the clock. */}
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#f2e8d8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#150c07" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="bandplate" />
   </head>
   <body class="bg-ground text-ink font-body">
     <a href="#main" class="bp-skip-link">{t.shell.skipToContent}</a>

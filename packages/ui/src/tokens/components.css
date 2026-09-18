@@ -1057,6 +1057,9 @@ a.bp-btn {
 
 .bp-shell {
   min-height: 100vh;
+  /* The dynamic unit, as `.bp-auth` does: `100vh` on a phone is the height
+     with the toolbars hidden, so the last row of the page hides under them. */
+  min-height: 100dvh;
   /* Referenced by `.bp-player` (its own vertical placement) AND
      `.bp-shell-main` (reserved bottom padding so page content never sits
      underneath the fixed player bar) — one number, one place, so the two
@@ -2084,6 +2087,7 @@ a.bp-btn {
     position: sticky;
     top: 0;
     height: 100vh;
+    height: 100dvh;
     box-sizing: border-box;
     /* Bottom padding reserves space for the player bar, which is
        `position: fixed` and sits ON TOP of this column's own bottom edge

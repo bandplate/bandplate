@@ -235,4 +235,24 @@ describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", (
     expect(body).not.toContain("not an address");
     expect(body).not.toContain("readonly");
   });
+
+  // The manifest is fetched by the browser with no cookie, from any page,
+  // including /login. It must therefore be a static file that never reaches
+  // the session guard: a redirect to /login here would make the app
+  // uninstallable with no visible error.
+  it("serves the web manifest publicly, as a manifest", async () => {
+    const res = await fetch(`${ORIGIN}/manifest.webmanifest`, { redirect: "manual" });
+    expect(res.status).toBe(200);
+    const manifest = (await res.json()) as Record<string, unknown>;
+    expect(manifest.display).toBe("standalone");
+    expect(manifest.start_url).toBe("/");
+    expect(manifest.scope).toBe("/");
+  });
+
+  it("links the manifest and lets the page reach the screen edges", async () => {
+    const body = await (await fetch(`${ORIGIN}/login`)).text();
+    expect(body).toContain('rel="manifest" href="/manifest.webmanifest"');
+    expect(body).toContain("viewport-fit=cover");
+    expect(body).toContain('name="theme-color"');
+  });
 });

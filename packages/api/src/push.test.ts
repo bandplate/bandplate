@@ -171,6 +171,95 @@ describe("POST /push/subscriptions", () => {
     expect(resub.status).toBe(204);
   });
 
+  it("a shared device's endpoint follows whoever subscribes it last — a takeover, not an error", async () => {
+    const testApp = await buildTestApp({ push: PUSH_CONFIG });
+    const { cookie: cookieA, memberId: memberAId } = await loginAsMember(testApp, {
+      email: "takeover-a@example.com",
+      displayName: "Takeover A",
+    });
+    const { cookie: cookieB, memberId: memberBId } = await loginAsMember(testApp, {
+      email: "takeover-b@example.com",
+      displayName: "Takeover B",
+    });
+    const endpoint = "https://fcm.googleapis.com/fcm/send/shared-device";
+
+    const first = await testApp.app.request("/push/subscriptions", {
+      method: "POST",
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookieA}` },
+      body: JSON.stringify(subscribeBody({ endpoint })),
+    });
+    expect(first.status).toBe(204);
+    expect(await pushSubscriptionsRepo.countForMember(testApp.db, memberAId)).toBe(1);
+
+    const second = await testApp.app.request("/push/subscriptions", {
+      method: "POST",
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookieB}` },
+      body: JSON.stringify(subscribeBody({ endpoint })),
+    });
+    expect(second.status).toBe(204);
+
+    // Reassigned to B: A's count drops back to 0, B's now includes it.
+    expect(await pushSubscriptionsRepo.countForMember(testApp.db, memberAId)).toBe(0);
+    expect(await pushSubscriptionsRepo.countForMember(testApp.db, memberBId)).toBe(1);
+    const stored = await pushSubscriptionsRepo.getByEndpoint(testApp.db, endpoint);
+    expect(stored?.memberId).toBe(memberBId);
+
+    // A no longer owns it, so A's DELETE for this endpoint is a no-op.
+    const deleteByA = await testApp.app.request("/push/subscriptions", {
+      method: "DELETE",
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookieA}` },
+      body: JSON.stringify({ endpoint }),
+    });
+    expect(deleteByA.status).toBe(204);
+    expect(await pushSubscriptionsRepo.countForMember(testApp.db, memberBId)).toBe(1);
+  });
+
+  it("a taken-over endpoint counts against the new owner's cap", async () => {
+    const testApp = await buildTestApp({ push: PUSH_CONFIG });
+    const { cookie: cookieA } = await loginAsMember(testApp, {
+      email: "takeover-cap-a@example.com",
+      displayName: "Takeover Cap A",
+    });
+    const { cookie: cookieB } = await loginAsMember(testApp, {
+      email: "takeover-cap-b@example.com",
+      displayName: "Takeover Cap B",
+    });
+    const sharedEndpoint = "https://fcm.googleapis.com/fcm/send/shared-cap-device";
+
+    await testApp.app.request("/push/subscriptions", {
+      method: "POST",
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookieA}` },
+      body: JSON.stringify(subscribeBody({ endpoint: sharedEndpoint })),
+    });
+
+    // B takes over the shared device, then fills up to 9 more of their own.
+    await testApp.app.request("/push/subscriptions", {
+      method: "POST",
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookieB}` },
+      body: JSON.stringify(subscribeBody({ endpoint: sharedEndpoint })),
+    });
+    for (let i = 0; i < 9; i++) {
+      const res = await testApp.app.request("/push/subscriptions", {
+        method: "POST",
+        headers: { ...jsonHeaders, cookie: `bp_session=${cookieB}` },
+        body: JSON.stringify(
+          subscribeBody({ endpoint: `https://fcm.googleapis.com/fcm/send/takeover-cap-${i}` }),
+        ),
+      });
+      expect(res.status).toBe(204);
+    }
+
+    // B is now at 10 (the taken-over device counts as one of them) — an 11th new endpoint is rejected.
+    const eleventh = await testApp.app.request("/push/subscriptions", {
+      method: "POST",
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookieB}` },
+      body: JSON.stringify(
+        subscribeBody({ endpoint: "https://fcm.googleapis.com/fcm/send/takeover-cap-10" }),
+      ),
+    });
+    expect(eleventh.status).toBe(409);
+  });
+
   it("rejects an endpoint that isn't a recognized push service", async () => {
     const testApp = await buildTestApp({ push: PUSH_CONFIG });
     const { cookie } = await loginAsMember(testApp, {
@@ -182,6 +271,25 @@ describe("POST /push/subscriptions", () => {
       method: "POST",
       headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
       body: JSON.stringify(subscribeBody({ endpoint: "https://evil.example/collect" })),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects an endpoint longer than 2048 characters", async () => {
+    const testApp = await buildTestApp({ push: PUSH_CONFIG });
+    const { cookie } = await loginAsMember(testApp, {
+      email: "sub-long-endpoint@example.com",
+      displayName: "Sub Long Endpoint",
+    });
+    const prefix = "https://fcm.googleapis.com/fcm/send/";
+    const overlong = prefix + "a".repeat(2049 - prefix.length);
+    expect(overlong.length).toBe(2049);
+
+    const res = await testApp.app.request("/push/subscriptions", {
+      method: "POST",
+      headers: { ...jsonHeaders, cookie: `bp_session=${cookie}` },
+      body: JSON.stringify(subscribeBody({ endpoint: overlong })),
     });
 
     expect(res.status).toBe(400);

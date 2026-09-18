@@ -31,8 +31,11 @@ const MAX_SUBSCRIPTIONS_PER_MEMBER = 10;
 /** `user-agent` is stored purely for diagnostics — truncated so one header can't blow up a row. */
 const USER_AGENT_MAX_LENGTH = 200;
 
+/** A real push-service endpoint is a short opaque URL; bound it so nothing oversized reaches the DB or `isAllowedPushEndpoint`'s `new URL()` parse. */
+const ENDPOINT_MAX_LENGTH = 2048;
+
 const subscribeSchema = z.object({
-  endpoint: z.string().min(1),
+  endpoint: z.string().min(1).max(ENDPOINT_MAX_LENGTH),
   keys: z.object({
     p256dh: z.string().min(1),
     auth: z.string().min(1),
@@ -40,7 +43,7 @@ const subscribeSchema = z.object({
 });
 
 const unsubscribeSchema = z.object({
-  endpoint: z.string().min(1),
+  endpoint: z.string().min(1).max(ENDPOINT_MAX_LENGTH),
 });
 
 const prefsSchema = z.object({
@@ -119,6 +122,20 @@ export function registerPushRoutes(router: GuardedRouter, deps: PushRouteDeps): 
 
     const userAgent = c.req.header("user-agent")?.slice(0, USER_AGENT_MAX_LENGTH) ?? null;
 
+    // Deliberately no "does this endpoint already belong to someone else"
+    // check here — `upsert` reassigns `memberId` on conflict, so an
+    // endpoint already owned by member A that member B POSTs here simply
+    // becomes B's. This is the intended takeover, not a missing
+    // authorization check: `endpoint` is a device secret the browser
+    // itself handed back from `PushManager.subscribe()`, so a caller
+    // presenting it has proven they control that device/browser profile —
+    // exactly the "a shared device follows whoever signed in last" rule
+    // `upsert`'s own doc comment describes. It's also safe by
+    // construction: A's device can no longer decrypt pushes sent under
+    // B's `p256dh`/`auth` keys (overwritten here), and B gains no access
+    // to anything A had that B didn't already have by holding the same
+    // endpoint/keys — there's no cross-member data exposed, only where
+    // future notifications for *this device* get attributed.
     await pushSubscriptionsRepo.upsert(
       deps.db,
       {

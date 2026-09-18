@@ -24,6 +24,15 @@ export const SCOPES = [
   // the same reasoning `songs:write`/`events:write`/`takes:write` already
   // stay separate from each other despite every admin holding all three.
   "favorites:write",
+  // Task 7: a member's own push subscriptions (subscribe/unsubscribe a
+  // device) and notification preferences (which of the three tick
+  // categories reach them at all) — one scope for both, since they're the
+  // same "manage how I get notified" surface a member controls on `/me`
+  // and neither has a collective/aggregate dimension the way voting does.
+  // Distinct from `favorites:write` for the same reason that one is
+  // distinct from `votes:write`: a future policy that can grant one
+  // without the other needs a scope to express that with.
+  "notifications:write",
   "ingest:write",
   "members:admin",
   "tokens:admin",
@@ -67,6 +76,7 @@ const MEMBER_SCOPES: readonly Scope[] = [
   "events:write",
   "votes:write",
   "favorites:write",
+  "notifications:write",
 ];
 
 /** Derive a member's scopes from their role. This is the only place role -> scopes happens. */

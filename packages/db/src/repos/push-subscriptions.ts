@@ -63,6 +63,25 @@ export async function upsert(
     });
 }
 
+/**
+ * Look up a subscription by its (UNIQUE) endpoint — the API's `POST
+ * /push/subscriptions` uses this to tell "this device is already this
+ * member's" (an update, exempt from the 10-subscription cap) apart from
+ * "a fresh subscription" or "someone else's device re-subscribing under a
+ * new member" (both count against the cap).
+ */
+export async function getByEndpoint(
+  db: Db,
+  endpoint: string,
+): Promise<PushSubscriptionRow | undefined> {
+  const [row] = await db
+    .select()
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.endpoint, endpoint))
+    .limit(1);
+  return row;
+}
+
 /** How many devices one member currently has subscribed — the `/me` "≤10" guard reads this. */
 export async function countForMember(db: Db, memberId: string): Promise<number> {
   const rows = await db

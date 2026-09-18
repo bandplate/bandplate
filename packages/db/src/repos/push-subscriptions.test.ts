@@ -137,6 +137,31 @@ describe("pushSubscriptionsRepo", () => {
     expect(await pushSubscriptions.listForMembers(db, [])).toEqual([]);
   });
 
+  it("getByEndpoint returns the subscription for that endpoint", async () => {
+    const member = await createMember("push-5");
+    await pushSubscriptions.upsert(
+      db,
+      {
+        memberId: member.id,
+        endpoint: "https://push.example.com/d",
+        p256dh: "p256dh",
+        auth: "auth",
+        vapidKeyId: "key1",
+      },
+      1000,
+    );
+
+    const row = await pushSubscriptions.getByEndpoint(db, "https://push.example.com/d");
+
+    expect(row?.memberId).toBe(member.id);
+  });
+
+  it("getByEndpoint returns undefined for an endpoint no one has subscribed", async () => {
+    expect(
+      await pushSubscriptions.getByEndpoint(db, "https://push.example.com/nope"),
+    ).toBeUndefined();
+  });
+
   // Fix round 1, finding 1: a companion regression test, requested alongside
   // the fix for `takesRepo.countUnvotedByMembers`'s chunk-size miscount —
   // this query's `inArray(...)` really is its only bound value, so a full

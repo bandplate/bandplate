@@ -3,7 +3,7 @@ import { hasAllScopes } from "./principal.js";
 import { SCOPES, scopesForRole } from "./scopes.js";
 
 describe("scopesForRole", () => {
-  it("gives members every :read scope, the three content :write scopes, votes and favorites", () => {
+  it("gives members every :read scope, the three content :write scopes, votes, favorites and notifications", () => {
     const scopes = scopesForRole("member");
     expect(scopes.sort()).toEqual(
       [
@@ -15,6 +15,7 @@ describe("scopesForRole", () => {
         "events:write",
         "votes:write",
         "favorites:write",
+        "notifications:write",
       ].sort(),
     );
   });

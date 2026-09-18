@@ -12,6 +12,7 @@ import { registerAudioRoutes } from "./routes/audio.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerFavoriteRoutes } from "./routes/favorites.js";
 import { registerIngestRoutes } from "./routes/ingest/index.js";
+import { registerPushRoutes } from "./routes/push.js";
 import { registerSetupRoutes } from "./routes/setup.js";
 import { registerTakeAssetRoutes } from "./routes/take-assets.js";
 import { registerVoteRoutes } from "./routes/votes.js";
@@ -132,6 +133,7 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
   registerAudioRoutes(router, { db: deps.db, storage: deps.storage });
   registerVoteRoutes(router, { db: deps.db, clock: deps.clock });
   registerFavoriteRoutes(router, { db: deps.db, clock: deps.clock });
+  registerPushRoutes(router, { db: deps.db, clock: deps.clock, push: deps.config.push });
   registerIngestRoutes(router, { db: deps.db, clock: deps.clock, storage: deps.storage });
   registerTakeAssetRoutes(router, { db: deps.db, clock: deps.clock, storage: deps.storage });
 

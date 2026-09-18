@@ -79,7 +79,13 @@ if (Astro.request.method === "POST") {
       }
     } else if (formData.get("intent") === "update") {
       const id = String(formData.get("songId") ?? "");
-      const result = await updateSong(appDeps.db, appDeps.clock.now(), id, formData);
+      const result = await updateSong(
+        appDeps.db,
+        appDeps.clock.now(),
+        principal.memberId,
+        id,
+        formData,
+      );
       if (result.kind === "ok") {
         return Astro.redirect(`/songs/${slug}?saved=1`);
       }

@@ -1,9 +1,10 @@
-import { type Storage, allocateSongSlug, normalizeTitle } from "@bandplate/core";
+import { type Storage, allocateSongSlug, chartChanged, normalizeTitle } from "@bandplate/core";
 import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
   favoritesRepo,
   type instrumentsRepo,
+  notificationsRepo,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -255,6 +256,7 @@ function invalidSong(parsed: z.SafeParseError<unknown>): SongFormFailure {
 export async function createSong(
   db: Db,
   now: number,
+  memberId: string,
   formData: FormData,
 ): Promise<CreateSongResult> {
   const parsed = parseSongFields(formData);
@@ -269,7 +271,7 @@ export async function createSong(
 
   const slug = await allocateSongSlug(db, parsed.data.title);
   try {
-    const song = await songsRepo.create(db, {
+    const { row: song, statement } = songsRepo.buildCreateStatement(db, {
       title: parsed.data.title,
       slug,
       musicalKey: parsed.data.musicalKey,
@@ -280,6 +282,17 @@ export async function createSong(
       createdAt: now,
       updatedAt: now,
     });
+    // Same batch as the insert — see `notificationsRepo.buildRecordChartChange`'s
+    // doc comment for why this must land atomically with the song row.
+    await db.batch([
+      statement,
+      notificationsRepo.buildRecordChartChange(db, {
+        songId: song.id,
+        memberId,
+        kind: "created",
+        changedAt: now,
+      }),
+    ]);
     return { kind: "ok", song };
   } catch (err) {
     const winner = await songsRepo.findByTitleNorm(db, normalizeTitle(parsed.data.title));
@@ -302,6 +315,7 @@ export async function createSong(
 export async function updateSong(
   db: Db,
   now: number,
+  memberId: string,
   id: string,
   formData: FormData,
 ): Promise<UpdateSongResult> {
@@ -323,17 +337,47 @@ export async function updateSong(
     }
   }
 
+  const updateInput: songsRepo.UpdateSongInput = {
+    title: parsed.data.title,
+    musicalKey: parsed.data.musicalKey,
+    tempoBpm: parsed.data.tempoBpm ?? null,
+    chordProgression: parsed.data.chordProgression,
+    lyrics: parsed.data.lyrics,
+    notes: parsed.data.notes,
+    isStub: false,
+    updatedAt: now,
+  };
+
+  // A stub promotion counts as "created" — it's the first time anyone has
+  // confirmed this song is real — regardless of whether the chart text
+  // itself changed. Otherwise only an actual chord/lyrics change (by
+  // content, not bytes — see `chartChanged`) is worth telling the rest of
+  // the band about; a title/key/tempo/notes-only edit records nothing.
+  const kind: "created" | "edited" | undefined = song.isStub
+    ? "created"
+    : chartChanged(
+          { chordProgression: song.chordProgression, lyrics: song.lyrics },
+          { chordProgression: parsed.data.chordProgression, lyrics: parsed.data.lyrics },
+        )
+      ? "edited"
+      : undefined;
+
   try {
-    await songsRepo.update(db, id, {
-      title: parsed.data.title,
-      musicalKey: parsed.data.musicalKey,
-      tempoBpm: parsed.data.tempoBpm ?? null,
-      chordProgression: parsed.data.chordProgression,
-      lyrics: parsed.data.lyrics,
-      notes: parsed.data.notes,
-      isStub: false,
-      updatedAt: now,
-    });
+    if (kind) {
+      // Same batch as the update — see `notificationsRepo.buildRecordChartChange`'s
+      // doc comment for why this must land atomically with the song row.
+      await db.batch([
+        songsRepo.buildUpdateStatement(db, id, updateInput),
+        notificationsRepo.buildRecordChartChange(db, {
+          songId: id,
+          memberId,
+          kind,
+          changedAt: now,
+        }),
+      ]);
+    } else {
+      await songsRepo.update(db, id, updateInput);
+    }
     return { kind: "ok" };
   } catch (err) {
     const clash = await songsRepo.findByTitleNorm(db, titleNorm);

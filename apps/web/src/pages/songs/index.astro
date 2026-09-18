@@ -57,7 +57,12 @@ if (Astro.request.method === "POST") {
   } else {
     const formData = await Astro.request.formData();
     if (formData.get("intent") === "create") {
-      const result = await createSong(appDeps.db, appDeps.clock.now(), formData);
+      const result = await createSong(
+        appDeps.db,
+        appDeps.clock.now(),
+        principal.memberId,
+        formData,
+      );
       if (result.kind === "ok") {
         // Straight to the song rather than back to the list: you added it
         // because you have something to put in it.

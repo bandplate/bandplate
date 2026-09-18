@@ -106,6 +106,37 @@ export async function createWithAlias(
   return row;
 }
 
+/**
+ * Builds (does not execute) one `songs` insert, for a caller that needs to
+ * fold it into a `db.batch([...])` alongside another write — Task 6's
+ * `createSong` batches this with `notificationsRepo.buildRecordChartChange`
+ * so the song and the "who created it" row land atomically. Constructs the
+ * row locally rather than using `.returning()`, the same reason
+ * `createWithAlias` does: a `db.batch` statement's own result isn't read
+ * back mid-batch, and the id is client-generated (uuidv7) anyway.
+ */
+export function buildCreateStatement(db: Db, input: CreateSongInput) {
+  const id = uuidv7();
+  const row: Song = {
+    id,
+    title: input.title,
+    titleNorm: normalizeTitle(input.title),
+    slug: input.slug,
+    tempoBpm: input.tempoBpm ?? null,
+    musicalKey: input.musicalKey ?? null,
+    chordProgression: input.chordProgression ?? null,
+    lyrics: input.lyrics ?? null,
+    notes: input.notes ?? null,
+    isStub: input.isStub ?? false,
+    archivedAt: null,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+    chartNotifiedAt: null,
+  };
+  const statement = db.insert(songs).values(row);
+  return { id, row, statement };
+}
+
 export interface UpdateSongInput {
   title?: string;
   tempoBpm?: number | null;
@@ -138,10 +169,20 @@ export interface UpdateSongInput {
  * there is no redirect table to catch them. A song whose title has been fixed
  * keeps its original slug, which is mildly ugly and reliably correct.
  */
-export async function update(db: Db, id: string, input: UpdateSongInput): Promise<void> {
+/**
+ * Builds (does not execute) the same update `update` runs — for a caller
+ * that needs to fold it into a `db.batch([...])` alongside another write
+ * (Task 6's `updateSong`, batching this with
+ * `notificationsRepo.buildRecordChartChange`).
+ */
+export function buildUpdateStatement(db: Db, id: string, input: UpdateSongInput) {
   const { title, ...rest } = input;
   const values = title === undefined ? rest : { ...rest, title, titleNorm: normalizeTitle(title) };
-  await db.update(songs).set(values).where(eq(songs.id, id));
+  return db.update(songs).set(values).where(eq(songs.id, id));
+}
+
+export async function update(db: Db, id: string, input: UpdateSongInput): Promise<void> {
+  await buildUpdateStatement(db, id, input);
 }
 
 /**

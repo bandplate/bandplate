@@ -104,7 +104,7 @@ export interface PendingSongChange {
 /**
  * Songs with a chord/lyrics change due a push: a change newer than the
  * song's last notification (or ever, if none), throttled to at most once
- * per `throttleMs` (the spec's 6h). `prev` is hexnded back so the caller's
+ * per `throttleMs` (the spec's 6h). `prev` is handed back so the caller's
  * `claimSongNotification(db, songId, prev, now)` CAS is racing against the
  * exact value this read saw, not a value re-derived later (which could have
  * moved between the read and the claim).

@@ -137,6 +137,16 @@ describe("pushSubscriptionsRepo", () => {
     expect(await pushSubscriptions.listForMembers(db, [])).toEqual([]);
   });
 
+  // Fix round 1, finding 1: a companion regression test, requested alongside
+  // the fix for `takesRepo.countUnvotedByMembers`'s chunk-size miscount —
+  // this query's `inArray(...)` really is its only bound value, so a full
+  // 90-id chunk should come in well under the 100-parameter cap.
+  it("a full chunk's query stays at or under D1's 100-parameter limit", () => {
+    const ids = Array.from({ length: 90 }, (_, i) => `member-${i}`);
+    const query = pushSubscriptions.buildListForMembersChunkQuery(db, ids);
+    expect(query.toSQL().params.length).toBeLessThanOrEqual(100);
+  });
+
   it("markSuccess sets last_success_at", async () => {
     const member = await createMember("push-5");
     await pushSubscriptions.upsert(

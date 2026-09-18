@@ -123,6 +123,28 @@ describe("notificationsRepo", () => {
       const claimed = await notifications.claimTakeBatch(db, eventA.id, 5000, 500);
       expect(claimed).toEqual([tA.id]);
     });
+
+    // Fix round 1, finding 2: an old pending take does NOT get claimed on
+    // its own just because it's old — the self-join `NOT EXISTS` gates the
+    // whole event's batch (old take included) on whether ANY pending take
+    // of that event is still within the quiet period, not per-take.
+    it("claim returns [] when one pending take is old and another is recent (quiet period is per-event, not per-take)", async () => {
+      const song = await createSong("takes-song-5");
+      const event = await createEvent();
+      const now = 100_000;
+      const quietMs = 600_000;
+      await createPublishedTake(song.id, event.id, now - quietMs - 1);
+      await createPublishedTake(song.id, event.id, now - 100);
+
+      const claimed = await notifications.claimTakeBatch(db, event.id, now, quietMs);
+      expect(claimed).toEqual([]);
+
+      // Neither take was claimed — both, including the old one, are still pending.
+      const batches = await notifications.listPendingTakeBatches(db);
+      const batch = batches.find((b) => b.eventId === event.id);
+      expect(batch?.count).toBe(2);
+      expect(batch?.lastPublishedAt).toBe(now - 100);
+    });
   });
 
   describe("song chart changes", () => {

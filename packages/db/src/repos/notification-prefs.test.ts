@@ -89,4 +89,14 @@ describe("notificationPrefsRepo", () => {
   it("listForMembers returns an empty map for an empty member list", async () => {
     expect((await notificationPrefs.listForMembers(db, [])).size).toBe(0);
   });
+
+  // Fix round 1, finding 1: a companion regression test — this query's
+  // `inArray(...)` really is its only bound value (unlike
+  // `takesRepo.countUnvotedByMembers`'s), so a full 100-id chunk is exactly
+  // at the cap, not over it.
+  it("a full chunk's query stays at or under D1's 100-parameter limit", () => {
+    const ids = Array.from({ length: 100 }, (_, i) => `member-${i}`);
+    const query = notificationPrefs.buildListForMembersChunkQuery(db, ids);
+    expect(query.toSQL().params.length).toBeLessThanOrEqual(100);
+  });
 });

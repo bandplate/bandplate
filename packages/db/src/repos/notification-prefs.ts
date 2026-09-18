@@ -65,6 +65,26 @@ export async function set(
 }
 
 /**
+ * Builds (without executing) one chunk's query for `listForMembers`.
+ * Exported for testing only — this query's `inArray(...)` really is its
+ * only bound value, unlike `takesRepo.countUnvotedByMembers`'s (see that
+ * function's doc comment), which is exactly why this one is safe to chunk
+ * at the full 100 rather than 90. A `.toSQL()` regression test pins that
+ * claim instead of leaving it as a comment.
+ */
+export function buildListForMembersChunkQuery(db: Db, ids: string[]) {
+  return db
+    .select({
+      memberId: notificationPrefs.memberId,
+      newTakes: notificationPrefs.newTakes,
+      weeklyUnvoted: notificationPrefs.weeklyUnvoted,
+      songChanges: notificationPrefs.songChanges,
+    })
+    .from(notificationPrefs)
+    .where(inArray(notificationPrefs.memberId, ids));
+}
+
+/**
  * Batch lookup for the tick's recipient selection — only members with an
  * explicit row come back (a member who never touched their prefs isn't
  * "missing", but the caller is expected to fall back to
@@ -80,15 +100,7 @@ export async function listForMembers(
     return result;
   }
   for (const ids of chunk(memberIds, MEMBER_CHUNK_SIZE)) {
-    const rows = await db
-      .select({
-        memberId: notificationPrefs.memberId,
-        newTakes: notificationPrefs.newTakes,
-        weeklyUnvoted: notificationPrefs.weeklyUnvoted,
-        songChanges: notificationPrefs.songChanges,
-      })
-      .from(notificationPrefs)
-      .where(inArray(notificationPrefs.memberId, ids));
+    const rows = await buildListForMembersChunkQuery(db, ids);
     for (const row of rows) {
       result.set(row.memberId, {
         newTakes: row.newTakes,

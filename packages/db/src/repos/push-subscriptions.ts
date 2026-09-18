@@ -84,6 +84,17 @@ export async function removeById(db: Db, id: string): Promise<void> {
 }
 
 /**
+ * Builds (without executing) one chunk's query for `listForMembers`.
+ * Exported for testing only, so a param-count regression test can assert
+ * against `.toSQL()` directly rather than trusting a comment about which
+ * values are bound — see `takesRepo.buildCountUnvotedByMembersChunkQuery`'s
+ * doc comment for why that trust turned out to be misplaced there.
+ */
+export function buildListForMembersChunkQuery(db: Db, ids: string[]) {
+  return db.select().from(pushSubscriptions).where(inArray(pushSubscriptions.memberId, ids));
+}
+
+/**
  * Every subscription belonging to any of the given members — the tick's
  * per-batch fan-out to devices. Chunked (`chunk.ts`) so a large recipient
  * list never exceeds D1's 100-bound-parameter cap on a single statement.
@@ -96,10 +107,7 @@ export async function listForMembers(db: Db, memberIds: string[]): Promise<PushS
   }
   const results: PushSubscriptionRow[] = [];
   for (const ids of chunk(memberIds, MEMBER_CHUNK_SIZE)) {
-    const rows = await db
-      .select()
-      .from(pushSubscriptions)
-      .where(inArray(pushSubscriptions.memberId, ids));
+    const rows = await buildListForMembersChunkQuery(db, ids);
     results.push(...rows);
   }
   return results;

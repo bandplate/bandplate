@@ -756,7 +756,29 @@ export async function countByEvents(db: Db, eventIds: string[]): Promise<Map<str
 }
 
 // D1 allows at most 100 bound parameters per statement — see `chunk.ts`.
-const MEMBER_CHUNK_SIZE = 100;
+// 90, not 100: this query's `inArray(members.id, ids)` isn't the only bound
+// value — `eq(takes.state, "published")` binds one more — so a full 100-id
+// chunk would ship 101 params. The "chunking stays under D1's 100-parameter
+// limit" test below asserts this with `toSQL()`.
+const MEMBER_CHUNK_SIZE = 90;
+
+/**
+ * Builds (without executing) one chunk's query for `countUnvotedByMembers`.
+ * Exported for testing only, so `takes.test.ts` can assert the actual bound
+ * parameter count via `.toSQL()` rather than trusting a comment — see
+ * finding round 1, item 1: the comment here used to claim `ids` was the
+ * query's only parameter, which `eq(takes.state, "published")` already
+ * contradicted.
+ */
+export function buildCountUnvotedByMembersChunkQuery(db: Db, ids: string[]) {
+  return db
+    .select({ memberId: members.id, value: sql<number>`count(*)` })
+    .from(members)
+    .innerJoin(takes, eq(takes.state, "published"))
+    .leftJoin(votes, and(eq(votes.takeId, takes.id), eq(votes.memberId, members.id)))
+    .where(and(inArray(members.id, ids), isNull(votes.takeId)))
+    .groupBy(members.id);
+}
 
 /**
  * How many published takes each of the given members has NOT yet voted on —
@@ -784,13 +806,7 @@ export async function countUnvotedByMembers(
   }
 
   for (const ids of chunk(memberIds, MEMBER_CHUNK_SIZE)) {
-    const rows = await db
-      .select({ memberId: members.id, value: sql<number>`count(*)` })
-      .from(members)
-      .innerJoin(takes, eq(takes.state, "published"))
-      .leftJoin(votes, and(eq(votes.takeId, takes.id), eq(votes.memberId, members.id)))
-      .where(and(inArray(members.id, ids), isNull(votes.takeId)))
-      .groupBy(members.id);
+    const rows = await buildCountUnvotedByMembersChunkQuery(db, ids);
     for (const row of rows) {
       result.set(row.memberId, row.value);
     }

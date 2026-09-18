@@ -1551,4 +1551,16 @@ describe("takes.countUnvotedByMembers", () => {
     expect(result.get(target.id)).toBe(5);
     expect(result.size).toBe(memberIds.length);
   });
+
+  // Fix round 1, finding 1: the chunk size (90) was picked assuming
+  // `inArray(members.id, ids)` was this query's only bound parameter, but
+  // `eq(takes.state, "published")` binds one more — a full 100-id chunk
+  // would have shipped 101 params, over D1's cap. Asserts the real, built
+  // query's parameter count directly via `.toSQL()` rather than trusting
+  // the chunk-size comment again.
+  it("a full chunk's query stays at or under D1's 100-parameter limit", () => {
+    const ids = Array.from({ length: 90 }, (_, i) => `member-${i}`);
+    const query = takes.buildCountUnvotedByMembersChunkQuery(db, ids);
+    expect(query.toSQL().params.length).toBeLessThanOrEqual(100);
+  });
 });

@@ -251,6 +251,16 @@ describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", (
     expect(manifest.scope).toBe("/");
   });
 
+  // The browser fetches `/sw.js` to install or update the service worker
+  // with no cookie attached — same reasoning as the manifest test above: a
+  // redirect to /login here would make push notifications silently
+  // uninstallable.
+  it("serves the service worker publicly, as JavaScript", async () => {
+    const res = await fetch(`${ORIGIN}/sw.js`, { redirect: "manual" });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("javascript");
+  });
+
   it("links the manifest and lets the page reach the screen edges", async () => {
     const body = await (await fetch(`${ORIGIN}/login`)).text();
     expect(body).toContain('rel="manifest" href="/manifest.webmanifest"');

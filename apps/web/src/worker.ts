@@ -25,9 +25,11 @@
 // `setAdapter`'s `serverEntrypoint` (this file, via `workerEntryPoint`)
 // still goes through Astro's normal SSR build — the same Vite graph that
 // applies `astro.config.mjs`'s `bandplate-workers-app-runtime` `resolveId`
-// hook to any `.../server/app.js` specifier. `scheduled.ts` imports
-// `./app.js` exactly like `middleware.ts` does, so that swap (to
-// `app.workers.ts`, the D1/http-mailer composition root) applies here too.
+// hook to any specifier ENDING in `server/app.js`. `scheduled.ts` (see its
+// own header) deliberately imports `../server/app.js`, not the shorter
+// sibling `./app.js` — only the former carries that substring, so only it
+// gets swapped to `app.workers.ts` (the D1/http-mailer composition root)
+// instead of silently pulling in the Node/nodemailer one.
 import { handle } from "@astrojs/cloudflare/handler";
 import type { ScheduledController } from "@cloudflare/workers-types";
 import type { SSRManifest } from "astro";

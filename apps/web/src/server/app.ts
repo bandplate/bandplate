@@ -153,16 +153,29 @@ function toNotificationDeps(
  * operator has set `BANDPLATE_SCHEDULER=off` — see that env var's own doc
  * in `docs/self-hosting.md`, for running more than one Node replica
  * against the same database without every replica ticking independently.
+ *
+ * Never throws: called from inside `getRuntime()`'s `.then()`, which
+ * populates the MEMOIZED `runtimePromise` every future caller awaits. An
+ * uncaught throw here would reject that promise instead of resolving it,
+ * permanently wedging `getApiApp`/`getAppDeps`/`getAuthDeps` — i.e. every
+ * request for the rest of the process's life — over a scheduler fault that
+ * has nothing to do with whether the app itself can serve traffic. Caught
+ * and logged instead; a scheduler that fails to start is a missed tick,
+ * not a down app.
  */
 function maybeStartNotificationScheduler(runtime: Runtime): void {
-  const deps = toNotificationDeps(runtime.config, runtime.deps);
-  if (!deps) {
-    return;
+  try {
+    const deps = toNotificationDeps(runtime.config, runtime.deps);
+    if (!deps) {
+      return;
+    }
+    if (!shouldStartNotificationScheduler(process.env.BANDPLATE_SCHEDULER)) {
+      return;
+    }
+    startNotificationScheduler(deps);
+  } catch (err) {
+    console.error(`[scheduler] failed to start: ${String(err)}`);
   }
-  if (!shouldStartNotificationScheduler(process.env.BANDPLATE_SCHEDULER)) {
-    return;
-  }
-  startNotificationScheduler(deps);
 }
 
 /**

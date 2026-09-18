@@ -49,7 +49,8 @@ declare global {
   // every previous one still running in the same process. `globalThis`
   // survives a module re-evaluation (unlike this module's own top-level
   // state), so it's the one place a singleton guard actually works here.
-  // eslint-disable-next-line no-var
+  // `var` (not `let`/`const`) is required here — it's the only declaration
+  // form TypeScript accepts inside `declare global`.
   var __bandplateNotificationScheduler: SchedulerState | undefined;
 }
 

@@ -83,9 +83,24 @@ await import(entryUrl.href);
 // nothing more. Runs fire-and-forget (not awaited) — the server is already
 // listening by the time this fires, and nothing here should delay the
 // process being considered "started".
+// The Node adapter listens on `process.env.HOST` when set (default
+// `0.0.0.0`, per `@astrojs/node`), so a warm-up hardcoded to `127.0.0.1`
+// would miss a deployment that binds to a specific interface. `0.0.0.0`
+// and `::` (their IPv4/IPv6 "every interface" spellings) aren't connectable
+// addresses themselves, though — they need mapping to a real loopback
+// address the same way `127.0.0.1` already was for the common case of no
+// `HOST` override at all.
+function warmUpHost(): string {
+  const host = process.env.HOST;
+  if (!host || host === "0.0.0.0" || host === "::") {
+    return "127.0.0.1";
+  }
+  return host;
+}
+
 async function warmUp(): Promise<void> {
   const port = process.env.PORT ?? "4321";
-  const url = `http://127.0.0.1:${port}/login`;
+  const url = `http://${warmUpHost()}:${port}/login`;
   const deadline = Date.now() + 30_000;
   let lastErr: unknown;
   while (Date.now() < deadline) {

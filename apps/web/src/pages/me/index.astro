@@ -28,8 +28,9 @@
 //                 before.
 //   INSTALL       only where installing can actually happen.
 //
-// The two settings sit ABOVE the votes. The votes list is paginated and grows
-// without end; a setting under it is a setting nobody finds.
+// The three settings sections sit ABOVE the votes. The votes list is
+// paginated and grows without end; a setting under it is a setting nobody
+// finds.
 //
 // Deliberately NOT here: favourites. Home is already the shelf of exactly
 // those, and listing them twice is what this page was being cured of.
@@ -319,6 +320,8 @@ const initials = member.displayName
           prefs={notificationPrefs}
           turnOnLabel={t.me.notifyTurnOn}
           turnOffLabel={t.me.notifyTurnOff}
+          turnOnFailedText={t.me.notifyTurnOnFailed}
+          turnOffFailedText={t.me.notifyTurnOffFailed}
           iosNeedsInstallText={t.me.notifyIosNeedsInstall}
           deniedText={t.me.notifyDenied}
           unsupportedText={t.me.notifyUnsupported}

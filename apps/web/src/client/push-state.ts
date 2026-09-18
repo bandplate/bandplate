@@ -95,3 +95,21 @@ export function subscriptionMatchesKey(
   }
   return true;
 }
+
+/**
+ * Whether a request tagged `requestSeq` is still the LATEST one issued
+ * (`latestSeq`), and so is the only one allowed to touch the UI.
+ *
+ * The three checkbox rows each fire a `PUT /push/prefs` on change, and
+ * nothing stops a member flipping a checkbox again before the first
+ * request's response lands — two in-flight requests, racing. Without this
+ * check, an earlier request's response arriving AFTER a later request has
+ * already started would overwrite the checkbox (or the saved/failed line)
+ * with a stale answer, silently reverting a change the member just made.
+ * Only the response whose own sequence number still matches "the most
+ * recent request issued" is current; every earlier one is stale and must
+ * be ignored, whether it succeeded or failed.
+ */
+export function isCurrentRequest(requestSeq: number, latestSeq: number): boolean {
+  return requestSeq === latestSeq;
+}

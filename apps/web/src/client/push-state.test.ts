@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { base64UrlToUint8Array, decidePushUiState, subscriptionMatchesKey } from "./push-state.js";
+import {
+  base64UrlToUint8Array,
+  decidePushUiState,
+  isCurrentRequest,
+  subscriptionMatchesKey,
+} from "./push-state.js";
 
 const base = {
   hasServiceWorker: true,
@@ -93,5 +98,20 @@ describe("subscriptionMatchesKey", () => {
   it("same length, different bytes -> no match", () => {
     const different = new Uint8Array([10, 20, 30, 41]);
     expect(subscriptionMatchesKey(different.buffer, publicKey)).toBe(false);
+  });
+});
+
+describe("isCurrentRequest", () => {
+  it("this request's own sequence number is still the latest issued -> current", () => {
+    expect(isCurrentRequest(3, 3)).toBe(true);
+  });
+
+  it("a later request has since been issued -> this one is stale", () => {
+    // Request 1's response arriving after request 2 already started.
+    expect(isCurrentRequest(1, 2)).toBe(false);
+  });
+
+  it("the very first request, nothing else issued since -> current", () => {
+    expect(isCurrentRequest(1, 1)).toBe(true);
   });
 });

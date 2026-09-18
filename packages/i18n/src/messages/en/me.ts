@@ -112,6 +112,10 @@ export const me = {
   notifyTurnOn: "Turn on for this phone or computer",
   /** The "on" state's button — unsubscribes it again. */
   notifyTurnOff: "Turn off for this phone or computer",
+  /** The server rejected the subscribe (the device cap, a 5xx, offline). */
+  notifyTurnOnFailed: "Couldn't turn on notifications. Try again.",
+  /** The server rejected the unsubscribe, or the request never reached it. */
+  notifyTurnOffFailed: "Couldn't turn off notifications. Try again.",
   /** iOS grants the permission only to a page added to the home screen. */
   notifyIosNeedsInstall:
     "On iPhone, notifications only work from the app on your home screen. Add bandplate to your home screen, then turn them on there.",

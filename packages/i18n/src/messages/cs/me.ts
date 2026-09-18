@@ -78,6 +78,10 @@ export const me = {
   notifyHeading: "Notifikace", // en: Notifications
   notifyTurnOn: "Zapnout na tomhle zařízení", // en: Turn on for this phone or computer
   notifyTurnOff: "Vypnout na tomhle zařízení", // en: Turn off for this phone or computer
+  // en: Couldn't turn on notifications. Try again.
+  notifyTurnOnFailed: "Nepodařilo se zapnout notifikace. Zkus to znovu.",
+  // en: Couldn't turn off notifications. Try again.
+  notifyTurnOffFailed: "Nepodařilo se vypnout notifikace. Zkus to znovu.",
   // en: On iPhone, notifications only work from the app on your home screen. Add bandplate to your home screen, then turn them on there.
   notifyIosNeedsInstall:
     "Na iPhonu notifikace fungují jen z aplikace na ploše. Přidej si bandplate na plochu a zapni je tam.",

@@ -23,6 +23,8 @@ import type { Locale } from "@bandplate/i18n";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Clock } from "../ports/clock.js";
 import type { PushResult, PushSender, PushTarget } from "../ports/push.js";
+import { newTakesMessage, songMessage } from "./messages.js";
+import { SONG_THROTTLE_MS } from "./songs.js";
 import { runNotificationTick } from "./tick.js";
 
 const VAPID_KEY_ID = "abcd1234abcd1234";
@@ -129,8 +131,10 @@ describe("runNotificationTick", () => {
     }
 
     it("waits for the quiet period, then sends one message with the total count", async () => {
-      const memberId = await seedMember("Alice", "alice");
-      await subscribe(memberId, "alice-device");
+      const aliceId = await seedMember("Alice", "alice");
+      const bobId = await seedMember("Bob", "bob-en");
+      await subscribe(aliceId, "alice-device");
+      await subscribe(bobId, "bob-en-device");
       const { eventId, songId } = await seedEvent();
 
       const clock = fakeClock(1_000_000);
@@ -147,20 +151,29 @@ describe("runNotificationTick", () => {
       expect(result.sent).toBe(0);
       expect(push.sent).toHaveLength(0);
 
-      // 10 minutes after the LAST take: now quiet.
+      // 10 minutes after the LAST take: now quiet. Both subscribed members
+      // (2 recipients) get it, with the exact body `newTakesMessage` builds.
       clock.advance(600_000);
       result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
-      expect(result.sent).toBe(1);
-      expect(push.sent).toHaveLength(1);
-      const payload = JSON.parse(push.sent[0]?.payload ?? "{}");
-      expect(payload.body).toContain("3");
+      expect(result.sent).toBe(2);
+      expect(push.sent).toHaveLength(2);
+      const event = await eventsRepo.getById(db, eventId);
+      if (!event) throw new Error("event vanished");
+      const expected = newTakesMessage("en", event, 3, clock.now());
+      for (const sent of push.sent) {
+        const payload = JSON.parse(sent.payload);
+        expect(payload.title).toBe(expected.title);
+        expect(payload.body).toBe(expected.body);
+        expect(payload.tag).toBe(expected.tag);
+      }
 
       // A later take starts a fresh batch.
+      push.sent.length = 0;
       clock.advance(1000);
       await publishTake(songId, eventId, clock.now());
       clock.advance(600_000);
       result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
-      expect(result.sent).toBe(1);
+      expect(result.sent).toBe(2);
       expect(push.sent).toHaveLength(2);
     });
 
@@ -220,9 +233,42 @@ describe("runNotificationTick", () => {
       const push = recordingPushSender();
       await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
       expect(push.sent).toHaveLength(2);
-      // Bodies differ across locales for the same event/count.
-      const bodies = new Set(push.sent.map((p) => JSON.parse(p.payload).body));
-      expect(bodies.size).toBe(2);
+
+      const event = await eventsRepo.getById(db, eventId);
+      if (!event) throw new Error("event vanished");
+      const enExpected = newTakesMessage("en", event, 1, clock.now());
+      const csExpected = newTakesMessage("cs", event, 1, clock.now());
+      expect(enExpected.body).not.toBe(csExpected.body);
+
+      const bobSend = push.sent.find(
+        (p) => p.target.endpoint === "https://fcm.googleapis.com/fcm/send/bob-device",
+      );
+      const aliceSend = push.sent.find(
+        (p) => p.target.endpoint === "https://fcm.googleapis.com/fcm/send/alice-device",
+      );
+      expect(JSON.parse(bobSend?.payload ?? "{}").body).toBe(csExpected.body);
+      expect(JSON.parse(aliceSend?.payload ?? "{}").body).toBe(enExpected.body);
+    });
+
+    it("sends nothing when the member has opted out of newTakes", async () => {
+      const memberId = await seedMember("No Take Alerts", "no-take-alerts");
+      await subscribe(memberId, "no-alert-device");
+      await notificationPrefsRepo.set(
+        db,
+        memberId,
+        { newTakes: false, weeklyUnvoted: true, songChanges: true },
+        1000,
+      );
+      const { eventId, songId } = await seedEvent();
+
+      const clock = fakeClock(1_000_000);
+      await publishTake(songId, eventId, clock.now());
+      clock.advance(600_000);
+
+      const push = recordingPushSender();
+      const result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(result.sent).toBe(0);
+      expect(push.sent).toHaveLength(0);
     });
   });
 
@@ -298,6 +344,156 @@ describe("runNotificationTick", () => {
       expect(targets2.has("https://fcm.googleapis.com/fcm/send/a-device")).toBe(true);
       expect(targets2.has("https://fcm.googleapis.com/fcm/send/c-device")).toBe(true);
     });
+
+    it("pins the 6h throttle boundary: 5h59m since the last claim doesn't fire, 6h does", async () => {
+      const editor = await seedMember("Boundary Editor", "boundary-editor");
+      const listener = await seedMember("Boundary Listener", "boundary-listener");
+      await subscribe(listener, "boundary-device");
+
+      const clock = fakeClock(100_000_000);
+      const song = await songsRepo.create(db, {
+        title: "Song Boundary",
+        slug: "song-boundary",
+        createdAt: clock.now(),
+        updatedAt: clock.now(),
+      });
+      await db.insert(schema.songChartChanges).values({
+        id: "bnd-1",
+        songId: song.id,
+        memberId: editor,
+        kind: "edited",
+        changedAt: clock.now(),
+      });
+
+      const push = recordingPushSender();
+      // Nothing has ever been claimed for this song, so the first tick fires
+      // immediately (`prev = 0` already satisfies the throttle) — this is
+      // the claim whose `now` becomes the boundary the rest of the test
+      // measures from.
+      const first = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(first.sent).toBe(1);
+      const claimedAt = clock.now();
+      push.sent.length = 0;
+
+      clock.advance(1);
+      await db.insert(schema.songChartChanges).values({
+        id: "bnd-2",
+        songId: song.id,
+        memberId: editor,
+        kind: "edited",
+        changedAt: clock.now(),
+      });
+
+      // 5h59m after the claim: still throttled, nothing fires.
+      clock.advance(5 * 60 * 60 * 1000 + 59 * 60 * 1000 - 1);
+      expect(clock.now()).toBe(claimedAt + 5 * 60 * 60 * 1000 + 59 * 60 * 1000);
+      const tooSoon = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(tooSoon.sent).toBe(0);
+
+      // Exactly 6h after the claim: fires.
+      clock.advance(60 * 1000);
+      expect(clock.now()).toBe(claimedAt + SONG_THROTTLE_MS);
+      const due = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(due.sent).toBe(1);
+    });
+
+    it("sends a 'created' message when the window includes the song's creation", async () => {
+      const editor = await seedMember("Creator", "creator");
+      const listener = await seedMember("Created Listener", "created-listener");
+      await subscribe(listener, "created-device");
+
+      const clock = fakeClock(100_000_000);
+      const song = await songsRepo.create(db, {
+        title: "Song Created",
+        slug: "song-created",
+        createdAt: clock.now(),
+        updatedAt: clock.now(),
+      });
+      await db.insert(schema.songChartChanges).values({
+        id: "cr-1",
+        songId: song.id,
+        memberId: editor,
+        kind: "created",
+        changedAt: clock.now(),
+      });
+      clock.advance(1000);
+      await db.insert(schema.songChartChanges).values({
+        id: "cr-2",
+        songId: song.id,
+        memberId: editor,
+        kind: "edited",
+        changedAt: clock.now(),
+      });
+
+      const push = recordingPushSender();
+      const result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(result.sent).toBe(1);
+      const expected = songMessage("en", song, "created");
+      const payload = JSON.parse(push.sent[0]?.payload ?? "{}");
+      expect(payload.title).toBe(expected.title);
+      expect(payload.body).toBe(expected.body);
+    });
+
+    it("sends an 'edited' message when the window has only edits", async () => {
+      const editor = await seedMember("Editor Only", "editor-only");
+      const listener = await seedMember("Edited Listener", "edited-listener");
+      await subscribe(listener, "edited-device");
+
+      const clock = fakeClock(100_000_000);
+      const song = await songsRepo.create(db, {
+        title: "Song Edited",
+        slug: "song-edited",
+        createdAt: clock.now(),
+        updatedAt: clock.now(),
+      });
+      await db.insert(schema.songChartChanges).values({
+        id: "ed-1",
+        songId: song.id,
+        memberId: editor,
+        kind: "edited",
+        changedAt: clock.now(),
+      });
+
+      const push = recordingPushSender();
+      const result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(result.sent).toBe(1);
+      const expected = songMessage("en", song, "edited");
+      const payload = JSON.parse(push.sent[0]?.payload ?? "{}");
+      expect(payload.title).toBe(expected.title);
+      expect(payload.body).toBe(expected.body);
+    });
+
+    it("sends nothing when the member has opted out of songChanges", async () => {
+      const otherEditor = await seedMember("Other Editor", "other-editor-off");
+      const memberId = await seedMember("No Song Alerts", "no-song-alerts");
+      await subscribe(memberId, "no-song-device");
+      await notificationPrefsRepo.set(
+        db,
+        memberId,
+        { newTakes: true, weeklyUnvoted: true, songChanges: false },
+        1000,
+      );
+
+      const clock = fakeClock(100_000_000);
+      const song = await songsRepo.create(db, {
+        title: "Song Off",
+        slug: "song-off",
+        createdAt: clock.now(),
+        updatedAt: clock.now(),
+      });
+      await db.insert(schema.songChartChanges).values({
+        id: "off-1",
+        songId: song.id,
+        memberId: otherEditor,
+        kind: "edited",
+        changedAt: clock.now(),
+      });
+
+      const push = recordingPushSender();
+      const result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(result.sent).toBe(0);
+      expect(push.sent).toHaveLength(0);
+    });
   });
 
   describe("weekly", () => {
@@ -334,11 +530,12 @@ describe("runNotificationTick", () => {
       await subscribe(optedOut, "d3");
 
       const takeId = await seedPublishedTake();
-      // `noUnvoted` and `optedOut` both vote it away, so it's unvoted only
-      // for `withUnvoted` (a published take otherwise counts as unvoted for
-      // EVERY active member who hasn't voted on it yet).
+      // `noUnvoted` votes it away, so it's unvoted only for `withUnvoted`
+      // and `optedOut` (a published take otherwise counts as unvoted for
+      // EVERY active member who hasn't voted on it yet). `optedOut`
+      // deliberately keeps an unvoted take, so the assertion that they get
+      // nothing proves the PREF stops it, not a count of 0.
       await votesRepo.castVote(db, { takeId, memberId: noUnvoted, keeper: true, now: 1000 });
-      await votesRepo.castVote(db, { takeId, memberId: optedOut, keeper: true, now: 1000 });
 
       await notificationPrefsRepo.set(
         db,
@@ -363,7 +560,7 @@ describe("runNotificationTick", () => {
   });
 
   describe("subscription housekeeping", () => {
-    async function seedReadyBatch(memberId: string): Promise<void> {
+    async function seedReadyBatch(): Promise<void> {
       const song = await songsRepo.create(db, {
         title: "Housekeeping Song",
         slug: "housekeeping-song",
@@ -384,13 +581,12 @@ describe("runNotificationTick", () => {
         updatedAt: 1000,
       });
       await takesRepo.setStateWithPublishedAt(db, take.id, "published", 1000, 1000);
-      void memberId;
     }
 
     it("removes a subscription that comes back 'gone', without retrying it", async () => {
       const memberId = await seedMember("Gone Guy", "gone-guy");
       await subscribe(memberId, "gone-device");
-      await seedReadyBatch(memberId);
+      await seedReadyBatch();
 
       const clock = fakeClock(1_000_000);
       clock.advance(600_000);
@@ -403,7 +599,7 @@ describe("runNotificationTick", () => {
     it("removes a subscription with a mismatched vapidKeyId without sending to it", async () => {
       const memberId = await seedMember("Old Keys", "old-keys");
       await subscribe(memberId, "old-device", "stalekeyid1234567");
-      await seedReadyBatch(memberId);
+      await seedReadyBatch();
 
       const clock = fakeClock(1_000_000);
       clock.advance(600_000);
@@ -412,6 +608,88 @@ describe("runNotificationTick", () => {
       expect(result.sent).toBe(0);
       expect(push.sent).toHaveLength(0);
       expect(await pushSubscriptionsRepo.countForMember(db, memberId)).toBe(0);
+    });
+
+    it("removes a subscription whose endpoint isn't an allowed push host, without sending", async () => {
+      const memberId = await seedMember("Bad Endpoint", "bad-endpoint");
+      await pushSubscriptionsRepo.upsert(
+        db,
+        {
+          memberId,
+          endpoint: "https://evil.example.com/collect",
+          p256dh: "p256dh",
+          auth: "auth",
+          vapidKeyId: VAPID_KEY_ID,
+        },
+        1000,
+      );
+      await seedReadyBatch();
+
+      const clock = fakeClock(1_000_000);
+      clock.advance(600_000);
+      const push = recordingPushSender();
+      const result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(result.sent).toBe(0);
+      expect(push.sent).toHaveLength(0);
+      expect(await pushSubscriptionsRepo.countForMember(db, memberId)).toBe(0);
+    });
+
+    it("counts a failed send without removing the subscription", async () => {
+      const memberId = await seedMember("Failing Send", "failing-send");
+      await subscribe(memberId, "failing-device");
+      await seedReadyBatch();
+
+      const clock = fakeClock(1_000_000);
+      clock.advance(600_000);
+      const push = recordingPushSender(() => ({ kind: "failed", status: 500 }));
+      const result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(result.failed).toBe(1);
+      expect(result.sent).toBe(0);
+      expect(await pushSubscriptionsRepo.countForMember(db, memberId)).toBe(1);
+    });
+
+    it("marks a subscription's lastSuccessAt after a successful send", async () => {
+      const memberId = await seedMember("Mark Me", "mark-me");
+      await subscribe(memberId, "mark-device");
+      await seedReadyBatch();
+
+      const clock = fakeClock(1_000_000);
+      clock.advance(600_000);
+      const push = recordingPushSender();
+      const result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(result.sent).toBe(1);
+      const subs = await pushSubscriptionsRepo.listForMembers(db, [memberId]);
+      expect(subs[0]?.lastSuccessAt).toBe(clock.now());
+    });
+  });
+
+  describe("resilience", () => {
+    it("resolves with the zero result, rather than rejecting, when loading members fails", async () => {
+      const throwingDb = new Proxy(db, {
+        get(target, prop, receiver) {
+          if (prop === "select") {
+            return () => {
+              throw new Error("members query boom");
+            };
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      }) as unknown as Db;
+
+      const clock = fakeClock(1_000_000);
+      const push = recordingPushSender();
+      const logs: string[] = [];
+      const result = await runNotificationTick({
+        db: throwingDb,
+        clock,
+        push,
+        vapidKeyId: VAPID_KEY_ID,
+        log: (line) => logs.push(line),
+      });
+
+      expect(result).toEqual({ sent: 0, gone: 0, failed: 0, skippedStale: 0 });
+      expect(push.sent).toHaveLength(0);
+      expect(logs.some((line) => line.includes("members query boom"))).toBe(true);
     });
   });
 });

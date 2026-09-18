@@ -255,11 +255,23 @@ export async function runNotificationTick(
   const now = deps.clock.now();
   const result = newResult();
 
-  const members = await membersRepo.list(deps.db);
-  const prefs = await notificationPrefsRepo.listForMembers(
-    deps.db,
-    members.map((m) => m.id),
-  );
+  let members: membersRepo.Member[];
+  let prefs: Map<string, notificationPrefsRepo.NotificationPrefs>;
+  try {
+    members = await membersRepo.list(deps.db);
+    prefs = await notificationPrefsRepo.listForMembers(
+      deps.db,
+      members.map((m) => m.id),
+    );
+  } catch (err) {
+    // Nothing downstream can run without the member list — this is the one
+    // failure that isn't "one section" or "one item", so it gets its own
+    // early return rather than three sections each independently failing to
+    // load the same thing. Still never throws: an unhandled rejection here
+    // would be fatal to the Node scheduler's `setInterval`.
+    deps.log?.(`failed to load members/prefs: ${String(err)}`);
+    return result;
+  }
 
   try {
     await runNewTakesSection(deps, now, members, prefs, result);

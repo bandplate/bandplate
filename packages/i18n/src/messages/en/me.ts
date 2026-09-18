@@ -66,6 +66,12 @@ export const me = {
   admin: "Admin",
   signOut: "Sign out",
 
+  /** `/me`'s install section. Shown only where installing is possible. */
+  installHeading: "On your phone",
+  installAction: "Install bandplate",
+  /** iOS has no install button a page can offer, only these two taps. */
+  installIosSteps: "Tap Share, then Add to Home Screen.",
+
   languageLegend: "Language",
   languageHint: "Applies on every device.",
   /** The button that is already the current language, for screen readers. */

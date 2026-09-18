@@ -33,6 +33,7 @@ import {
 } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
+import InstallHint from "../../components/InstallHint.tsx";
 import InstrumentSet from "../../components/InstrumentSet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -269,5 +270,11 @@ const initials = member.displayName
       <p class="bp-field-hint bp-m0">{t.me.languageHint} {t.me.languageStopsPlayback}</p>
     </section>
 
+    <InstallHint
+      client:load
+      heading={t.me.installHeading}
+      action={t.me.installAction}
+      iosSteps={t.me.installIosSteps}
+    />
   </div>
 </AppLayout>

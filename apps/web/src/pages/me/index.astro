@@ -13,22 +13,27 @@
 // and what follows is what is pressed into it — the ledger of how you have
 // voted, then the calls themselves.
 //
-// Six parts, one column, in this order:
-//   HERO        the plate, your name, since when, what you play. Sign out sits
-//               here rather than at the bottom of a rail — it is yours, it is
-//               destructive, and it should be where you look for it.
-//   LEDGER      four figures. `agreementPct` is the one worth having: it is
-//               something the archive knows about you that you do not.
-//   APPEARANCE  light, dark or the device's own, for this browser.
-//   LANGUAGE    for you, on every device.
-//   VOTES       the calls, with the comment you left, which was invisible before.
-//   INSTALL     only where installing can actually happen.
+// Seven parts, one column, in this order:
+//   HERO          the plate, your name, since when, what you play. Sign out
+//                 sits here rather than at the bottom of a rail — it is
+//                 yours, it is destructive, and it should be where you look
+//                 for it.
+//   LEDGER        four figures. `agreementPct` is the one worth having: it is
+//                 something the archive knows about you that you do not.
+//   APPEARANCE    light, dark or the device's own, for this browser.
+//   LANGUAGE      for you, on every device.
+//   NOTIFICATIONS per device too, like appearance — only where push is
+//                 actually configured.
+//   VOTES         the calls, with the comment you left, which was invisible
+//                 before.
+//   INSTALL       only where installing can actually happen.
 //
 // The two settings sit ABOVE the votes. The votes list is paginated and grows
 // without end; a setting under it is a setting nobody finds.
 //
 // Deliberately NOT here: favourites. Home is already the shelf of exactly
 // those, and listing them twice is what this page was being cured of.
+import { notificationPrefsRepo } from "@bandplate/db";
 import {
   LANGUAGE_NAMES,
   LOCALES,
@@ -41,8 +46,9 @@ import Pagination from "@bandplate/ui/components/Pagination.astro";
 import { THEMES, isThemeChoice } from "../../client/theme.js";
 import InstallHint from "../../components/InstallHint.tsx";
 import InstrumentSet from "../../components/InstrumentSet.astro";
+import NotificationSettings from "../../components/NotificationSettings.tsx";
 import AppLayout from "../../layouts/AppLayout.astro";
-import { getAppDeps } from "../../server/app.js";
+import { getAppDeps, getWebConfig } from "../../server/app.js";
 import { readThemeCookie, setLocaleCookie, setThemeCookie } from "../../server/cookies.js";
 import { isSameOrigin } from "../../server/csrf.js";
 
@@ -114,6 +120,15 @@ const pages = pageView({ url: Astro.url, page, perPage: VOTES_PER_PAGE, total: v
 if (pages.redirectTo) {
   return Astro.redirect(pages.redirectTo);
 }
+
+// The Notifications section only exists where push is actually configured —
+// no VAPID keys, no section, same rule the install section follows. Reading
+// the member's prefs is skipped entirely in that case: there's nothing for
+// them to describe.
+const webConfig = await getWebConfig();
+const notificationPrefs = webConfig.push
+  ? await notificationPrefsRepo.get(appDeps.db, principal.memberId)
+  : undefined;
 
 // Initials for the identity disc — first letters of the first two words, which
 // handles "František Voráč" and a single-word stage name alike.
@@ -287,6 +302,34 @@ const initials = member.displayName
       </form>
       <p class="bp-field-hint bp-m0">{t.me.languageHint} {t.me.languageStopsPlayback}</p>
     </section>
+
+    {/* ── Notifications ──────────────────────────────────────────────── */}
+    {/* Only where push is actually configured (no VAPID keys, no section —
+        no fake affordance for a feature that isn't on). Per device, like
+        appearance: `NotificationSettings` renders nothing until it has
+        checked this browser's own service-worker/permission/subscription
+        state, which is why it (like `InstallHint`) ships no server markup
+        at all. */}
+    {
+      webConfig.push && notificationPrefs && (
+        <NotificationSettings
+          client:load
+          heading={t.me.notifyHeading}
+          publicKey={webConfig.push.publicKey}
+          prefs={notificationPrefs}
+          turnOnLabel={t.me.notifyTurnOn}
+          turnOffLabel={t.me.notifyTurnOff}
+          iosNeedsInstallText={t.me.notifyIosNeedsInstall}
+          deniedText={t.me.notifyDenied}
+          unsupportedText={t.me.notifyUnsupported}
+          newTakesLabel={t.me.notifyNewTakes}
+          weeklyUnvotedLabel={t.me.notifyWeeklyUnvoted}
+          songChangesLabel={t.me.notifySongChanges}
+          savedText={t.me.notifySaved}
+          saveFailedText={t.me.notifySaveFailed}
+        />
+      )
+    }
 
     {/* ── The calls ──────────────────────────────────────────────────── */}
     <section>

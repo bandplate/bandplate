@@ -101,4 +101,28 @@ export const me = {
    * leave half the furniture in the old language.
    */
   languageStopsPlayback: "Switching reloads the page, so anything playing stops.",
+
+  /**
+   * `/me`'s Notifications section — between Language and the votes list.
+   * Rendered only when `getWebConfig().push` exists (no VAPID keys, no
+   * section: no fake affordance for a feature that isn't configured).
+   */
+  notifyHeading: "Notifications",
+  /** The "off" state's button — subscribes this browser/device. */
+  notifyTurnOn: "Turn on for this phone or computer",
+  /** The "on" state's button — unsubscribes it again. */
+  notifyTurnOff: "Turn off for this phone or computer",
+  /** iOS grants the permission only to a page added to the home screen. */
+  notifyIosNeedsInstall:
+    "On iPhone, notifications only work from the app on your home screen. Add bandplate to your home screen, then turn them on there.",
+  /** The member or the OS already blocked the permission. */
+  notifyDenied:
+    "Notifications are blocked for bandplate. Allow them in your browser or phone settings.",
+  /** No service worker, no PushManager, or no Notification API. */
+  notifyUnsupported: "This browser can't do notifications.",
+  notifyNewTakes: "New takes from rehearsals",
+  notifyWeeklyUnvoted: "Sunday vote reminder",
+  notifySongChanges: "New songs and chord or lyric changes",
+  notifySaved: "Saved.",
+  notifySaveFailed: "Couldn't save. Try again.",
 };

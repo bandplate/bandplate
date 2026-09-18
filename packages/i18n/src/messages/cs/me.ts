@@ -74,4 +74,21 @@ export const me = {
   languageSaved: "Jazyk je změněný.", // en: Language changed.
   // en: Changing this reloads the page, so anything playing will stop.
   languageStopsPlayback: "Přepnutí zastaví přehrávání.",
+
+  notifyHeading: "Notifikace", // en: Notifications
+  notifyTurnOn: "Zapnout na tomhle zařízení", // en: Turn on for this phone or computer
+  notifyTurnOff: "Vypnout na tomhle zařízení", // en: Turn off for this phone or computer
+  // en: On iPhone, notifications only work from the app on your home screen. Add bandplate to your home screen, then turn them on there.
+  notifyIosNeedsInstall:
+    "Na iPhonu notifikace fungují jen z aplikace na ploše. Přidej si bandplate na plochu a zapni je tam.",
+  // en: Notifications are blocked for bandplate. Allow them in your browser or phone settings.
+  notifyDenied:
+    "Notifikace jsou pro bandplate zablokované. Povol je v nastavení prohlížeče nebo telefonu.",
+  notifyUnsupported: "Tenhle prohlížeč notifikace neumí.", // en: This browser can't do notifications.
+  notifyNewTakes: "Nové nahrávky ze zkoušek", // en: New takes from rehearsals
+  notifyWeeklyUnvoted: "Nedělní připomínka hlasování", // en: Sunday vote reminder
+  // en: New songs and chord or lyric changes
+  notifySongChanges: "Nové skladby a změny akordů nebo textu",
+  notifySaved: "Uloženo.", // en: Saved.
+  notifySaveFailed: "Nepodařilo se uložit. Zkus to znovu.", // en: Couldn't save. Try again.
 } satisfies typeof enMe;

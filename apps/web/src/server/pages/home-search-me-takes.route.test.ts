@@ -688,6 +688,17 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).not.toContain("this device");
     });
 
+    it("has no Notifications section when push isn't configured", async () => {
+      // This suite's server is built with no VAPID env at all (see this
+      // file's own setup) — `getWebConfig().push` is `undefined`, so
+      // `NotificationSettings` must not even be mounted. No fake affordance
+      // for a feature that isn't configured.
+      const res = await fetch(`${ORIGIN}/me`, { headers: { cookie: sessionCookie } });
+      const body = await res.text();
+      expect(body).not.toContain("Notifications");
+      expect(body).not.toMatch(/NotificationSettings/);
+    });
+
     it("ships no transition-retarget script anywhere any more", async () => {
       // `TakeTransitionRetarget.astro` is deleted. It existed because one take
       // could appear twice on a page, which assigns the same

@@ -245,6 +245,22 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   ],
   "mail.inviteSubjectBy": [{ label: "n", args: ["Vařič"] }],
   "mail.inviteWhatBy": [{ label: "n", args: ["Vařič"] }],
+  "push.newTakesByWeekday": [
+    { label: "rehearsal", args: ["rehearsal", 4] },
+    { label: "concert", args: ["concert", 4] },
+    { label: "session", args: ["session", 4] },
+  ],
+  "push.newTakesByDate": [
+    { label: "rehearsal", args: ["rehearsal", 12, 9] },
+    { label: "concert", args: ["concert", 12, 9] },
+    { label: "session", args: ["session", 12, 9] },
+  ],
+  "push.weeklyBody": [
+    { label: "one", args: [1] },
+    { label: "few", args: [3] },
+    { label: "other", args: [7] },
+  ],
+  "push.songEditedBody": [{ label: "n", args: ["Čoudy"] }],
   "me.memberSince": [{ label: "d", args: ["8. února 2026"] }],
   "me.ledgerVotes": [
     { label: "one", args: [1] },

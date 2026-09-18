@@ -34,6 +34,7 @@ export { type Messages, messages } from "./messages/index.js";
 export { playerMessages } from "./messages/player.js";
 export { LANGUAGE_NAMES, meMessages } from "./messages/me.js";
 export { mixerMessages } from "./messages/mixer.js";
+export { pushMessages } from "./messages/push.js";
 export { shellMessages } from "./messages/shell.js";
 export { songsMessages } from "./messages/songs.js";
 export { takesMessages } from "./messages/takes.js";

@@ -19,6 +19,7 @@ import { mailByLocale } from "./mail.js";
 import { meByLocale } from "./me.js";
 import { mixerByLocale } from "./mixer.js";
 import { playerByLocale } from "./player.js";
+import { pushByLocale } from "./push.js";
 import { shellByLocale } from "./shell.js";
 import { songsByLocale } from "./songs.js";
 import { takesByLocale } from "./takes.js";
@@ -37,6 +38,7 @@ const CATALOG = {
     me: meByLocale.en,
     mixer: mixerByLocale.en,
     player: playerByLocale.en,
+    push: pushByLocale.en,
     shell: shellByLocale.en,
     songs: songsByLocale.en,
     takes: takesByLocale.en,
@@ -54,6 +56,7 @@ const CATALOG = {
     me: meByLocale.cs,
     mixer: mixerByLocale.cs,
     player: playerByLocale.cs,
+    push: pushByLocale.cs,
     shell: shellByLocale.cs,
     songs: songsByLocale.cs,
     takes: takesByLocale.cs,

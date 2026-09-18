@@ -10,7 +10,12 @@ const IPAD_AS_MAC =
 const ANDROID =
   "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36";
 
-const base = { standalone: false, promptAvailable: false, maxTouchPoints: 0 };
+const base = {
+  standalone: false,
+  promptAvailable: false,
+  maxTouchPoints: 0,
+  iosSignInWorks: true,
+};
 
 describe("isIos", () => {
   it("an iPhone is iOS", () => expect(isIos(IPHONE, 5)).toBe(true));
@@ -37,6 +42,17 @@ describe("decideInstallHint", () => {
 
   it("iOS has no prompt API -> the Share steps", () => {
     expect(decideInstallHint({ ...base, userAgent: IPHONE, maxTouchPoints: 5 })).toBe("ios-steps");
+  });
+
+  it("iOS but sign-in by code doesn't exist yet -> nothing", () => {
+    expect(
+      decideInstallHint({
+        ...base,
+        userAgent: IPHONE,
+        maxTouchPoints: 5,
+        iosSignInWorks: false,
+      }),
+    ).toBe("none");
   });
 
   // Firefox, or Chrome before it decides the site is installable, or a

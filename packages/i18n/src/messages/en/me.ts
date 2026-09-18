@@ -67,7 +67,7 @@ export const me = {
   signOut: "Sign out",
 
   /** `/me`'s install section. Shown only where installing is possible. */
-  installHeading: "On your phone",
+  installHeading: "The app",
   installAction: "Install bandplate",
   /** iOS has no install button a page can offer, only these two taps. */
   installIosSteps: "Tap Share, then Add to Home Screen.",

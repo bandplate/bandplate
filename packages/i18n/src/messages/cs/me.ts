@@ -55,7 +55,7 @@ export const me = {
   admin: "Správa", // en: Admin
   signOut: "Odhlásit se", // en: Sign out
 
-  installHeading: "V telefonu", // en: On your phone
+  installHeading: "Aplikace", // en: The app
   installAction: "Nainstalovat bandplate", // en: Install bandplate
   installIosSteps: "Klepni na Sdílet a pak na Přidat na plochu.", // en: Tap Share, then Add to Home Screen.
 

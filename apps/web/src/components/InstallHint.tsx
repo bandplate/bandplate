@@ -26,6 +26,8 @@ export default function InstallHint({ heading, action, iosSteps }: Props) {
         promptAvailable: prompt !== null,
         userAgent: navigator.userAgent,
         maxTouchPoints: navigator.maxTouchPoints,
+        // Sign-in by code hasn't shipped yet; see install-hint.ts's header.
+        iosSignInWorks: false,
       }),
     );
   }, [prompt]);
@@ -38,9 +40,16 @@ export default function InstallHint({ heading, action, iosSteps }: Props) {
     if (!prompt) {
       return;
     }
-    await prompt.prompt();
-    // A prompt is single-use whatever the answer.
+    // Clear before awaiting, and keep a local reference: a prompt is
+    // single-use whatever the answer, and a second tap while the first is
+    // still pending must not see it as available again.
     $installPrompt.set(null);
+    try {
+      await prompt.prompt();
+    } catch {
+      // Already shown once, dismissed some other way, or the browser
+      // revoked it — nothing to do; there is no button left to re-disable.
+    }
   };
 
   return (

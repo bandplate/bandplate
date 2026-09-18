@@ -1117,7 +1117,12 @@ a.bp-btn {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.875rem 1.25rem;
+  padding-block: 0.875rem;
+  /* `viewport-fit=cover` lets the page run under the notch/camera cutout in
+     landscape, so the shell's own edge padding has to grow to clear it
+     instead of staying at the fixed 1.25rem. */
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
   border-bottom: 1px solid var(--bp-color-border);
 }
 
@@ -1164,11 +1169,13 @@ a.bp-btn {
      with no track loaded, rather than toggled by JS: a fixed bottom-padding
      number can't itself cause the width-based scrollWidth-blowout bugs a
      JS-computed one already has, elsewhere in this project. */
-  padding: 1.25rem 1.25rem
-    calc(
-      2.5rem + var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
-        var(--bp-player-height)
-    );
+  padding-top: 1.25rem;
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(
+    2.5rem + var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
+      var(--bp-player-height)
+  );
   box-sizing: border-box;
 }
 
@@ -1289,6 +1296,7 @@ a.bp-btn {
   border-top: 1px solid var(--bp-color-border);
   background: var(--bp-color-bg);
   padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-inline: env(safe-area-inset-left, 0) env(safe-area-inset-right, 0);
 }
 
 .bp-tabbar-item {
@@ -1461,7 +1469,9 @@ a.bp-btn {
   flex-direction: column;
   justify-content: center;
   gap: 0.625rem;
-  padding: 0.75rem 1.25rem;
+  padding-block: 0.75rem;
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
   background: var(--bp-color-surface);
   border-top: 1px solid var(--bp-color-border);
 }
@@ -5072,7 +5082,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-toast-region {
   position: fixed;
   top: 1rem;
-  right: 1rem;
+  right: max(1rem, env(safe-area-inset-right, 0px));
   z-index: 150; /* above the player (42) and tab bar (40), below the route-progress bar's 200 and the skip-link's 100 only when focused */
   display: flex;
   flex-direction: column;

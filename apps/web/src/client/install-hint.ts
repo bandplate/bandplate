@@ -8,6 +8,11 @@
 //              nothing a button could do.
 //   none       already installed, or a browser that will not install this.
 //              No affordance that cannot work.
+//
+// `ios-steps` also needs `iosSignInWorks`, currently always false: the
+// installed iOS app gets its own cookie jar, separate from Safari's, and the
+// emailed sign-in link opens in Safari. Until sign-in by code exists,
+// telling an iPhone member to install leads to an app they cannot sign into.
 
 export type InstallHint = "none" | "prompt" | "ios-steps";
 
@@ -16,6 +21,7 @@ export interface InstallEnvironment {
   promptAvailable: boolean;
   userAgent: string;
   maxTouchPoints: number;
+  iosSignInWorks: boolean;
 }
 
 export function isIos(userAgent: string, maxTouchPoints: number): boolean {
@@ -33,5 +39,5 @@ export function decideInstallHint(env: InstallEnvironment): InstallHint {
   if (env.promptAvailable) {
     return "prompt";
   }
-  return isIos(env.userAgent, env.maxTouchPoints) ? "ios-steps" : "none";
+  return isIos(env.userAgent, env.maxTouchPoints) && env.iosSignInWorks ? "ios-steps" : "none";
 }

@@ -230,8 +230,8 @@ describe("updateSong", () => {
   });
 });
 
-// Task 6 — who changed a song's chart, for the notification tick to read
-// back later. `songsRepo.buildCreateStatement`/`buildUpdateStatement` batch
+// Who changed a song's chart, for the notification tick to read it back
+// later. `songsRepo.buildCreateStatement`/`buildUpdateStatement` batch
 // the song write with `notificationsRepo.buildRecordChartChange`; these
 // tests read that row back through `listSongChangesInWindow` rather than
 // reaching into the schema directly.
@@ -251,7 +251,7 @@ describe("chart change recording", () => {
     if (result.kind !== "ok") throw new Error("seed failed");
 
     const changes = await notificationsRepo.listSongChangesInWindow(db, result.song.id, 0, 1000);
-    expect(changes).toEqual([{ memberId, kind: "created" }]);
+    expect(changes).toEqual([{ memberId, kind: "created", changedAt: 1000 }]);
   });
 
   it("records `edited`, with the member, when the chords change", async () => {
@@ -272,7 +272,7 @@ describe("chart change recording", () => {
       1000,
       2000,
     );
-    expect(changes).toEqual([{ memberId: otherMemberId, kind: "edited" }]);
+    expect(changes).toEqual([{ memberId: otherMemberId, kind: "edited", changedAt: 2000 }]);
   });
 
   it("records nothing for a CRLF-only re-save", async () => {
@@ -336,7 +336,7 @@ describe("chart change recording", () => {
     );
 
     const changes = await notificationsRepo.listSongChangesInWindow(db, stub.id, 0, 2000);
-    expect(changes).toEqual([{ memberId, kind: "created" }]);
+    expect(changes).toEqual([{ memberId, kind: "created", changedAt: 2000 }]);
   });
 });
 

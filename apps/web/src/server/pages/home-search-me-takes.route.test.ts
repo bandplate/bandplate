@@ -425,7 +425,7 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       // anywhere on the page (the persistent player's own always-present
       // `<audio>` element is fine — see the previous test's comment — but
       // nothing should point AT this take). `data-take-id` alone is no
-      // longer a reliable proxy for "has a play control" — Task 8's
+      // longer a reliable proxy for "has a play control" — the favorite
       // `VoteToggle`/the take-label link legitimately carry it too, for an
       // unrelated purpose (which take a vote/favorite is about), so a take
       // with no playable asset still has plenty of `data-take-id`

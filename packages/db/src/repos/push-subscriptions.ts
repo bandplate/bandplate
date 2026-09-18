@@ -21,7 +21,7 @@ export interface UpsertPushSubscriptionInput {
 
 /**
  * Insert-or-update by `endpoint` (UNIQUE) — a device re-subscribing lands
- * here every time, on `/me`'s each-load re-upsert (Task 10). On conflict,
+ * here every time, on `/me`'s each-load re-upsert. On conflict,
  * `memberId` is reassigned along with the keys: a shared device that
  * switches which member is signed in on it stops notifying the old member
  * the moment it re-subscribes, matching the spec's "upsert on `endpoint`

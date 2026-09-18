@@ -1,5 +1,5 @@
-// The scheduler's entry point: one call every 10 minutes (see
-// `global-constraints.md`), claiming whatever pending work exists and
+// The scheduler's entry point: one call every 10 minutes, claiming
+// whatever pending work exists and
 // sending the pushes it decides on. Claim first, then send — per
 // `notificationsRepo`'s own doc comments, a crash between the two loses a
 // notification rather than repeating it.
@@ -25,7 +25,7 @@ import { encodePayload, newTakesMessage, songMessage, weeklyMessage } from "./me
 import { NEW_TAKES_QUIET_MS, isBatchStale } from "./new-takes.js";
 import { selectRecipients } from "./recipients.js";
 import { weeklyReminderSlot } from "./schedule.js";
-import { SONG_THROTTLE_MS, songNotificationKind } from "./songs.js";
+import { SONG_MAX_AGE_MS, SONG_THROTTLE_MS, songNotificationKind } from "./songs.js";
 
 export interface NotificationTickDeps {
   db: Db;
@@ -182,6 +182,14 @@ async function runSongsSection(
         change.prev,
         now,
       );
+      const newestChangedAt = Math.max(...editsInWindow.map((e) => e.changedAt));
+      if (now - newestChangedAt >= SONG_MAX_AGE_MS) {
+        // The claim already went through above — honored silently, so it
+        // can never be re-claimed and re-attempted, but nothing is sent for
+        // a change this stale.
+        result.skippedStale++;
+        continue;
+      }
       const editors = new Set(editsInWindow.map((e) => e.memberId));
       const kind = songNotificationKind(editsInWindow.map((e) => e.kind));
       const song = await songsRepo.getById(deps.db, change.songId);
@@ -221,8 +229,25 @@ async function runWeeklySection(
     deps.db,
     recipients.map((r) => r.id),
   );
+  // A member with no subscription under the CURRENT VAPID key gets no
+  // push either way, so claiming their Sunday slot anyway would burn it for
+  // nothing: they subscribe later that same Sunday (or their only device
+  // just rotated keys and hasn't re-subscribed yet) and the reminder never
+  // arrives, this week or ever again for that slot. Fetching subscriptions
+  // up front and skipping the claim entirely for members with none under
+  // `deps.vapidKeyId` keeps the slot open for them instead.
+  const subs = await pushSubscriptionsRepo.listForMembers(
+    deps.db,
+    recipients.map((r) => r.id),
+  );
+  const membersWithCurrentSubscription = new Set(
+    subs.filter((sub) => sub.vapidKeyId === deps.vapidKeyId).map((sub) => sub.memberId),
+  );
   for (const recipient of recipients) {
     try {
+      if (!membersWithCurrentSubscription.has(recipient.id)) {
+        continue;
+      }
       const count = counts.get(recipient.id) ?? 0;
       if (count <= 0) {
         continue;

@@ -11,8 +11,8 @@ import { BAND_TIME_ZONE, zonedParts } from "./schedule.js";
 /**
  * How many days past an event's own day a "new takes" notification will
  * still name it by weekday ("From Thursday's rehearsal") rather than by
- * date ("From the rehearsal on Sep 12") — see `task-3-brief.md`. Beyond
- * this, "Thursday" stops meaning anything to a reader who has to work out
+ * date ("From the rehearsal on Sep 12"). Beyond this, "Thursday" stops
+ * meaning anything to a reader who has to work out
  * which Thursday.
  */
 const NEW_TAKES_WEEKDAY_HORIZON_DAYS = 6;

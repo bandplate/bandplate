@@ -1,5 +1,4 @@
-// VAPID key handling for Web Push (RFC 8292). Key format is spike-verified
-// (see `.superpowers/sdd/2026-09-18-push/progress.md`): `publicKey` is the
+// VAPID key handling for Web Push (RFC 8292). `publicKey` is the
 // base64url encoding of the 65-byte uncompressed P-256 point (87 chars),
 // `privateKey` is the base64url encoding of the raw 32-byte scalar `d` (43
 // chars) — the same shape `@block65/webcrypto-web-push`'s `vapidHeaders`

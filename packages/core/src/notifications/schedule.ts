@@ -71,8 +71,8 @@ export function zonedParts(
 /**
  * The weekly "takes waiting for your vote" reminder fires once, in the
  * window that opens Sunday at 19:00 `tz` time and stays open the rest of
- * Sunday — the tick (every 10 minutes, see `global-constraints.md`) calls
- * this each time and only acts on a non-null result, so `dateKey` is the
+ * Sunday — the tick (every 10 minutes) calls this each time and only acts
+ * on a non-null result, so `dateKey` is the
  * natural idempotency key: "already sent for 2026-03-29" is a single map
  * lookup rather than a second clock read.
  */

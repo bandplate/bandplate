@@ -122,6 +122,19 @@ self.addEventListener("notificationclick", (event) => {
  * gesture to react to a failure with, so a subscribe or POST that fails
  * here just leaves the device unsubscribed until it next visits the app,
  * same as any other lost push registration.
+ *
+ * A subtler failure mode when the rotation is OURS (a new
+ * `BANDPLATE_VAPID_*` deploy): the fallback below re-subscribes with
+ * `oldKey`, the applicationServerKey this device originally subscribed
+ * under, not this deployment's current public key — there is no other key
+ * available here to subscribe with. The POST this sends still gets stamped
+ * with the server's CURRENT `vapidKeyId` (`push.ts`'s handler always uses
+ * `deps.push.keyId`, not anything the client claims), so the row looks
+ * current while the underlying push-service subscription is still signed
+ * for the old key. Sends to it then simply fail until the member reopens
+ * `/me`, whose own mismatch check (`subscriptionMatchesKey` in
+ * `NotificationSettings.tsx`) unsubscribes and re-subscribes for real,
+ * under the current public key.
  */
 self.addEventListener("pushsubscriptionchange", (event) => {
   const oldKey = event.oldSubscription?.options.applicationServerKey;

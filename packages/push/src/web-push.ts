@@ -1,6 +1,6 @@
 // Web Push over Web Crypto — the real `PushSender`, built on
-// `@block65/webcrypto-web-push` (spike-verified in workerd, see
-// `.superpowers/sdd/2026-09-18-push/progress.md`). `buildPushPayload` does
+// `@block65/webcrypto-web-push` (verified in workerd delivering to a real
+// Android device). `buildPushPayload` does
 // the actual encryption/signing and returns a fetch `RequestInit`; this
 // module's only job is the status-code-to-`PushResult` mapping and making
 // sure `send` truly never throws.

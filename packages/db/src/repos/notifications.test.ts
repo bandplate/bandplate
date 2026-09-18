@@ -185,7 +185,7 @@ describe("notificationsRepo", () => {
       expect(claimedAgain).toBe(false);
 
       const inWindow = await notifications.listSongChangesInWindow(db, song.id, 0, now);
-      expect(inWindow).toEqual([{ memberId: author.id, kind: "edited" }]);
+      expect(inWindow).toEqual([{ memberId: author.id, kind: "edited", changedAt }]);
 
       // A second change from a different member, right after the claim.
       const changedAt2 = now + 5;
@@ -216,7 +216,7 @@ describe("notificationsRepo", () => {
 
       // Only the change AFTER the previous claim's watermark is in this window.
       const nextWindow = await notifications.listSongChangesInWindow(db, song.id, now, nextNow);
-      expect(nextWindow).toEqual([{ memberId: other.id, kind: "edited" }]);
+      expect(nextWindow).toEqual([{ memberId: other.id, kind: "edited", changedAt: changedAt2 }]);
     });
 
     it("claimSongNotification is a no-op (false) when prev no longer matches", async () => {
@@ -269,7 +269,9 @@ describe("notificationsRepo", () => {
       await notifications.prune(db, now);
 
       const remainingChanges = await notifications.listSongChangesInWindow(db, song.id, 0, now);
-      expect(remainingChanges).toEqual([{ memberId: member.id, kind: "edited" }]);
+      expect(remainingChanges).toEqual([
+        { memberId: member.id, kind: "edited", changedAt: now - 10 * DAY_MS },
+      ]);
 
       // Pruned claim keys can be claimed again; a still-live one cannot.
       expect(await notifications.claimKey(db, "old-claim", now)).toBe(true);

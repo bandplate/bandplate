@@ -590,7 +590,7 @@ export interface SearchFilters {
 
 /**
  * `"recent"` (default) — newest first, same as every other take listing.
- * `"rating"` — `keeperVotes DESC, ratingScore DESC` (Task 8 brief, §1): a
+ * `"rating"` — `keeperVotes DESC, ratingScore DESC`: a
  * take with 6 keeper votes out of 7 outranks one with 1 keeper vote out of
  * 1, even though the second has a higher `ratingScore` (1.0 vs ~0.86) — vote
  * COUNT is the primary key precisely so a single enthusiastic vote can't
@@ -765,10 +765,9 @@ const MEMBER_CHUNK_SIZE = 90;
 /**
  * Builds (without executing) one chunk's query for `countUnvotedByMembers`.
  * Exported for testing only, so `takes.test.ts` can assert the actual bound
- * parameter count via `.toSQL()` rather than trusting a comment — see
- * finding round 1, item 1: the comment here used to claim `ids` was the
- * query's only parameter, which `eq(takes.state, "published")` already
- * contradicted.
+ * parameter count via `.toSQL()` rather than trusting a comment: `ids` is
+ * NOT the query's only bound parameter — `eq(takes.state, "published")`
+ * binds one too, which is why `MEMBER_CHUNK_SIZE` is 90, not the full 100.
  */
 export function buildCountUnvotedByMembersChunkQuery(db: Db, ids: string[]) {
   return db

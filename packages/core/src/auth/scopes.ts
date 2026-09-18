@@ -12,7 +12,7 @@ export const SCOPES = [
   "events:read",
   "events:write",
   "votes:write",
-  // Task 8: a member's own favorite/pin, on a song, take, OR event — NOT
+  // A member's own favorite/pin, on a song, take, OR event — NOT
   // folded into `votes:write`. Voting only ever applies to takes and is
   // inherently collective (it feeds a shared, public aggregate every other
   // member sees); favoriting applies to three different target types and
@@ -24,7 +24,7 @@ export const SCOPES = [
   // the same reasoning `songs:write`/`events:write`/`takes:write` already
   // stay separate from each other despite every admin holding all three.
   "favorites:write",
-  // Task 7: a member's own push subscriptions (subscribe/unsubscribe a
+  // A member's own push subscriptions (subscribe/unsubscribe a
   // device) and notification preferences (which of the three tick
   // categories reach them at all) — one scope for both, since they're the
   // same "manage how I get notified" surface a member controls on `/me`

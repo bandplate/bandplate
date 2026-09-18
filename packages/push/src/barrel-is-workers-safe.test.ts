@@ -7,9 +7,9 @@
 // Unlike `@bandplate/mail` (which carves `smtp.ts` out of its barrel
 // specifically because nodemailer needs Node), nothing in this package
 // touches a Node built-in: `vapid.ts` uses only `crypto.subtle`/`btoa`,
-// `web-push.ts` and `recording.ts` are pure, and the spike (see
-// `.superpowers/sdd/2026-09-18-push/progress.md`) already proved
-// `@block65/webcrypto-web-push` itself runs in workerd. So there is no
+// `web-push.ts` and `recording.ts` are pure, and `@block65/webcrypto-web-push`
+// itself was verified delivering a push to a real Android device from
+// workerd. So there is no
 // Node-only sibling module here to run mail's second "sanity check" test
 // against — this package's whole barrel is workers-safe by construction,
 // not by exclusion.

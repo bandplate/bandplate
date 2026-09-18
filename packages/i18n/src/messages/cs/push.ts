@@ -93,9 +93,10 @@ export const push = {
   // en: `${count} ${count === 1 ? "take is" : "takes are"} waiting for your vote.`
   //
   // 1 nahrávka · 2–4 nahrávky · 5+ nahrávek — stejná skloňování jako
-  // `events.takeCount`.
+  // `events.takeCount`. Sloveso se shoduje s podmětem v čísle: "čeká" je
+  // jednotné číslo (1, 5+), "čekají" množné (2–4).
   weeklyBody: (count: number): string =>
-    `Čeká na tebe ${count} ${plural("cs", count, { one: "nahrávka", few: "nahrávky", many: "nahrávky", other: "nahrávek" })} k hlasování.`,
+    `${plural("cs", count, { one: "Čeká", few: "Čekají", many: "Čekají", other: "Čeká" })} na tebe ${count} ${plural("cs", count, { one: "nahrávka", few: "nahrávky", many: "nahrávky", other: "nahrávek" })} k hlasování.`,
 
   // --- změny ve skladbě -----------------------------------------------------
   songCreatedTitle: "Nová skladba", // en: New song

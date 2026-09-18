@@ -218,6 +218,11 @@ prints both keys, public first. Leave all three unset and push notifications
 stay off: `/me`'s Notifikace section doesn't render, and nothing about
 migrations, mail or storage changes.
 
+Rotating the keys silently kills every existing subscription: each stored
+row is stamped with the `vapidKeyId` it subscribed under, sends against an
+old key ID are skipped, and a device only starts working again once its
+member reopens `/me` and it re-subscribes under the current key.
+
 ## 4. Migrate — before every deploy, unconditionally
 
 ```
@@ -250,8 +255,8 @@ on it.
 ## Scheduled tick
 
 `wrangler.toml.example` ships `[triggers] crons = ["*/10 * * * *"]`, which
-runs the notification tick every 10 minutes — the same cadence
-`global-constraints.md` specs. The Worker's `scheduled` handler
+runs the notification tick every 10 minutes — matching
+`NOTIFICATION_TICK_INTERVAL_MS` on the Node profile. The Worker's `scheduled` handler
 (`src/worker.ts`, alongside the normal `fetch` one — wired in via
 `workerEntryPoint` in `astro.config.mjs`) calls
 `src/server/scheduled.ts#runScheduledTick`, which builds the Workers

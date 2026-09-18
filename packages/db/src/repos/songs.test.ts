@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "../client.js";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as events from "./events.js";
+import * as favorites from "./favorites.js";
 import * as instruments from "./instruments.js";
+import * as members from "./members.js";
+import * as notifications from "./notifications.js";
 import * as songs from "./songs.js";
 import * as takes from "./takes.js";
 
@@ -564,5 +567,50 @@ describe("songs repo", () => {
     const left = await songs.listAliases(db, song.id);
     expect(left.map((a) => a.source)).toEqual(["ingest"]);
     expect(await songs.findByAlias(db, normalizeTitle("Night Bus"))).toBeUndefined();
+  });
+
+  it("remove deletes the song's aliases, favorites, and chart-change history along with it", async () => {
+    const author = await members.create(db, {
+      displayName: "Chart Author",
+      slug: "chart-author-remove",
+      email: "chart-author-remove@example.com",
+      createdAt: 1000,
+    });
+    const song = await songs.create(db, {
+      title: "Vanishing Point",
+      slug: "vanishing-point",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    await songs.addAlias(db, song.id, "Vanish", "manual");
+    await favorites.add(db, {
+      memberId: author.id,
+      targetType: "song",
+      targetId: song.id,
+      createdAt: 1000,
+    });
+    await db.batch([
+      notifications.buildRecordChartChange(db, {
+        songId: song.id,
+        memberId: author.id,
+        kind: "created",
+        changedAt: 1000,
+      }),
+    ]);
+
+    // All three exist before the delete — otherwise the assertions after
+    // `remove` would pass trivially by never having anything to clean up.
+    expect(await songs.listAliases(db, song.id)).toHaveLength(1);
+    expect(await favorites.listTargetIdsByMember(db, author.id, "song")).toEqual(
+      new Set([song.id]),
+    );
+    expect(await notifications.listSongChangesInWindow(db, song.id, 0, 1000)).toHaveLength(1);
+
+    await songs.remove(db, song.id);
+
+    expect(await songs.getById(db, song.id)).toBeUndefined();
+    expect(await songs.listAliases(db, song.id)).toEqual([]);
+    expect(await favorites.listTargetIdsByMember(db, author.id, "song")).toEqual(new Set());
+    expect(await notifications.listSongChangesInWindow(db, song.id, 0, 1000)).toEqual([]);
   });
 });

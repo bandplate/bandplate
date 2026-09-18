@@ -5,6 +5,7 @@ import {
   favorites,
   instruments,
   songAliases,
+  songChartChanges,
   songInstrumentNotes,
   songs,
   takes,
@@ -108,7 +109,7 @@ export async function createWithAlias(
 
 /**
  * Builds (does not execute) one `songs` insert, for a caller that needs to
- * fold it into a `db.batch([...])` alongside another write — Task 6's
+ * fold it into a `db.batch([...])` alongside another write —
  * `createSong` batches this with `notificationsRepo.buildRecordChartChange`
  * so the song and the "who created it" row land atomically. Constructs the
  * row locally rather than using `.returning()`, the same reason
@@ -172,7 +173,7 @@ export interface UpdateSongInput {
 /**
  * Builds (does not execute) the same update `update` runs — for a caller
  * that needs to fold it into a `db.batch([...])` alongside another write
- * (Task 6's `updateSong`, batching this with
+ * (`updateSong` batches this with
  * `notificationsRepo.buildRecordChartChange`).
  */
 export function buildUpdateStatement(db: Db, id: string, input: UpdateSongInput) {
@@ -452,7 +453,8 @@ export async function addAlias(
 
 /**
  * Delete a song and everything that belongs to it ALONE — its aliases, its
- * per-instrument notes, and every member's pin on it.
+ * per-instrument notes, its chart-change history, and every member's pin on
+ * it.
  *
  * Its TAKES are not touched here, and that is deliberate: a take owns audio
  * objects in the bucket, and a repo has no business reaching for storage. The
@@ -468,6 +470,7 @@ export async function remove(db: Db, id: string): Promise<void> {
   await db.batch([
     db.delete(songAliases).where(eq(songAliases.songId, id)),
     db.delete(songInstrumentNotes).where(eq(songInstrumentNotes.songId, id)),
+    db.delete(songChartChanges).where(eq(songChartChanges.songId, id)),
     db.delete(favorites).where(and(eq(favorites.targetType, "song"), eq(favorites.targetId, id))),
     db.delete(songs).where(eq(songs.id, id)),
   ]);

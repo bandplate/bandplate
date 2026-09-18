@@ -25,7 +25,7 @@ export interface PushRouteDeps {
   push?: { publicKey: string; keyId: string };
 }
 
-/** A member may hold at most this many subscribed devices at once — global-constraints.md. */
+/** A member may hold at most this many subscribed devices at once. */
 const MAX_SUBSCRIPTIONS_PER_MEMBER = 10;
 
 /** `user-agent` is stored purely for diagnostics — truncated so one header can't blow up a row. */
@@ -143,6 +143,15 @@ export function registerPushRoutes(router: GuardedRouter, deps: PushRouteDeps): 
         endpoint,
         p256dh: keys.p256dh,
         auth: keys.auth,
+        // Always THIS deployment's current key, regardless of which key the
+        // browser actually subscribed the endpoint under — a caller has no
+        // way to claim otherwise, and normally doesn't need to: the sw.js
+        // `pushsubscriptionchange` fallback is the one caller that CAN'T
+        // resubscribe under the current key (see its own comment) and so
+        // ends up POSTing an endpoint still signed for the old one; that
+        // row is then stamped current here while sends to it keep failing,
+        // until the member reopens `/me` and its mismatch check
+        // re-subscribes for real.
         vapidKeyId: deps.push.keyId,
         // `MemberPrincipal` carries no session id today — nothing to
         // attribute this subscription's session to yet.

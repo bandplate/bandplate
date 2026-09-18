@@ -180,9 +180,8 @@ export const instruments = sqliteTable("instruments", {
   archivedAt: ts("archived_at"),
 });
 
-// A member<->instrument relation was specified in the project plan (Task 6
-// review, "data-model gap") but never made it into this schema — a
-// transcription loss in the Task 2 brief, not a deliberate omission. Closing
+// A member<->instrument relation belongs in this schema but never made it
+// in — an oversight, not a deliberate omission. Closing
 // it now as a join table, the same shape as `takeInstruments` just below,
 // rather than a JSON array column on `members` (the shape `serviceTokens.scopes`
 // uses elsewhere in this file):
@@ -195,8 +194,8 @@ export const instruments = sqliteTable("instruments", {
 //     to be restructured into one anyway. `takeInstruments` already made this
 //     exact call for the same reasoning (see its own comment).
 //   - Instruments are archivable, and archiving must not disturb a member's
-//     existing association (the brief: "a member holding an archived
-//     instrument must still render") — a plain FK with no cascade-on-archive
+//     existing association: a member holding an archived instrument must
+//     still render — a plain FK with no cascade-on-archive
 //     behavior (archiving only ever sets `archivedAt`, never deletes the row)
 //     satisfies this by construction, the same way `takeInstruments` already
 //     keeps rendering an instrument the band has dropped.
@@ -571,7 +570,7 @@ export const notificationPrefs = sqliteTable("notification_prefs", {
  * `notificationsRepo.listPendingSongChanges`/`listSongChangesInWindow` read
  * to decide a song push is due and who made it (excluded from the push, so
  * nobody is notified about their own edit). Only `createSong`/`updateSong`
- * write here (Task 7) — ingest's stub-song creation never does, so the
+ * write here — ingest's stub-song creation never does, so the
  * archive's initial backfill and every ingest run stay silent.
  */
 export const songChartChanges = sqliteTable(

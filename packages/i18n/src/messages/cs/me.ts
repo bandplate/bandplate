@@ -82,9 +82,8 @@ export const me = {
   notifyTurnOnFailed: "Nepodařilo se zapnout notifikace. Zkus to znovu.",
   // en: Couldn't turn off notifications. Try again.
   notifyTurnOffFailed: "Nepodařilo se vypnout notifikace. Zkus to znovu.",
-  // en: On iPhone, notifications only work from the app on your home screen. Add bandplate to your home screen, then turn them on there.
-  notifyIosNeedsInstall:
-    "Na iPhonu notifikace fungují jen z aplikace na ploše. Přidej si bandplate na plochu a zapni je tam.",
+  // en: On iPhone, notifications only work in the app added to the Home Screen.
+  notifyIosNeedsInstall: "Na iPhonu notifikace fungují jen v aplikaci na ploše.",
   // en: Notifications are blocked for bandplate. Allow them in your browser or phone settings.
   notifyDenied:
     "Notifikace jsou pro bandplate zablokované. Povol je v nastavení prohlížeče nebo telefonu.",

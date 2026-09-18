@@ -136,7 +136,7 @@ describe("weeklyMessage", () => {
   });
 
   it("uses the Czech 2-4 plural class at 3", () => {
-    expect(weeklyMessage("cs", 3).body).toBe("Čeká na tebe 3 nahrávky k hlasování.");
+    expect(weeklyMessage("cs", 3).body).toBe("Čekají na tebe 3 nahrávky k hlasování.");
   });
 
   it("uses the Czech 5+ plural class at 7", () => {

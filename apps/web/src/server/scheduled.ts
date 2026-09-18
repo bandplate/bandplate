@@ -28,27 +28,33 @@ import type { CloudflareEnv } from "./config.worker.js";
  * Called from `worker.ts`'s `scheduled` export, itself wrapped in
  * `ctx.waitUntil` there so the platform keeps the isolate alive until this
  * resolves. `initWorkersRuntime` is the same no-op-after-first-call as
- * `middleware.ts`'s use of it — a scheduled invocation gets its own fresh
- * isolate (Workers doesn't reuse them across a fetch and a cron trigger),
- * so this always builds the runtime fresh here.
+ * `middleware.ts`'s use of it — Workers MAY reuse an isolate across a fetch
+ * and a later cron trigger, so this could be a no-op finding the runtime
+ * already built; that idempotency is exactly why it's safe to call here
+ * unconditionally either way, fresh isolate or reused one.
  *
  * `getNotificationDeps()` returns `undefined` when push isn't configured
  * (no VAPID vars set — see `config.worker.ts`) — every cron trigger runs
  * regardless of whether push is on, so this is the "nothing to do" case,
  * not an error.
  *
- * `runNotificationTick` itself never throws (see its own doc comment: an
- * unhandled rejection here would still be fatal to `waitUntil`, so the
- * `try`/`catch` is a deliberate second line of defense, not dead code for
- * a promise that can't reject).
+ * `initWorkersRuntime`/`getNotificationDeps` live inside the `try` along
+ * with the tick itself: `getRuntime()` can throw `ConfigError` (invalid
+ * env), and letting that escape uncaught would reject the `waitUntil`
+ * promise unhandled instead of logging a `[scheduled]` line like every
+ * other failure here.
+ *
+ * `runNotificationTick` itself never throws (see its own doc comment), but
+ * the `try`/`catch` stays a deliberate second line of defense around it too,
+ * not dead code for a promise that can't reject.
  */
 export async function runScheduledTick(env: CloudflareEnv): Promise<void> {
-  initWorkersRuntime(env);
-  const deps = await getNotificationDeps();
-  if (!deps) {
-    return;
-  }
   try {
+    initWorkersRuntime(env);
+    const deps = await getNotificationDeps();
+    if (!deps) {
+      return;
+    }
     const result = await runNotificationTick(deps);
     console.log(
       `[scheduled] notification tick: sent=${result.sent} gone=${result.gone} ` +

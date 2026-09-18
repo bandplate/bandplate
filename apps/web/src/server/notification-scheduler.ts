@@ -12,7 +12,7 @@
 // state.
 import { type NotificationTickDeps, runNotificationTick } from "@bandplate/core";
 
-/** Matches `global-constraints.md`'s tick cadence: every 10 minutes. */
+/** The tick runs every 10 minutes. */
 export const NOTIFICATION_TICK_INTERVAL_MS = 600_000;
 
 /**

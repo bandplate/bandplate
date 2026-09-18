@@ -10,6 +10,16 @@
 /** How long after one chart-changing edit to wait before notifying, so a flurry of edits becomes one message. */
 export const SONG_THROTTLE_MS = 21_600_000; // 6 hours
 
+/**
+ * How old the newest change in a claimed window may be before the tick
+ * gives up on sending it — same 24h horizon as `NEW_TAKES_MAX_AGE_MS`. A
+ * claim can sit unsent for a while (a DB outage, a deploy gap, the tick
+ * itself down); once the change behind it is this old, "someone edited a
+ * song" has stopped being news, so the claim is honored silently (counted
+ * in `skippedStale`) rather than sent.
+ */
+export const SONG_MAX_AGE_MS = 86_400_000; // 24 hours
+
 type Chart = { chordProgression: string | null; lyrics: string | null };
 
 /**

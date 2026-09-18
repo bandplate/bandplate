@@ -153,6 +153,7 @@ export async function claimSongNotification(
 export interface SongChangeInWindow {
   memberId: string;
   kind: "created" | "edited";
+  changedAt: number;
 }
 
 /**
@@ -161,7 +162,8 @@ export interface SongChangeInWindow {
  * "never to whoever made the change"). Exclusive/inclusive on purpose:
  * `afterExclusive` is the previous claim's watermark (already covered by an
  * earlier push, or never), `untilInclusive` is `now`, the instant this
- * claim covers.
+ * claim covers. `changedAt` comes along so the caller can tell how STALE the
+ * newest change in the window is (`tick.ts`'s song-section staleness guard).
  */
 export async function listSongChangesInWindow(
   db: Db,
@@ -170,7 +172,11 @@ export async function listSongChangesInWindow(
   untilInclusive: number,
 ): Promise<SongChangeInWindow[]> {
   const rows = await db
-    .select({ memberId: songChartChanges.memberId, kind: songChartChanges.kind })
+    .select({
+      memberId: songChartChanges.memberId,
+      kind: songChartChanges.kind,
+      changedAt: songChartChanges.changedAt,
+    })
     .from(songChartChanges)
     .where(
       and(
@@ -190,8 +196,9 @@ export interface RecordChartChangeInput {
 }
 
 /**
- * Builds (does not execute) one `song_chart_changes` insert, for `Task 7`'s
- * `createSong`/`updateSong` to fold into their own `db.batch([...])` — the
+ * Builds (does not execute) one `song_chart_changes` insert, for
+ * `songsRepo`'s `createSong`/`updateSong` to fold into their own
+ * `db.batch([...])` — the
  * write and the change row must land atomically, the same
  * batch-not-transaction shape every other atomic write in this package
  * uses (see `takesRepo.create`'s own doc comment).

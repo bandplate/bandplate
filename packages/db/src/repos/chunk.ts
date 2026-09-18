@@ -1,5 +1,5 @@
-// D1 allows at most 100 bound parameters per statement (see
-// `global-constraints.md`), so any `inArray(...)` built from a caller-sized
+// D1 allows at most 100 bound parameters per statement, so any
+// `inArray(...)` built from a caller-sized
 // list has to be split before it reaches the database. `chunk` is the one
 // place that splitting happens — but the size each caller passes is ITS OWN
 // responsibility to get right: `size` has to be small enough that the

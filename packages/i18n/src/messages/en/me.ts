@@ -116,9 +116,14 @@ export const me = {
   notifyTurnOnFailed: "Couldn't turn on notifications. Try again.",
   /** The server rejected the unsubscribe, or the request never reached it. */
   notifyTurnOffFailed: "Couldn't turn off notifications. Try again.",
-  /** iOS grants the permission only to a page added to the home screen. */
-  notifyIosNeedsInstall:
-    "On iPhone, notifications only work from the app on your home screen. Add bandplate to your home screen, then turn them on there.",
+  /**
+   * iOS grants the permission only to a page added to the Home Screen. No
+   * install instruction here on purpose — see `client/install-hint.ts`'s
+   * `iosSignInWorks`: the installed app's cookie jar is separate from
+   * Safari's, and the emailed sign-in link opens in Safari, so telling an
+   * iPhone member to install would lead to an app they cannot sign into.
+   */
+  notifyIosNeedsInstall: "On iPhone, notifications only work in the app added to the Home Screen.",
   /** The member or the OS already blocked the permission. */
   notifyDenied:
     "Notifications are blocked for bandplate. Allow them in your browser or phone settings.",

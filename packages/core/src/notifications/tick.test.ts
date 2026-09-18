@@ -24,7 +24,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Clock } from "../ports/clock.js";
 import type { PushResult, PushSender, PushTarget } from "../ports/push.js";
 import { newTakesMessage, songMessage } from "./messages.js";
-import { SONG_THROTTLE_MS } from "./songs.js";
+import { SONG_MAX_AGE_MS, SONG_THROTTLE_MS } from "./songs.js";
 import { runNotificationTick } from "./tick.js";
 
 const VAPID_KEY_ID = "abcd1234abcd1234";
@@ -494,6 +494,45 @@ describe("runNotificationTick", () => {
       expect(result.sent).toBe(0);
       expect(push.sent).toHaveLength(0);
     });
+
+    it("claims a change silently as stale, without sending, once it's 24h+ old — and never retries it", async () => {
+      const editor = await seedMember("Stale Editor", "stale-editor");
+      const listener = await seedMember("Stale Listener", "stale-listener");
+      await subscribe(listener, "stale-device");
+
+      const clock = fakeClock(100_000_000);
+      const song = await songsRepo.create(db, {
+        title: "Song Stale",
+        slug: "song-stale",
+        createdAt: clock.now(),
+        updatedAt: clock.now(),
+      });
+      await db.insert(schema.songChartChanges).values({
+        id: "stale-1",
+        songId: song.id,
+        memberId: editor,
+        kind: "edited",
+        changedAt: clock.now(),
+      });
+
+      // The tick never ran in time — by the time it finally does, the
+      // change is past `SONG_MAX_AGE_MS`. It still claims the notification
+      // (so a later tick won't retry it), but sends nothing and counts it
+      // as skipped-stale instead.
+      clock.advance(SONG_MAX_AGE_MS + 1000);
+      const push = recordingPushSender();
+      const result = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(result.sent).toBe(0);
+      expect(result.skippedStale).toBe(1);
+      expect(push.sent).toHaveLength(0);
+
+      // A later tick finds nothing pending: the claim already went through,
+      // so this is not retried, stale or otherwise.
+      clock.advance(SONG_THROTTLE_MS);
+      const later = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(later.sent).toBe(0);
+      expect(later.skippedStale).toBe(0);
+    });
   });
 
   describe("weekly", () => {
@@ -556,6 +595,31 @@ describe("runNotificationTick", () => {
       const result2 = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
       expect(result2.sent).toBe(0);
       expect(push.sent).toHaveLength(1);
+    });
+
+    it("doesn't burn the Sunday slot for a member with no device yet — they still get it once they subscribe", async () => {
+      const memberId = await seedMember("Late Subscriber", "late-subscriber");
+      await seedPublishedTake();
+
+      const clock = fakeClock(SUNDAY_1905_PRAGUE_UTC);
+      const push = recordingPushSender();
+
+      // 19:05, no device subscribed yet: nothing to send, and the slot must
+      // stay open rather than being claimed against a member with nowhere
+      // to deliver to.
+      const first = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(first.sent).toBe(0);
+      expect(push.sent).toHaveLength(0);
+
+      // The member opens `/me` and subscribes a device, still within the
+      // same Sunday window.
+      await subscribe(memberId, "late-device");
+      clock.advance(10 * 60 * 1000);
+
+      const second = await runNotificationTick({ db, clock, push, vapidKeyId: VAPID_KEY_ID });
+      expect(second.sent).toBe(1);
+      expect(push.sent).toHaveLength(1);
+      expect(push.sent[0]?.target.endpoint).toBe("https://fcm.googleapis.com/fcm/send/late-device");
     });
   });
 

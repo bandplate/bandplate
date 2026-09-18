@@ -61,8 +61,8 @@ export function createExports(manifest: SSRManifest) {
       fetch: (request: WorkerRequest, env: WorkerEnv, ctx: WorkerCtx) =>
         handle(manifest, app, request, env, ctx),
       // `wrangler.toml`'s `[triggers] crons` (`*/10 * * * *`, every 10
-      // minutes — matching the tick constant in `global-constraints.md`)
-      // is what actually invokes this; Cron Triggers run in UTC
+      // minutes — matching `NOTIFICATION_TICK_INTERVAL_MS`) is what
+      // actually invokes this; Cron Triggers run in UTC
       // regardless of the band's `Europe/Prague` zone the reminder logic
       // itself reasons in (see `docs/deploy-cloudflare.md`) — the 10-minute
       // cadence makes that distinction immaterial here.

@@ -46,7 +46,17 @@ if (typeof process.loadEnvFile === "function") {
 const adapterKind = process.env.BANDPLATE_ADAPTER === "cloudflare" ? "cloudflare" : "node";
 const adapter =
   adapterKind === "cloudflare"
-    ? cloudflare({ imageService: "compile", platformProxy: { enabled: true } })
+    ? cloudflare({
+        imageService: "compile",
+        platformProxy: { enabled: true },
+        // Custom entry (`src/worker.ts`) instead of the adapter's stock
+        // one, so the built Worker also exports a `scheduled` handler for
+        // `wrangler.toml`'s `[triggers] crons` (the notification tick,
+        // every 10 minutes — see `worker.ts`'s own doc comment and
+        // `docs/deploy-cloudflare.md`). It reproduces the stock `fetch`
+        // handler verbatim, so ordinary request handling is unchanged.
+        workerEntryPoint: { path: "./src/worker.ts" },
+      })
     : node({ mode: "standalone" });
 
 export default defineConfig({

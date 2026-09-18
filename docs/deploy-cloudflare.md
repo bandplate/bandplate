@@ -247,6 +247,39 @@ pnpm exec wrangler deploy
 (`dist/start.mjs`) instead. Nothing else in `astro.config.mjs` branches
 on it.
 
+## Scheduled tick
+
+`wrangler.toml.example` ships `[triggers] crons = ["*/10 * * * *"]`, which
+runs the notification tick every 10 minutes — the same cadence
+`global-constraints.md` specs. The Worker's `scheduled` handler
+(`src/worker.ts`, alongside the normal `fetch` one — wired in via
+`workerEntryPoint` in `astro.config.mjs`) calls
+`src/server/scheduled.ts#runScheduledTick`, which builds the Workers
+runtime, asks `getNotificationDeps()` for the push-sender/DB/clock bundle,
+and — if push is configured at all — calls `@bandplate/core`'s
+`runNotificationTick`. If push isn't configured (no `BANDPLATE_VAPID_*`
+vars, see step 3), `getNotificationDeps()` returns `undefined` and the
+handler returns immediately: the cron still fires every 10 minutes, it
+just has nothing to do.
+
+**Cron Triggers run in UTC.** The reminder logic itself — the weekly
+Sunday-evening slot, the quiet periods, the staleness windows — reasons in
+the band's own `Europe/Prague` zone (`Clock.now()` stays epoch
+milliseconds throughout; only the notification code converts). A 10-minute
+cadence makes the UTC-vs-Prague distinction immaterial for *when this
+Worker wakes up* — it's frequent enough that the Prague-local decision
+inside each tick is what actually gates a send, not the trigger's own
+clock. Nothing about the cron schedule itself needs adjusting for daylight
+saving; the underlying decision logic already accounts for it.
+
+This trigger is applied automatically as part of `wrangler deploy` (crons
+are Worker config, applied the same way `[vars]`/bindings are — no
+separate subcommand to run for a first deploy). Confirm it's live in the
+**Triggers** tab of the Worker in the dashboard, or with `wrangler tail`
+around the :00/:10/:20/... mark — a tick logs
+`[scheduled] notification tick: sent=... gone=... failed=... skippedStale=...`
+on every run.
+
 ## Local verification (no account needed)
 
 Everything above requires a real Cloudflare account. Before spending any
@@ -280,6 +313,23 @@ matching `BANDPLATE_VAPID_PUBLIC_KEY`/`BANDPLATE_VAPID_SUBJECT` in your local
 `wrangler.toml`'s `[vars]` (real values, not the shipped placeholders — see
 step 2). Leave all three out and push notifications stay off, same as a real
 deploy: nothing else here changes.
+
+To fire the scheduled tick without waiting for the cron itself, run
+`wrangler dev` with `--test-scheduled` (this opens an extra local-only
+route that simulates a cron trigger; it changes nothing about the deploy
+config) and hit it with `curl`:
+
+```
+pnpm exec wrangler dev --test-scheduled
+curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"
+```
+
+The `curl` should return `200`, and the `wrangler dev` terminal logs the
+same `[scheduled] notification tick: sent=...` line a real cron
+invocation would produce (or nothing at all beyond that, if push isn't
+configured in your local `.dev.vars`/`wrangler.toml` — see above). Normal
+`fetch` handling is unaffected either way; `curl -I
+http://localhost:8787/login` still serves the sign-in page.
 
 `BANDPLATE_APP_ORIGIN` is the one value here you can't just leave at
 whatever `wrangler.toml` ships, or fake: `pnpm exec wrangler dev` serves the app

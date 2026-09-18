@@ -202,7 +202,16 @@ function buildOperationSpecs(): OperationSpec[] {
                 type: "array",
                 items: {
                   type: "object",
-                  properties: { slug: { type: "string" }, label: { type: "string" } },
+                  properties: {
+                    slug: { type: "string", description: "The instrument's canonical slug." },
+                    label: { type: "string" },
+                    aliases: {
+                      type: "array",
+                      items: { type: "string" },
+                      description:
+                        "Other names for this instrument. Accepted everywhere the canonical slug is.",
+                    },
+                  },
                 },
               },
             },

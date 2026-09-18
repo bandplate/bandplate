@@ -390,11 +390,25 @@ working without anyone editing a mapping file, and an instrument merged into
 another leaves its slug behind so the next run resolves it rather than
 re-creating the row the merge removed.
 
-Aliases resolve but are **not advertised**: `GET /api/ingest/v1/instruments` and
-a `422`'s `validSlugs` both list canonical slugs only. An alias exists to keep an
-older bridge working, not to become a second vocabulary to build against. An
-alias of an *archived* instrument does not resolve at all — archiving means "not
-a choice for new takes", and an alias must not be a side door around that.
+Aliases are other names for an instrument, and they are **advertised as
+accepted** everywhere canonical slugs are. `GET /api/ingest/v1/instruments` lists
+each instrument's aliases beside its slug:
+
+```json
+{ "instruments": [
+  { "slug": "drums-auto", "label": "Auto drums", "aliases": ["drums-sampler"] }
+] }
+```
+
+and a `422`'s `validSlugs` includes them. A bridge may send either name; both
+land on the same instrument. When checking a manifest up front, accept `slug`
+and `aliases` together. A bridge that checks against `slug` alone refuses a
+name the server would take. (Added within v1: the field is additive, and a
+bridge that ignores it keeps working against every slug it could use before.)
+
+An alias of an *archived* instrument does not resolve and is not listed:
+archiving means "not a choice for new takes", and an alias must not be a side
+door around that.
 
 An admin can also **merge** one instrument into another, which moves everything
 that referenced it and leaves its slug behind as an alias. That last part is

@@ -153,6 +153,43 @@ describe("ingest API", () => {
         "drums",
       ]);
     });
+
+    // A bridge that checks its slugs up front (the contract recommends it)
+    // needs to know what RESOLVES, not just what to map onto. Without this,
+    // a slug the band deliberately kept alive as an alias is refused by the
+    // client before the server, which would have accepted it, is ever asked.
+    it("lists each instrument's aliases beside its canonical slug", async () => {
+      const testApp = await buildTestApp();
+      const drums = await instrumentsRepo.create(testApp.db, { slug: "drums", label: "Drums" });
+      await instrumentsRepo.create(testApp.db, { slug: "bass", label: "Bass" });
+      await instrumentsRepo.addAlias(testApp.db, {
+        instrumentId: drums.id,
+        slug: "drums-sampler",
+        source: "manual",
+      });
+      const auth = await ingestToken(testApp);
+      const res = await testApp.app.request("/ingest/v1/instruments", { headers: auth });
+      const body = await res.json();
+      const bySlug = Object.fromEntries(
+        body.instruments.map((i: { slug: string; aliases: string[] }) => [i.slug, i.aliases]),
+      );
+      expect(bySlug).toEqual({ bass: [], drums: ["drums-sampler"] });
+    });
+
+    it("does not list the aliases of an archived instrument, which do not resolve", async () => {
+      const testApp = await buildTestApp();
+      const old = await instrumentsRepo.create(testApp.db, { slug: "old-kit", label: "Old kit" });
+      await instrumentsRepo.addAlias(testApp.db, {
+        instrumentId: old.id,
+        slug: "kit",
+        source: "manual",
+      });
+      await instrumentsRepo.archive(testApp.db, old.id, Date.now());
+      const auth = await ingestToken(testApp);
+      const res = await testApp.app.request("/ingest/v1/instruments", { headers: auth });
+      const body = await res.json();
+      expect(body.instruments).toEqual([]);
+    });
   });
 
   describe("GET /ingest/v1/openapi.json", () => {
@@ -693,10 +730,9 @@ describe("ingest API", () => {
       ]);
     });
 
-    it("does not advertise aliases as valid slugs", async () => {
-      // They resolve, but a bridge must map onto the instruments as they are
-      // — an alias exists to keep an OLD bridge working, not to become a
-      // second vocabulary someone builds against.
+    it("advertises aliases among the valid slugs", async () => {
+      // An alias is another name for the instrument, accepted wherever the
+      // canonical slug is — so the list a 422 hands back names it too.
       const testApp = await buildTestApp();
       await seedInstruments(testApp);
       const bass = (await instrumentsRepo.list(testApp.db)).find((i) => i.slug === "bass");
@@ -731,7 +767,7 @@ describe("ingest API", () => {
       });
       expect(res.status).toBe(422);
       const body = await res.json();
-      expect(body.validSlugs.sort()).toEqual(["bass", "drums"]);
+      expect(body.validSlugs.sort()).toEqual(["bass", "bass-di-2", "drums"]);
     });
 
     it("still refuses when the declaration did not ask", async () => {

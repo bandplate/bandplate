@@ -26,12 +26,14 @@ export interface InstrumentVocab {
    */
   bySlug: Map<string, instrumentsRepo.Instrument>;
   /**
-   * What a bridge should be mapping ONTO — canonical slugs only.
+   * Every slug the server accepts, canonical and alias alike — the list a 422
+   * hands back.
    *
-   * Aliases resolve but are not advertised: they exist to keep old bridges
-   * working, not to become a second vocabulary someone builds against. This
-   * is the list a 422 hands back, so it must name the instruments as they
-   * actually are.
+   * An alias is another name for an instrument, not a legacy shim, so it is
+   * advertised wherever accepted slugs are: here and in
+   * `GET /ingest/v1/instruments`. Listing canonical slugs alone told a bridge
+   * that a slug the server would take was invalid, and a bridge that checks
+   * up front believed it.
    */
   validSlugs: string[];
 }
@@ -42,7 +44,6 @@ export async function loadInstrumentVocab(db: Db): Promise<InstrumentVocab> {
     instrumentsRepo.listAllAliases(db),
   ]);
   const bySlug = new Map(rows.map((r) => [r.slug, r]));
-  const validSlugs = [...bySlug.keys()].sort();
 
   const byId = new Map(rows.map((r) => [r.id, r]));
   for (const alias of aliases) {
@@ -55,7 +56,7 @@ export async function loadInstrumentVocab(db: Db): Promise<InstrumentVocab> {
       bySlug.set(alias.slug, target);
     }
   }
-  return { bySlug, validSlugs };
+  return { bySlug, validSlugs: [...bySlug.keys()].sort() };
 }
 
 /**

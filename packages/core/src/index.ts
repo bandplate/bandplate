@@ -13,3 +13,4 @@ export * from "./services/auth.js";
 export * from "./services/members.js";
 export * from "./services/assets.js";
 export * from "./services/songs.js";
+export * from "./notifications/tick.js";

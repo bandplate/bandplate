@@ -165,6 +165,47 @@ directory containing nothing but `dist/`, `package.json`, and a
 > mutating page request with a mismatched `Origin` whether or not the
 > specific page remembered its own check.
 
+### Notification tick
+
+If push is configured (see "Push notifications" above), `node dist/start.mjs`
+also runs the notification tick itself — no separate cron to set up, unlike
+the Cloudflare profile (see [`deploy-cloudflare.md`](deploy-cloudflare.md)'s
+"Scheduled tick", which relies on a Cron Trigger instead). The Node
+composition root (`apps/web/src/server/app.ts`) starts one `setInterval`
+the first time the runtime is built — the first request the server
+receives — ticking every 10 minutes after an initial ~30s delay, sharing
+the same database connection the rest of the app uses. A tick logs
+`[scheduler] notification tick: sent=... gone=... failed=... skippedStale=...`;
+if push isn't configured, nothing starts at all.
+
+Because the runtime is only built lazily on that first request, `start`
+also fires one warm-up request to `/login` right after the server starts
+listening (retried for up to 30s) purely so the scheduler exists even if
+real traffic is slow to arrive. A failed warm-up is logged, never fatal —
+the scheduler simply starts a little later, whenever the first real
+request does come in.
+
+**Running more than one Node replica against the same database?** Only one
+of them should tick — two schedulers hitting the same database independently
+don't corrupt anything (`notificationsRepo` claims work before sending), but
+there's no reason to run the query twice every 10 minutes. Set
+`BANDPLATE_SCHEDULER=off` on every replica but one to suppress the scheduler
+there; the excluded replicas serve requests exactly as before, they just
+never start their own timer.
+
+To fire a tick on demand — right after configuring push, to confirm it
+works, or from an external cron instead of the in-process scheduler —
+run:
+
+```sh
+pnpm --filter web run notify:tick
+```
+
+It builds the same runtime the app itself would (reading the same env,
+including `BANDPLATE_DATABASE_URL` and `BANDPLATE_VAPID_*`) and runs exactly
+one tick, printing the same result line before exiting. If push isn't
+configured it says so and does nothing.
+
 ## 5. Create the first member
 
 Once it is running, visit `/setup`. This page only exists until the first

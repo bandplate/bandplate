@@ -59,3 +59,48 @@ try {
 // separately-built dependency graph — into this file too.
 const entryUrl = new URL("./server/entry.mjs", import.meta.url);
 await import(entryUrl.href);
+
+// Warm-up request — the Node notification scheduler (`server/app.ts`'s
+// `getRuntime()`, wired up alongside the rest of the composition root; see
+// `notification-scheduler.ts`) only starts once the runtime has actually
+// been built, and the runtime is only built lazily, the first time a
+// request reaches `middleware.ts` — same "nothing runs at module top level
+// in the built output" fact this file's header explains for config
+// validation. Left alone, a freshly (re)started deployment that happens to
+// sit quiet for a while — an overnight redeploy, a band on a break — would
+// leave the scheduler unstarted for that whole stretch, silently missing
+// ticks it should have been running.
+//
+// `/login` is the same target the route tests already poll for readiness
+// (see e.g. `pages/login-token.route.test.ts`'s `waitForServer`): public,
+// unauthenticated, and cheap to render. This keeps its own short internal
+// retry loop — the adapter's `await import` above only guarantees the
+// module has finished its own top-level setup, not that the HTTP listener
+// has finished binding the port yet — capped at ~30s total. Deliberately
+// NOT part of `try`/`catch`-and-`process.exit(1)` like the config
+// validation above: a failed warm-up only means the scheduler waits for
+// real traffic instead, same as before this existed, so it's logged and
+// nothing more. Runs fire-and-forget (not awaited) — the server is already
+// listening by the time this fires, and nothing here should delay the
+// process being considered "started".
+async function warmUp(): Promise<void> {
+  const port = process.env.PORT ?? "4321";
+  const url = `http://127.0.0.1:${port}/login`;
+  const deadline = Date.now() + 30_000;
+  let lastErr: unknown;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(url);
+      // Any response at all — even a 4xx/5xx — proves the listener (and
+      // therefore the runtime behind it) is up; that's all this needs.
+      console.log(`[start] warm-up request to ${url}: ${res.status}`);
+      return;
+    } catch (err) {
+      lastErr = err;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+  console.error(`[start] warm-up request to ${url} did not succeed within 30s: ${String(lastErr)}`);
+}
+
+void warmUp();

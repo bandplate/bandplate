@@ -36,6 +36,10 @@ import { createWebPushSender, vapidKeyId } from "@bandplate/push";
 import { createS3Storage } from "@bandplate/storage";
 import { createClient } from "@libsql/client";
 import { type RuntimeConfig, loadConfig } from "./config.js";
+import {
+  shouldStartNotificationScheduler,
+  startNotificationScheduler,
+} from "./notification-scheduler.js";
 
 // `ReturnType<typeof createApp>` rather than importing Hono's own `Hono`
 // type directly — `hono` is only a transitive dependency here (declared by
@@ -121,10 +125,59 @@ async function buildRuntime(): Promise<Runtime> {
   return { config, deps, authDeps, app };
 }
 
-/** Memoized: the environment is read and the app is built once per process. */
+/**
+ * Shared by `getNotificationDeps` and the scheduler start-up below — the
+ * one place that turns `RuntimeConfig`'s `push` (or its absence) into a
+ * `NotificationTickDeps` (or `undefined`).
+ */
+function toNotificationDeps(
+  config: RuntimeConfig,
+  deps: AppDeps,
+): NotificationTickDeps | undefined {
+  if (!config.push) {
+    return undefined;
+  }
+  return {
+    db: deps.db,
+    clock: deps.clock,
+    push: createWebPushSender(config.push),
+    vapidKeyId: vapidKeyId(config.push.publicKey),
+  };
+}
+
+/**
+ * Starts the Node scheduler (see `notification-scheduler.ts`) the first
+ * time the runtime is built in this process — never at module load, since
+ * `RuntimeConfig` (and therefore whether push is even configured) doesn't
+ * exist until then. A no-op when push isn't configured, or when an
+ * operator has set `BANDPLATE_SCHEDULER=off` — see that env var's own doc
+ * in `docs/self-hosting.md`, for running more than one Node replica
+ * against the same database without every replica ticking independently.
+ */
+function maybeStartNotificationScheduler(runtime: Runtime): void {
+  const deps = toNotificationDeps(runtime.config, runtime.deps);
+  if (!deps) {
+    return;
+  }
+  if (!shouldStartNotificationScheduler(process.env.BANDPLATE_SCHEDULER)) {
+    return;
+  }
+  startNotificationScheduler(deps);
+}
+
+/**
+ * Memoized: the environment is read and the app is built once per process.
+ * The notification scheduler (if configured) starts right after that first
+ * build resolves — deliberately not from inside `buildRuntime` itself,
+ * which would recurse back into this same pending promise via
+ * `getNotificationDeps`/`toNotificationDeps` and deadlock.
+ */
 function getRuntime(): Promise<Runtime> {
   if (!runtimePromise) {
-    runtimePromise = buildRuntime();
+    runtimePromise = buildRuntime().then((runtime) => {
+      maybeStartNotificationScheduler(runtime);
+      return runtime;
+    });
   }
   return runtimePromise;
 }
@@ -186,15 +239,7 @@ export async function getWebConfig(): Promise<WebConfig> {
  */
 export async function getNotificationDeps(): Promise<NotificationTickDeps | undefined> {
   const { config, deps } = await getRuntime();
-  if (!config.push) {
-    return undefined;
-  }
-  return {
-    db: deps.db,
-    clock: deps.clock,
-    push: createWebPushSender(config.push),
-    vapidKeyId: vapidKeyId(config.push.publicKey),
-  };
+  return toNotificationDeps(config, deps);
 }
 
 /**

@@ -9,7 +9,8 @@
     "preview": "astro preview",
     "start": "node dist/start.mjs",
     "typecheck": "astro check",
-    "test": "vitest run"
+    "test": "vitest run",
+    "notify:tick": "tsx scripts/notify-tick.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "12.6.10",
@@ -36,6 +37,7 @@
     "@astrojs/check": "^0.9.4",
     "@cloudflare/workers-types": "^5.20260907.1",
     "esbuild": "^0.24.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "wrangler": "4.41.0"

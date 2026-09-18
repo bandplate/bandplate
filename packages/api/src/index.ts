@@ -32,6 +32,16 @@ export interface AppConfig {
   trustedProxyDepth?: number;
   /** See `AuthRouteDeps.enableDeferredMailSend` in `routes/auth.ts`. Workers profile only. */
   enableDeferredMailSend?: boolean;
+  /**
+   * Web Push, when configured. `publicKey` is what a subscribing browser's
+   * `pushManager.subscribe` needs as `applicationServerKey`; `keyId` (see
+   * `@bandplate/push`'s `vapidKeyId`) is what gets stamped onto every stored
+   * subscription, so a later VAPID key rotation can tell stale subscriptions
+   * apart from current ones without re-deriving the id each time. Undefined
+   * when push notifications are off — never the private key, which routes
+   * never need and must not be able to leak.
+   */
+  push?: { publicKey: string; keyId: string };
 }
 
 /**

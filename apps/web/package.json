@@ -20,6 +20,7 @@
     "@bandplate/db": "workspace:*",
     "@bandplate/i18n": "workspace:*",
     "@bandplate/mail": "workspace:*",
+    "@bandplate/push": "workspace:*",
     "@bandplate/storage": "workspace:*",
     "@bandplate/ui": "workspace:*",
     "@libsql/client": "0.14.0",

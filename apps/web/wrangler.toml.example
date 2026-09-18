@@ -58,3 +58,16 @@ S3_ENDPOINT = "https://<account-id>.r2.cloudflarestorage.com"
 S3_PUBLIC_ENDPOINT = "https://<account-id>.r2.cloudflarestorage.com"
 S3_BUCKET = "bandplate"
 S3_REGION = "auto"
+
+# Push notifications (Web Push / VAPID) — optional, off by default. Left
+# commented out on purpose: BANDPLATE_VAPID_PUBLIC_KEY and BANDPLATE_VAPID_SUBJECT
+# are all-or-nothing with the BANDPLATE_VAPID_PRIVATE_KEY *secret* below (see
+# docs/deploy-cloudflare.md's secrets step) — a real key pair uncommented here
+# with no matching secret set fails the placeholder/completeness check at
+# startup, same as leaving one BANDPLATE_SMTP_* variable set without the rest.
+# Generate a pair with `pnpm --filter @bandplate/push vapid:generate`, then
+# uncomment both lines below with your public key and a real contact
+# address, and set the private key with `wrangler secret put
+# BANDPLATE_VAPID_PRIVATE_KEY` — never put the private key in this file.
+# BANDPLATE_VAPID_PUBLIC_KEY = "<your generated public key>"
+# BANDPLATE_VAPID_SUBJECT = "mailto:band@example.com"

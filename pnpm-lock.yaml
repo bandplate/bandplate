@@ -41,6 +41,9 @@ importers:
       '@bandplate/mail':
         specifier: workspace:*
         version: link:../../packages/mail
+      '@bandplate/push':
+        specifier: workspace:*
+        version: link:../../packages/push
       '@bandplate/storage':
         specifier: workspace:*
         version: link:../../packages/storage

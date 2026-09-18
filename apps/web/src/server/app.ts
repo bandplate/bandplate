@@ -26,11 +26,13 @@ import { type AppDeps, createApp } from "@bandplate/api";
 import {
   type AuthDeps,
   type Mailer,
+  type NotificationTickDeps,
   createInMemoryRateLimiter,
   systemClock,
 } from "@bandplate/core";
 import { createDb } from "@bandplate/db";
 import { createDevMailer } from "@bandplate/mail";
+import { createWebPushSender, vapidKeyId } from "@bandplate/push";
 import { createS3Storage } from "@bandplate/storage";
 import { createClient } from "@libsql/client";
 import { type RuntimeConfig, loadConfig } from "./config.js";
@@ -89,6 +91,9 @@ async function buildRuntime(): Promise<Runtime> {
       bootstrapToken: config.bootstrapToken,
       cookieSecure: config.cookieSecure,
       trustedProxyDepth: config.trustedProxyDepth,
+      push: config.push
+        ? { publicKey: config.push.publicKey, keyId: vapidKeyId(config.push.publicKey) }
+        : undefined,
     },
   };
   const authDeps: AuthDeps = {
@@ -145,6 +150,18 @@ export async function getAppDeps(): Promise<AppDeps> {
 }
 
 /**
+ * The subset of `RuntimeConfig` safe to reach from a page — everything
+ * except `push`, which is narrowed from the full `VapidConfig` (private key
+ * included) down to just the `publicKey` a browser's `pushManager.subscribe`
+ * needs. `getWebConfig()` is called from Astro pages (see `/me`'s
+ * Notifications section), so the private key must never round-trip through
+ * it even in memory — there is no route that needs it there at all.
+ */
+export interface WebConfig extends Omit<RuntimeConfig, "push"> {
+  push?: { publicKey: string };
+}
+
+/**
  * The whole validated deployment config, for the handful of settings that are
  * not the API app's business. `AppDeps.config` is `packages/api`'s
  * `AppConfig` — origin, bootstrap token, cookie flags — and
@@ -152,8 +169,32 @@ export async function getAppDeps(): Promise<AppDeps> {
  * putting it there would make `packages/api` depend on `@bandplate/i18n` to
  * name its type.
  */
-export async function getWebConfig(): Promise<RuntimeConfig> {
-  return (await getRuntime()).config;
+export async function getWebConfig(): Promise<WebConfig> {
+  const { config } = await getRuntime();
+  return {
+    ...config,
+    push: config.push ? { publicKey: config.push.publicKey } : undefined,
+  };
+}
+
+/**
+ * Dependencies for `@bandplate/core`'s `runNotificationTick` — the same `db`
+ * and `clock` (`systemClock`) as the rest of this runtime, plus a
+ * `createWebPushSender` built from the VAPID config. `undefined` when push
+ * isn't configured, which every caller treats as "nothing to do" rather than
+ * an error, since push is entirely opt-in.
+ */
+export async function getNotificationDeps(): Promise<NotificationTickDeps | undefined> {
+  const { config, deps } = await getRuntime();
+  if (!config.push) {
+    return undefined;
+  }
+  return {
+    db: deps.db,
+    clock: deps.clock,
+    push: createWebPushSender(config.push),
+    vapidKeyId: vapidKeyId(config.push.publicKey),
+  };
 }
 
 /**

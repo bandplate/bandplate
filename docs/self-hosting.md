@@ -63,6 +63,23 @@ that `app` service they must.** The `.env.example` comment on those two
 variables explains exactly why: a presigned URL signed against the wrong one
 403s or hangs in the browser with no obvious cause.
 
+### Push notifications
+
+Optional, and off by default — unlike mail and object storage, there is no
+requirement to configure this. Set all three `BANDPLATE_VAPID_*` variables
+together (all-or-nothing, same rule as `BANDPLATE_SMTP_*`) to turn it on;
+leave all three unset and `/me`'s Notifikace section simply doesn't render.
+
+```sh
+pnpm --filter @bandplate/push vapid:generate
+```
+
+prints a fresh key pair. `BANDPLATE_VAPID_PUBLIC_KEY` is safe to expose to
+the browser; `BANDPLATE_VAPID_PRIVATE_KEY` is not — treat it like the SMTP
+password, never commit it. `BANDPLATE_VAPID_SUBJECT` is a `mailto:` or
+`https:` contact address, per RFC 8292, that a push service can reach if
+this deployment starts misbehaving.
+
 ### One variable that is a decision, not a value
 
 **`BANDPLATE_TRUSTED_PROXY_DEPTH`** controls how many reverse-proxy hops in

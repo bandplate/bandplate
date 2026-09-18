@@ -249,4 +249,50 @@ describe("loadConfig", () => {
     expect(second).toBe(first);
     expect(second.databaseUrl).toBe("file:./test.db");
   });
+
+  // --- VAPID (Web Push) — optional, all-or-nothing, mirrors SMTP above ---
+
+  const VAPID_ENV = {
+    BANDPLATE_VAPID_PUBLIC_KEY:
+      "BCqYw5fp3IEnFM4W6Hv-XAyPWUbqedCa2pW2wEDz3YrqHbwD0IQ4F4YfIE5rI_BCU8vBhAOHav848fAiJlMiJ7g",
+    BANDPLATE_VAPID_PRIVATE_KEY: "r3yxmvzci4jgTxiS9hKtpQLEzHOp0qWpvFsc8k6kobw",
+    BANDPLATE_VAPID_SUBJECT: "mailto:band@example.com",
+  };
+
+  it("leaves push undefined when no BANDPLATE_VAPID_* variable is set", () => {
+    const config = loadConfig({ ...BASE_ENV });
+    expect(config.push).toBeUndefined();
+  });
+
+  it("builds a VapidConfig when all three BANDPLATE_VAPID_* variables are set", () => {
+    const config = loadConfig({ ...BASE_ENV, ...VAPID_ENV });
+    expect(config.push).toEqual({
+      publicKey: VAPID_ENV.BANDPLATE_VAPID_PUBLIC_KEY,
+      privateKey: VAPID_ENV.BANDPLATE_VAPID_PRIVATE_KEY,
+      subject: VAPID_ENV.BANDPLATE_VAPID_SUBJECT,
+    });
+  });
+
+  it("fails, naming the missing field, when VAPID config is partially set", () => {
+    const env = {
+      ...BASE_ENV,
+      BANDPLATE_VAPID_PUBLIC_KEY: VAPID_ENV.BANDPLATE_VAPID_PUBLIC_KEY,
+    };
+    expect(() => loadConfig(env)).toThrow(ConfigError);
+    expect(() => loadConfig(env)).toThrow(
+      /BANDPLATE_VAPID_PRIVATE_KEY.*BANDPLATE_VAPID_SUBJECT|BANDPLATE_VAPID_SUBJECT.*BANDPLATE_VAPID_PRIVATE_KEY/,
+    );
+  });
+
+  it("fails, naming BANDPLATE_VAPID_PUBLIC_KEY, when it is malformed", () => {
+    const env = { ...BASE_ENV, ...VAPID_ENV, BANDPLATE_VAPID_PUBLIC_KEY: "too-short" };
+    expect(() => loadConfig(env)).toThrow(ConfigError);
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_VAPID_PUBLIC_KEY/);
+  });
+
+  it("fails, naming BANDPLATE_VAPID_SUBJECT, when it doesn't start with mailto: or https:", () => {
+    const env = { ...BASE_ENV, ...VAPID_ENV, BANDPLATE_VAPID_SUBJECT: "band@example.com" };
+    expect(() => loadConfig(env)).toThrow(ConfigError);
+    expect(() => loadConfig(env)).toThrow(/BANDPLATE_VAPID_SUBJECT/);
+  });
 });

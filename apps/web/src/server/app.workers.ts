@@ -17,9 +17,15 @@
 // (as Vitest uses) never applies it, so the Node/`vitest run` path is
 // completely unaffected by this file's existence.
 import { type AppDeps, createApp } from "@bandplate/api";
-import { type AuthDeps, createInMemoryRateLimiter, systemClock } from "@bandplate/core";
+import {
+  type AuthDeps,
+  type NotificationTickDeps,
+  createInMemoryRateLimiter,
+  systemClock,
+} from "@bandplate/core";
 import { createD1Db } from "@bandplate/db";
 import { createHttpMailer } from "@bandplate/mail";
+import { createWebPushSender, vapidKeyId } from "@bandplate/push";
 import { createS3Storage } from "@bandplate/storage";
 import {
   type CloudflareEnv,
@@ -83,6 +89,9 @@ async function buildWorkersRuntime(env: CloudflareEnv): Promise<Runtime> {
       cookieSecure: config.cookieSecure,
       trustedProxyDepth: config.trustedProxyDepth,
       enableDeferredMailSend: true,
+      push: config.push
+        ? { publicKey: config.push.publicKey, keyId: vapidKeyId(config.push.publicKey) }
+        : undefined,
     },
   };
   const authDeps: AuthDeps = {
@@ -144,14 +153,46 @@ export async function getAppDeps(): Promise<AppDeps> {
 }
 
 /**
+ * The subset of `WorkersRuntimeConfig` safe to reach from a page — see
+ * `app.ts`'s `WebConfig` for why `push` is narrowed down to just
+ * `publicKey` (the private key must never round-trip through a page).
+ */
+export interface WebConfig extends Omit<WorkersRuntimeConfig, "push"> {
+  push?: { publicKey: string };
+}
+
+/**
  * The whole validated deployment config, for settings that are not the API
  * app's business — `BANDPLATE_DEFAULT_LOCALE` today. Must stay in step with
  * `app.ts`'s export of the same name: `astro.config.mjs` aliases this file in
  * for the Workers build, so a name missing here typechecks fine and fails the
  * Cloudflare build instead.
  */
-export async function getWebConfig(): Promise<WorkersRuntimeConfig> {
-  return (await getRuntime()).config;
+export async function getWebConfig(): Promise<WebConfig> {
+  const { config } = await getRuntime();
+  return {
+    ...config,
+    push: config.push ? { publicKey: config.push.publicKey } : undefined,
+  };
+}
+
+/**
+ * Dependencies for `@bandplate/core`'s `runNotificationTick` — same shape as
+ * `app.ts`'s export of the same name (see its doc comment); this profile's
+ * scheduled handler (`server/scheduled.ts`, a later increment) is what calls
+ * it. `undefined` when push isn't configured.
+ */
+export async function getNotificationDeps(): Promise<NotificationTickDeps | undefined> {
+  const { config, deps } = await getRuntime();
+  if (!config.push) {
+    return undefined;
+  }
+  return {
+    db: deps.db,
+    clock: deps.clock,
+    push: createWebPushSender(config.push),
+    vapidKeyId: vapidKeyId(config.push.publicKey),
+  };
 }
 
 /**

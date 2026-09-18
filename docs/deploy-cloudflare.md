@@ -203,6 +203,21 @@ pnpm exec wrangler secret put S3_SECRET_ACCESS_KEY
 correct for Workers — every request arrives via Cloudflare's own edge as
 exactly one trusted hop).
 
+**Push notifications are optional.** Turning them on needs three more
+values, all-or-nothing: `BANDPLATE_VAPID_PUBLIC_KEY` and
+`BANDPLATE_VAPID_SUBJECT` uncommented in `wrangler.toml`'s `[vars]` (see
+that file's own comment — a real subject, e.g. `mailto:you@bandplate.example`,
+not the shipped example), plus the private key as a fifth secret:
+
+```
+pnpm exec wrangler secret put BANDPLATE_VAPID_PRIVATE_KEY
+```
+
+Generate the pair with `pnpm --filter @bandplate/push vapid:generate` — it
+prints both keys, public first. Leave all three unset and push notifications
+stay off: `/me`'s Notifikace section doesn't render, and nothing about
+migrations, mail or storage changes.
+
 ## 4. Migrate — before every deploy, unconditionally
 
 ```
@@ -257,6 +272,14 @@ S3_ACCESS_KEY_ID=dev-fake-key-id
 S3_SECRET_ACCESS_KEY=dev-fake-secret
 BANDPLATE_APP_ORIGIN=http://localhost:8787
 ```
+
+That's the minimum to boot. To also exercise push notifications locally,
+add a sixth value — `BANDPLATE_VAPID_PRIVATE_KEY` from a pair generated with
+`pnpm --filter @bandplate/push vapid:generate` — *and* uncomment the
+matching `BANDPLATE_VAPID_PUBLIC_KEY`/`BANDPLATE_VAPID_SUBJECT` in your local
+`wrangler.toml`'s `[vars]` (real values, not the shipped placeholders — see
+step 2). Leave all three out and push notifications stay off, same as a real
+deploy: nothing else here changes.
 
 `BANDPLATE_APP_ORIGIN` is the one value here you can't just leave at
 whatever `wrangler.toml` ships, or fake: `pnpm exec wrangler dev` serves the app

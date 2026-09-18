@@ -75,4 +75,50 @@ describe("loadWorkersConfig", () => {
     const env = { ...VALID_ENV, BANDPLATE_APP_ORIGIN: "https://bandplate.io" };
     expect(() => loadWorkersConfig(env)).not.toThrow();
   });
+
+  // --- VAPID (Web Push) — optional, all-or-nothing, mirrors config.test.ts ---
+
+  const VAPID_ENV = {
+    BANDPLATE_VAPID_PUBLIC_KEY:
+      "BCqYw5fp3IEnFM4W6Hv-XAyPWUbqedCa2pW2wEDz3YrqHbwD0IQ4F4YfIE5rI_BCU8vBhAOHav848fAiJlMiJ7g",
+    BANDPLATE_VAPID_PRIVATE_KEY: "r3yxmvzci4jgTxiS9hKtpQLEzHOp0qWpvFsc8k6kobw",
+    BANDPLATE_VAPID_SUBJECT: "mailto:band@example.com",
+  };
+
+  it("leaves push undefined when no BANDPLATE_VAPID_* variable is set", () => {
+    const config = loadWorkersConfig(VALID_ENV);
+    expect(config.push).toBeUndefined();
+  });
+
+  it("builds a VapidConfig when all three BANDPLATE_VAPID_* variables are set", () => {
+    const config = loadWorkersConfig({ ...VALID_ENV, ...VAPID_ENV });
+    expect(config.push).toEqual({
+      publicKey: VAPID_ENV.BANDPLATE_VAPID_PUBLIC_KEY,
+      privateKey: VAPID_ENV.BANDPLATE_VAPID_PRIVATE_KEY,
+      subject: VAPID_ENV.BANDPLATE_VAPID_SUBJECT,
+    });
+  });
+
+  it("fails, naming the missing field, when VAPID config is partially set", () => {
+    const env = {
+      ...VALID_ENV,
+      BANDPLATE_VAPID_PUBLIC_KEY: VAPID_ENV.BANDPLATE_VAPID_PUBLIC_KEY,
+    };
+    expect(() => loadWorkersConfig(env)).toThrow(ConfigError);
+    expect(() => loadWorkersConfig(env)).toThrow(
+      /BANDPLATE_VAPID_PRIVATE_KEY.*BANDPLATE_VAPID_SUBJECT|BANDPLATE_VAPID_SUBJECT.*BANDPLATE_VAPID_PRIVATE_KEY/,
+    );
+  });
+
+  it("fails, naming BANDPLATE_VAPID_PUBLIC_KEY, when it is malformed", () => {
+    const env = { ...VALID_ENV, ...VAPID_ENV, BANDPLATE_VAPID_PUBLIC_KEY: "too-short" };
+    expect(() => loadWorkersConfig(env)).toThrow(ConfigError);
+    expect(() => loadWorkersConfig(env)).toThrow(/BANDPLATE_VAPID_PUBLIC_KEY/);
+  });
+
+  it("fails, naming BANDPLATE_VAPID_SUBJECT, when it doesn't start with mailto: or https:", () => {
+    const env = { ...VALID_ENV, ...VAPID_ENV, BANDPLATE_VAPID_SUBJECT: "band@example.com" };
+    expect(() => loadWorkersConfig(env)).toThrow(ConfigError);
+    expect(() => loadWorkersConfig(env)).toThrow(/BANDPLATE_VAPID_SUBJECT/);
+  });
 });

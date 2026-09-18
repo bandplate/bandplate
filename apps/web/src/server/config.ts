@@ -9,6 +9,7 @@
 // composition root the brief calls out as the one place `apps/web` may use
 // Node APIs. Nothing here is imported by `packages/core`/`db`/`api`.
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "@bandplate/i18n";
+import { type VapidConfig, validateVapidConfig } from "@bandplate/push";
 import { z } from "zod";
 
 export class ConfigError extends Error {
@@ -57,6 +58,14 @@ export interface RuntimeConfig {
   smtp?: SmtpConfig;
   s3: S3Config;
   isProduction: boolean;
+  /**
+   * Web Push (VAPID) — optional, all-or-nothing, mirroring `smtp` above.
+   * Undefined means push notifications are off entirely: `getNotificationDeps`
+   * (in the composition root) returns `undefined`, and `getWebConfig().push`
+   * is absent, so `/me`'s Notifikace section renders nothing (see "No fake
+   * affordances" in the repo's CLAUDE.md — there is no half-on state).
+   */
+  push?: VapidConfig;
 }
 
 const BOOLEAN_STRING = z
@@ -77,6 +86,62 @@ const LOCALE_STRING = z
 const NON_NEGATIVE_INT_STRING = z
   .string()
   .refine((v) => /^\d+$/.test(v), { message: "must be a non-negative integer" });
+
+interface VapidEnvFields {
+  BANDPLATE_VAPID_PUBLIC_KEY?: string;
+  BANDPLATE_VAPID_PRIVATE_KEY?: string;
+  BANDPLATE_VAPID_SUBJECT?: string;
+}
+
+/**
+ * Shared by both profiles' schemas (see `config.worker.ts`'s own
+ * `superRefine`) — VAPID config is optional but all-or-nothing, exactly like
+ * SMTP above. Once complete, its values are checked for actual VAPID key
+ * shape with `@bandplate/push`'s `validateVapidConfig` rather than just
+ * non-emptiness: a malformed key, or a subject missing its `mailto:`/`https:`
+ * scheme, otherwise fails silently as a per-push 4xx from the push service
+ * with nothing pointing back at configuration.
+ */
+export function addVapidIssues(env: VapidEnvFields, ctx: z.RefinementCtx): void {
+  const vapidFields = {
+    BANDPLATE_VAPID_PUBLIC_KEY: env.BANDPLATE_VAPID_PUBLIC_KEY,
+    BANDPLATE_VAPID_PRIVATE_KEY: env.BANDPLATE_VAPID_PRIVATE_KEY,
+    BANDPLATE_VAPID_SUBJECT: env.BANDPLATE_VAPID_SUBJECT,
+  };
+  const vapidProvided = Object.values(vapidFields).some((v) => v !== undefined);
+  const vapidComplete = Object.values(vapidFields).every((v) => v !== undefined);
+  if (vapidProvided && !vapidComplete) {
+    for (const [name, value] of Object.entries(vapidFields)) {
+      if (value === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [name],
+          message:
+            "is required once any BANDPLATE_VAPID_* variable is set — VAPID config is " +
+            "all-or-nothing (BANDPLATE_VAPID_PUBLIC_KEY, BANDPLATE_VAPID_PRIVATE_KEY, " +
+            "BANDPLATE_VAPID_SUBJECT).",
+        });
+      }
+    }
+    return;
+  }
+  if (!vapidComplete) {
+    return;
+  }
+  const problems = validateVapidConfig({
+    publicKey: vapidFields.BANDPLATE_VAPID_PUBLIC_KEY as string,
+    privateKey: vapidFields.BANDPLATE_VAPID_PRIVATE_KEY as string,
+    subject: vapidFields.BANDPLATE_VAPID_SUBJECT as string,
+  });
+  for (const problem of problems) {
+    const path = problem.startsWith("publicKey")
+      ? "BANDPLATE_VAPID_PUBLIC_KEY"
+      : problem.startsWith("privateKey")
+        ? "BANDPLATE_VAPID_PRIVATE_KEY"
+        : "BANDPLATE_VAPID_SUBJECT";
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message: problem });
+  }
+}
 
 const EnvSchema = z
   .object({
@@ -130,6 +195,14 @@ const EnvSchema = z
     BANDPLATE_SMTP_FROM: z.string().trim().min(1).optional(),
     BANDPLATE_SMTP_SECURE: BOOLEAN_STRING.optional(),
     BANDPLATE_ALLOW_DEV_MAILER: BOOLEAN_STRING.optional(),
+    // --- Web Push (VAPID) -----------------------------------------------
+    // All-or-nothing, like SMTP above — validated for shape (not just
+    // non-empty) below in `superRefine`, via `@bandplate/push`'s
+    // `validateVapidConfig`, since a malformed key fails silently at send
+    // time otherwise (every push just 400s from the push service).
+    BANDPLATE_VAPID_PUBLIC_KEY: z.string().trim().min(1).optional(),
+    BANDPLATE_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+    BANDPLATE_VAPID_SUBJECT: z.string().trim().min(1).optional(),
     // --- Object storage (audio) ---------------------------------------
     // Six variables, all required — this app has no meaningful "no
     // storage configured" mode (every take's audio lives here). The
@@ -239,6 +312,8 @@ const EnvSchema = z
           "BANDPLATE_SMTP_* instead.",
       });
     }
+
+    addVapidIssues(env, ctx);
   });
 
 function formatZodError(error: z.ZodError): string {
@@ -283,6 +358,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
         }
       : undefined;
 
+  const push: VapidConfig | undefined =
+    data.BANDPLATE_VAPID_PUBLIC_KEY &&
+    data.BANDPLATE_VAPID_PRIVATE_KEY &&
+    data.BANDPLATE_VAPID_SUBJECT
+      ? {
+          publicKey: data.BANDPLATE_VAPID_PUBLIC_KEY,
+          privateKey: data.BANDPLATE_VAPID_PRIVATE_KEY,
+          subject: data.BANDPLATE_VAPID_SUBJECT,
+        }
+      : undefined;
+
   cached = {
     databaseUrl: data.BANDPLATE_DATABASE_URL,
     appOrigin: data.BANDPLATE_APP_ORIGIN ?? "http://localhost:4321",
@@ -303,6 +389,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
       secretAccessKey: data.S3_SECRET_ACCESS_KEY,
     },
     isProduction,
+    push,
   };
   return cached;
 }

@@ -9,7 +9,7 @@ import { DEFAULT_LOCALE, LOCALES, type Locale } from "@bandplate/i18n";
 // so nothing downstream (the composition root, `AppDeps`, every repo/
 // route) needs to know which profile built it.
 import { z } from "zod";
-import { ConfigError, type RuntimeConfig } from "./config.js";
+import { ConfigError, type RuntimeConfig, addVapidIssues } from "./config.js";
 
 /**
  * The bindings/vars this Worker declares in `wrangler.toml` — see
@@ -30,6 +30,9 @@ export interface CloudflareEnv {
   MAIL_PROVIDER?: string;
   MAIL_API_KEY?: string;
   MAIL_FROM?: string;
+  BANDPLATE_VAPID_PUBLIC_KEY?: string;
+  BANDPLATE_VAPID_PRIVATE_KEY?: string;
+  BANDPLATE_VAPID_SUBJECT?: string;
   S3_ENDPOINT: string;
   S3_PUBLIC_ENDPOINT: string;
   S3_BUCKET: string;
@@ -75,66 +78,76 @@ const NOT_A_PLACEHOLDER = {
     "every form POST 403 with no visible error.",
 };
 
-const EnvSchema = z.object({
-  BANDPLATE_APP_ORIGIN: z
-    .string()
-    .trim()
-    .min(1)
-    .refine(
-      (v) => {
-        try {
-          return new URL(v).origin === v;
-        } catch {
-          return false;
-        }
-      },
-      { message: "must be a bare origin — scheme + host only, e.g. https://bandplate.example" },
-    )
-    .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
-  BANDPLATE_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
-  // See `RuntimeConfig.defaultLocale`. Validated against the shipped
-  // languages so a typo'd `cz` fails the deploy instead of looking like the
-  // setting does nothing.
-  BANDPLATE_DEFAULT_LOCALE: z
-    .string()
-    .trim()
-    .refine((v): v is Locale => (LOCALES as readonly string[]).includes(v), {
-      message: `must be one of: ${LOCALES.join(", ")}`,
-    })
-    .optional(),
-  BANDPLATE_TRUSTED_PROXY_DEPTH: z
-    .string()
-    .trim()
-    .refine((v) => /^\d+$/.test(v), { message: "must be a non-negative integer" })
-    .optional(),
-  // Every Workers deploy is public-internet-facing behind Cloudflare's
-  // own TLS-terminating edge, so unlike the Node profile (which has a
-  // non-TLS local-dev mode), the session cookie is always `Secure` here —
-  // no `BANDPLATE_COOKIE_SECURE` escape hatch to misconfigure.
-  MAIL_PROVIDER: z.enum(["resend", "postmark"], {
-    errorMap: () => ({ message: 'is required and must be "resend" or "postmark"' }),
-  }),
-  MAIL_API_KEY: z.string().min(1, "is required — the app has no non-email way in after bootstrap"),
-  MAIL_FROM: z
-    .string()
-    .trim()
-    .min(1, "is required")
-    .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
-  S3_ENDPOINT: z
-    .string()
-    .trim()
-    .min(1, "is required")
-    .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
-  S3_PUBLIC_ENDPOINT: z
-    .string()
-    .trim()
-    .min(1, "is required")
-    .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
-  S3_BUCKET: z.string().trim().min(1, "is required"),
-  S3_REGION: z.string().trim().min(1, 'is required — use "auto" for R2'),
-  S3_ACCESS_KEY_ID: z.string().trim().min(1, "is required"),
-  S3_SECRET_ACCESS_KEY: z.string().min(1, "is required"),
-});
+const EnvSchema = z
+  .object({
+    BANDPLATE_APP_ORIGIN: z
+      .string()
+      .trim()
+      .min(1)
+      .refine(
+        (v) => {
+          try {
+            return new URL(v).origin === v;
+          } catch {
+            return false;
+          }
+        },
+        { message: "must be a bare origin — scheme + host only, e.g. https://bandplate.example" },
+      )
+      .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
+    BANDPLATE_BOOTSTRAP_TOKEN: z.string().trim().min(1, "is required"),
+    // See `RuntimeConfig.defaultLocale`. Validated against the shipped
+    // languages so a typo'd `cz` fails the deploy instead of looking like the
+    // setting does nothing.
+    BANDPLATE_DEFAULT_LOCALE: z
+      .string()
+      .trim()
+      .refine((v): v is Locale => (LOCALES as readonly string[]).includes(v), {
+        message: `must be one of: ${LOCALES.join(", ")}`,
+      })
+      .optional(),
+    BANDPLATE_TRUSTED_PROXY_DEPTH: z
+      .string()
+      .trim()
+      .refine((v) => /^\d+$/.test(v), { message: "must be a non-negative integer" })
+      .optional(),
+    // Every Workers deploy is public-internet-facing behind Cloudflare's
+    // own TLS-terminating edge, so unlike the Node profile (which has a
+    // non-TLS local-dev mode), the session cookie is always `Secure` here —
+    // no `BANDPLATE_COOKIE_SECURE` escape hatch to misconfigure.
+    MAIL_PROVIDER: z.enum(["resend", "postmark"], {
+      errorMap: () => ({ message: 'is required and must be "resend" or "postmark"' }),
+    }),
+    MAIL_API_KEY: z
+      .string()
+      .min(1, "is required — the app has no non-email way in after bootstrap"),
+    MAIL_FROM: z
+      .string()
+      .trim()
+      .min(1, "is required")
+      .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
+    S3_ENDPOINT: z
+      .string()
+      .trim()
+      .min(1, "is required")
+      .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
+    S3_PUBLIC_ENDPOINT: z
+      .string()
+      .trim()
+      .min(1, "is required")
+      .refine((v) => !isPlaceholder(v), NOT_A_PLACEHOLDER),
+    S3_BUCKET: z.string().trim().min(1, "is required"),
+    S3_REGION: z.string().trim().min(1, 'is required — use "auto" for R2'),
+    S3_ACCESS_KEY_ID: z.string().trim().min(1, "is required"),
+    S3_SECRET_ACCESS_KEY: z.string().min(1, "is required"),
+    // --- Web Push (VAPID) -----------------------------------------------
+    // Optional, all-or-nothing — same rule and the same `validateVapidConfig`
+    // shape check as the Node profile's `config.ts`, via `addVapidIssues`.
+    BANDPLATE_VAPID_PUBLIC_KEY: z.string().trim().min(1).optional(),
+    BANDPLATE_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+    BANDPLATE_VAPID_SUBJECT: z.string().trim().min(1).optional(),
+  })
+  .superRefine(addVapidIssues);
 
 function formatZodError(error: z.ZodError): string {
   const issue = error.issues[0];
@@ -165,6 +178,16 @@ export function loadWorkersConfig(env: CloudflareEnv): WorkersRuntimeConfig {
     throw new ConfigError(formatZodError(parsed.error));
   }
   const data = parsed.data;
+  const push =
+    data.BANDPLATE_VAPID_PUBLIC_KEY &&
+    data.BANDPLATE_VAPID_PRIVATE_KEY &&
+    data.BANDPLATE_VAPID_SUBJECT
+      ? {
+          publicKey: data.BANDPLATE_VAPID_PUBLIC_KEY,
+          privateKey: data.BANDPLATE_VAPID_PRIVATE_KEY,
+          subject: data.BANDPLATE_VAPID_SUBJECT,
+        }
+      : undefined;
   return {
     // No `databaseUrl` on Workers — the D1 binding IS the connection,
     // there's no libSQL URL to speak of. `RuntimeConfig.databaseUrl` is
@@ -189,6 +212,7 @@ export function loadWorkersConfig(env: CloudflareEnv): WorkersRuntimeConfig {
       secretAccessKey: data.S3_SECRET_ACCESS_KEY,
     },
     isProduction: true,
+    push,
     mail: { provider: data.MAIL_PROVIDER, apiKey: data.MAIL_API_KEY, from: data.MAIL_FROM },
   };
 }

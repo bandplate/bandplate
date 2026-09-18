@@ -50,10 +50,11 @@ export const auth = {
   slowNote: "any link already sent still works",
 
   /** The tap-to-sign-in screen the emailed link lands on. */
-  signingInAs: "Signing in as",
+  greeting: "Hi there!",
+  signingInAs: "You're signing in as",
   /** When the token is valid but the member has no display name yet. */
   yourself: "yourself",
-  tokenSubmit: "Sign in to bandplate",
+  tokenSubmit: "Continue to bandplate",
   notYou: "Not you?",
   notYouLink: "Ask for your own link",
 

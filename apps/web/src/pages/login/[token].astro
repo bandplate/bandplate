@@ -69,13 +69,14 @@ const initials = displayName
 
   {view.kind === "valid" ? (
     <>
-      {/* The screen already knows whose link this is, so it answers "who am I
-          about to become" before asking for a press — with the same initials
-          disc `/me` draws, rather than the name buried in a sentence. */}
-      <p class="bp-eyebrow bp-m0">{t.auth.signingInAs}</p>
+      {/* A welcome, not a form. The owner's wording: "Hi there! You're
+          signing in as [name]. Continue to bandplate." The button is still
+          the POST that consumes the token; GET renders and nothing more. */}
+      <h1 class="bp-auth-title bp-m0">{t.auth.greeting}</h1>
+      <p class="bp-auth-lede bp-m0">{t.auth.signingInAs}</p>
       <div class="bp-auth-who">
         {initials && <span class="bp-auth-avatar" aria-hidden="true">{initials}</span>}
-        <h1 class="bp-auth-title bp-auth-who-name">{view.displayName ?? t.auth.yourself}</h1>
+        <p class="bp-auth-title bp-auth-who-name bp-m0">{view.displayName ?? t.auth.yourself}</p>
       </div>
       <form method="post" class="bp-auth-form">
         <button type="submit" class="bp-btn bp-btn-primary">{t.auth.tokenSubmit}</button>

@@ -182,6 +182,8 @@ describe("GET/POST /login/[token] over real HTTP (the mail-scanner scenario)", (
     expect(get1.status).toBe(200);
     const body1 = await get1.text();
     expect(body1).toContain("Robyn Route-Test");
+    expect(body1).toContain("Hi there!");
+    expect(body1).toContain("Continue to bandplate");
     expect(get1.headers.get("cache-control")).toContain("no-store");
 
     const get2 = await fetch(`${ORIGIN}/login/${rawToken}`);

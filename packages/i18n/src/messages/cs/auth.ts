@@ -42,9 +42,10 @@ export const auth = {
     `Moc pokusů o přihlášení odsud. Zkus to znovu asi za ${seconds} sekund.`,
   slowNote: "odkaz, který už ti přišel, pořád platí", // en: any link already sent still works
 
-  signingInAs: "Přihlašuješ se jako", // en: Signing in as
+  greeting: "Ahoj!", // en: Hi there!
+  signingInAs: "Přihlašuješ se jako", // en: You're signing in as
   yourself: "sebe", // en: yourself
-  tokenSubmit: "Přihlásit se do bandplate", // en: Sign in to bandplate
+  tokenSubmit: "Pokračovat do bandplate", // en: Continue to bandplate
   notYou: "Nejsi to ty?", // en: Not you?
   notYouLink: "Vyžádej si vlastní odkaz", // en: Ask for your own link
 

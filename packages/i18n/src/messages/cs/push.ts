@@ -7,72 +7,84 @@
 // │ fix. Register is INFORMAL (tykání).                                     │
 // │                                                                        │
 // │ GLOSSARY: rehearsal → zkouška (f.) · concert → koncert (m.) ·           │
-// │ session → session (nesklonné, po vzoru "ze session")                    │
+// │ session → studio (s.) — stejné slovo jako `events.ts`'s `kindLabel`.    │
 // │                                                                        │
 // │ Skloňování dne v týdnu: přivlastňovací přídavné jméno na "-ní" má v     │
-// │ ženském rodě genitiv shodný s nominativem ("čtvrteční"), v mužském      │
-// │ rodě genitiv končí na "-ího" ("čtvrtečního") — odtud dvě tabulky níže.  │
-// │ Předložka "ze" před slovy začínajícími na z/s ("zkoušky", "session"),   │
-// │ "z" jinde ("koncertu").                                                 │
+// │ ženském rodě genitiv shodný s nominativem ("čtvrteční"), v mužském a    │
+// │ středním rodě genitiv končí na "-ího" ("čtvrtečního") — odtud dvě       │
+// │ tabulky níže. "studio" je střední rod, ale genitiv má stejnou koncovku  │
+// │ přídavného jména jako mužský ("čtvrtečního studia").                   │
+// │                                                                        │
+// │ PŘEDLOŽKA "z"/"ze" SE ŘÍDÍ SLOVEM DNE, NE DRUHEM AKCE: "ze středeční/   │
+// │ čtvrteční/sobotní" (obtížná souhlásková skupina na začátku slova dne),  │
+// │ "z nedělní/pondělní/úterní/páteční" jinde — stejně pro obě tabulky,     │
+// │ protože mužský/střední tvar dne začíná stejnou hláskou jako ženský.     │
+// │ Datum bez dne v týdnu naopak předložku odvozuje od NÁSLEDUJÍCÍHO        │
+// │ podstatného jména: "ze zkoušky", "z koncertu", "ze studia".            │
 // └────────────────────────────────────────────────────────────────────────┘
 import { plural } from "../../plural.js";
 import type { push as enPush } from "../en/push.js";
 
-// en: { rehearsal: "rehearsal", concert: "concert", session: "session" }
-const WEEKDAY_FEM: Record<number, string> = {
-  0: "nedělní",
-  1: "pondělní",
-  2: "úterní",
-  3: "středeční",
-  4: "čtvrteční",
-  5: "páteční",
-  6: "sobotní",
+type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
+ * One weekday's adjective, in the two genitive shapes this area needs, and
+ * the preposition that precedes it — "z" before a day whose word starts
+ * cleanly, "ze" before one whose consonant cluster makes "z" hard to say
+ * ("z středeční" / "z čtvrteční" / "z sobotní" would all trip on the
+ * leading consonant cluster).
+ */
+const WEEKDAY: Record<Weekday, { fem: string; masc: string; prep: "z" | "ze" }> = {
+  0: { fem: "nedělní", masc: "nedělního", prep: "z" },
+  1: { fem: "pondělní", masc: "pondělního", prep: "z" },
+  2: { fem: "úterní", masc: "úterního", prep: "z" },
+  3: { fem: "středeční", masc: "středečního", prep: "ze" },
+  4: { fem: "čtvrteční", masc: "čtvrtečního", prep: "ze" },
+  5: { fem: "páteční", masc: "pátečního", prep: "z" },
+  6: { fem: "sobotní", masc: "sobotního", prep: "ze" },
 };
 
-const WEEKDAY_MASC_GEN: Record<number, string> = {
-  0: "nedělního",
-  1: "pondělního",
-  2: "úterního",
-  3: "středečního",
-  4: "čtvrtečního",
-  5: "pátečního",
-  6: "sobotního",
-};
+/** Capitalizes the first letter — every notification body starts a sentence, same as the English catalog's "From ...". */
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0]?.toUpperCase() + s.slice(1);
+}
 
 export const push = {
   // --- nové nahrávky ------------------------------------------------------
   newTakesTitle: "Nové nahrávky", // en: New takes
   // en: `From ${weekdayPossessive} ${kindNoun}`
   //
-  // "session" se chová jako "zkoušky" — ženský/nesklonný vzor, předložka
-  // "ze". `weekday` odpovídá `zonedParts`: 0 = neděle.
-  newTakesByWeekday: (kind: string, weekday: 0 | 1 | 2 | 3 | 4 | 5 | 6): string => {
+  // `weekday` odpovídá `zonedParts`: 0 = neděle. Předložka jde vždy s dnem
+  // v týdnu, ne s druhem akce — viz hlavička souboru.
+  newTakesByWeekday: (kind: string, weekday: Weekday): string => {
+    const { fem, masc, prep } = WEEKDAY[weekday];
     switch (kind) {
       case "concert":
-        return `z ${WEEKDAY_MASC_GEN[weekday]} koncertu`;
+        return capitalize(`${prep} ${masc} koncertu`);
       case "rehearsal":
-        return `ze ${WEEKDAY_FEM[weekday]} zkoušky`;
+        return capitalize(`${prep} ${fem} zkoušky`);
       case "session":
-        return `ze ${WEEKDAY_FEM[weekday]} session`;
+        return capitalize(`${prep} ${masc} studia`);
       default:
-        return kind;
+        return capitalize(kind);
     }
   },
   // en: `From the ${kindNoun} on ${monthAbbr} ${day}`
   //
   // "12. 9." — den a měsíc oddělené tečkou, bez roku, jak se datum krátce
-  // píše všude jinde v aplikaci.
+  // píše všude jinde v aplikaci. Bez dne v týdnu volí předložku podle
+  // podstatného jména samotného.
   newTakesByDate: (kind: string, day: number, month: number): string => {
     const date = `${day}. ${month}.`;
     switch (kind) {
       case "concert":
-        return `z koncertu ${date}`;
+        return capitalize(`z koncertu ${date}`);
       case "rehearsal":
-        return `ze zkoušky ${date}`;
+        return capitalize(`ze zkoušky ${date}`);
       case "session":
-        return `ze session ${date}`;
+        return capitalize(`ze studia ${date}`);
       default:
-        return `${kind} ${date}`;
+        return capitalize(`${kind} ${date}`);
     }
   },
 

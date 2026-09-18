@@ -50,7 +50,11 @@ export function newTakesMessage(
   now: number,
 ): PushMessage {
   const t = pushMessages(locale);
-  const descriptor = event.title ?? eventDescriptor(locale, event, now);
+  // `||`, not `??`: an event title that is present but empty (an admin
+  // cleared the field rather than leaving it unset) is just as much "no
+  // title" as `null` is — the weekday/date fallback is the only thing that
+  // still names the event.
+  const descriptor = event.title || eventDescriptor(locale, event, now);
   return {
     title: t.newTakesTitle,
     body: `${descriptor} (${formatNumber(locale, count)})`,

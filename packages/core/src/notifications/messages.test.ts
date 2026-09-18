@@ -34,47 +34,87 @@ describe("newTakesMessage", () => {
     expect(msg.body).toBe("From Thursday's rehearsal (14)");
   });
 
-  it("gives an untitled rehearsal the Czech feminine genitive", () => {
+  it("gives an untitled rehearsal the Czech feminine genitive, capitalized", () => {
     const msg = newTakesMessage(
       "cs",
       { id: "ev3", kind: "rehearsal", title: null, heldAt: Date.parse("2026-09-16T23:30:00Z") },
       14,
       now,
     );
-    expect(msg.body).toBe("ze čtvrteční zkoušky (14)");
+    expect(msg.body).toBe("Ze čtvrteční zkoušky (14)");
   });
 
-  it("gives an untitled concert the Czech masculine genitive", () => {
+  it("gives an untitled concert the Czech masculine genitive, with the preposition the WEEKDAY takes", () => {
     const msg = newTakesMessage(
       "cs",
       { id: "ev4", kind: "concert", title: null, heldAt: Date.parse("2026-09-16T23:30:00Z") },
       14,
       now,
     );
-    expect(msg.body).toBe("z čtvrtečního koncertu (14)");
+    // Thursday ("čtvrtečního") takes "ze", regardless of "koncertu" itself
+    // starting with a consonant that alone would take "z".
+    expect(msg.body).toBe("Ze čtvrtečního koncertu (14)");
   });
 
-  it("gives an untitled session the same feminine-pattern genitive as rehearsal", () => {
+  it("gives an untitled session the neuter genitive of studio, matching the UI's word for a session", () => {
     const msg = newTakesMessage(
       "cs",
       { id: "ev5", kind: "session", title: null, heldAt: Date.parse("2026-09-16T23:30:00Z") },
       14,
       now,
     );
-    expect(msg.body).toBe("ze čtvrteční session (14)");
+    expect(msg.body).toBe("Ze čtvrtečního studia (14)");
+  });
+
+  it("picks the preposition 'z' for a weekday whose word starts cleanly — Friday rehearsal", () => {
+    // 2026-09-11T10:00:00Z is Friday in Prague, 6 days before `now`.
+    const msg = newTakesMessage(
+      "cs",
+      { id: "ev8", kind: "rehearsal", title: null, heldAt: Date.parse("2026-09-11T10:00:00Z") },
+      1,
+      now,
+    );
+    expect(msg.body).toBe("Z páteční zkoušky (1)");
+  });
+
+  it("picks the preposition 'ze' for a weekday whose word needs it — Saturday concert", () => {
+    // 2026-09-12T10:00:00Z is Saturday in Prague, 5 days before `now`.
+    const msg = newTakesMessage(
+      "cs",
+      { id: "ev9", kind: "concert", title: null, heldAt: Date.parse("2026-09-12T10:00:00Z") },
+      1,
+      now,
+    );
+    expect(msg.body).toBe("Ze sobotního koncertu (1)");
   });
 
   it("falls back to a date, not a weekday, when the event is more than 6 days old", () => {
-    // now = 2026-09-17T12:00:00Z; an event 7 calendar days earlier in Prague.
+    // now = 2026-09-17T12:00:00Z; an event 9 calendar days earlier in Prague.
     const heldAt = Date.parse("2026-09-08T10:00:00Z");
     const msg = newTakesMessage("cs", { id: "ev6", kind: "concert", title: null, heldAt }, 3, now);
-    expect(msg.body).toBe("z koncertu 8. 9. (3)");
+    expect(msg.body).toBe("Z koncertu 8. 9. (3)");
+  });
+
+  it("gives an untitled, dated session the neuter genitive of studio", () => {
+    const heldAt = Date.parse("2026-09-08T10:00:00Z");
+    const msg = newTakesMessage("cs", { id: "ev10", kind: "session", title: null, heldAt }, 3, now);
+    expect(msg.body).toBe("Ze studia 8. 9. (3)");
   });
 
   it("still uses the weekday at exactly 6 days old", () => {
     const heldAt = Date.parse("2026-09-11T10:00:00Z"); // 6 days before 2026-09-17
     const msg = newTakesMessage("cs", { id: "ev7", kind: "concert", title: null, heldAt }, 1, now);
     expect(msg.body).not.toMatch(/\d+\. \d+\./);
+  });
+
+  it("treats an empty-string title the same as no title, falling back to weekday/date", () => {
+    const msg = newTakesMessage(
+      "en",
+      { id: "ev11", kind: "rehearsal", title: "", heldAt: Date.parse("2026-09-16T23:30:00Z") },
+      14,
+      now,
+    );
+    expect(msg.body).toBe("From Thursday's rehearsal (14)");
   });
 });
 
@@ -149,5 +189,12 @@ describe("encodePayload", () => {
     const budget = 3000 - shell.length;
     const msg = { title: "", body: "x".repeat(budget), url: "", tag: "" };
     expect(() => encodePayload(msg)).not.toThrow();
+  });
+
+  it("throws on a multibyte body that is under the character count but over the byte budget", () => {
+    // "č" is 2 bytes in UTF-8 — 1600 of them is 3200 bytes, over the limit,
+    // even though `body.length` (1600) alone would look safely under 3000.
+    const msg = { title: "T", body: "č".repeat(1600), url: "/u", tag: "tg" };
+    expect(() => encodePayload(msg)).toThrow();
   });
 });

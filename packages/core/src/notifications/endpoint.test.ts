@@ -47,4 +47,8 @@ describe("isAllowedPushEndpoint", () => {
   it("rejects garbage that isn't a URL at all", () => {
     expect(isAllowedPushEndpoint("not a url")).toBe(false);
   });
+
+  it("rejects an allowed host with a non-empty port", () => {
+    expect(isAllowedPushEndpoint("https://fcm.googleapis.com:8443/fcm/send/abc")).toBe(false);
+  });
 });

@@ -25,6 +25,13 @@ export function isAllowedPushEndpoint(url: string): boolean {
     return false;
   }
 
+  // A real push service is reached on the default HTTPS port. A URL that
+  // names an explicit port is not the endpoint the browser actually handed
+  // back from any of these services — reject it rather than trust it.
+  if (parsed.port !== "") {
+    return false;
+  }
+
   const host = parsed.hostname;
   if (ALLOWED_HOSTS.has(host)) {
     return true;

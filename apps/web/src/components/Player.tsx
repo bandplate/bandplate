@@ -250,6 +250,20 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       if (!queue || !item) return;
       playQueue.set({ ...queue, index });
       startItem(item);
+      // Only the queue moving the track (Next, Previous, auto-advance, the
+      // Hraje sheet's own order list) scrolls the row into view — a user's
+      // own tap on `start-track` skips this because they are already
+      // looking at that row. `scrollIntoView` alone stops at the SCROLL
+      // CONTAINER's edge, which is well behind the fixed player bar and tab
+      // bar; `.bp-take-row`'s `scroll-margin-bottom` (components.css) is
+      // what actually keeps the row clear of them.
+      const row = document
+        .querySelector(`[data-play-queue] [data-take-id="${CSS.escape(item.takeId)}"]`)
+        ?.closest(".bp-take-row");
+      row?.scrollIntoView({
+        block: "nearest",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
     },
     [startItem],
   );

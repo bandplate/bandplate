@@ -3923,6 +3923,27 @@ html:has(dialog.bp-filter-sheet[open]) body {
      row renders inside one on no page — but `text-align` inherits, and a
      future embedding should not silently mirror the row. */
   text-align: left;
+  /* The queue's own scroll into view uses `block: "nearest"`, which only
+     knows about the SCROLL CONTAINER's edges — it has no idea a player bar
+     and a tab bar sit fixed on top of the bottom of that container, so a row
+     landing exactly at the viewport's bottom edge is really landing behind
+     both. Same two custom properties `.bp-app-main`'s padding-bottom above
+     reserves for the same bars, so this tracks their measured height rather
+     than a guessed constant. */
+  scroll-margin-bottom: calc(
+    var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
+      var(--bp-player-height)
+  );
+}
+
+/* The row the queue is currently on reads as "current" with the same fill a
+   hover uses — one material for "this is playing" and "the pointer is here",
+   rather than a second accent competing with it. Keyed off the row's own
+   play toggle (`syncButtons()` sets `.is-active` there for the queue's
+   current take, paused or not — see Player.tsx), not a class on the row
+   itself, so there is exactly one place that decides "is this the one". */
+.bp-take-row:has(.bp-play-toggle.is-active) {
+  background: var(--bp-color-surface);
 }
 
 /* Not a control: no role, no tabstop, `aria-hidden` in the markup. It stands

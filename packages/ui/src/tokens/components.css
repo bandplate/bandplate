@@ -8362,20 +8362,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
   display: inline;
 }
 
-/* The shadow that says the list continues.
-   Sits ABOVE the control, fading the last visible row into the page ground —
-   the same gesture the pinned rail uses at its scrolling edge. Only while
-   closed: once the rest is on screen there is nothing left to suggest.
-   `pointer-events: none` so it never eats a click meant for the row under it. */
-.bp-take-fold:not([open])::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  height: 3.25rem;
-  pointer-events: none;
-  background: linear-gradient(to top, var(--bp-color-bg), transparent);
+/* The fade that says the list continues: the last row above the closed fold
+   fades out toward its bottom edge. A MASK on that row, not a gradient laid
+   over it: rows are rounded and bleed past the list's box, so an overlay
+   drew a square shadow that stopped short of the row's own corners and sat on
+   top of its hover fill. A mask fades the row, fill and corners included.
+   Only while closed: once the rest is on screen there is nothing to suggest. */
+.bp-take-row:has(+ .bp-take-fold:not([open])) {
+  mask-image: linear-gradient(to bottom, #000 35%, rgb(0 0 0 / 0.2));
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -13,7 +13,7 @@
 // included, which is why the sheet carries its own transport as a foot row
 // rather than leaving the bar's underneath.
 import type { playerMessages } from "@bandplate/i18n";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { PlayQueue } from "../client/player-queue.js";
 import { AUDIO_SOURCE_ATTR, type PlayerSource, type PlayerTrack } from "../client/player-store.js";
 
@@ -56,6 +56,9 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
     t,
   } = props;
   const ref = useRef<HTMLDialogElement>(null);
+  const listRef = useRef<HTMLOListElement>(null);
+  /** Whether the order list has takes above / below its visible three — drives the fades. */
+  const [more, setMore] = useState({ above: false, below: false });
 
   useEffect(() => {
     const dialog = ref.current;
@@ -63,6 +66,26 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
   }, [open]);
+
+  // The order list shows three takes and scrolls the rest. On open, and
+  // whenever the queue moves, bring the current take into that window, then
+  // recompute whether anything is hidden below it (the fade says so).
+  const queueIndex = queue?.index ?? -1;
+  const queueLength = queue?.items.length ?? 0;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: queueIndex/queueLength are triggers: the list's DOM is what is read.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!open || !list) return;
+    list.querySelector<HTMLElement>('[aria-current="true"]')?.scrollIntoView({ block: "nearest" });
+    updateMore(list);
+  }, [open, queueIndex, queueLength]);
+
+  function updateMore(list: HTMLElement) {
+    setMore({
+      above: list.scrollTop > 1,
+      below: list.scrollTop + list.clientHeight < list.scrollHeight - 1,
+    });
+  }
 
   const position =
     queue && queue.items.length > 1
@@ -187,7 +210,11 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
             <h3 id="bp-now-playing-order" class="bp-eyebrow bp-m0">
               {t.orderHeading}
             </h3>
-            <ol class="bp-now-playing-list">
+            <ol
+              ref={listRef}
+              class={`bp-now-playing-list${more.above ? " has-more-above" : ""}${more.below ? " has-more-below" : ""}`}
+              onScroll={(event) => updateMore(event.currentTarget)}
+            >
               {queue.items.map((item, i) => (
                 <li key={item.takeId}>
                   <button

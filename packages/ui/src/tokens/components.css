@@ -1729,6 +1729,9 @@ a.bp-btn {
   flex-direction: column;
   gap: 16px;
   padding: 0.75rem 20px calc(1rem + env(safe-area-inset-bottom, 0px));
+  /* The last resort on a short screen with many sources: the whole sheet
+     scrolls rather than anything overlapping. */
+  overflow-y: auto;
 }
 
 /* The grab handle — a purely decorative affordance (this sheet has no
@@ -1790,11 +1793,15 @@ a.bp-btn {
    rule — same reason the bar's play button borrows a shared class: one
    selector, so the two touch targets cannot drift apart. */
 
+/* Sections keep their natural height: the sheet was a flex column letting
+   them shrink, so a long running order squeezed the source pills until the
+   order's heading sat on top of them. The one part that scrolls is the order
+   list itself, capped below. */
 .bp-now-playing-section {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  min-height: 0;
+  flex: none;
 }
 
 .bp-now-playing-sources {
@@ -1853,10 +1860,6 @@ a.bp-btn {
   outline-offset: 2px;
 }
 
-.bp-now-playing-order {
-  min-height: 0;
-  overflow: hidden;
-}
 
 .bp-now-playing-list {
   list-style: none;
@@ -1865,8 +1868,40 @@ a.bp-btn {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
+  /* Three takes and the rest scroll. A row measures 55.5px at the default
+     size (its two lines of text, not its 50px floor), so 3.5rem each, in rem
+     so a larger system font still shows three. */
+  max-height: calc(3 * 3.5rem + 2 * 0.125rem);
   overflow-y: auto;
-  min-height: 0;
+  overscroll-behavior: contain;
+}
+
+/* More takes past the three in view fade out at that edge, top or bottom,
+   which says "keep scrolling" without a control that would have to be
+   pressed. Set from the list's own scroll position (NowPlayingSheet.tsx), so
+   each fade is gone once that end is reached. */
+.bp-now-playing-list {
+  --bp-fade-top: 0px;
+  --bp-fade-bottom: 0px;
+}
+
+.bp-now-playing-list.has-more-above {
+  --bp-fade-top: 2.5rem;
+}
+
+.bp-now-playing-list.has-more-below {
+  --bp-fade-bottom: 2.5rem;
+}
+
+.bp-now-playing-list.has-more-above,
+.bp-now-playing-list.has-more-below {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--bp-fade-top),
+    #000 calc(100% - var(--bp-fade-bottom)),
+    transparent
+  );
 }
 
 .bp-now-playing-item {

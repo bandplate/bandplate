@@ -5493,6 +5493,29 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 0.5rem;
 }
 
+/* Wide enough, and the actions go back beside the date, on the right, where
+   Edit always sat on a desktop. A grid rather than a row wrapper, so the
+   markup keeps ONE order (the phone's) and only the placement changes. */
+@media (min-width: 1024px) {
+  .bp-event-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 1rem;
+    row-gap: 0.5rem;
+  }
+
+  .bp-event-hero > * {
+    grid-column: 1;
+  }
+
+  .bp-event-hero > .bp-event-hero-actions {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    flex-wrap: nowrap;
+  }
+}
+
 /* Play all is a secondary button carrying the play disc: the gold marks the
    one thing that plays, and the pill stays as quiet as Edit beside it. */
 .bp-btn-play-all {

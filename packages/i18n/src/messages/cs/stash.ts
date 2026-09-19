@@ -18,6 +18,7 @@ export const stash = {
   chipSyncing: "Nahrává se", // en: Uploading
   chipFailed: "Nejde nahrát", // en: Couldn't upload
   retry: "Zkusit znovu", // en: Try again
+  discardPendingBody: "Je jen v tomhle zařízení, takže ji zahodíš natrvalo.", // en: It is only on this device, so throwing it away loses it for good.
   open: "Otevřít", // en: Open
   inYourStash: (count: number): string => `Ve tvém šuplíku: ${count}`, // en: In your stash: N
   homeLine: (count: number): string => `V šuplíku ${count}`, // en: N in your stash
@@ -58,6 +59,7 @@ export const stash = {
   errSaveFailed: "Nahrávku se nepodařilo uložit do zařízení. Zkus to znovu.", // en: Couldn't keep the recording on this device. Try again.
 
   pageTitle: (title: string): string => `${title} v šuplíku`, // en: {title} in your stash
+  songAndLength: (title: string, length: string): string => `${title}, ${length}`, // en: {title}, {m:ss}
   backToStash: "Zpět do šuplíku", // en: Back to the stash
   addTitle: "Přidat k písni", // en: Add to song
   fieldSong: "Píseň", // en: Song

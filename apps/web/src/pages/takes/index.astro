@@ -51,6 +51,11 @@ if (!principal) {
 const appDeps = await getAppDeps();
 const query = parseSearchQuery(Astro.url.searchParams);
 const viewingStash = Astro.url.searchParams.get("stash") === "1";
+// Set by the delete on `/stash/[id]`: the take just deleted, whose local copy
+// (if this device still holds one) the list below drops.
+const deletedTakeId = viewingStash
+  ? (Astro.url.searchParams.get("deleted") ?? undefined)
+  : undefined;
 const filtersApplied = hasAnyFilter(query) || query.sort !== "recent";
 
 const { page, args: takesPage } = pageRequest(Astro.url.searchParams, TAKES_PER_PAGE);
@@ -336,7 +341,12 @@ const countLabel = t.takes.count(total);
     {viewingStash ? (
       <div class="bp-search-results">
         <p class="bp-stash-lede bp-m0">{t.stash.viewLede}</p>
-        <StashPendingList client:load locale={locale} serverTakeIds={stashRows.map((row) => row.id)} />
+        <StashPendingList
+          client:load
+          locale={locale}
+          serverTakeIds={stashRows.map((row) => row.id)}
+          deletedTakeId={deletedTakeId}
+        />
         {stashRows.length > 0 && (
           <div class="bp-take-list bp-take-list--wide" data-play-queue>
             {stashRows.map((row) => <StashRow row={row} />)}

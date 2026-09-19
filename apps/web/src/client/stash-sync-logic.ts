@@ -16,6 +16,15 @@ export type PendingStatus =
   /** The server refused it in a way retrying will not fix. Kept; retried only by hand. */
   | "failed";
 
+/** The request a sync attempt was making when it failed. */
+export type SyncRequest = "create" | "declare" | "put" | "verify";
+
+/** Where a sync attempt stopped, and what the other end answered. */
+export interface FailurePoint {
+  request: SyncRequest;
+  status: number;
+}
+
 export interface PendingStashItem {
   /** IndexedDB key, and the take's `clientRef` on the server. */
   localId: string;
@@ -34,6 +43,12 @@ export interface PendingStashItem {
   status: PendingStatus;
   attempts: number;
   lastError: string | null;
+  /**
+   * Where the last attempt failed, so the stash can tell a failure a retry
+   * can fix from one it cannot. Optional: records saved before it existed
+   * have none, and `canRetryByHand` treats those as it always did.
+   */
+  failedAt?: FailurePoint | null;
   blob: Blob;
 }
 
@@ -60,6 +75,7 @@ export function newPendingItem(input: NewPendingInput): PendingStashItem {
     status: "waiting",
     attempts: 0,
     lastError: null,
+    failedAt: null,
   };
 }
 
@@ -111,17 +127,52 @@ export function afterFailure<T extends PendingSummary>(
   item: T,
   kind: FailureKind,
   message: string,
+  failedAt: FailurePoint | null = null,
 ): T {
   return {
     ...item,
     status: kind === "retry" ? "waiting" : "failed",
     attempts: item.attempts + 1,
     lastError: message,
+    failedAt,
   };
 }
 
 export function retryItem<T extends PendingSummary>(item: T): T {
-  return { ...item, status: "waiting", lastError: null };
+  return { ...item, status: "waiting", lastError: null, failedAt: null };
+}
+
+/**
+ * Whether "Zkusit znovu" can do anything for a recording that was given up on.
+ *
+ * Only where the next attempt is a DIFFERENT attempt: the bucket refused this
+ * upload (the next declare signs a new one, and S3 answers a stalled socket
+ * with 400), or the server found the file had not arrived whole. Everything
+ * else that gives up answers the same way forever: 404 is a deleted song or a
+ * deleted take, and 422 is a request the server will never accept. A retry
+ * button on those would be a control that cannot work, so the row offers
+ * only to throw the recording away.
+ *
+ * A failure saved before the request was recorded keeps its retry: nothing is
+ * known about it, and it is what that row offered before.
+ */
+export function canRetryByHand(item: Pick<PendingSummary, "status" | "failedAt">): boolean {
+  if (item.status !== "failed") {
+    return false;
+  }
+  const at = item.failedAt;
+  if (!at) {
+    return true;
+  }
+  return at.request === "put" || (at.request === "verify" && at.status === 409);
+}
+
+/** The local copies of one server take, for when that take has been deleted. */
+export function pendingForTake(
+  items: Pick<PendingSummary, "localId" | "takeId">[],
+  takeId: string,
+): string[] {
+  return items.filter((item) => item.takeId === takeId).map((item) => item.localId);
 }
 
 /**
@@ -134,8 +185,16 @@ export function retryItem<T extends PendingSummary>(item: T): T {
 export function pendingToRender(
   items: PendingSummary[],
   serverTakeIds: ReadonlySet<string>,
+  /**
+   * Takes just deleted from this page. Their local copies are on their way
+   * out of IndexedDB, and must not flash back as rows meanwhile.
+   */
+  deletedTakeIds: ReadonlySet<string> = new Set(),
 ): PendingSummary[] {
   return items
-    .filter((item) => !(item.takeId && serverTakeIds.has(item.takeId)))
+    .filter(
+      (item) =>
+        !(item.takeId && (serverTakeIds.has(item.takeId) || deletedTakeIds.has(item.takeId))),
+    )
     .sort((a, b) => b.recordedAt - a.recordedAt);
 }

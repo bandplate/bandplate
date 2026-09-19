@@ -28,6 +28,9 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // The empty-tally case is "" in every language — an unvoted take renders
   // nothing at all. See `en/voting.ts`.
   "voting.tally(unvoted)",
+  // A song's title and a duration, joined by a comma. Neither half is words
+  // to translate, and a comma is a comma.
+  "stash.songAndLength(t)",
   // The bootstrap token is called that in both languages — it is the name of
   // an environment variable the deployer already typed.
   "auth.setupTokenLabel",
@@ -87,6 +90,7 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   ],
   "stash.recordFor": [{ label: "t", args: ["Čoudy"] }],
   "stash.pageTitle": [{ label: "t", args: ["Čoudy"] }],
+  "stash.songAndLength": [{ label: "t", args: ["Čoudy", "2:47"] }],
   "stash.personalEvent": [{ label: "d", args: ["19. 9. 2026"] }],
   "stash.deleteTitle": [{ label: "t", args: ["Čoudy"] }],
   "mixer.mute": [{ label: "i", args: ["Bass"] }],

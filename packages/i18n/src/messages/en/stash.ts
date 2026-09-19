@@ -12,6 +12,7 @@ export const stash = {
   chipSyncing: "Uploading",
   chipFailed: "Couldn't upload",
   retry: "Try again",
+  discardPendingBody: "It is only on this device, so throwing it away loses it for good.",
   open: "Open",
   /** Under a song's takes: "In your stash: 2". */
   inYourStash: (count: number): string => `In your stash: ${count}`,
@@ -58,6 +59,7 @@ export const stash = {
 
   // --- one stash item: "Add to song" ----------------------------------------
   pageTitle: (title: string): string => `${title} in your stash`,
+  songAndLength: (title: string, length: string): string => `${title}, ${length}`,
   backToStash: "Back to the stash",
   addTitle: "Add to song",
   fieldSong: "Song",

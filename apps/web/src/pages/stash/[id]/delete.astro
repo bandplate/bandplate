@@ -35,7 +35,9 @@ if (Astro.request.method === "POST") {
   if (result.kind !== "ok") {
     return new Response("Not found.", { status: 404 });
   }
-  return Astro.redirect("/takes?stash=1");
+  // `deleted` lets the stash view drop a local copy still waiting to upload
+  // into this take, which would otherwise come back as a row that 404s.
+  return Astro.redirect(`/takes?stash=1&deleted=${id}`);
 }
 
 const item = await getStashItem(appDeps.db, id, principal.memberId);

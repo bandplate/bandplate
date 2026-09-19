@@ -8990,11 +8990,24 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-fg);
 }
 
-/* "Zkusit znovu" on a refused upload: at the end of line two, on one line. */
-.bp-stash-row .bp-take-line2 > .bp-btn {
-  flex: none;
-  margin-inline-start: auto;
-  white-space: nowrap;
+/* A refused upload's "Zkusit znovu" and "Zahodit": a third line, under the
+   title's column, so line two keeps its chip, label and date whole at 375px.
+   Auto-placed into an implicit grid row; `.bp-take-row`'s two named rows are
+   untouched. */
+.bp-stash-row-actions {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Under the heading on /stash/[id]: the song and the length. Chivo is the
+   body face already; the figures are tabular, as timecode is everywhere. */
+.bp-stash-sub {
+  margin-top: 0.375rem;
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .bp-stash-back {

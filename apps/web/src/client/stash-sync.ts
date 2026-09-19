@@ -10,16 +10,22 @@ import { deletePending, listPending, putPending } from "./stash-db.js";
 import { pendingStash, stashUploadsFinished } from "./stash-store.js";
 import {
   type PendingStashItem,
+  type SyncRequest,
   afterFailure,
+  canRetryByHand,
   classifyFailure,
   nextSyncStep,
+  pendingForTake,
   retryItem,
   shouldSync,
   summarize,
 } from "./stash-sync-logic.js";
 
+const LOCK_NAME = "bandplate-stash-sync";
+
 class HttpFailure extends Error {
   constructor(
+    readonly request: SyncRequest,
     readonly status: number,
     message: string,
   ) {
@@ -36,9 +42,9 @@ async function postJson(url: string, body: unknown): Promise<Response> {
   });
 }
 
-async function failureOf(res: Response): Promise<HttpFailure> {
+async function failureOf(request: SyncRequest, res: Response): Promise<HttpFailure> {
   const body = await res.json().catch(() => null);
-  return new HttpFailure(res.status, body?.error?.message ?? `HTTP ${res.status}`);
+  return new HttpFailure(request, res.status, body?.error?.message ?? `HTTP ${res.status}`);
 }
 
 export async function refreshPendingStash(): Promise<void> {
@@ -67,7 +73,7 @@ async function uploadMaster(item: PendingStashItem): Promise<void> {
     replace: true,
   });
   if (!declared.ok) {
-    throw await failureOf(declared);
+    throw await failureOf("declare", declared);
   }
   const slot = (await declared.json()) as {
     assetId: string;
@@ -78,14 +84,14 @@ async function uploadMaster(item: PendingStashItem): Promise<void> {
   // fetch, not XHR: nobody watches a progress bar for a background retry.
   const put = await fetch(slot.url, { method: "PUT", headers: slot.headers, body: item.blob });
   if (!put.ok) {
-    throw new HttpFailure(put.status, `The bucket answered ${put.status}.`);
+    throw new HttpFailure("put", put.status, `The bucket answered ${put.status}.`);
   }
 
   const verified = await postJson(`/api/assets/${slot.assetId}/verify`, {
     durationMs: item.durationMs,
   });
   if (!verified.ok) {
-    throw await failureOf(verified);
+    throw await failureOf("verify", verified);
   }
 }
 
@@ -107,7 +113,7 @@ async function syncOne(item: PendingStashItem): Promise<void> {
         durationMs: current.durationMs,
       });
       if (!res.ok) {
-        throw await failureOf(res);
+        throw await failureOf("create", res);
       }
       const body = (await res.json()) as { takeId: string; masterReady: boolean };
       current = { ...current, takeId: body.takeId };
@@ -123,7 +129,9 @@ async function syncOne(item: PendingStashItem): Promise<void> {
     const failure =
       err instanceof HttpFailure ? { status: err.status } : { network: true as const };
     const message = err instanceof Error ? err.message : String(err);
-    await save(afterFailure(current, classifyFailure(failure), message));
+    const failedAt =
+      err instanceof HttpFailure ? { request: err.request, status: err.status } : null;
+    await save(afterFailure(current, classifyFailure(failure), message, failedAt));
   }
 }
 
@@ -157,7 +165,7 @@ export function syncPendingStash(): Promise<void> {
   }
   const task = async () => {
     if ("locks" in navigator) {
-      await navigator.locks.request("bandplate-stash-sync", () => runOnce());
+      await navigator.locks.request(LOCK_NAME, () => runOnce());
     } else {
       await runOnce();
     }
@@ -171,10 +179,47 @@ export function syncPendingStash(): Promise<void> {
 /** The "Zkusit znovu" button on a recording the server refused. */
 export async function retryPending(localId: string): Promise<void> {
   const item = (await listPending()).find((i) => i.localId === localId);
-  if (item) {
+  if (item && canRetryByHand(item)) {
     await save(retryItem(item));
     await syncPendingStash();
   }
+}
+
+/**
+ * Runs `fn` when no sync is touching the queue: after this tab's own sync,
+ * and under the same Web Lock as every tab's. A delete that raced a sync
+ * would be undone by the sync's next `putPending` of the item it holds.
+ */
+async function exclusive(fn: () => Promise<void>): Promise<void> {
+  await running?.catch(() => undefined);
+  if ("locks" in navigator) {
+    await navigator.locks.request(LOCK_NAME, fn);
+  } else {
+    await fn();
+  }
+}
+
+/**
+ * "Zahodit" on a recording that cannot be uploaded: the one place a local
+ * copy goes without the server having confirmed it. Only the member's own
+ * press, after a confirm, reaches this.
+ */
+export async function discardPending(localId: string): Promise<void> {
+  await exclusive(() => deletePending(localId));
+  await refreshPendingStash();
+}
+
+/**
+ * The owner deleted this take on `/stash/[id]`. A local copy still waiting to
+ * upload into it would otherwise come back as a row whose upload 404s forever.
+ */
+export async function discardPendingForTake(takeId: string): Promise<void> {
+  await exclusive(async () => {
+    for (const localId of pendingForTake(await listPending(), takeId)) {
+      await deletePending(localId);
+    }
+  });
+  await refreshPendingStash();
 }
 
 let started = false;

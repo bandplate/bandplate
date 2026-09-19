@@ -15,6 +15,7 @@ import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
+import { formatDuration } from "../../server/format.js";
 import { getStashItem, publishStashTake, renameStashTake } from "../../server/pages/stash.js";
 
 const principal = Astro.locals.principal;
@@ -84,6 +85,7 @@ if (!item) {
 const { take, song, event, owner, playableAsset } = item;
 const title = song?.title ?? t.stash.unknownSong;
 const justRenamed = Astro.url.searchParams.get("renamed") === "1";
+const length = formatDuration(take.durationMs);
 ---
 
 <AppLayout title={t.stash.pageTitle(title)} principal={principal} current="takes">
@@ -93,10 +95,16 @@ const justRenamed = Astro.url.searchParams.get("renamed") === "1";
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <p class="bp-eyebrow bp-m0">{t.stash.addTitle}</p>
+    {/* The design's heading: the recording's own name, then the song it is
+        for and how long it runs. An unnamed recording is called by its song,
+        so the line under it is only the length rather than the title twice. */}
     <div class="bp-title-row">
-      <h1 class="bp-hero-title bp-m0">
-        {title}{take.label && <span class="bp-hero-title-note">: {take.label}</span>}
-      </h1>
+      <div>
+        <h1 class="bp-hero-title bp-m0">{take.label ?? title}</h1>
+        <p class="bp-stash-sub bp-m0">
+          {take.label ? t.stash.songAndLength(title, length) : length}
+        </p>
+      </div>
       {playableAsset && (
         <PlayToggleButton takeId={take.id} assetId={playableAsset.id} title={title} subtitle={take.label ?? ""} size="lg" />
       )}
@@ -147,7 +155,7 @@ const justRenamed = Astro.url.searchParams.get("renamed") === "1";
         data-confirm-body={t.stash.deleteBody}
         data-confirm-action={`/stash/${take.id}/delete`}
         data-confirm-cta={t.stash.deleteCta}
-        data-confirm-redirect="/takes?stash=1"
+        data-confirm-redirect={`/takes?stash=1&deleted=${take.id}`}
       >
         <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />

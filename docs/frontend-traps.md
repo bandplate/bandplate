@@ -191,3 +191,24 @@ them at the moment of writing — and that is what `deleteInstrument` and
 
 The same applies to every `ON DELETE cascade` in the schema: it is
 documentation, not behaviour. Delete dependent rows explicitly.
+
+---
+
+## "It recorded fine and the player says 0:00"
+
+### Chrome's MediaRecorder writes a WebM with no duration
+
+The header has no Duration element, so `<audio>.duration` is `Infinity`, the
+player's seek bar is disabled and its time reads 0:00, even though the file
+plays. The recorder writes the measured length in with `fix-webm-duration`
+before the blob is kept (`Recorder.tsx`, `needsDurationFix`). A WebM that
+reaches the stash without going through that path (a file dropped onto the
+upload panel) keeps the problem.
+
+### A private take is invisible by construction, not by the page
+
+`takes.visibility = 'private'` is filtered in SQL by every band listing
+(`takesRepo.bandVisibleCondition`), and every lookup BY ID asks
+`takesRepo.isVisibleTo`. A new route or loader that resolves a take by id and
+skips that call leaks somebody's stash, and nothing else will fail. Grep for
+`takesRepo.getById(` in the change and check each one.

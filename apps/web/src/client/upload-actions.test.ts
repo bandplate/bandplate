@@ -166,3 +166,13 @@ describe("reduceItem", () => {
     expect(failed).toMatchObject({ phase: "failed", message: "The upload stopped." });
   });
 });
+
+describe("recorded formats", () => {
+  it("reads a phone recording as a lossy webm or m4a", () => {
+    expect(readAudioShape("idea.webm", "")).toEqual({ format: "webm", tier: "lossy" });
+    expect(readAudioShape("idea.m4a", "")).toEqual({ format: "m4a", tier: "lossy" });
+    expect(readAudioShape("blob", "audio/webm")).toEqual({ format: "webm", tier: "lossy" });
+    expect(readAudioShape("blob", "audio/mp4")).toEqual({ format: "m4a", tier: "lossy" });
+    expect(readAudioShape("voice.m4a", "audio/x-m4a")).toEqual({ format: "m4a", tier: "lossy" });
+  });
+});

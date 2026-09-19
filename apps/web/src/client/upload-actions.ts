@@ -5,7 +5,7 @@
 // than through a rendered component. `AssetUploader.tsx` owns the bytes, the
 // progress events and the markup; everything here is a pure function.
 
-export type AssetFormat = "opus" | "mp3" | "flac" | "wav";
+export type AssetFormat = "opus" | "mp3" | "flac" | "wav" | "webm" | "m4a";
 export type AssetTier = "lossy" | "lossless";
 export type AssetKind = "master" | "stem";
 
@@ -27,6 +27,8 @@ const SHAPE_BY_FORMAT: Record<AssetFormat, AssetTier> = {
   wav: "lossless",
   mp3: "lossy",
   opus: "lossy",
+  webm: "lossy",
+  m4a: "lossy",
 };
 
 const EXTENSIONS: Record<string, AssetFormat> = {
@@ -39,6 +41,8 @@ const EXTENSIONS: Record<string, AssetFormat> = {
   // the bucket stores both under `audio/ogg` — which is exactly what the
   // `opus` format maps to. Treating it as opus is the honest available answer.
   ogg: "opus",
+  webm: "webm",
+  m4a: "m4a",
 };
 
 const MIME_TYPES: Record<string, AssetFormat> = {
@@ -52,6 +56,11 @@ const MIME_TYPES: Record<string, AssetFormat> = {
   "audio/mp3": "mp3",
   "audio/ogg": "opus",
   "audio/opus": "opus",
+  // What a phone's voice recorder or the browser's MediaRecorder hands over.
+  "audio/webm": "webm",
+  "audio/mp4": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/m4a": "m4a",
 };
 
 /**

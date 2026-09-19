@@ -99,6 +99,15 @@ and the message you get points at the element's *closing* tag with
 Put the explanation above the element, or compute the value in frontmatter
 with the comment beside it. The second is usually better anyway.
 
+### A script tag written inside a frontmatter comment
+
+Vite's dependency scan finds `<script>` in an `.astro` file with a regex, not
+a parser, so a `// see the <script> below` in the frontmatter opens a "script"
+there and esbuild parses the rest of the comment as JS. The dev server logs
+`Failed to scan for dependencies … Expected ";"` pointing at a line of
+English, and the page still works, so it reads as noise. Name the script in
+words ("the inline script below") instead of writing the tag.
+
 ---
 
 ## "The typechecker is green and the page is 500"

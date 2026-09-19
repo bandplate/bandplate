@@ -93,7 +93,9 @@ if (Astro.request.method === "POST") {
       localeError = t.common.genericError;
     }
     // The no-JS path. With scripts, the picker applies a choice in place and
-    // never submits (see the <script> below), so this only runs without them.
+    // never submits (see the picker's inline script below), so this only runs
+    // without them. Never write the tag itself in a frontmatter comment: Vite's
+    // dependency scan finds script tags by regex and parses what follows as JS.
     // No `?saved` banner: the page itself changing colour is the confirmation.
     if (formData.get("intent") === "theme") {
       const choice = formData.get("theme");

@@ -1810,29 +1810,12 @@ a.bp-btn {
   gap: 0.5rem;
 }
 
-.bp-now-playing-source {
+/* The source choices are `.bp-pill`s, at the 44px target a sheet on a phone
+   needs (the primitive's 36px is sized for filter rows). */
+.bp-now-playing-sources .bp-pill {
   min-height: 44px;
-  padding: 0 1rem;
-  border: none;
-  border-radius: 999px;
-  background: var(--bp-fill-subtle);
-  color: var(--bp-color-fg);
-  font-family: var(--bp-font-body);
-  font-weight: 600;
-  font-size: var(--text-ui, 0.9375rem);
+  padding-inline: 1rem;
   white-space: nowrap;
-  cursor: pointer;
-}
-
-.bp-now-playing-source:hover {
-  background: var(--bp-fill-raised);
-}
-
-/* The selected source — rendered by the sheet itself, and the same class
-   `syncButtons` gives every other `[data-audio-source]` control. */
-.bp-now-playing-source.is-active {
-  background: color-mix(in srgb, var(--bp-color-accent-gold) 16%, transparent);
-  color: var(--bp-color-accent);
 }
 
 .bp-now-playing-mixer {
@@ -1924,7 +1907,7 @@ a.bp-btn {
   background: var(--bp-fill-subtle);
 }
 
-/* The playing row — same gold-tinted fill and accent title `.bp-now-playing-source.is-active` uses, so the two "this is what's on" markers in the sheet read as one language. */
+/* The playing row — same gold-tinted fill and accent title a selected `.bp-pill` uses, so the two "this is what's on" markers in the sheet read as one language. */
 .bp-now-playing-item[aria-current="true"] {
   background: color-mix(in srgb, var(--bp-color-accent-gold) 10%, transparent);
 }
@@ -2969,7 +2952,7 @@ a.bp-btn {
 /* the little that is genuinely specific to them.                          */
 /* ---------------------------------------------------------------------- */
 
-/* Title, then the sections. `.bp-filter-pills` does the row itself. */
+/* Title, then the sections. `.bp-pills` does the row itself. */
 .bp-admin-head {
   display: flex;
   flex-direction: column;
@@ -3504,7 +3487,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   margin-top: 0.625rem;
 }
 
-.bp-cell-editor-body .bp-filter-pills {
+.bp-cell-editor-body .bp-pills {
   flex: 1 1 100%;
 }
 
@@ -7249,13 +7232,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
    No legend either: "Kind" over three pills reading Rehearsals / Concerts /
    Sessions labelled what was already obvious. */
-.bp-filter-pills {
+.bp-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.bp-filter-pill {
+.bp-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.4375rem;
@@ -7273,23 +7256,26 @@ html:has(dialog.bp-filter-sheet[open]) body {
   cursor: pointer;
 }
 
-.bp-filter-pill:hover {
+.bp-pill:hover {
   background: var(--bp-fill-raised);
 }
 
-/* On is the accent fill, the same one the chosen vote takes. Selection also
-   carries a tick, so it never rests on colour alone — three pills where one is
-   off has no other cue that would survive a monochrome screen. */
-.bp-filter-pill[aria-pressed="true"],
-.bp-filter-pill[aria-current="page"] {
-  background: var(--bp-color-accent);
-  color: var(--bp-color-on-accent);
+/* On is a gold TINT with accent text, not a solid gold fill. A row of pills
+   is a choice, not the page's primary action, and a solid plate on one of
+   them outshouted every button around it; the tint is the one the Hraje
+   sheet's source choice introduced. Where a pill filters, selection also
+   carries a tick, so it never rests on colour alone. */
+.bp-pill[aria-pressed="true"],
+.bp-pill[aria-current="page"],
+.bp-pill-check input:checked + .bp-pill {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 16%, transparent);
+  color: var(--bp-color-accent);
 }
 
-.bp-filter-pill[aria-pressed="true"]:hover,
-.bp-filter-pill[aria-current="page"]:hover {
-  background: var(--bp-color-accent);
-  filter: brightness(1.06);
+.bp-pill[aria-pressed="true"]:hover,
+.bp-pill[aria-current="page"]:hover,
+.bp-pill-check input:checked + .bp-pill:hover {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 24%, transparent);
 }
 
 /* The odd pill out in a row of them (M8's "Archived"). The three sort pills
@@ -7298,12 +7284,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
    Two things say so without inventing a new shape: it is pushed to the end of
    the row (and, when the row wraps, to the end of its own line), and it rests
    in the muted ink rather than the full foreground. Pressed, it takes the
-   same accent fill as its neighbours, because pressed is pressed. */
-.bp-filter-pill--set-apart {
+   same gold tint as its neighbours, because pressed is pressed. */
+.bp-pill--set-apart {
   margin-inline-start: auto;
 }
 
-.bp-filter-pill--set-apart:not([aria-pressed="true"]) {
+.bp-pill--set-apart:not([aria-pressed="true"]) {
   color: var(--bp-color-muted);
 }
 
@@ -7312,7 +7298,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
    there, and these pills are what is behind it. Past `lg` the sidebar lists
    the same four sections, so keeping both would be the same navigation twice
    on one screen. Declared HERE rather than beside `.bp-admin-head`, because
-   `.bp-filter-pills`'s own `display: flex` is later in this file and a media
+   `.bp-pills`'s own `display: flex` is later in this file and a media
    query adds no specificity — the earlier rule simply lost. */
 @media (min-width: 1024px) {
   .bp-admin-sections {
@@ -7320,7 +7306,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 }
 
-.bp-filter-pill-mark {
+.bp-pill-mark {
   display: inline-grid;
   place-items: center;
   width: 0.875rem;
@@ -7328,7 +7314,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   flex: none;
 }
 
-.bp-filter-pill[aria-pressed="false"] .bp-filter-pill-mark {
+.bp-pill[aria-pressed="false"] .bp-pill-mark {
   opacity: 0.35;
 }
 
@@ -8187,12 +8173,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
    form submits and what a screen reader announces) and is drawn as the same
    pill the link-filters on `/events` use, so a filter looks the same whether it
    is a link or a field. */
-.bp-filter-pill-check {
+.bp-pill-check {
   display: inline-flex;
   cursor: pointer;
 }
 
-.bp-filter-pill-check input {
+.bp-pill-check input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -8201,12 +8187,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   clip-path: inset(50%);
 }
 
-.bp-filter-pill-check input:checked + .bp-filter-pill {
-  background: var(--bp-color-accent);
-  color: var(--bp-color-on-accent);
-}
-
-.bp-filter-pill-check input:focus-visible + .bp-filter-pill {
+.bp-pill-check input:focus-visible + .bp-pill {
   outline: 2px solid var(--bp-color-accent);
   outline-offset: 2px;
 }
@@ -8426,7 +8407,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 /* --- Pagination ---------------------------------------------------------
 
-   The numbers are `.bp-filter-pill`s: same size, same fill, same accent for
+   The numbers are `.bp-pill`s: same size, same fill, same accent for
    the chosen one, and that class already styled `[aria-current="page"]`
    before anything paged. What is left here is the ROW — how the numbers sit
    between the two steps, and what happens when there is not enough width for
@@ -8539,7 +8520,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
     border: 0;
   }
 
-  /* 44px in BOTH directions. `.bp-filter-pill`'s own 36px min-height is right
+  /* 44px in BOTH directions. `.bp-pill`'s own 36px min-height is right
      for a pill in a wrapping bank of filters, where the label beside it makes
      the target read wider than it is; an icon-only arrow that is the primary
      thing a thumb reaches for on this control has to clear the floor on its

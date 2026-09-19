@@ -197,13 +197,13 @@ function archivedHref(): string {
       </form>
     </RecordSheet>
 
-    <div class="bp-filter-pills">
+    <div class="bp-pills">
       {
         KIND_OPTIONS.map((option) => {
           const on = selected.includes(option.value);
           return (
-            <a href={toggleHref(option.value)} class="bp-filter-pill" aria-pressed={on ? "true" : "false"}>
-              <span class="bp-filter-pill-mark" aria-hidden="true">
+            <a href={toggleHref(option.value)} class="bp-pill" aria-pressed={on ? "true" : "false"}>
+              <span class="bp-pill-mark" aria-hidden="true">
                 {on ? (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 12.5l5.5 5.5L20 6" />
@@ -223,7 +223,7 @@ function archivedHref(): string {
         (archivedCount > 0 || viewingArchive) && (
           <a
             href={archivedHref()}
-            class="bp-filter-pill bp-filter-pill--set-apart"
+            class="bp-pill bp-pill--set-apart"
             aria-pressed={viewingArchive ? "true" : "false"}
           >
             {t.events.archived}

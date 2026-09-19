@@ -297,11 +297,11 @@ const [allSongs, allInstruments] = await Promise.all([
           />
           <fieldset class="bp-sheet-field">
             <legend class="bp-eyebrow">{t.events.instrumentsHeading}</legend>
-            <div class="bp-filter-pills">
+            <div class="bp-pills">
               {allInstruments.map((instrument) => (
-                <label class="bp-filter-pill-check">
+                <label class="bp-pill-check">
                   <input type="checkbox" name="instrumentIds" value={instrument.id} />
-                  <span class="bp-filter-pill">{instrument.label}</span>
+                  <span class="bp-pill">{instrument.label}</span>
                 </label>
               ))}
             </div>

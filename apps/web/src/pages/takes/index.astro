@@ -168,9 +168,9 @@ const countLabel = t.takes.count(total);
                 <span class="bp-filter-legend-note">{t.takes.instrumentsAll}</span>
               )}
             </legend>
-            <div class="bp-filter-pills">
+            <div class="bp-pills">
               {instruments.map((instrument) => (
-                <label class="bp-filter-pill-check">
+                <label class="bp-pill-check">
                   <input
                     type="checkbox"
                     id={`search-instrument-${instrument.id}`}
@@ -178,7 +178,7 @@ const countLabel = t.takes.count(total);
                     value={instrument.id}
                     checked={query.instrumentIds.includes(instrument.id)}
                   />
-                  <span class="bp-filter-pill">{instrument.label}</span>
+                  <span class="bp-pill">{instrument.label}</span>
                 </label>
               ))}
             </div>
@@ -195,20 +195,20 @@ const countLabel = t.takes.count(total);
               selected member and a member can get back to it. */}
           <fieldset class="bp-filter-group">
             <legend class="bp-eyebrow bp-filter-legend">{t.takes.recordedLegend}</legend>
-            <div class="bp-filter-pills">
-              <label class="bp-filter-pill-check">
+            <div class="bp-pills">
+              <label class="bp-pill-check">
                 <input
                   type="radio"
                   name="since"
                   value=""
                   checked={!query.since && !usingExactDates}
                 />
-                <span class="bp-filter-pill">{t.takes.anyTime}</span>
+                <span class="bp-pill">{t.takes.anyTime}</span>
               </label>
               {Object.entries(RECORDED_WINDOWS).map(([value, { labelKey }]) => (
-                <label class="bp-filter-pill-check">
+                <label class="bp-pill-check">
                   <input type="radio" name="since" value={value} checked={query.since === value} />
-                  <span class="bp-filter-pill">{t.takes[labelKey]}</span>
+                  <span class="bp-pill">{t.takes[labelKey]}</span>
                 </label>
               ))}
             </div>
@@ -246,8 +246,8 @@ const countLabel = t.takes.count(total);
               judged from last month, with horns on it" is one query. */}
           <fieldset class="bp-filter-group">
             <legend class="bp-eyebrow bp-filter-legend">{t.takes.yoursLegend}</legend>
-            <div class="bp-filter-pills">
-              <label class="bp-filter-pill-check">
+            <div class="bp-pills">
+              <label class="bp-pill-check">
                 <input
                   type="checkbox"
                   id="search-unvoted"
@@ -255,7 +255,7 @@ const countLabel = t.takes.count(total);
                   value="1"
                   checked={query.unvotedOnly}
                 />
-                <span class="bp-filter-pill">{t.takes.notVotedByMe}</span>
+                <span class="bp-pill">{t.takes.notVotedByMe}</span>
               </label>
             </div>
           </fieldset>

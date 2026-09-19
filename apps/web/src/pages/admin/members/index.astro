@@ -274,16 +274,16 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
 
                         <fieldset class="bp-sheet-field">
                           <legend class="bp-eyebrow">{ta.colInstruments}</legend>
-                          <div class="bp-filter-pills">
+                          <div class="bp-pills">
                             {allInstruments.map((instrument) => (
-                              <label class="bp-filter-pill-check">
+                              <label class="bp-pill-check">
                                 <input
                                   type="checkbox"
                                   name="instrumentIds"
                                   value={instrument.id}
                                   checked={member.instrumentIds.includes(instrument.id)}
                                 />
-                                <span class="bp-filter-pill">
+                                <span class="bp-pill">
                                   {instrument.label}
                                   {instrument.archivedAt !== null ? " (archived)" : ""}
                                 </span>

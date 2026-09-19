@@ -250,12 +250,12 @@ function archivedHref(): string {
       <button type="submit" class="bp-visually-hidden">{t.songs.searchSubmit}</button>
     </form>
 
-    <div class="bp-filter-pills">
+    <div class="bp-pills">
       {
         SORT_OPTIONS.map((option) => (
           <a
             href={sortHref(option.value)}
-            class="bp-filter-pill"
+            class="bp-pill"
             aria-pressed={sort === option.value ? "true" : "false"}
           >
             {option.label}
@@ -269,7 +269,7 @@ function archivedHref(): string {
         (archivedCount > 0 || viewingArchive) && (
           <a
             href={archivedHref()}
-            class="bp-filter-pill bp-filter-pill--set-apart"
+            class="bp-pill bp-pill--set-apart"
             aria-pressed={viewingArchive ? "true" : "false"}
           >
             {t.songs.archived}

@@ -251,6 +251,33 @@ describe("a private take is its owner's alone", () => {
     expect((await vote.json()).error.code).toBe("not_votable");
   });
 
+  it("another member cannot verify its file; the owner can", async () => {
+    const testApp = await build();
+    const { robin, sam, takeId } = await stashed(testApp);
+    const ready = await readyMaster(testApp, takeId);
+    // Already ready, so the owner's verify answers without touching a bucket.
+    expect((await post(testApp, `/assets/${ready.id}/verify`, sam.cookie, {})).status).toBe(404);
+    expect((await post(testApp, `/assets/${ready.id}/verify`, robin.cookie, {})).status).toBe(200);
+
+    const [pending] = await assetsRepo.createMany(testApp.db, [
+      {
+        takeId,
+        kind: "stem",
+        instrumentId: null,
+        tier: "lossy",
+        format: "webm",
+        storageKey: `takes/${takeId}/stem/lossy.webm`,
+        contentType: "audio/webm",
+        bytes: 12,
+        status: "pending",
+        createdAt: testApp.clock.now(),
+      },
+    ]);
+    if (!pending) throw new Error("no asset");
+    expect((await post(testApp, `/assets/${pending.id}/verify`, sam.cookie, {})).status).toBe(404);
+    expect((await assetsRepo.getById(testApp.db, pending.id))?.status).toBe("pending");
+  });
+
   describe.skipIf(isWorkerdRuntime)("against a real bucket", () => {
     it("the owner uploads a webm master: declare, PUT, verify", async () => {
       const testApp = await build();
@@ -296,15 +323,37 @@ describe("a private take is its owner's alone", () => {
           ).status,
         ).toBe(302);
       }
-      // No peaks exist for a stash take; what matters is that a stranger gets
-      // the same 404 whether or not they do.
-      expect(
-        (
-          await testApp.app.request(`/assets/${asset.id}/peaks`, {
-            headers: { cookie: sam.cookie },
-          })
-        ).status,
-      ).toBe(404);
+    });
+
+    it("peaks 404 for another member even where the owner has a waveform", async () => {
+      const testApp = await build();
+      const { robin, sam, takeId } = await stashed(testApp);
+      const asset = await readyMaster(testApp, takeId);
+      // A ready waveform for the master, so the owner's answer is a real
+      // redirect: the stranger's 404 is then the access check, not the
+      // "no waveform yet" 404 every take without peaks gives.
+      await assetsRepo.createMany(testApp.db, [
+        {
+          takeId,
+          kind: "peaks",
+          tier: "lossy",
+          format: "json",
+          storageKey: `takes/${takeId}/peaks.json`,
+          contentType: "application/json",
+          bytes: 1000,
+          status: "ready",
+          createdAt: testApp.clock.now(),
+          readyAt: testApp.clock.now(),
+        },
+      ]);
+      const peaks = (cookie: string) =>
+        testApp.app.request(`/assets/${asset.id}/peaks`, {
+          headers: { cookie },
+          redirect: "manual",
+        });
+      // The route answers a found waveform with a redirect to the signed URL.
+      expect((await peaks(robin.cookie)).status).toBe(302);
+      expect((await peaks(sam.cookie)).status).toBe(404);
     });
   });
 });

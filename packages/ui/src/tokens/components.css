@@ -9075,3 +9075,23 @@ html:has(dialog.bp-filter-sheet[open]) body {
     display: inline-block;
   }
 }
+
+/* The stash line on a song page and on home: a lock, the count, a link. */
+.bp-stash-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--bp-color-muted);
+}
+
+.bp-home-stash {
+  min-height: 44px;
+  color: var(--bp-color-fg);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.bp-song-record {
+  margin-top: 0.75rem;
+}

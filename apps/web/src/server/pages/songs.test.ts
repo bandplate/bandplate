@@ -1,5 +1,12 @@
 import type { Db } from "@bandplate/db";
-import { assetsRepo, eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import {
+  assetsRepo,
+  eventsRepo,
+  instrumentsRepo,
+  membersRepo,
+  songsRepo,
+  takesRepo,
+} from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSongDetail, listSongsForLibrary, parseSongsListQuery } from "./songs.js";
@@ -156,5 +163,50 @@ describe("listSongsForLibrary / getSongDetail", () => {
     const silentTake = detail?.takes.find((t) => t.id === silent.id);
     expect(playableTake?.playableAssetId).toBe(masterAsset?.id);
     expect(silentTake?.playableAssetId).toBeUndefined();
+  });
+});
+
+describe("getSongDetail and the stash", () => {
+  it("counts this member's private takes of the song, and nobody else's", async () => {
+    const db = await createTestDb();
+    const me = await membersRepo.create(db, {
+      displayName: "Me",
+      slug: "me",
+      email: "me@example.com",
+      createdAt: 1,
+    });
+    const them = await membersRepo.create(db, {
+      displayName: "Them",
+      slug: "them",
+      email: "them@example.com",
+      createdAt: 1,
+    });
+    const song = await songsRepo.create(db, {
+      title: "Čoudy",
+      slug: "coudy",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const event = await eventsRepo.findOrCreatePersonal(db, {
+      memberId: me.id,
+      dayKey: "2026-09-19",
+      heldAt: 1,
+      now: 1,
+    });
+    for (const recordedAt of [1, 2]) {
+      await takesRepo.create(db, {
+        songId: song.id,
+        eventId: event.id,
+        recordedAt,
+        visibility: "private",
+        ownerMemberId: me.id,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+    }
+    const mine = await getSongDetail(db, "coudy", me.id);
+    expect(mine?.stashCount).toBe(2);
+    expect(mine?.takeTotal).toBe(0);
+    expect((await getSongDetail(db, "coudy", them.id))?.stashCount).toBe(0);
   });
 });

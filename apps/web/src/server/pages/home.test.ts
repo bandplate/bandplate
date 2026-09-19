@@ -305,4 +305,28 @@ describe("getHomeData", () => {
     expect(recentEvents.map((e) => e.id)).toEqual([event.id]);
     expect(recentEvents[0]?.takeCount).toBe(0);
   });
+
+  it("says how many recordings are waiting in this member's stash", async () => {
+    expect((await getHomeData(db, memberId)).stashCount).toBe(0);
+    const song = await songsRepo.create(db, { title: "S", slug: "s", createdAt: 1, updatedAt: 1 });
+    const event = await eventsRepo.findOrCreatePersonal(db, {
+      memberId,
+      dayKey: "2026-09-19",
+      heldAt: 1,
+      now: 1,
+    });
+    await takesRepo.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: 1,
+      visibility: "private",
+      ownerMemberId: memberId,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const data = await getHomeData(db, memberId);
+    expect(data.stashCount).toBe(1);
+    // …and the personal day it sits in is not a recent event.
+    expect(data.recentEvents).toEqual([]);
+  });
 });

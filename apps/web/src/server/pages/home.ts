@@ -230,16 +230,20 @@ export interface HomeData {
   pinnedTotal: number;
   /** The ledger — events only, newest first, each with its take count. */
   recentEvents: eventsRepo.EventWithTakeCount[];
+  /** How many recordings are in this member's stash. */
+  stashCount: number;
 }
 
 export async function getHomeData(db: Db, memberId: string): Promise<HomeData> {
-  const [pinned, recentEvents] = await Promise.all([
+  const [pinned, recentEvents, stashCount] = await Promise.all([
     getPinned(db, memberId),
     eventsRepo.listRecentWithTakeCounts(db, { limit: RECENT_EVENTS_LIMIT }),
+    takesRepo.countStash(db, memberId),
   ]);
   return {
     pinned: pinned.items,
     pinnedTotal: pinned.total,
     recentEvents: recentEvents.rows,
+    stashCount,
   };
 }

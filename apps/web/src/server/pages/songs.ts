@@ -106,6 +106,8 @@ export interface SongDetail {
   /** ONE PAGE of takes, newest first, plus how many the song has in all. */
   takes: TakeWithContext[];
   takeTotal: number;
+  /** This member's recordings of this song still in their stash — the "Ve tvém šuplíku" line. Never anyone else's. */
+  stashCount: number;
 }
 
 /**
@@ -135,11 +137,12 @@ export async function getSongDetail(
     return undefined;
   }
 
-  const [aliases, instrumentNotes, pagedTakes, songFavorited] = await Promise.all([
+  const [aliases, instrumentNotes, pagedTakes, songFavorited, stashCount] = await Promise.all([
     songsRepo.listAliases(db, song.id),
     songsRepo.listInstrumentNotes(db, song.id),
     takesRepo.listBySong(db, song.id, { page: takesPage }),
     favoritesRepo.isFavorited(db, memberId, "song", song.id),
+    takesRepo.countStash(db, memberId, { songId: song.id }),
   ]);
   const takes = pagedTakes.rows;
 
@@ -166,6 +169,7 @@ export async function getSongDetail(
     aliases,
     instrumentNotes,
     takeTotal: pagedTakes.total,
+    stashCount,
     takes: takes.map((take) => ({
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],

@@ -108,7 +108,7 @@ if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { song, songFavorited, aliases, instrumentNotes, takes, takeTotal } = detail;
+const { song, songFavorited, aliases, instrumentNotes, takes, takeTotal, stashCount } = detail;
 const pages = pageView({
   url: Astro.url,
   page,
@@ -255,6 +255,22 @@ function eventOptionLabel(event: eventsRepo.Event): string {
       charts and machine strings (docs/design-foundation.md). Tabular figures
       are what a row of numbers actually needed. */}
       {metaParts.length > 0 && <p class="bp-song-hero-meta bp-m0">{metaParts.join(", ")}</p>}
+
+      {/* The recorder with this song already chosen. A pill, not a button in
+          the title row: it is a way to add to the song, beside it, not an
+          edit of it. `data-astro-reload` because `/record` runs with no
+          router and no shell player — see that page. */}
+      <div class="bp-pills bp-song-record">
+        <a href={`/record?song=${song.slug}`} class="bp-pill" data-astro-reload>
+          <span class="bp-pill-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="3" width="6" height="12" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+            </svg>
+          </span>
+          {t.stash.recordIdea}
+        </a>
+      </div>
 
     </div>
 
@@ -550,6 +566,19 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             </div>
           )
         }
+
+        {/* Only the owner ever sees this, and only when there is something:
+            `stashCount` is this member's own private takes of this song. */}
+        {stashCount > 0 && (
+          <p class="bp-stash-line bp-m0">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+            {t.stash.inYourStash(stashCount)}
+            <a href="/takes?stash=1">{t.stash.open}</a>
+          </p>
+        )}
 
         {instrumentNotes.length > 0 && (
           <section class="bp-song-aside-section">

@@ -2424,8 +2424,12 @@ a.bp-btn {
        38ch, the chart column at 40ch — so the page can be wider without any
        line of text getting longer. It stays capped rather than fluid: at
        1920px an uncapped take row would run a date and a duration to opposite
-       ends of the screen. */
-    max-width: 72rem;
+       ends of the screen.
+
+       90rem since the rows lost their rules: a borderless row reads as one
+       object across a wider span, and at 72rem a 1920px window still left a
+       third of the screen empty beside the home page's shelf. */
+    max-width: 90rem;
     /* CENTRED in the space beside the sidebar, not pinned against it. This was
        `margin: 0`, which cancelled the base rule's `margin: 0 auto` — fine
        when 72rem nearly filled a 1450px window, and wrong on anything wider:
@@ -7189,7 +7193,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 .bp-ledger-footer {
   padding-top: 1rem;
-  border-top: 1px solid var(--bp-color-border);
 }
 
 /* Past `lg` the two sections sit side by side: the shelf you reach for on the

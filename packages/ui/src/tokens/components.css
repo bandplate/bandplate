@@ -1202,89 +1202,6 @@ a.bp-btn {
   }
 }
 
-/* The way into the mixer, beside the source switcher in the player bar. They
-   answer the same question — which parts of this take do I want to hear — so
-   it is built from the switcher trigger's own fill, type and height and the
-   two read as one pair of controls.
-
-   A CIRCLE below the bar's phone breakpoint and a labelled pill at and above
-   it. The bar is permanent chrome on every page and already carries a
-   transport, a title, a switcher and a close; on a phone there is no room for
-   another set of words, and on a desktop there is no excuse for withholding
-   them. The words are never taken out of the accessibility tree, only out of
-   sight, so the control has a name at both widths.
-
-   40px, not 36 like its neighbour, and the `::after` reaches the remaining
-   4px: a circle is the one shape here with no label to widen it, so it is the
-   one that would otherwise fall under the touch floor in both axes. The bar's
-   own 0.875rem row gap leaves the expanded targets 10px clear. */
-.bp-player-mixer {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  flex: none;
-  width: 40px;
-  min-height: 40px;
-  border-radius: 50%;
-  background: var(--bp-fill-subtle);
-  color: var(--bp-color-fg);
-  font-family: var(--bp-font-body);
-  font-weight: 600;
-  font-size: var(--text-ui, 0.9375rem);
-  white-space: nowrap;
-  text-decoration: none;
-}
-
-.bp-player-mixer::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-}
-
-.bp-player-mixer:hover {
-  background: var(--bp-fill-raised);
-}
-
-.bp-player-mixer:focus-visible {
-  outline: 3px solid var(--bp-color-fg);
-  outline-offset: 2px;
-}
-
-/* Out of sight, not out of the accessibility tree — the same treatment
-   `.bp-visually-hidden` gives, undone at the breakpoint below. */
-.bp-player-mixer-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-@media (min-width: 40rem) {
-  .bp-player-mixer {
-    width: auto;
-    min-height: 36px;
-    padding: 0.375rem 0.8125rem;
-    border-radius: var(--radius-pill, 999px);
-  }
-
-  .bp-player-mixer::after {
-    content: none;
-  }
-
-  .bp-player-mixer-label {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
-  }
-}
-
 /* Bottom tab bar — phones and tablets. */
 .bp-tabbar {
   position: fixed;
@@ -1476,13 +1393,6 @@ a.bp-btn {
   border-top: 1px solid var(--bp-color-border);
 }
 
-@media (max-width: 639px) {
-  .bp-player-source-trigger {
-    max-width: 8rem;
-    overflow: hidden;
-  }
-}
-
 .bp-player[hidden] {
   display: none;
 }
@@ -1580,84 +1490,6 @@ a.bp-btn {
 
 .bp-player-meta-button:hover .bp-player-meta-caret {
   color: var(--bp-color-fg);
-}
-
-/* The source switch — what am I hearing, and a way to change it from
-   wherever you are. Its list is the same `[data-audio-source]` control the
-   take page's stems drawer uses, so switching here runs the one decision
-   function that preserves the playhead. */
-.bp-player-switch {
-  position: relative;
-  flex: none;
-}
-
-.bp-player-source-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 36px;
-  padding: 0.375rem 0.8125rem;
-  border: none;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--bp-fill-subtle);
-  color: var(--bp-color-fg);
-  font-family: var(--bp-font-body);
-  font-weight: 600;
-  font-size: var(--text-ui, 0.9375rem);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.bp-player-source-trigger:hover {
-  background: var(--bp-fill-raised);
-}
-
-.bp-player-sources {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 0.625rem);
-  z-index: 1;
-  min-width: 11rem;
-  padding: 0.375rem;
-  border: 1px solid var(--bp-color-border);
-  border-radius: 0.625rem;
-  background: var(--bp-color-surface);
-  box-shadow: 0 -10px 34px rgb(0 0 0 / 0.55);
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.bp-player-source {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 0.875rem;
-  border: none;
-  border-radius: 0.375rem;
-  background: transparent;
-  color: var(--bp-color-fg);
-  font-family: var(--bp-font-body);
-  font-weight: 600;
-  font-size: var(--text-ui, 0.9375rem);
-  text-align: left;
-  cursor: pointer;
-}
-
-.bp-player-source:hover {
-  background: var(--bp-fill-subtle);
-}
-
-/* `syncButtons` marks the selected source — the same class every other
-   `[data-audio-source]` control gets. */
-.bp-player-source.is-active {
-  background: color-mix(in srgb, var(--bp-color-accent-gold) 16%, transparent);
-}
-
-.bp-player-sources-empty {
-  padding: 0.625rem 0.875rem;
-  font-size: var(--text-note, 0.8125rem);
-  color: var(--bp-color-muted);
 }
 
 .bp-player-transport {
@@ -1830,6 +1662,301 @@ a.bp-btn {
    element IS the playback state, and it must survive every track change. */
 .bp-player-audio {
   display: none;
+}
+
+/* ---------------------------------------------------------------------- */
+/* The Hraje sheet — `NowPlayingSheet.tsx`. A native `<dialog>` opened with */
+/* `showModal()`: source, mixer link, running order, and its own foot     */
+/* transport (the bar behind it goes inert the moment it opens).           */
+/* ---------------------------------------------------------------------- */
+
+/* Dimmer over the page, including the bar — `showModal()` paints this as the
+   dialog's own `::backdrop`, not a sibling element (see `.bp-dialog`'s own
+   comment on why that matters: a class with nothing in the markup wearing it
+   is dead CSS). Reads the page background rather than a flat black so it
+   sits right in both themes without a separate dark-mode override. */
+.bp-now-playing::backdrop {
+  background: color-mix(in srgb, var(--bp-color-bg) 72%, transparent);
+}
+
+.bp-now-playing {
+  position: fixed;
+  /* Pinned to the bottom on a phone: `margin: auto 0 0` centers nothing
+     horizontally and pushes the dialog to the bottom edge instead of the
+     UA's default centered placement. */
+  margin: auto 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: calc(100dvh - 4rem);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: none;
+  border-top: 1px solid var(--bp-color-border);
+  border-radius: 18px 18px 0 0;
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
+  padding: 0.75rem 20px calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* The grab handle — a purely decorative affordance (this sheet has no
+   drag-to-dismiss gesture; Escape, the backdrop and the close button all
+   do the job), so it is drawn, not a button, and carries no label. */
+.bp-now-playing::before {
+  content: "";
+  align-self: center;
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bp-color-border);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bp-now-playing[open] {
+    animation: bp-now-playing-in var(--duration-enter, 220ms) var(--ease-bp, ease-out);
+  }
+}
+
+@keyframes bp-now-playing-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.bp-now-playing-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.bp-now-playing-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.bp-now-playing-title {
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-size: 24px;
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
+
+.bp-now-playing-sub {
+  color: var(--bp-color-muted);
+  font-size: 0.875rem;
+}
+
+/* The close button reuses `.bp-player-skip`'s 44px box rather than its own
+   rule — same reason the bar's play button borrows a shared class: one
+   selector, so the two touch targets cannot drift apart. */
+
+.bp-now-playing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-height: 0;
+}
+
+.bp-now-playing-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.bp-now-playing-source {
+  min-height: 40px;
+  padding: 0 1rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-ui, 0.9375rem);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bp-now-playing-source:hover {
+  background: var(--bp-fill-raised);
+}
+
+/* `syncButtons` marks the selected source — the same class every other
+   `[data-audio-source]` control gets. */
+.bp-now-playing-source.is-active {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 16%, transparent);
+  color: var(--bp-color-accent);
+}
+
+.bp-now-playing-mixer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-ui, 0.9375rem);
+  text-decoration: none;
+}
+
+.bp-now-playing-mixer:hover {
+  background: var(--bp-fill-raised);
+}
+
+.bp-now-playing-mixer:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+.bp-now-playing-order {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bp-now-playing-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.bp-now-playing-item {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: none;
+  border-radius: 10px;
+  padding: 0.375rem 0.625rem;
+  background: transparent;
+  color: inherit;
+  font-family: var(--bp-font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bp-now-playing-item:hover {
+  background: var(--bp-fill-subtle);
+}
+
+/* The playing row — same gold-tinted fill and accent title `.bp-now-playing-source.is-active` uses, so the two "this is what's on" markers in the sheet read as one language. */
+.bp-now-playing-item[aria-current="true"] {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 10%, transparent);
+}
+
+.bp-now-playing-item[aria-current="true"] .bp-now-playing-item-title {
+  color: var(--bp-color-accent);
+}
+
+/* Already played: present in the list, quieted rather than hidden — the
+   queue itself never shrinks mid-playback, only what is ahead is dimmed. */
+.bp-now-playing-item[data-played] .bp-now-playing-item-title,
+.bp-now-playing-item[data-played] .bp-now-playing-item-sub {
+  color: var(--bp-color-muted);
+}
+
+.bp-now-playing-num {
+  flex: none;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--bp-color-muted);
+}
+
+.bp-now-playing-item[aria-current="true"] .bp-now-playing-num {
+  color: var(--bp-color-accent);
+}
+
+.bp-now-playing-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.bp-now-playing-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-now-playing-item-sub {
+  color: var(--bp-color-muted);
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The sheet's own transport — `showModal()` makes the bar behind it inert,
+   so previous/play-pause/next have to be reachable from inside the top
+   layer too. Same `.bp-player-skip`/`.bp-player-play` classes and handlers
+   as the bar; no second waveform, seeking stays there. */
+.bp-now-playing-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex: none;
+  padding-top: 0.25rem;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 640px) {
+  .bp-now-playing {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: 100%;
+    max-width: 28rem;
+    max-height: min(calc(100dvh - 4rem), 40rem);
+    border: 1px solid var(--bp-color-border);
+    border-radius: 18px;
+  }
+
+  .bp-now-playing::before {
+    /* No drag-to-dismiss gesture on a pointer-driven surface: the phone-only
+       affordance would just be a decorative bar nobody asked for. */
+    display: none;
+  }
+}
+
+@media (min-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .bp-now-playing[open] {
+    animation: bp-now-playing-in-desktop var(--duration-enter, 220ms) var(--ease-bp, ease-out);
+  }
+}
+
+@keyframes bp-now-playing-in-desktop {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ---------------------------------------------------------------------- */

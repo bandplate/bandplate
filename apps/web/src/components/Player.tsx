@@ -58,6 +58,7 @@ import {
   playQueue,
   sourcesUrl,
 } from "../client/player-store.js";
+import { NowPlayingSheet } from "./NowPlayingSheet.tsx";
 
 /**
  * How wide one bar plus its gap should be, in CSS pixels.
@@ -269,6 +270,22 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     }
   }, [playIndex]);
 
+  // The one play/pause toggle, shared by the bar's own button and the Hraje
+  // sheet's foot transport — `showModal()` makes the bar inert while the
+  // sheet is open, so the sheet needs its own control wired to the same
+  // effect rather than a duplicate copy of this logic.
+  const togglePlayback = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+    if (audio.paused) {
+      void audio.play();
+    } else {
+      audio.pause();
+    }
+  }, []);
+
   const [playhead, setPlayhead] = useState(0);
   const [duration, setDuration] = useState(0);
   // `null` means "not fetched or none exists" — both render the plain rail,
@@ -450,6 +467,24 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     }
     document.addEventListener("astro:page-load", onPageLoad);
     return () => document.removeEventListener("astro:page-load", onPageLoad);
+  }, []);
+
+  // The sheet must never sit open over nothing (the bar's close button
+  // clears `track`) or over a page that swapped underneath it — a
+  // `showModal()` dialog is otherwise perfectly happy to keep the top layer
+  // through a navigation, which would leave the OLD take's sheet open on the
+  // NEW page.
+  useEffect(() => {
+    if (!track) {
+      setSheetOpen(false);
+    }
+  }, [track]);
+  useEffect(() => {
+    function onBeforeSwap() {
+      setSheetOpen(false);
+    }
+    document.addEventListener("astro:before-swap", onBeforeSwap);
+    return () => document.removeEventListener("astro:before-swap", onBeforeSwap);
   }, []);
 
   // The lock screen / headphones remote — same transport this bar exposes,
@@ -704,17 +739,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             class="bp-player-play"
             aria-pressed={playing}
             aria-label={playing ? t.pause(track?.title ?? "") : t.play(track?.title ?? "")}
-            onClick={() => {
-              const audio = audioRef.current;
-              if (!audio) {
-                return;
-              }
-              if (audio.paused) {
-                void audio.play();
-              } else {
-                audio.pause();
-              }
-            }}
+            onClick={togglePlayback}
           >
             {playing ? (
               <svg
@@ -883,6 +908,27 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
         </span>
         <span class="bp-player-time">{formatTime(duration)}</span>
       </div>
+
+      {/* The title button's sheet — sources, the mixer link, the running
+          order. Only mounted while there IS a track: an empty `PlayerTrack`
+          has no title or takeId for the sheet to show. */}
+      {track && (
+        <NowPlayingSheet
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          track={track}
+          sources={sources}
+          showMixer={sources !== null && stemCount >= MIN_MIXER_STEMS}
+          queue={queue}
+          onPick={playIndex}
+          onPrevious={goPrevious}
+          onNext={goNext}
+          onToggle={togglePlayback}
+          playing={playing}
+          canNext={hasNext(queue)}
+          t={t}
+        />
+      )}
 
       {/* No `controls`: the chrome above is ours now. Always in the DOM
           (never conditionally rendered) so the element's own playback state

@@ -22,6 +22,7 @@ import {
   pickerGroups,
   reduceRecorder,
   shapeForMime,
+  shouldDrawWaveform,
   waveformBars,
 } from "../client/recorder-logic.js";
 import { putPending } from "../client/stash-db.js";
@@ -55,14 +56,36 @@ function micError(err: unknown): RecorderError {
 }
 
 async function decodeBars(blob: Blob): Promise<number[] | null> {
+  let context: AudioContext | null = null;
   try {
-    const context = new AudioContext();
+    context = new AudioContext();
     const buffer = await context.decodeAudioData(await blob.arrayBuffer());
-    void context.close();
     return waveformBars(buffer.getChannelData(0), WAVE_BARS);
   } catch {
     // No picture is an honest answer; the review still plays.
     return null;
+  } finally {
+    // A phone allows only a handful of live AudioContexts; a failed decode
+    // must not keep one.
+    void context?.close().catch(() => undefined);
+  }
+}
+
+/**
+ * Asks the browser not to evict this origin's storage under pressure: the
+ * IndexedDB queue may hold the only copy of a recording. Best effort, and
+ * bounded, because the page leaves right after and a browser that asks the
+ * member must not hold the save up.
+ */
+async function requestPersistentStorage(): Promise<void> {
+  try {
+    const storage = navigator.storage;
+    if (!storage?.persist || (await storage.persisted?.())) {
+      return;
+    }
+    await Promise.race([storage.persist(), new Promise((resolve) => setTimeout(resolve, 1000))]);
+  } catch {
+    // No answer is an answer: the recording is saved either way.
   }
 }
 
@@ -208,13 +231,21 @@ export default function Recorder({
     if (durationRef.current === 0) {
       durationRef.current = Math.max(0, now - startedAtRef.current);
     }
-    const blob = needsDurationFix(mime)
-      ? await fixWebmDuration(raw, durationRef.current, { logger: false })
-      : raw;
+    let blob = raw;
+    if (needsDurationFix(mime)) {
+      try {
+        blob = await fixWebmDuration(raw, durationRef.current, { logger: false });
+      } catch {
+        // An unseekable review beats a lost recording: keep the raw bytes.
+        blob = raw;
+      }
+    }
     blobRef.current = blob;
     setReviewUrl(URL.createObjectURL(blob));
     setProgress(0);
-    setBars(await decodeBars(blob));
+    // A long take is not decoded at all (see `shouldDrawWaveform`); the review
+    // then shows no waveform, and play still works.
+    setBars(shouldDrawWaveform(durationRef.current) ? await decodeBars(blob) : null);
     dispatch({ type: "finished" });
   }, [releaseInput]);
 
@@ -244,25 +275,34 @@ export default function Recorder({
     mimeRef.current = mime;
     chunksRef.current = [];
     discardRef.current = false;
-    const recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 128_000 });
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunksRef.current.push(event.data);
-      }
-    };
-    recorder.onstop = () => {
-      void finishRecording();
-    };
+    let recorder: MediaRecorder;
+    try {
+      // Either can throw on a browser that claimed the type and then refuses
+      // it (NotSupportedError), or on a stream that died in between.
+      recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 128_000 });
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+      recorder.onstop = () => {
+        void finishRecording();
+      };
+      // A chunk a second, so a recording is never one enormous final buffer.
+      recorder.start(1000);
+    } catch {
+      releaseInput();
+      dispatch({ type: "failed", error: "unsupported" });
+      return;
+    }
     recorderRef.current = recorder;
-    // A chunk a second, so a recording is never one enormous final buffer.
-    recorder.start(1000);
     recordedAtRef.current = Date.now();
     durationRef.current = 0;
     startedAtRef.current = performance.now();
     dispatch({ type: "started", at: startedAtRef.current });
     startMeter(stream);
     void acquireWakeLock();
-  }, [acquireWakeLock, finishRecording, startMeter]);
+  }, [acquireWakeLock, finishRecording, releaseInput, startMeter]);
 
   const stop = useCallback(() => {
     const now = performance.now();
@@ -314,6 +354,7 @@ export default function Recorder({
       dispatch({ type: "failed", error: "save-failed" });
       return;
     }
+    await requestPersistentStorage();
     // Saved means safe: leave. The stash page's sync takes it from here.
     window.location.assign(STASH_HREF);
   }, [label, memberId, song, state.elapsedMs]);
@@ -618,7 +659,9 @@ export default function Recorder({
           >
             <CloseIcon />
           </button>
-        ) : state.phase === "armed" || state.phase === "error" ? (
+        ) : state.phase === "armed" || state.phase === "starting" || state.phase === "error" ? (
+          // `starting` too: a permission prompt nobody answers must not trap
+          // the member on a page with no way out.
           <a href={closeHref} class="bp-rec-close" aria-label={t.close}>
             <CloseIcon />
           </a>

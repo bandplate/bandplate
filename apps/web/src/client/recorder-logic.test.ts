@@ -10,6 +10,7 @@ import {
   pickerGroups,
   reduceRecorder,
   shapeForMime,
+  shouldDrawWaveform,
   waveformBars,
 } from "./recorder-logic.js";
 
@@ -185,6 +186,15 @@ describe("waveformBars", () => {
     expect(waveformBars(new Float32Array(0), 8)).toEqual([]);
     expect(waveformBars(new Float32Array(4), 0)).toEqual([]);
     expect(waveformBars(new Float32Array(4), 2)).toEqual([0, 0]);
+  });
+});
+
+describe("shouldDrawWaveform", () => {
+  it("decodes up to ten minutes, and no further", () => {
+    expect(shouldDrawWaveform(42_000)).toBe(true);
+    expect(shouldDrawWaveform(10 * 60_000)).toBe(true);
+    expect(shouldDrawWaveform(10 * 60_000 + 1)).toBe(false);
+    expect(shouldDrawWaveform(90 * 60_000)).toBe(false);
   });
 });
 

@@ -209,6 +209,18 @@ export function levelFromTimeDomain(samples: Uint8Array): number {
 }
 
 /**
+ * The longest recording the review screen draws a waveform for. Decoding in
+ * the browser holds the whole take as 32-bit PCM (an hour of stereo 48 kHz is
+ * over a gigabyte), which is how a phone tab dies. Past this the review shows
+ * no picture, and play still works.
+ */
+export const WAVEFORM_DECODE_LIMIT_MS = 10 * 60_000;
+
+export function shouldDrawWaveform(durationMs: number): boolean {
+  return durationMs <= WAVEFORM_DECODE_LIMIT_MS;
+}
+
+/**
  * The review screen's waveform: `bars` peaks, the loudest scaled to 1. Same
  * shape as the player's `downsamplePeaks`, but over a decoded channel
  * (millions of samples) rather than a stored peaks file, so it walks the

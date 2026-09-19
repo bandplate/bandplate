@@ -43,6 +43,8 @@ import {
   hasNext,
   nextIndex,
   queueFrom,
+  queuePosition,
+  sheetHasContent,
 } from "../client/player-queue.js";
 import {
   AUDIO_SOURCE_ATTR,
@@ -75,8 +77,6 @@ const WAVEFORM_BARS = 120;
 /** Floor and ceiling on the derived count: never a handful of slabs, never more bars than the file has samples to fill them (`downsamplePeaks` would just repeat buckets). */
 const MIN_WAVEFORM_BARS = 60;
 const MAX_WAVEFORM_BARS = 1000;
-/** What the skip controls move by. Not a preference — "play that bit again" is the move this app is for, and there is no queue to skip through. */
-const SKIP_SECONDS = 10;
 
 /**
  * Everything the player says, in the language of the page it is standing in.
@@ -269,7 +269,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     }
   }, [playIndex]);
 
-  const [position, setPosition] = useState(0);
+  const [playhead, setPlayhead] = useState(0);
   const [duration, setDuration] = useState(0);
   // `null` means "not fetched or none exists" — both render the plain rail,
   // and deliberately so: a take with no waveform is not an error state, it
@@ -282,7 +282,8 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   const [sources, setSources] = useState<PlayerSource[] | null>(null);
   /** How many of them are stems — what decides whether a mixer is worth offering. */
   const stemCount = sources?.filter((source) => source.kind === "stem").length ?? 0;
-  const [switcherOpen, setSwitcherOpen] = useState(false);
+  /** The title button opens this; Task 4 renders the sheet that reads it. */
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   // `playIndex` closed over by `onEnded` below, which is registered once
   // (`[]` deps, same reason as the click handler) — the ref is what lets it
@@ -312,7 +313,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
         playIndexRef.current(index);
       }
     };
-    const onTime = () => setPosition(audio.currentTime);
+    const onTime = () => setPlayhead(audio.currentTime);
     const onDuration = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     const onLoadedMetadata = () => {
       setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
@@ -508,13 +509,13 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   // What this take can be heard as — fetched when the switch is OPENED, so a
   // take nobody switches on never pays for the request.
   const takeId = track?.takeId;
+  // Cleared on every take change first, so a take with no fetch yet in
+  // flight never reports the PREVIOUS take's source count — that count
+  // feeds `canOpenSheet` and the subtitle's source label below. The gate
+  // is on the TAKE, not on anything being open: the list loads with the
+  // track, and Task 4's sheet reads it whenever it renders.
   useEffect(() => {
-    // Gated on the TAKE, not on the drawer being open. The gate below only
-    // renders the trigger once `sources` has loaded and holds more than one
-    // entry -- so waiting for `switcherOpen` meant waiting for a press on a
-    // button that could never appear, and the switcher was unreachable on
-    // every take. The comment on that gate has always said the list loads
-    // with the track; this makes it true.
+    setSources(null);
     if (!takeId) {
       return;
     }
@@ -535,44 +536,6 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       cancelled = true;
     };
   }, [takeId]);
-
-  // A switch belongs to the take it was opened on; changing take closes it,
-  // and so does Escape or a click anywhere else.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: takeId is the trigger, not an input — the body never reads it, and dropping it leaves the previous take's source list open over the new take.
-  useEffect(() => {
-    setSwitcherOpen(false);
-    setSources(null);
-  }, [takeId]);
-  useEffect(() => {
-    if (!switcherOpen) {
-      return;
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSwitcherOpen(false);
-      }
-    };
-    const onDown = (event: MouseEvent) => {
-      const el = event.target;
-      if (el instanceof Element && !el.closest(".bp-player-switch")) {
-        setSwitcherOpen(false);
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onDown);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onDown);
-    };
-  }, [switcherOpen]);
-
-  const seekBy = useCallback((delta: number) => {
-    const audio = audioRef.current;
-    if (!audio || !Number.isFinite(audio.duration)) {
-      return;
-    }
-    audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + delta));
-  }, []);
 
   // Keeps `--bp-player-height` (declared on `.bp-shell`, consumed by
   // `.bp-shell-main`'s reserved bottom padding — see components.css) equal
@@ -682,12 +645,25 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     () => (peaks ? downsamplePeaks(peaks, Math.max(1, Math.min(barCount, peaks.length))) : []),
     [peaks, barCount],
   );
-  const progress = duration > 0 ? position / duration : 0;
-  // The chip has a caret and names a source, so it shows the bare name — no
-  // "Solo: " prefix, which would be a third thing on screen saying so. This
-  // used to strip that prefix back off with `/^Solo:\s*/`, which only worked
-  // while the prefix was that English word.
-  const sourceName = !track ? "" : track.sourceKind === "stem" ? track.sourceName : t.master;
+  const progress = duration > 0 ? playhead / duration : 0;
+
+  // The queue's own position — "3 of 10" — distinct from `playhead`, the
+  // scrub position in seconds, which is why that state was renamed above.
+  const position = queuePosition(queue);
+  const sourceLabel = !track ? "" : track.sourceKind === "stem" ? track.sourceName : t.master;
+  const subtitleLine = [
+    track?.subtitle,
+    sources && sources.length > 1 ? sourceLabel : "",
+    position ? t.position(position) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const canOpenSheet = sheetHasContent({
+    sourceCount: sources?.length ?? 0,
+    stemCount,
+    queueLength: queue?.items.length ?? 0,
+    minMixerStems: MIN_MIXER_STEMS,
+  });
 
   return (
     <div class="bp-player" hidden={!track} data-testid="bp-player" ref={playerRef}>
@@ -704,25 +680,16 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             control belongs without being one. The bar is chrome you operate,
             not a picture of a record player. */}
         <div class="bp-player-transport">
-          <button
-            type="button"
-            class="bp-player-skip"
-            onClick={() => seekBy(-SKIP_SECONDS)}
-            aria-label={t.back(SKIP_SECONDS)}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.9"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M11 5.5L4.5 12l6.5 6.5" />
-              <path d="M19.5 5.5L13 12l6.5 6.5" />
+          <button type="button" class="bp-player-skip" onClick={goPrevious} aria-label={t.previous}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                d="M6.5 5.5v13"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+              <path d="M18.5 5.8v12.4L9.5 12z" fill="currentColor" />
             </svg>
           </button>
           {/* Its own class, sharing the take row's rules rather than its
@@ -772,129 +739,60 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
               </svg>
             )}
           </button>
+          {hasNext(queue) && (
+            <button type="button" class="bp-player-skip" onClick={goNext} aria-label={t.next}>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M17.5 5.5v13"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                />
+                <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* The title is the way into the "Hraje" sheet — what's playing,
+            what it could switch to, and where it sits in the queue. Plain
+            text when there is nothing the sheet would show: a control that
+            cannot work is not rendered (no fake affordances). */}
+        {canOpenSheet ? (
           <button
             type="button"
-            class="bp-player-skip"
-            onClick={() => seekBy(SKIP_SECONDS)}
-            aria-label={t.forward(SKIP_SECONDS)}
+            class="bp-player-meta bp-player-meta-button"
+            aria-haspopup="dialog"
+            aria-expanded={sheetOpen}
+            aria-label={t.openNowPlaying(track?.title ?? "")}
+            onClick={() => setSheetOpen(true)}
           >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.9"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M13 5.5L19.5 12 13 18.5" />
-              <path d="M4.5 5.5L11 12l-6.5 6.5" />
-            </svg>
-          </button>
-        </div>
-
-        <div class="bp-player-meta">
-          <span class="bp-player-title">{track?.title ?? ""}</span>
-          <span class="bp-player-subtitle">{track?.subtitle ?? ""}</span>
-        </div>
-
-        {/* The way into the mixer, beside the source switcher because they
-            answer the same question — which parts of this take do I want to
-            hear. The switcher plays ONE of them; the mixer plays all of them
-            at once, which is the thing this bar can never do.
-
-            Same threshold the take page uses, from the same module: below two
-            stems there is nothing to balance and the switcher already does
-            the job.
-
-            `data-astro-reload` is load-bearing. This island is
-            `transition:persist`, so a view transition would carry THIS
-            PLAYING `<audio>` into the page that builds its own audio graph —
-            two engines, one pair of ears. A real document load cannot. */}
-        {track && sources !== null && stemCount >= MIN_MIXER_STEMS && (
-          <a
-            href={`/takes/${track.takeId}/mix`}
-            class="bp-player-mixer"
-            data-astro-reload
-            title={t.openInMixer}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              aria-hidden="true"
-            >
-              <path d="M6 3v6M6 15v6M12 3v10M12 19v2M18 3v2M18 11v10" />
-              <path d="M3 12h6M9 16h6M15 8h6" />
-            </svg>
-            {/* Read at every width; SEEN only where the bar has room for it.
-                A real element rather than an `aria-label`, so the name is in
-                the accessibility tree either way — see the stylesheet. */}
-            <span class="bp-player-mixer-label">{t.openInMixer}</span>
-          </a>
-        )}
-
-        {/* Only on a take that HAS more than one source. The list loads with
-            the track rather than on the press, so the control cannot vanish
-            under the finger that pressed it. */}
-        {track && sources !== null && sources.length > 1 && (
-          <div class="bp-player-switch">
-            <button
-              type="button"
-              class="bp-player-source-trigger"
-              aria-expanded={switcherOpen}
-              aria-haspopup="true"
-              onClick={() => setSwitcherOpen((open) => !open)}
-            >
-              <span class="bp-visually-hidden">{t.changeSource}</span>
-              {sourceName}
+            <span class="bp-player-title-line">
+              <span class="bp-player-title">{track?.title ?? ""}</span>
               <svg
+                class="bp-player-meta-caret"
                 viewBox="0 0 24 24"
                 width="13"
                 height="13"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
                 aria-hidden="true"
               >
-                <path d="M6 9l6 6 6-6" />
+                <path
+                  d="M6 15l6-6 6 6"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
-            </button>
-            {switcherOpen && (
-              // biome-ignore lint/a11y/useSemanticElements: <fieldset> groups form controls; these are toolbar buttons, and a fieldset brings a legend contract and default rendering to undo.
-              <div class="bp-player-sources" role="group" aria-label={t.sourceGroup}>
-                {sources.map((source) => (
-                  // A plain `[data-audio-source]` control, exactly like the
-                  // stems drawer on a take's own page — so switching from here
-                  // runs the same `decidePlayerClickAction` path that
-                  // preserves the playhead, not a second implementation of it.
-                  <button
-                    key={source.assetId}
-                    type="button"
-                    class="bp-player-source"
-                    data-audio-source
-                    data-take-id={track.takeId}
-                    data-asset-id={source.assetId}
-                    data-title={track.title}
-                    data-subtitle={track.subtitle}
-                    data-source-kind={source.kind}
-                    data-source-name={source.kind === "stem" ? source.label : ""}
-                    data-role="source-select"
-                    onClick={() => setSwitcherOpen(false)}
-                  >
-                    {source.label}
-                  </button>
-                ))}
-              </div>
-            )}
+            </span>
+            <span class="bp-player-subtitle">{subtitleLine}</span>
+          </button>
+        ) : (
+          <div class="bp-player-meta">
+            <span class="bp-player-title">{track?.title ?? ""}</span>
+            <span class="bp-player-subtitle">{subtitleLine}</span>
           </div>
         )}
 
@@ -935,7 +833,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       </div>
 
       <div class="bp-player-scrub">
-        <span class="bp-player-time">{formatTime(position)}</span>
+        <span class="bp-player-time">{formatTime(playhead)}</span>
         {/* The seek control is a REAL `<input type="range">`, sized over the
             drawing and visually transparent. That is what keeps everything
             the native `<audio controls>` used to give for free — keyboard
@@ -969,16 +867,16 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             min={0}
             max={duration || 0}
             step={0.01}
-            value={position}
+            value={playhead}
             disabled={duration <= 0}
             aria-label={t.seek}
-            aria-valuetext={`${formatTime(position)} of ${formatTime(duration)}`}
+            aria-valuetext={`${formatTime(playhead)} of ${formatTime(duration)}`}
             onInput={(event) => {
               const audio = audioRef.current;
               const next = Number((event.currentTarget as HTMLInputElement).value);
               if (audio && Number.isFinite(next)) {
                 audio.currentTime = next;
-                setPosition(next);
+                setPlayhead(next);
               }
             }}
           />

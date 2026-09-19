@@ -21,11 +21,17 @@ export const player = {
 
   play: (title: string): string => `Přehrát ${title}`, // en: `Play ${title}`
   pause: (title: string): string => `Pozastavit ${title}`, // en: `Pause ${title}`
-  // en: `Back ${seconds} seconds` — "o N sekund zpět", the number always 5+ so genitive plural
-  back: (seconds: number): string => `O ${seconds} sekund zpět`,
-  forward: (seconds: number): string => `O ${seconds} sekund vpřed`, // en: `Forward ${seconds} seconds`
-  changeSource: "Změnit zdroj, teď hraje", // en: Change source, currently
-  sourceGroup: "Zdroj", // en: Source
+  previous: "Předchozí nahrávka", // en: Previous take
+  next: "Další nahrávka", // en: Next take
+  // en: `${current} of ${total}`
+  position: ({ current, total }: { current: number; total: number }): string =>
+    `${current} z ${total}`,
+  // en: `${title}. Show what's playing`
+  openNowPlaying: (title: string): string => `${title}. Ukázat, co hraje`,
+  nowPlayingHeading: "Hraje", // en: Now playing
+  sourceHeading: "Zdroj", // en: Source
+  orderHeading: "Pořadí", // en: Order
+  closeSheet: "Zavřít", // en: Close
   close: "Zastavit a zavřít přehrávač", // en: Stop and close the player
   seek: "Přetočit", // en: Seek
   openInMixer: "Otevřít v mixéru", // en: Open in mixer

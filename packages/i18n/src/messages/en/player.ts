@@ -25,10 +25,17 @@ export const player = {
 
   play: (title: string): string => `Play ${title}`,
   pause: (title: string): string => `Pause ${title}`,
-  back: (seconds: number): string => `Back ${seconds} seconds`,
-  forward: (seconds: number): string => `Forward ${seconds} seconds`,
-  changeSource: "Change source, currently",
-  sourceGroup: "Source",
+  previous: "Previous take",
+  next: "Next take",
+  /** "3 of 10" — where the playing take sits in the list it was started from. */
+  position: ({ current, total }: { current: number; total: number }): string =>
+    `${current} of ${total}`,
+  /** The title button's name: it opens the sheet. */
+  openNowPlaying: (title: string): string => `${title}. Show what's playing`,
+  nowPlayingHeading: "Now playing",
+  sourceHeading: "Source",
+  orderHeading: "Order",
+  closeSheet: "Close",
   close: "Stop and close the player",
   seek: "Seek",
   /**

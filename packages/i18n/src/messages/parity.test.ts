@@ -159,8 +159,8 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "player.nowPlayingSource": [{ label: "p", args: [{ title: "Čoudy", source: "Solo: Bass" }] }],
   "player.play": [{ label: "t", args: ["Čoudy"] }],
   "player.pause": [{ label: "t", args: ["Čoudy"] }],
-  "player.back": [{ label: "s", args: [10] }],
-  "player.forward": [{ label: "s", args: [10] }],
+  "player.position": [{ label: "p", args: [{ current: 3, total: 10 }] }],
+  "player.openNowPlaying": [{ label: "t", args: ["Čoudy"] }],
   "takes.count": [
     { label: "one", args: [1] },
     { label: "few", args: [3] },

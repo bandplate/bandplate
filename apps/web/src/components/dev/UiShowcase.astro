@@ -480,11 +480,77 @@ const scale = [
       the drawn separator in the subtitle. Behaviour is verified in the app, not here.
     </p>
     <div class="bp-player" style="position: static">
-      <div class="bp-player-meta">
-        <span class="bp-player-title">Píseň o cestách</span>
-        <span class="bp-player-subtitle">
-          take 3<span class="bp-player-sep" aria-hidden="true" />Bass
-        </span>
+      <div class="bp-player-row">
+        <div class="bp-player-transport">
+          <button type="button" class="bp-player-skip" aria-label="Previous take">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                d="M6.5 5.5v13"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+              <path d="M18.5 5.8v12.4L9.5 12z" fill="currentColor" />
+            </svg>
+          </button>
+          <button type="button" class="bp-player-play" aria-pressed="true" aria-label="Pause Píseň o cestách">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+              <rect x="7" y="5" width="3.6" height="14" rx="1.2" />
+              <rect x="13.4" y="5" width="3.6" height="14" rx="1.2" />
+            </svg>
+          </button>
+          <button type="button" class="bp-player-skip" aria-label="Next take">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                d="M17.5 5.5v13"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+              <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="bp-player-meta bp-player-meta-button"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-label="Píseň o cestách. Show what's playing"
+        >
+          <span class="bp-player-title-line">
+            <span class="bp-player-title">Píseň o cestách</span>
+            <svg class="bp-player-meta-caret" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+              <path
+                d="M6 15l6-6 6 6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <span class="bp-player-subtitle">take 3 · Bass · 3 of 10</span>
+        </button>
+
+        <button type="button" class="bp-player-close" aria-label="Stop and close the player">
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
       </div>
     </div>
   </section>

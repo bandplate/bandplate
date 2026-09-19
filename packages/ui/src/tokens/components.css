@@ -1550,6 +1550,38 @@ a.bp-btn {
   text-overflow: ellipsis;
 }
 
+/* The title is the way into the Hraje sheet. A button that looks like the
+   text it replaced, plus a caret — the bar stays a row of controls you know,
+   and the one new thing is "tap the name". */
+.bp-player-meta-button {
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bp-player-title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 100%;
+}
+
+.bp-player-meta-caret {
+  flex: none;
+  color: var(--bp-color-muted);
+}
+
+.bp-player-meta-button:hover .bp-player-meta-caret {
+  color: var(--bp-color-fg);
+}
+
 /* The source switch — what am I hearing, and a way to change it from
    wherever you are. Its list is the same `[data-audio-source]` control the
    take page's stems drawer uses, so switching here runs the one decision
@@ -1656,10 +1688,12 @@ a.bp-btn {
   color: var(--bp-color-fg);
 }
 
-/* Back 10 and forward 10, not previous/next: there is no queue in this app.
-   You are listening to one take, and the move you actually make is "play
-   that bit again". Drawn only at `lg` and up — see the rule near the top of
-   the player block for why, and for what does the job below it. */
+/* Previous and next — the queue's own transport, not a seek convenience, so
+   unlike the ±10s buttons this replaced, these are drawn at every width:
+   the compact bar on a phone is where "go to the next take" is needed most.
+   Previous is always rendered (it always does something: go back, or
+   restart); Next only when `hasNext` says there is somewhere to go — a
+   control that cannot work is not rendered. */
 .bp-player-skip {
   display: grid;
   place-items: center;
@@ -1675,34 +1709,6 @@ a.bp-btn {
 
 .bp-player-skip:hover {
   background: var(--bp-fill-subtle);
-}
-
-/* The skip pair is a DESKTOP control, and `lg` is where this app's desktop
-   layout begins — the same line the sidebar, the two-column song detail and
-   the wide take rows are drawn on. The plan scoped "real transport controls"
-   to that layout from the start; this is that scoping applied.
- *
- * Hiding them costs nothing, because the waveform is not a picture:
- * `.bp-player-seek` is a real `<input type="range">` sized over it, so tapping
- * the timeline seeks and arrow keys step along it. Ten seconds back was always
- * a convenience over a control that already did the job, and below `lg` the
- * bar needs the width more than the convenience is worth — two 44px boxes
- * flanking play, on a row that also carries the title, the source switch and
- * the close.
- *
- * `display: none`, not `visibility` or opacity: a control nobody can see must
- * not be reachable by Tab or announced by a screen reader either.
- *
- * THIS RULE MUST STAY BELOW the base `.bp-player-skip` above. There was an
- * identical hide at `max-width: 639px` up beside `.bp-player-bar`, and it
- * never once took effect: same specificity, declared EARLIER, so the base
- * rule's `display: grid` won on source order at every width. The skip pair
- * drew on every phone the whole time it was believed hidden. A media query is
- * not a specificity boost. */
-@media (max-width: 1023px) {
-  .bp-player-skip {
-    display: none;
-  }
 }
 
 .bp-player-scrub {

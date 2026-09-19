@@ -3801,7 +3801,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
    toggle is a 44px touch target with a 34px disc centred inside it, so a bare
    34px plate started every unrecorded take's title 5px left of every recorded
    one — a ragged left edge down the list. Same 44px box, ring drawn by
-   `::before` at the disc's size and position. */
+   `::before` at the disc's size and position (28px, the list size of the
+   disc; see the quiet list control below). */
 .bp-take-plate {
   position: relative;
   display: inline-flex;
@@ -3815,11 +3816,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 2px solid var(--bp-color-border);
+  border: 1.5px solid var(--bp-color-border);
   box-sizing: border-box;
 }
 
@@ -3916,6 +3917,48 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-take-favorite-mark {
   position: relative;
   z-index: 1;
+}
+
+/* In a LIST the play control is quiet until it is wanted: a 28px disc tinted
+   with the accent and an accent glyph, going solid when its row is pointed at,
+   when it has focus, and while it plays. A column of solid 34px gold discs was
+   the loudest thing on every list page, louder than the titles it sat beside,
+   and gold that is everywhere stops meaning anything. The take hero, the
+   player bar and the mixer keep the solid disc: there it is the page's one
+   primary action, not one of ten. The 44px touch box does not shrink. */
+.bp-take-row-lead .bp-play-toggle {
+  --bp-play-disc: 28px;
+  color: var(--bp-color-accent);
+}
+
+.bp-take-row-lead .bp-play-toggle::before {
+  background: color-mix(in srgb, var(--bp-color-accent) 14%, transparent);
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.bp-take-row-lead .bp-play-toggle svg {
+  width: 12px;
+  height: 12px;
+}
+
+.bp-take-row:hover .bp-take-row-lead .bp-play-toggle,
+.bp-take-row-lead .bp-play-toggle:focus-visible,
+.bp-take-row-lead .bp-play-toggle[aria-pressed="true"] {
+  color: var(--bp-color-on-accent);
+}
+
+.bp-take-row:hover .bp-take-row-lead .bp-play-toggle::before,
+.bp-take-row-lead .bp-play-toggle:focus-visible::before,
+.bp-take-row-lead .bp-play-toggle[aria-pressed="true"]::before {
+  background: var(--bp-color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-take-row-lead .bp-play-toggle::before {
+    transition: none;
+  }
 }
 
 /* The favourite sits at the ROW'S far right end, past the duration — where

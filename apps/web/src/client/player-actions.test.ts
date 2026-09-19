@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decidePlayerClickAction } from "./player-actions.js";
+import { controlState, decidePlayerClickAction } from "./player-actions.js";
 import type { PlayerTrack } from "./player-store.js";
 
 const master: PlayerTrack = {
@@ -95,6 +95,25 @@ describe("decidePlayerClickAction", () => {
     }
   });
 
+  it("the plain toggle of the take while one of its STEMS plays -> toggle-playback, not a swap back to the master", () => {
+    const bass: PlayerTrack = {
+      ...master,
+      sourceAssetId: "asset-bass-stem",
+      sourceKind: "stem",
+      sourceName: "Bass",
+    };
+    const action = decidePlayerClickAction(bass, {
+      takeId: "take-1",
+      assetId: "asset-master",
+      title: "Neon Skyline",
+      subtitle: "rehearsal — Aug 12",
+      sourceKind: "master",
+      sourceName: "",
+      role: "toggle",
+    });
+    expect(action).toEqual({ kind: "toggle-playback" });
+  });
+
   it("clicking a control for a DIFFERENT take entirely -> start-track, discarding the old track", () => {
     const action = decidePlayerClickAction(master, {
       takeId: "take-2",
@@ -115,6 +134,74 @@ describe("decidePlayerClickAction", () => {
         sourceKind: "master",
         sourceName: "",
       },
+    });
+  });
+});
+
+describe("controlState", () => {
+  const bass: PlayerTrack = {
+    ...master,
+    sourceAssetId: "asset-bass-stem",
+    sourceKind: "stem",
+    sourceName: "Bass",
+  };
+  const rowToggle = { takeId: "take-1", assetId: "asset-master", role: "toggle" };
+  const masterPill = { takeId: "take-1", assetId: "asset-master", role: "source-select" };
+  const bassPill = { takeId: "take-1", assetId: "asset-bass-stem", role: "source-select" };
+
+  it("nothing loaded -> nothing pressed, nothing current", () => {
+    expect(controlState(null, false, rowToggle)).toEqual({
+      pressed: false,
+      selected: false,
+      currentTake: false,
+      playing: false,
+    });
+  });
+
+  it("a row toggle reads as playing while a STEM of its take plays", () => {
+    expect(controlState(bass, true, rowToggle)).toEqual({
+      pressed: true,
+      selected: false,
+      currentTake: true,
+      playing: true,
+    });
+  });
+
+  it("a row toggle of the current take, paused -> not pressed, still the current take", () => {
+    expect(controlState(master, false, rowToggle)).toEqual({
+      pressed: false,
+      selected: true,
+      currentTake: true,
+      playing: false,
+    });
+  });
+
+  it("another take's toggle is untouched", () => {
+    const other = { takeId: "take-2", assetId: "asset-2-master", role: "toggle" };
+    expect(controlState(master, true, other)).toEqual({
+      pressed: false,
+      selected: false,
+      currentTake: false,
+      playing: false,
+    });
+  });
+
+  it("a source pill is pressed when selected, paused or not", () => {
+    expect(controlState(bass, false, bassPill).pressed).toBe(true);
+    expect(controlState(bass, true, bassPill)).toEqual({
+      pressed: true,
+      selected: true,
+      currentTake: true,
+      playing: true,
+    });
+  });
+
+  it("an unselected source pill of the playing take is not pressed", () => {
+    expect(controlState(bass, true, masterPill)).toEqual({
+      pressed: false,
+      selected: false,
+      currentTake: true,
+      playing: false,
     });
   });
 });

@@ -36,7 +36,7 @@ import { Fragment } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import { MIN_MIXER_STEMS } from "../client/mixer-tracks.js";
-import { decidePlayerClickAction } from "../client/player-actions.js";
+import { controlState, decidePlayerClickAction } from "../client/player-actions.js";
 import {
   type QueueItem,
   decidePrevious,
@@ -117,7 +117,7 @@ interface SourceButtonData {
   subtitle: string;
   sourceKind: "master" | "stem";
   sourceName: string;
-  /** "source-select" (the stems drawer) gets different aria-label phrasing than the default play/pause toggle. */
+  /** "source-select" (the Hraje sheet's source pills) keeps its own text as its name; the default play/pause toggle gets a Play/Pause label. */
   role: string;
 }
 
@@ -175,33 +175,26 @@ function readQueueIn(container: HTMLElement): QueueItem[] {
   return items;
 }
 
-/** Updates every `[data-audio-source]` element currently in the DOM to reflect the live player state — aria-pressed, a couple of CSS hooks, and (for plain toggle buttons) the aria-label. Called on every store change and after every navigation (`astro:page-load`), since Astro swaps in fresh, unsynced elements on each page. */
+/** Updates every `[data-audio-source]` element currently in the DOM to reflect the live player state — aria-pressed, a few CSS hooks, and (for plain toggle buttons) the aria-label. Called on every store change and after every navigation (`astro:page-load`), since Astro swaps in fresh, unsynced elements on each page. What each control should show is `controlState` in `player-actions.ts`; this only writes it. */
 function syncButtons(track: PlayerTrack | null, playing: boolean): void {
   for (const el of document.querySelectorAll<HTMLElement>(`[${AUDIO_SOURCE_ATTR}]`)) {
     const data = readButtonData(el);
     if (!data) {
       continue;
     }
-    const isActiveSource =
-      track !== null && track.takeId === data.takeId && track.sourceAssetId === data.assetId;
-    const isActivePlaying = isActiveSource && playing;
-    // `aria-pressed` means different things for the two roles this
-    // delegated handler drives: a "source-select" chip (the Solo drawer)
-    // is a SELECTOR, so its pressed state is "is this the selected
-    // source" — playback state is irrelevant to it, and reporting
-    // `isActivePlaying` there meant a paused-but-selected chip announced
-    // as unpressed to a screen reader, indistinguishable from an
-    // unselected one (review: fix round 1, item 3). The default "toggle"
-    // role (play/pause buttons) keeps the play/pause semantics, where
-    // pressed correctly means "currently playing".
-    const ariaPressed = data.role === "source-select" ? isActiveSource : isActivePlaying;
-    el.setAttribute("aria-pressed", String(ariaPressed));
-    el.classList.toggle("is-active", isActiveSource);
-    el.classList.toggle("is-playing", isActivePlaying);
+    const state = controlState(track, playing, data);
+    el.setAttribute("aria-pressed", String(state.pressed));
+    el.classList.toggle("is-active", state.selected);
+    // The take, not the source: a take row stays the current one while a
+    // stem of it plays, and the row fill in components.css keys on this.
+    el.classList.toggle("is-current-take", state.currentTake);
+    el.classList.toggle("is-playing", state.playing);
+    // A source pill is named by its own text ("Master", "Basa"); only the
+    // play/pause toggles carry a label that changes with playback.
     if (data.role !== "source-select") {
       el.setAttribute(
         "aria-label",
-        isActivePlaying ? playerText().pause(data.title) : playerText().play(data.title),
+        state.playing ? playerText().pause(data.title) : playerText().play(data.title),
       );
     }
   }
@@ -472,9 +465,14 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   // Keep every on-page control in sync with the store — on every state
   // change, AND after every view-transition navigation (fresh, unsynced
   // elements land in the DOM with no memory of the player's state).
+  // `sources` too: the sheet's source pills mount when the take's source
+  // list arrives, after the track change that asked for it. The sheet
+  // renders their selected state itself; this adds the classes it leaves
+  // to `syncButtons`, so the pills match every other control.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `sources` is the trigger (new pills in the DOM), not a value the effect reads
   useEffect(() => {
     syncButtons(track, playing);
-  }, [track, playing]);
+  }, [track, playing, sources]);
   useEffect(() => {
     function onPageLoad() {
       syncButtons(currentTrack.get(), isPlaying.get());

@@ -1679,6 +1679,16 @@ a.bp-btn {
   background: color-mix(in srgb, var(--bp-color-bg) 72%, transparent);
 }
 
+/* No `display` here: author CSS beats the UA's own
+   `dialog:not([open]) { display: none }`, so a `display: flex` on this rule
+   draws the CLOSED sheet over the page at all times (the same trap
+   `.bp-sheet[open]` documents below). The layout goes on `[open]`. Every
+   other declaration here only matters while the dialog is shown.
+
+   No padding and no gap on the dialog either: a click on the dialog element
+   itself is how the sheet recognises its backdrop (NowPlayingSheet.tsx), and
+   padding or a flex gap on it would be dialog-element surface too. Both live
+   on `.bp-now-playing-body`, which fills the dialog. */
 .bp-now-playing {
   position: fixed;
   /* Pinned to the bottom on a phone: `margin: auto 0 0` centers nothing
@@ -1689,21 +1699,34 @@ a.bp-btn {
   max-width: none;
   max-height: calc(100dvh - 4rem);
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   border: none;
   border-top: 1px solid var(--bp-color-border);
   border-radius: 18px 18px 0 0;
   background: var(--bp-color-surface);
   color: var(--bp-color-fg);
+  padding: 0;
+  overflow: hidden;
+}
+
+.bp-now-playing[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.bp-now-playing-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: 0.75rem 20px calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* The grab handle — a purely decorative affordance (this sheet has no
    drag-to-dismiss gesture; Escape, the backdrop and the close button all
-   do the job), so it is drawn, not a button, and carries no label. */
-.bp-now-playing::before {
+   do the job), so it is drawn, not a button, and carries no label. On the
+   body, not the dialog, for the backdrop-click reason above. */
+.bp-now-playing-body::before {
   content: "";
   align-self: center;
   width: 40px;
@@ -1789,8 +1812,8 @@ a.bp-btn {
   background: var(--bp-fill-raised);
 }
 
-/* `syncButtons` marks the selected source — the same class every other
-   `[data-audio-source]` control gets. */
+/* The selected source — rendered by the sheet itself, and the same class
+   `syncButtons` gives every other `[data-audio-source]` control. */
 .bp-now-playing-source.is-active {
   background: color-mix(in srgb, var(--bp-color-accent-gold) 16%, transparent);
   color: var(--bp-color-accent);
@@ -1935,7 +1958,7 @@ a.bp-btn {
     border-radius: 18px;
   }
 
-  .bp-now-playing::before {
+  .bp-now-playing-body::before {
     /* No drag-to-dismiss gesture on a pointer-driven surface: the phone-only
        affordance would just be a decorative bar nobody asked for. */
     display: none;
@@ -3939,10 +3962,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* The row the queue is currently on reads as "current" with the same fill a
    hover uses — one material for "this is playing" and "the pointer is here",
    rather than a second accent competing with it. Keyed off the row's own
-   play toggle (`syncButtons()` sets `.is-active` there for the queue's
-   current take, paused or not — see Player.tsx), not a class on the row
-   itself, so there is exactly one place that decides "is this the one". */
-.bp-take-row:has(.bp-play-toggle.is-active) {
+   play toggle (`syncButtons()` sets `.is-current-take` there for the loaded
+   take, paused or not, whichever of its sources is playing — see
+   Player.tsx), not a class on the row itself, so there is exactly one place
+   that decides "is this the one". Not `.is-active`: that one means "this
+   exact source", and a row's toggle is always the master, so the fill
+   vanished the moment a stem was picked in the sheet. */
+.bp-take-row:has(.bp-play-toggle.is-current-take) {
   background: var(--bp-color-surface);
 }
 

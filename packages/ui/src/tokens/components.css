@@ -8933,3 +8933,132 @@ html:has(dialog.bp-filter-sheet[open]) body {
   flex-direction: column;
   gap: 0.375rem;
 }
+
+/* ---------------------------------------------------------------------- */
+/* The stash (Šuplík) on /takes and /stash/[id].                          */
+/* ---------------------------------------------------------------------- */
+
+/* The count inside the Šuplík pill: a number, in the pill's own ink. */
+.bp-pill-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+/* The stash view has no filter panel, so past `lg` its results take the
+   whole width rather than sitting beside an empty 20rem column. */
+@media (min-width: 64rem) {
+  .bp-takes--stash {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "bar"
+      "results";
+  }
+}
+
+.bp-stash-lede {
+  color: var(--bp-color-muted);
+}
+
+/* "Čeká na signál": a state, so it takes the badge's shape, in the muted
+   fill; a refused upload takes the alert fill. Sentence case, unlike the
+   kind badges: it is a short sentence about this recording, not a label from
+   a vocabulary. */
+.bp-stash-chip {
+  gap: 0.3125rem;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  text-transform: none;
+}
+
+.bp-stash-chip > svg {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.bp-stash-chip.is-failed {
+  background: var(--bp-fill-alert);
+}
+
+/* `.bp-take-label`'s type, without its whole-row link: a recording still on
+   the phone has no page to open yet. */
+.bp-stash-pending-title {
+  font-family: var(--bp-font-display);
+  font-size: var(--text-row, 1.1875rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--bp-color-fg);
+}
+
+/* "Zkusit znovu" on a refused upload: at the end of line two, on one line. */
+.bp-stash-row .bp-take-line2 > .bp-btn {
+  flex: none;
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+
+.bp-stash-back {
+  align-self: flex-start;
+}
+
+.bp-stash-facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.bp-stash-facts dt {
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-stash-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.bp-stash-publish {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.bp-stash-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The stash view's way in to the recorder, in the top bar: a round mic in the
+   gold tint (the pressed pill's), not a solid plate. The page's subject is the
+   list; this is the one action beside it. */
+.bp-stash-record {
+  width: 44px;
+  padding: 0;
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 16%, transparent);
+  color: var(--bp-color-accent);
+}
+
+.bp-stash-record:hover {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 24%, transparent);
+}
+
+/* The chip sits at the head of line two, so the title keeps the whole of
+   line one, and it never gives before the words beside it do. */
+.bp-stash-row .bp-stash-chip {
+  flex: none;
+}
+
+/* A stash row has no instrument set, and its label is the one thing that
+   tells two ideas for the same song apart, so it stays on a phone, where a
+   band take's note is dropped (see "PHONE: the words go" above). */
+@media (max-width: 559px) {
+  .bp-stash-row .bp-take-note {
+    display: block;
+  }
+
+  .bp-stash-row .bp-take-rule {
+    display: inline-block;
+  }
+}

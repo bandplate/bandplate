@@ -1,0 +1,172 @@
+---
+// "Přidat k písni" — one recording from the stash. What it is (song, the
+// personal day it sits in, who recorded it), the one thing to do with it
+// (add it to the song, where the band hears it) and the three lesser ones
+// (rename, download, delete).
+//
+// Publishing and renaming are plain POSTs to this page, like every other M8
+// write; delete is the shared `data-confirm` modal, with `/stash/[id]/delete`
+// as its no-JS page. A published or someone else's take is a 404 here.
+import { formatShortDate, messages } from "@bandplate/i18n";
+import Banner from "@bandplate/ui/components/Banner.astro";
+import Field from "@bandplate/ui/components/Field.astro";
+import PlayToggleButton from "../../components/PlayToggleButton.astro";
+import RecordSheet from "../../components/RecordSheet.astro";
+import AppLayout from "../../layouts/AppLayout.astro";
+import { getAppDeps } from "../../server/app.js";
+import { isSameOrigin } from "../../server/csrf.js";
+import { getStashItem, publishStashTake, renameStashTake } from "../../server/pages/stash.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const { id } = Astro.params;
+if (!id) {
+  return new Response("Not found.", { status: 404 });
+}
+
+const appDeps = await getAppDeps();
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
+let formError: string | undefined;
+let renameError: string | undefined;
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = t.common.originError;
+  } else {
+    const formData = await Astro.request.formData();
+    const intent = formData.get("intent");
+    if (intent === "publish") {
+      const result = await publishStashTake(
+        appDeps.db,
+        appDeps.clock.now(),
+        id,
+        principal.memberId,
+      );
+      if (result.kind === "ok") {
+        return Astro.redirect(`/takes/${id}?published=1`);
+      }
+      if (result.kind === "not_found") {
+        return new Response("Not found.", { status: 404 });
+      }
+      formError = t.stash.stillUploading;
+    } else if (intent === "rename") {
+      const result = await renameStashTake(
+        appDeps.db,
+        appDeps.clock.now(),
+        id,
+        principal.memberId,
+        formData,
+      );
+      if (result.kind === "ok") {
+        return Astro.redirect(`/stash/${id}?renamed=1`);
+      }
+      if (result.kind === "not_found") {
+        return new Response("Not found.", { status: 404 });
+      }
+      // Twice: in the field, for the no-JS page where the sheet is a plain
+      // block, and in a banner, because with script the sheet is closed again
+      // by the time this page is back.
+      renameError = t.stash.labelTooLong;
+      formError = renameError;
+    }
+  }
+}
+
+const item = await getStashItem(appDeps.db, id, principal.memberId);
+if (!item) {
+  return new Response("Not found.", { status: 404 });
+}
+const { take, song, event, owner, playableAsset } = item;
+const title = song?.title ?? t.stash.unknownSong;
+const justRenamed = Astro.url.searchParams.get("renamed") === "1";
+---
+
+<AppLayout title={t.stash.pageTitle(title)} principal={principal} current="takes">
+  <div class="bp-stack bp-stash-item">
+    <a href="/takes?stash=1" class="bp-btn bp-btn-secondary bp-btn-sm bp-stash-back">{t.stash.backToStash}</a>
+    {justRenamed && <Banner kind="success">{t.stash.renamed}</Banner>}
+    {formError && <Banner kind="error">{formError}</Banner>}
+
+    <p class="bp-eyebrow bp-m0">{t.stash.addTitle}</p>
+    <div class="bp-title-row">
+      <h1 class="bp-hero-title bp-m0">
+        {title}{take.label && <span class="bp-hero-title-note">: {take.label}</span>}
+      </h1>
+      {playableAsset && (
+        <PlayToggleButton takeId={take.id} assetId={playableAsset.id} title={title} subtitle={take.label ?? ""} size="lg" />
+      )}
+    </div>
+
+    {/* Labelled fields, not a run joined by dots: three different facts. */}
+    <dl class="bp-stash-facts">
+      <div>
+        <dt>{t.stash.fieldSong}</dt>
+        <dd>{title}</dd>
+      </div>
+      <div>
+        <dt>{t.stash.fieldEvent}</dt>
+        <dd>{t.stash.personalEvent(formatShortDate(locale, event?.heldAt ?? take.recordedAt))}</dd>
+      </div>
+      <div>
+        <dt>{t.stash.fieldBy}</dt>
+        <dd>{owner?.displayName}</dd>
+      </div>
+    </dl>
+
+    {playableAsset ? (
+      <div class="bp-stash-publish">
+        <p class="bp-m0">{t.stash.publishNote}</p>
+        <form method="post">
+          <input type="hidden" name="intent" value="publish" />
+          <button type="submit" class="bp-btn bp-btn-primary">{t.stash.publish}</button>
+        </form>
+      </div>
+    ) : (
+      <p class="bp-field-hint bp-m0">{t.stash.stillUploading}</p>
+    )}
+
+    <div class="bp-stash-secondary">
+      <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="rename-stash">
+        {t.stash.rename}
+      </button>
+      {playableAsset && (
+        <a href={`/api/assets/${playableAsset.id}/download`} class="bp-btn bp-btn-secondary bp-btn-sm">
+          {t.stash.download}
+        </a>
+      )}
+      <a
+        href={`/stash/${take.id}/delete`}
+        class="bp-btn bp-btn-danger bp-btn-sm"
+        data-confirm
+        data-confirm-title={t.stash.deleteTitle(title)}
+        data-confirm-body={t.stash.deleteBody}
+        data-confirm-action={`/stash/${take.id}/delete`}
+        data-confirm-cta={t.stash.deleteCta}
+        data-confirm-redirect="/takes?stash=1"
+      >
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+        </svg>
+        {t.stash.delete}
+      </a>
+    </div>
+
+    <RecordSheet id="rename-stash" eyebrow={t.stash.rename} title={title}>
+      <form method="post" class="bp-sheet-form" novalidate>
+        <input type="hidden" name="intent" value="rename" />
+        <div class="bp-sheet-body">
+          <Field label={t.stash.labelField} name="label" value={take.label ?? ""} maxlength={200} error={renameError} />
+        </div>
+        <div class="bp-sheet-foot">
+          <button type="submit" class="bp-btn bp-btn-primary">{t.stash.renameSave}</button>
+          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.stash.cancel}</button>
+        </div>
+      </form>
+    </RecordSheet>
+  </div>
+</AppLayout>

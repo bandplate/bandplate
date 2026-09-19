@@ -1,0 +1,66 @@
+---
+// One recording in the stash, drawn as a take row (same grid, same borderless
+// shape — see `.bp-take-row`) so the stash reads as part of Nahrávky rather than
+// a second list style. The differences are what the stash is: the row opens
+// `/stash/[id]` ("Přidat k písni") rather than a take page, there is no pin,
+// and a recording whose file has not landed says so instead of offering play.
+//
+// `StashPendingList.tsx` draws the same row for recordings still on the phone.
+// Astro and Preact cannot share a component, so the markup is written twice;
+// the classes are the same, so the styling lives once. Change one, change both.
+import { formatShortDate, messages } from "@bandplate/i18n";
+import { formatDuration } from "../server/format.js";
+import type { StashRowData } from "../server/pages/stash.js";
+import PlayToggleButton from "./PlayToggleButton.astro";
+
+export interface Props {
+  row: StashRowData;
+}
+
+const { row } = Astro.props;
+const locale = Astro.locals.locale;
+const t = messages(locale);
+const title = row.song?.title ?? t.stash.unknownSong;
+const date = formatShortDate(locale, row.recordedAt);
+---
+
+<div class="bp-take-row bp-stash-row">
+  <div class="bp-take-row-lead">
+    {
+      row.playableAssetId ? (
+        <PlayToggleButton takeId={row.id} assetId={row.playableAssetId} title={title} subtitle={row.label ?? date} />
+      ) : (
+        <span class="bp-take-plate" aria-hidden="true" />
+      )
+    }
+  </div>
+  <div class="bp-take-row-line">
+    <span class="bp-take-row-name">
+      <a href={`/stash/${row.id}`} class="bp-take-label">{title}</a>
+    </span>
+  </div>
+  <span class="bp-take-row-duration">{formatDuration(row.durationMs)}</span>
+  <div class="bp-take-line2">
+    <span class="bp-take-textrun">
+      {
+        !row.playableAssetId && (
+          <span class="bp-badge bp-stash-chip">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m2 2 20 20M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.31-.19M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07" />
+            </svg>
+            {t.stash.chipWaiting}
+          </span>
+        )
+      }
+      {
+        row.label && (
+          <>
+            <span class="bp-take-note bp-take-elastic">{row.label}</span>
+            <span class="bp-take-rule" />
+          </>
+        )
+      }
+      <span class="bp-take-fixed">{date}</span>
+    </span>
+  </div>
+</div>

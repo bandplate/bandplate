@@ -1,0 +1,52 @@
+---
+// Delete a recording from your own stash. GET is the no-JS confirm page (with
+// script, `ConfirmDialog` intercepts the trigger and nobody sees it); POST
+// deletes, answering `ok` to the dialog's fetch or redirecting a plain form.
+import { messages } from "@bandplate/i18n";
+import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import Layout from "../../../layouts/Layout.astro";
+import { getAppDeps } from "../../../server/app.js";
+import { isSameOrigin } from "../../../server/csrf.js";
+import { deleteStashTake, getStashItem } from "../../../server/pages/stash.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect("/takes?stash=1");
+}
+
+const appDeps = await getAppDeps();
+const t = messages(Astro.locals.locale);
+const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
+
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    return new Response("origin check failed", { status: 403 });
+  }
+  const result = await deleteStashTake(appDeps.db, appDeps.storage, id, principal.memberId);
+  if (isFetch) {
+    return new Response(result.kind === "ok" ? "ok" : "not found", {
+      status: result.kind === "ok" ? 200 : 404,
+    });
+  }
+  if (result.kind !== "ok") {
+    return new Response("Not found.", { status: 404 });
+  }
+  return Astro.redirect("/takes?stash=1");
+}
+
+const item = await getStashItem(appDeps.db, id, principal.memberId);
+if (!item) {
+  return new Response("Not found.", { status: 404 });
+}
+const title = item.song?.title ?? t.stash.unknownSong;
+---
+
+<Layout title={t.stash.delete}>
+  <ConfirmActionPage bannerTitle={t.stash.deleteTitle(title)} cta={t.stash.deleteCta} cancelHref={`/stash/${id}`} cancelLabel={t.stash.cancel}>
+    {t.stash.deleteBody}
+  </ConfirmActionPage>
+</Layout>

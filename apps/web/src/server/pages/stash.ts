@@ -1,8 +1,11 @@
-// The stash's page logic: the recorder's song list (here), and the stash
-// view, the "Přidat k písni" page and its three actions (Task 10).
+// The stash's page logic: the recorder's song list, the stash view's rows, and
+// the "Přidat k písni" page with its actions (publish, rename, delete).
+import { type Storage, canPublish } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
-import { songsRepo } from "@bandplate/db";
+import { assetsRepo, eventsRepo, membersRepo, songsRepo, takesRepo } from "@bandplate/db";
+import { z } from "zod";
 import type { SongOption } from "../../client/recorder-logic.js";
+import { type DeleteTakeResult, deleteTake } from "./takes.js";
 
 /** How many songs the picker loads. A band's repertoire is tens; this is a ceiling, not a page. */
 const RECORDABLE_SONGS_LIMIT = 500;
@@ -50,4 +53,140 @@ export async function resolvePreselectedSong(
   }
   const song = (await songsRepo.getBySlug(db, param)) ?? (await songsRepo.getById(db, param));
   return song ? { id: song.id, title: song.title, slug: song.slug } : undefined;
+}
+
+export interface StashRowData extends takesRepo.Take {
+  song: songsRepo.Song | undefined;
+  /** Undefined until the recording has landed — the row shows the chip instead of a play control. */
+  playableAssetId: string | undefined;
+}
+
+/** The stash view's server rows. Local, not-yet-uploaded recordings are the island's. */
+export async function getStashRows(db: Db, memberId: string): Promise<StashRowData[]> {
+  const rows = await takesRepo.listStash(db, memberId);
+  if (rows.length === 0) {
+    return [];
+  }
+  const [songs, playable] = await Promise.all([
+    songsRepo.getByIds(db, [...new Set(rows.map((t) => t.songId))]),
+    assetsRepo.listPlayableMastersByTakeIds(
+      db,
+      rows.map((t) => t.id),
+    ),
+  ]);
+  const songById = new Map(songs.map((s) => [s.id, s]));
+  return rows.map((take) => ({
+    ...take,
+    song: songById.get(take.songId),
+    playableAssetId: playable.get(take.id)?.id,
+  }));
+}
+
+export interface StashItem {
+  take: takesRepo.Take;
+  song: songsRepo.Song | undefined;
+  event: eventsRepo.Event | undefined;
+  owner: membersRepo.Member | undefined;
+  playableAsset: assetsRepo.Asset | undefined;
+}
+
+/** Only while the take is private AND mine — published, it lives at `/takes/[id]`. */
+async function ownStashTake(
+  db: Db,
+  id: string,
+  memberId: string,
+): Promise<takesRepo.Take | undefined> {
+  const take = await takesRepo.getById(db, id);
+  return take && take.visibility === "private" && take.ownerMemberId === memberId
+    ? take
+    : undefined;
+}
+
+export async function getStashItem(
+  db: Db,
+  id: string,
+  memberId: string,
+): Promise<StashItem | undefined> {
+  const take = await ownStashTake(db, id, memberId);
+  if (!take) {
+    return undefined;
+  }
+  const [song, event, owners, playable] = await Promise.all([
+    songsRepo.getById(db, take.songId),
+    eventsRepo.getById(db, take.eventId),
+    membersRepo.getByIds(db, [memberId]),
+    assetsRepo.listPlayableMastersByTakeIds(db, [take.id]),
+  ]);
+  return { take, song, event, owner: owners[0], playableAsset: playable.get(take.id) };
+}
+
+export type PublishStashResult =
+  | { kind: "ok"; take: takesRepo.Take }
+  | { kind: "not_found" }
+  /** The file has not landed yet — the page shows no button then, so this is a stale page. */
+  | { kind: "nothing_to_play" };
+
+export async function publishStashTake(
+  db: Db,
+  now: number,
+  id: string,
+  memberId: string,
+): Promise<PublishStashResult> {
+  const take = await ownStashTake(db, id, memberId);
+  if (!take) {
+    return { kind: "not_found" };
+  }
+  if (!canPublish(await assetsRepo.listByTake(db, id))) {
+    return { kind: "nothing_to_play" };
+  }
+  // Conditional on owner + private in SQL too; a double press loses here.
+  return (await takesRepo.publishFromStash(db, id, memberId, now))
+    ? { kind: "ok", take }
+    : { kind: "not_found" };
+}
+
+const labelSchema = z.string().trim().max(200);
+
+export type RenameStashResult = { kind: "ok" } | { kind: "not_found" } | { kind: "invalid" };
+
+export async function renameStashTake(
+  db: Db,
+  now: number,
+  id: string,
+  memberId: string,
+  formData: FormData,
+): Promise<RenameStashResult> {
+  const take = await ownStashTake(db, id, memberId);
+  if (!take) {
+    return { kind: "not_found" };
+  }
+  const parsed = labelSchema.safeParse(String(formData.get("label") ?? ""));
+  if (!parsed.success) {
+    return { kind: "invalid" };
+  }
+  await takesRepo.update(db, id, {
+    label: parsed.data === "" ? null : parsed.data,
+    updatedAt: now,
+  });
+  return { kind: "ok" };
+}
+
+/**
+ * The owner deleting their own unpublished recording.
+ *
+ * The one member-side delete in the app — destruction otherwise lives under
+ * `/admin`. It is safe to hand the owner because a private take has, by
+ * construction, no votes, no pins and no listener but them: nothing of the
+ * band's is lost. Once published it is the band's, and only an admin deletes it.
+ */
+export async function deleteStashTake(
+  db: Db,
+  storage: Storage,
+  id: string,
+  memberId: string,
+): Promise<DeleteTakeResult> {
+  if (!(await ownStashTake(db, id, memberId))) {
+    return { kind: "not_found" };
+  }
+  return deleteTake(db, storage, id);
 }

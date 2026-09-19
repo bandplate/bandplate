@@ -32,6 +32,8 @@ export const stash = {
   recordFor: (title: string): string => `Record for ${title}`,
   recordingInto: "Recording into your stash",
   screenNote: "The screen may go dark; recording keeps going.",
+  /** Under the level ring on the recording stage. */
+  levelHint: "The ring shows your level. If it's full all the way round, you're too close.",
   start: "Start recording",
   stop: "Stop recording",
   cancel: "Cancel",

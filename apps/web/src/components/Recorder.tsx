@@ -123,6 +123,8 @@ export default function Recorder({
   const blobRef = useRef<Blob | null>(null);
   const recordedAtRef = useRef(0);
   const durationRef = useRef(0);
+  /** `performance.now()` at the moment recording began, for a stop nobody pressed. */
+  const startedAtRef = useRef(0);
   const discardRef = useRef(false);
   const meterRef = useRef<{ context: AudioContext; frame: number } | null>(null);
   const ringRef = useRef<HTMLDivElement>(null);
@@ -152,7 +154,15 @@ export default function Recorder({
       return;
     }
     try {
-      wakeRef.current = await navigator.wakeLock.request("screen");
+      const sentinel = await navigator.wakeLock.request("screen");
+      // The browser drops the lock whenever the page is hidden. Forget it
+      // then, so coming back to the page takes a new one.
+      sentinel.addEventListener("release", () => {
+        if (wakeRef.current === sentinel) {
+          wakeRef.current = null;
+        }
+      });
+      wakeRef.current = sentinel;
     } catch {
       // Battery saver, or a browser that says no. The note on screen already
       // says recording carries on if the screen goes dark.
@@ -185,6 +195,15 @@ export default function Recorder({
     releaseInput();
     if (discardRef.current) {
       return;
+    }
+    // The recorder can stop on its own: a phone call, Siri, a headset pulled
+    // out ends the tracks and `onstop` fires with nobody pressing Stop. Tell
+    // the state machine now; after a pressed Stop it is already finishing and
+    // this is a no-op.
+    const now = performance.now();
+    dispatch({ type: "stop", now });
+    if (durationRef.current === 0) {
+      durationRef.current = Math.max(0, now - startedAtRef.current);
     }
     const blob = needsDurationFix(mime)
       ? await fixWebmDuration(raw, durationRef.current, { logger: false })
@@ -235,7 +254,9 @@ export default function Recorder({
     // A chunk a second, so a recording is never one enormous final buffer.
     recorder.start(1000);
     recordedAtRef.current = Date.now();
-    dispatch({ type: "started", at: performance.now() });
+    durationRef.current = 0;
+    startedAtRef.current = performance.now();
+    dispatch({ type: "started", at: startedAtRef.current });
     startMeter(stream);
     void acquireWakeLock();
   }, [acquireWakeLock, finishRecording, startMeter]);
@@ -637,6 +658,7 @@ export default function Recorder({
             <span class="bp-rec-stop is-busy" aria-hidden="true" />
           )}
         </div>
+        <p class="bp-rec-hint bp-m0">{t.levelHint}</p>
         {state.phase === "confirm-discard" && (
           <div class="bp-rec-confirm" role="alertdialog" aria-label={t.discardQuestion}>
             <p class="bp-m0">{t.discardQuestion}</p>

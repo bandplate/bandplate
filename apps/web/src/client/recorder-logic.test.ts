@@ -122,6 +122,30 @@ describe("reduceRecorder", () => {
     expect(reduceRecorder(s, { type: "start" }).phase).toBe("starting");
   });
 
+  it("a stop the recorder made itself finishes the take, and a second stop changes nothing", () => {
+    // A phone call or a pulled headset ends the tracks: onstop fires while
+    // the phase is still recording, and the island dispatches the stop itself.
+    let s = reduceRecorder(reduceRecorder(picked(), { type: "start" }), {
+      type: "started",
+      at: 1_000,
+    });
+    s = reduceRecorder(s, { type: "stop", now: 31_000 });
+    expect(s).toMatchObject({ phase: "finishing", elapsedMs: 30_000 });
+    // The pressed Stop already moved it to finishing; the onstop dispatch
+    // that follows must not move the clock.
+    expect(reduceRecorder(s, { type: "stop", now: 32_000 })).toBe(s);
+    expect(reduceRecorder(s, { type: "finished" }).phase).toBe("review");
+  });
+
+  it("a stop the recorder made itself during the discard question still keeps the take", () => {
+    let s = reduceRecorder(reduceRecorder(picked(), { type: "start" }), { type: "started", at: 0 });
+    s = reduceRecorder(s, { type: "cancel" });
+    expect(reduceRecorder(s, { type: "stop", now: 8_000 })).toMatchObject({
+      phase: "finishing",
+      elapsedMs: 8_000,
+    });
+  });
+
   it("ignores an event that does not belong to the phase", () => {
     const s = picked();
     expect(reduceRecorder(s, { type: "stop", now: 5 })).toBe(s);

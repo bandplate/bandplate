@@ -34,6 +34,7 @@ export const stash = {
   recordFor: (title: string): string => `Nahrávat k ${title}`, // en: Record for {title}
   recordingInto: "Nahrávám do šuplíku", // en: Recording into your stash
   screenNote: "Displej může zhasnout, nahrávání běží dál.", // en: The screen may go dark; recording keeps going.
+  levelHint: "Kroužek ukazuje hlasitost. Když svítí celý, jsi moc blízko.", // en: The ring shows your level. If it's full all the way round, you're too close.
   start: "Začít nahrávat", // en: Start recording
   stop: "Zastavit nahrávání", // en: Stop recording
   cancel: "Zrušit", // en: Cancel

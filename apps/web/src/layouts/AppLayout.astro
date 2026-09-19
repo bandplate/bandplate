@@ -236,6 +236,11 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
 
 <script>
   import "../client/install-prompt.js";
+  import { startStashSync } from "../client/stash-sync.js";
+  // Recordings left on this device by a dead-signal commute go up on the next
+  // page anyone opens, not only when the stash view is open. Runs once per
+  // document: ClientRouter navigations do not re-run this script.
+  startStashSync();
   // Progress bar for View Transitions navigation — see components.css's
   // ".bp-route-progress" for the actual animation and its
   // prefers-reduced-motion override. Astro fires these events on

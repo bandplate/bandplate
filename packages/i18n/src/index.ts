@@ -37,6 +37,7 @@ export { mixerMessages } from "./messages/mixer.js";
 export { pushMessages } from "./messages/push.js";
 export { shellMessages } from "./messages/shell.js";
 export { songsMessages } from "./messages/songs.js";
+export { stashMessages } from "./messages/stash.js";
 export { takesMessages } from "./messages/takes.js";
 export {
   type ValidationKey,

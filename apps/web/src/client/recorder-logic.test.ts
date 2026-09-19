@@ -7,6 +7,7 @@ import {
   levelFromTimeDomain,
   needsDurationFix,
   pickRecorderMime,
+  pickerGroups,
   reduceRecorder,
   shapeForMime,
   waveformBars,
@@ -169,11 +170,36 @@ describe("filterSongs", () => {
     { id: "2", title: "Čoudy", slug: "coudy" },
     { id: "3", title: "Neon Skyline", slug: "neon" },
   ];
-  it("keeps the given order (recent first) and matches without diacritics or case", () => {
+  it("keeps the given order and matches without diacritics or case", () => {
     expect(filterSongs(songs, "")).toEqual(songs);
     expect(filterSongs(songs, "coud").map((s) => s.id)).toEqual(["2"]);
     expect(filterSongs(songs, "CESTA").map((s) => s.id)).toEqual(["1"]);
     expect(filterSongs(songs, "  ")).toEqual(songs);
     expect(filterSongs(songs, "zzz")).toEqual([]);
+  });
+});
+
+describe("pickerGroups", () => {
+  const songs = [
+    { id: "a", title: "Aardvark", slug: "aardvark" },
+    { id: "c", title: "Čoudy", slug: "coudy" },
+    { id: "z", title: "Zebra", slug: "zebra" },
+  ];
+  it("puts the recently played first, most recent on top, then every song", () => {
+    expect(pickerGroups(songs, ["z", "c"], "")).toEqual([
+      { kind: "recent", songs: [songs[2], songs[1]] },
+      { kind: "all", songs },
+    ]);
+  });
+  it("has no recent group when nothing has been played, and skips ids it does not list", () => {
+    expect(pickerGroups(songs, [], "")).toEqual([{ kind: "all", songs }]);
+    expect(pickerGroups(songs, ["gone"], "")).toEqual([{ kind: "all", songs }]);
+  });
+  it("turns a search into one flat list of matches, even an empty one", () => {
+    expect(pickerGroups(songs, ["z"], "coud")).toEqual([{ kind: "matches", songs: [songs[1]] }]);
+    expect(pickerGroups(songs, ["z"], "zzz")).toEqual([{ kind: "matches", songs: [] }]);
+  });
+  it("has nothing to group in an empty library", () => {
+    expect(pickerGroups([], [], "")).toEqual([]);
   });
 });

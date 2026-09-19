@@ -22,6 +22,7 @@ import { playerByLocale } from "./player.js";
 import { pushByLocale } from "./push.js";
 import { shellByLocale } from "./shell.js";
 import { songsByLocale } from "./songs.js";
+import { stashByLocale } from "./stash.js";
 import { takesByLocale } from "./takes.js";
 import { validationByLocale } from "./validation.js";
 import { votingByLocale } from "./voting.js";
@@ -41,6 +42,7 @@ const CATALOG = {
     push: pushByLocale.en,
     shell: shellByLocale.en,
     songs: songsByLocale.en,
+    stash: stashByLocale.en,
     takes: takesByLocale.en,
     validation: validationByLocale.en,
     voting: votingByLocale.en,
@@ -59,6 +61,7 @@ const CATALOG = {
     push: pushByLocale.cs,
     shell: shellByLocale.cs,
     songs: songsByLocale.cs,
+    stash: stashByLocale.cs,
     takes: takesByLocale.cs,
     validation: validationByLocale.cs,
     voting: votingByLocale.cs,

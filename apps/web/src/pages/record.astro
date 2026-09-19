@@ -1,0 +1,44 @@
+---
+// `/record`: the recorder. `/record?song=<slug or id>` skips the picker.
+//
+// A TOOL page like the mixer, and for the same reasons (see `AppLayout`'s
+// `transitions`/`shellPlayer` props): it owns a live MediaStream and an
+// AudioContext, and a ClientRouter navigation would leave both running with no
+// control anywhere. No router, no shell player, no chrome. Links IN carry
+// `data-astro-reload`.
+import { messages } from "@bandplate/i18n";
+import Recorder from "../components/Recorder.tsx";
+import AppLayout from "../layouts/AppLayout.astro";
+import { getAppDeps } from "../server/app.js";
+import { listRecordableSongs, resolvePreselectedSong } from "../server/pages/stash.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+const { db } = await getAppDeps();
+const locale = Astro.locals.locale;
+const t = messages(locale);
+
+const [{ songs, recentIds }, preselected] = await Promise.all([
+  listRecordableSongs(db),
+  resolvePreselectedSong(db, Astro.url.searchParams.get("song")),
+]);
+// A preselected song that is archived is not in the list; put it first so the
+// stage can still name it.
+const options =
+  preselected && !songs.some((s) => s.id === preselected.id) ? [preselected, ...songs] : songs;
+const closeHref = preselected ? `/songs/${preselected.slug}` : "/takes?stash=1";
+---
+
+<AppLayout title={t.stash.recordIdea} principal={principal} current="takes" transitions={false} shellPlayer={false} chrome={false}>
+  <Recorder
+    client:load
+    locale={locale}
+    songs={options}
+    recentIds={recentIds}
+    preselectedSongId={preselected?.id ?? null}
+    closeHref={closeHref}
+  />
+</AppLayout>

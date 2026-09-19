@@ -253,11 +253,47 @@ export function foldForSearch(text: string): string {
     .trim();
 }
 
-/** The picker's search. Keeps the caller's order, which is recent-first. */
+/** The picker's search. Keeps the caller's order. */
 export function filterSongs(songs: SongOption[], query: string): SongOption[] {
   const needle = foldForSearch(query);
   if (!needle) {
     return songs;
   }
   return songs.filter((song) => foldForSearch(song.title).includes(needle));
+}
+
+export interface PickerGroup {
+  /** `recent` and `all` carry a heading; `matches` is a search's one flat list. */
+  kind: "recent" | "all" | "matches";
+  songs: SongOption[];
+}
+
+/**
+ * What the picker shows. With no search: the songs the band played most
+ * recently (in `recentIds` order), then the whole library, in which the recent
+ * ones appear again, because "all songs" that skipped five of them would not be
+ * all of them. With a search: one list of matches, which may be empty.
+ */
+export function pickerGroups(
+  songs: SongOption[],
+  recentIds: string[],
+  query: string,
+): PickerGroup[] {
+  if (foldForSearch(query)) {
+    return [{ kind: "matches", songs: filterSongs(songs, query) }];
+  }
+  if (songs.length === 0) {
+    return [];
+  }
+  const byId = new Map(songs.map((song) => [song.id, song]));
+  const recent = recentIds.flatMap((id) => {
+    const song = byId.get(id);
+    return song ? [song] : [];
+  });
+  return recent.length > 0
+    ? [
+        { kind: "recent", songs: recent },
+        { kind: "all", songs },
+      ]
+    : [{ kind: "all", songs }];
 }

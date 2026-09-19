@@ -77,6 +77,18 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   ],
   "auth.slowLede": [{ label: "seconds", args: ["45"] }],
   "mixer.pageTitle": [{ label: "take", args: ["Čoudy"] }],
+  "stash.inYourStash": [
+    { label: "one", args: [1] },
+    { label: "many", args: [5] },
+  ],
+  "stash.homeLine": [
+    { label: "one", args: [1] },
+    { label: "many", args: [5] },
+  ],
+  "stash.recordFor": [{ label: "t", args: ["Čoudy"] }],
+  "stash.pageTitle": [{ label: "t", args: ["Čoudy"] }],
+  "stash.personalEvent": [{ label: "d", args: ["19. 9. 2026"] }],
+  "stash.deleteTitle": [{ label: "t", args: ["Čoudy"] }],
   "mixer.mute": [{ label: "i", args: ["Bass"] }],
   "mixer.unmute": [{ label: "i", args: ["Bass"] }],
   "mixer.solo": [{ label: "i", args: ["Bass"] }],

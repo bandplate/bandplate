@@ -28,6 +28,7 @@
     "@nanostores/preact": "^1.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "astro": "^5.1.1",
+    "fix-webm-duration": "1.0.6",
     "nanostores": "^1.0.1",
     "preact": "^10.25.3",
     "tailwindcss": "^4.0.0",

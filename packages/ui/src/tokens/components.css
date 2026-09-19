@@ -968,8 +968,8 @@ a.bp-btn {
  *                  because nothing around it establishes the grouping.
  *
  *   .bp-card-flat  the same container inside a LIST of like things. The list
- *                  itself is the grouping, so the surface and the radius come
- *                  off and a hairline separates one item from the next.
+ *                  itself is the grouping, so the surface comes off; items
+ *                  are rounded rows a few pixels apart, with no rule between.
  *
  * More than two of a thing is a list. Boxes in a list read as boxes, which is
  * the thing the Label skin was chosen to avoid — an archive of ten events
@@ -1004,29 +1004,37 @@ a.bp-btn {
   margin-inline: calc(var(--bp-row-gutter) * -1);
 }
 
+/* No rules between rows. A list is rounded rows on the bare ground, a few
+   pixels apart; the row lights up under the pointer and while its take plays,
+   and that is the whole separation. The hairlines made every list a stack of
+   boxes; the Hraje sheet's running order showed the calmer version, and
+   every list now follows it. */
 .bp-card-flat,
 .bp-song-row,
-.bp-take-row {
+.bp-take-row,
+.bp-ledger-row {
   border: none;
-  border-bottom: 1px solid var(--bp-color-border);
-  border-radius: 0;
+  border-radius: 12px;
   padding-block: 0.875rem;
   background: transparent;
 }
 
-/* `--bp-color-surface`, and one value for every row type. This was a 5%
-   foreground wash on takes and events and the surface colour on songs, which
-   is a difference nobody chose — the two treatments simply grew in different
-   places. The surface is the better of the two: a wash of the foreground is
-   the border colour by another name, so at any weight that reads it also
-   starts swallowing the hairline and the plate's ring, while the surface is a
-   colour the palette already carries for exactly this — a plane lifted off the
-   ground. */
+.bp-card-flat + .bp-card-flat,
+.bp-song-row + .bp-song-row,
+.bp-take-row + .bp-take-row,
+.bp-ledger-row + .bp-ledger-row {
+  margin-top: 0.25rem;
+}
+
+/* One hover for every row type, and the same one the Hraje sheet's order
+   list uses: the subtle foreground wash. It used to be the surface colour,
+   because a wash would swallow the hairline between rows; there is no hairline
+   now, and the wash reads the same on lacquer and on sand. */
 .bp-card-flat:hover,
 .bp-song-row:hover,
 .bp-take-row:hover,
 .bp-ledger-row:hover {
-  background: var(--bp-color-surface);
+  background: var(--bp-fill-subtle);
 }
 
 /* …and the plate brightens rather than being swallowed, so the anchor stays
@@ -2728,7 +2736,6 @@ a.bp-btn {
 
 .bp-uploader-item {
   padding-block: 0.75rem;
-  border-bottom: 1px solid var(--bp-color-border);
 }
 
 .bp-uploader-item-top {
@@ -3853,21 +3860,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* count, last played) is mono, right-aligned on desktop as real columns.  */
 /* ---------------------------------------------------------------------- */
 
-/* The first row's top hairline is drawn BY THE ROW, not by the list.
- *
- * It was `border-top` on `.bp-song-list`, and it came up 20px short: every row
- * carries `margin-inline: -0.625rem` so its hover surface bleeds past the
- * list's own box (see `--bp-row-gutter`), which left the cap 10px shy at each
- * end while every other separator — each row's own `border-bottom` — ran the
- * full width. On the first row, hovered, the line visibly failed to reach its
- * own corners.
- *
- * Putting it on the row puts it in the same box as every other rule in the
- * list, so the two cannot disagree again. */
-.bp-song-list > .bp-song-row:first-child {
-  border-top: 1px solid var(--bp-color-border);
-}
-
 /* Task 8: `.bp-song-row` used to BE the `<a>` — the whole row was one
    link. `FavoriteToggle` renders a `<form>+<button>`, and a `<form>` inside
    an `<a>` is invalid HTML (interactive content can't nest), so the row is
@@ -3881,7 +3873,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 0.5rem;
   min-height: 44px;
   padding-block: 1rem;
-  border-bottom: 1px solid var(--bp-color-border);
 }
 
 .bp-song-row-link {
@@ -3984,7 +3975,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
    What this replaced stacked four muted lines under the title and left the
    right half of a desktop row empty apart from an orphaned duration.
 
-   Box model (hairline, padding, hover) comes from `.bp-card-flat`. */
+   Box model (radius, padding, hover) comes from `.bp-card-flat`. */
 .bp-take-row {
   display: grid;
   /* Line two spans the title AND duration columns as ONE area, with the
@@ -4034,7 +4025,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
    exact source", and a row's toggle is always the master, so the fill
    vanished the moment a stem was picked in the sheet. */
 .bp-take-row:has(.bp-play-toggle.is-current-take) {
-  background: var(--bp-color-surface);
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 10%, transparent);
 }
 
 /* …and its title takes the accent, so the current take is readable from
@@ -4960,7 +4951,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--bp-color-border);
 }
 
 .bp-asset-row {
@@ -4971,7 +4961,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 0.5rem 1rem;
   min-height: 44px;
   padding: 0.75rem 0.25rem;
-  border-bottom: 1px solid var(--bp-color-border);
 }
 
 .bp-asset-row-label {
@@ -5070,7 +5059,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--bp-color-border);
 }
 
 /* One column, not two. The two-up grid was right when `/me` was a single
@@ -5091,7 +5079,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 0.25rem 0.75rem;
   min-height: 44px;
   padding: 0.875rem 0.25rem;
-  border-bottom: 1px solid var(--bp-color-border);
 }
 
 .bp-vote-row-main {
@@ -5509,13 +5496,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 /* A skeleton row mirrors `.bp-take-row` geometry: the same
-   34px leading disc, the same 12px vertical padding, the same hairline. */
+   34px leading disc, the same 12px vertical padding. */
 .bp-skeleton-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 0;
-  border-bottom: 1px solid var(--bp-color-border);
 }
 
 .bp-skeleton-row-main {
@@ -6558,7 +6544,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   justify-content: space-between;
   gap: 0.625rem;
   padding: 0.25rem 0;
-  border-bottom: 1px solid var(--bp-color-border);
 }
 
 .bp-alias-remove {
@@ -7126,7 +7111,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   align-items: center;
   gap: 0 0.5rem;
   padding-block: 0.8125rem;
-  border-top: 1px solid var(--bp-color-border);
 }
 
 .bp-ledger-link {
@@ -7139,12 +7123,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
   text-decoration: none;
 }
 
-/* The newest event opens the ledger, so it has no rule above it and takes the
-   accent on its date — the one thing on this page that says "this is what
-   just happened". */
-.bp-ledger-row--latest {
-  border-top-color: transparent;
-}
+/* The newest event opens the ledger and takes the accent on its date, the
+   one thing on this page that says "this is what just happened". */
 
 /* An event with neither title nor venue has no name; it says so, muted, so the
    word reads as a fact rather than as a title someone typed. */
@@ -7703,8 +7683,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--bp-color-border);
+  padding: 3px 4px;
+  border-radius: 3px;
 }
 
 .bp-theme-mini-line + .bp-theme-mini-row {

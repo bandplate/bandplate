@@ -20,6 +20,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { generateToken, hashToken } from "@bandplate/core";
 import {
+  assetsRepo,
   createDb,
   eventsRepo,
   instrumentsRepo,
@@ -45,6 +46,7 @@ let songSlug: string;
 let songSlugNoTakes: string;
 let eventId: string;
 let eventIdNoTakes: string;
+let eventIdPlayable: string;
 let bassInstrumentId: string;
 let drumsInstrumentId: string;
 
@@ -152,6 +154,40 @@ async function seedAndGetSessionCookie(): Promise<string> {
     updatedAt: now - 2,
     instrumentIds: [bass.id],
   });
+
+  // A separate event whose one take has a ready master — this is the event
+  // "Play all" is allowed to render on. `eventWithTakes` above deliberately
+  // stays asset-less, so it doubles as the "no playable takes" case.
+  const eventPlayable = await eventsRepo.create(db, {
+    kind: "rehearsal",
+    heldAt: now - 2000,
+    venue: "Route Test Playable Venue",
+    createdAt: now - 2000,
+    updatedAt: now - 2000,
+  });
+  eventIdPlayable = eventPlayable.id;
+  const playableTake = await takesRepo.create(db, {
+    songId: songWithTakes.id,
+    eventId: eventPlayable.id,
+    recordedAt: now - 2000,
+    createdAt: now - 2000,
+    updatedAt: now - 2000,
+    instrumentIds: [bass.id],
+  });
+  await assetsRepo.createMany(db, [
+    {
+      takeId: playableTake.id,
+      kind: "master",
+      tier: "lossless",
+      format: "flac",
+      storageKey: `route-test/${playableTake.id}/master.flac`,
+      contentType: "audio/flac",
+      bytes: 42_000_000,
+      status: "ready",
+      createdAt: now - 2000,
+      readyAt: now - 2000,
+    },
+  ]);
 
   const token = generateToken();
   await loginTokensRepo.create(db, {
@@ -333,6 +369,30 @@ describe("member browsing routes over real HTTP", () => {
     // event's own kind label — so this asserts on the take row's NOTE slot
     // rather than on the whole document.
     expect(body).not.toContain('class="bp-take-note bp-take-elastic">live');
+  });
+
+  it("renders Play all for an event with a playable take", async () => {
+    const res = await fetch(`${ORIGIN}/events/${eventIdPlayable}`, {
+      headers: { cookie: sessionCookie },
+    });
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    // The attribute is unique on the page — no jsdom/DOMParser equivalent in
+    // this repo's route tests, so presence/absence rides on that uniqueness
+    // (see `docs/frontend-traps.md` on why a bare string match is otherwise
+    // weak, and the task brief's own allowance for this file).
+    expect(html).toContain('data-play-queue-start="event-takes"');
+    expect(html).toContain("Play all");
+  });
+
+  it("renders no Play all button for an event whose takes have no playable asset", async () => {
+    const res = await fetch(`${ORIGIN}/events/${eventId}`, {
+      headers: { cookie: sessionCookie },
+    });
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).not.toContain('data-play-queue-start="event-takes"');
+    expect(html).not.toContain("Play all");
   });
 
   it("404s for an unknown event id", async () => {

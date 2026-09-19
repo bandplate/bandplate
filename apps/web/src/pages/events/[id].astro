@@ -113,6 +113,9 @@ const kindLabel = t.events.kindLabel(event.kind);
 // rather than a label — `.bp-kind` uppercases it everywhere it is shown.
 const kindTitle = kindLabel.charAt(0).toUpperCase() + kindLabel.slice(1);
 
+// No fake affordance: without a playable take, there is nothing to queue.
+const hasPlayable = takes.some((take) => take.playableAssetId);
+
 const canArchive = hasAllScopes(principal, ["members:admin"]);
 const isArchived = event.archivedAt !== null;
 const justCreated = Astro.url.searchParams.get("created") === "1";
@@ -225,7 +228,6 @@ const [allSongs, allInstruments] = await Promise.all([
         boundaries to break at. */}
         {event.venue && <span class="bp-event-hero-venue">{event.venue}</span>}
       </div>
-      <div class="bp-title-row">
       <h1 class="bp-hero-date">
         {formatLongDate(locale, event.heldAt)}
         <span class="bp-take-favorite-mark">
@@ -238,11 +240,24 @@ const [allSongs, allInstruments] = await Promise.all([
           />
         </span>
       </h1>
+      {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
+      <div class="bp-event-hero-actions">
+        {hasPlayable && (
+          <button
+            type="button"
+            class="bp-btn bp-btn-secondary bp-btn-sm bp-btn-play-all"
+            data-play-queue-start="event-takes"
+          >
+            <span class="bp-btn-play-disc" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l10-5.5-10-5.5z" /></svg>
+            </span>
+            {t.events.playAll}
+          </button>
+        )}
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-event">
           {t.events.edit}
         </button>
       </div>
-      {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
       {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
 
     </header>

@@ -119,6 +119,7 @@ export const events = {
   whatWasIt: "Co to bylo", // en: What was it
   archived: "Archiv", // en: Archived
   edit: "Upravit", // en: Edit
+  playAll: "Přehrát vše", // en: Play all
   addTake: "Přidat nahrávku", // en: Add take
   instrumentsHeading: "Nástroje", // en: Instruments
   songHeading: "Skladba", // en: Song

@@ -112,6 +112,8 @@ export const events = {
   whatWasIt: "What was it",
   archived: "Archived",
   edit: "Edit",
+  /** The button that starts the queue from this event's own take list. */
+  playAll: "Play all",
   addTake: "Add take",
   instrumentsHeading: "Instruments",
   songHeading: "Song",

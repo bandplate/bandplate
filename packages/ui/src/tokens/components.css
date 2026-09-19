@@ -1772,7 +1772,7 @@ a.bp-btn {
 }
 
 .bp-now-playing-source {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 1rem;
   border: none;
   border-radius: 999px;
@@ -1801,7 +1801,7 @@ a.bp-btn {
   align-items: center;
   gap: 0.5rem;
   align-self: flex-start;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 1rem;
   border-radius: 999px;
   background: var(--bp-fill-subtle);

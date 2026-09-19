@@ -389,7 +389,7 @@ const [allSongs, allInstruments] = await Promise.all([
             <p>{t.events.takesEmpty}</p>
           </div>
         ) : (
-          <div class="bp-take-list bp-take-list--wide">
+          <div class="bp-take-list bp-take-list--wide" id="event-takes" data-play-queue>
             {takes.map((take) => (
               <TakeRow
                 take={take}

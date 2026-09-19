@@ -507,7 +507,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
               <p>{t.songs.takesEmpty}</p>
             </div>
           ) : (
-            <div class="bp-take-list">
+            <div class="bp-take-list" data-play-queue>
               {takes.slice(0, TAKES_BEFORE_FOLD).map((take) => (
                 <TakeRow
                   take={take}

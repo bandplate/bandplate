@@ -38,6 +38,13 @@ import { currentLocale } from "../client/locale.js";
 import { MIN_MIXER_STEMS } from "../client/mixer-tracks.js";
 import { decidePlayerClickAction } from "../client/player-actions.js";
 import {
+  type QueueItem,
+  decidePrevious,
+  hasNext,
+  nextIndex,
+  queueFrom,
+} from "../client/player-queue.js";
+import {
   AUDIO_SOURCE_ATTR,
   type PlayerSource,
   type PlayerTrack,
@@ -46,6 +53,7 @@ import {
   downsamplePeaks,
   isPlaying,
   peaksUrl,
+  playQueue,
   sourcesUrl,
 } from "../client/player-store.js";
 
@@ -130,6 +138,42 @@ function readButtonData(el: HTMLElement): SourceButtonData | null {
   };
 }
 
+/**
+ * The list a toggle was pressed in, as queue items, in document order. Only
+ * plain toggles count (not the take page's source chips), and only masters:
+ * a queued take starts on its master. A toggle outside any
+ * `[data-play-queue]` is a queue of one.
+ */
+function readQueueAround(target: HTMLElement, clicked: SourceButtonData): QueueItem[] {
+  const container = target.closest<HTMLElement>("[data-play-queue]");
+  const self = {
+    takeId: clicked.takeId,
+    assetId: clicked.assetId,
+    title: clicked.title,
+    subtitle: clicked.subtitle,
+  };
+  if (!container) {
+    return [self];
+  }
+  return readQueueIn(container);
+}
+
+function readQueueIn(container: HTMLElement): QueueItem[] {
+  const items: QueueItem[] = [];
+  for (const el of container.querySelectorAll<HTMLElement>(`[${AUDIO_SOURCE_ATTR}]`)) {
+    const data = readButtonData(el);
+    if (data && data.role === "toggle" && data.sourceKind === "master") {
+      items.push({
+        takeId: data.takeId,
+        assetId: data.assetId,
+        title: data.title,
+        subtitle: data.subtitle,
+      });
+    }
+  }
+  return items;
+}
+
 /** Updates every `[data-audio-source]` element currently in the DOM to reflect the live player state — aria-pressed, a couple of CSS hooks, and (for plain toggle buttons) the aria-label. Called on every store change and after every navigation (`astro:page-load`), since Astro swaps in fresh, unsynced elements on each page. */
 function syncButtons(track: PlayerTrack | null, playing: boolean): void {
   for (const el of document.querySelectorAll<HTMLElement>(`[${AUDIO_SOURCE_ATTR}]`)) {
@@ -165,6 +209,7 @@ function syncButtons(track: PlayerTrack | null, playing: boolean): void {
 export default function Player({ locale }: { locale?: Locale } = {}) {
   const track = useStore(currentTrack);
   const playing = useStore(isPlaying);
+  const queue = useStore(playQueue);
   const audioRef = useRef<HTMLAudioElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   /** The waveform's own box — measured to decide how many bars fit. */
@@ -175,6 +220,54 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   // resume) is applied there instead of immediately after `audio.src = `.
   const pendingSeekRef = useRef<number | null>(null);
   const pendingAutoplayRef = useRef(false);
+
+  // The one way a queued take gets onto the `<audio>` element — used by the
+  // click handler's "start-track"/Play-all paths and by the Next/Previous
+  // buttons alike, so there is exactly one place that touches `audio.src`
+  // for a track change.
+  const startItem = useCallback((item: QueueItem) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    pendingSeekRef.current = null;
+    pendingAutoplayRef.current = false;
+    currentTrack.set({
+      takeId: item.takeId,
+      title: item.title,
+      subtitle: item.subtitle,
+      sourceAssetId: item.assetId,
+      sourceKind: "master",
+      sourceName: "",
+    });
+    audio.src = audioUrl(item.assetId);
+    void audio.play();
+  }, []);
+
+  const playIndex = useCallback(
+    (index: number) => {
+      const queue = playQueue.get();
+      const item = queue?.items[index];
+      if (!queue || !item) return;
+      playQueue.set({ ...queue, index });
+      startItem(item);
+    },
+    [startItem],
+  );
+
+  const goNext = useCallback(() => {
+    const index = nextIndex(playQueue.get());
+    if (index !== null) playIndex(index);
+  }, [playIndex]);
+
+  const goPrevious = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const action = decidePrevious(playQueue.get(), audio.currentTime);
+    if (action.kind === "go") {
+      playIndex(action.index);
+    } else {
+      audio.currentTime = 0;
+    }
+  }, [playIndex]);
 
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -191,6 +284,12 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   const stemCount = sources?.filter((source) => source.kind === "stem").length ?? 0;
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
+  // `playIndex` closed over by `onEnded` below, which is registered once
+  // (`[]` deps, same reason as the click handler) — the ref is what lets it
+  // see the current callback instead of the one from first mount.
+  const playIndexRef = useRef(playIndex);
+  playIndexRef.current = playIndex;
+
   // Wires the real DOM events (not our own click handler's optimistic
   // guess) to `isPlaying` — this is what keeps the store honest when the
   // native `<audio controls>` UI itself is used to pause/play, not just
@@ -202,7 +301,17 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     }
     const onPlay = () => isPlaying.set(true);
     const onPause = () => isPlaying.set(false);
-    const onEnded = () => isPlaying.set(false);
+    // Advances the queue rather than just stopping — see `player-queue.ts`
+    // for what "next" means. `null` (no queue, or already at the end) is
+    // the ordinary stop.
+    const onEnded = () => {
+      const index = nextIndex(playQueue.get());
+      if (index === null) {
+        isPlaying.set(false);
+      } else {
+        playIndexRef.current(index);
+      }
+    };
     const onTime = () => setPosition(audio.currentTime);
     const onDuration = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     const onLoadedMetadata = () => {
@@ -239,6 +348,23 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   // page-scoped script would have.
   useEffect(() => {
     function onClick(event: MouseEvent) {
+      // Play all: not a `[data-audio-source]` control at all, so it has to
+      // be checked before that lookup below returns early for it.
+      const startButton = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+        "[data-play-queue-start]",
+      );
+      if (startButton) {
+        const container = document.getElementById(startButton.dataset.playQueueStart ?? "");
+        const items = container ? readQueueIn(container) : [];
+        const first = items[0];
+        if (first) {
+          event.preventDefault();
+          playQueue.set({ items, index: 0 });
+          startItem(first);
+        }
+        return;
+      }
+
       const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
         `[${AUDIO_SOURCE_ATTR}]`,
       );
@@ -280,24 +406,36 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           audio.load();
           currentTrack.set(action.track);
           break;
-        case "start-track":
-          pendingSeekRef.current = null;
-          pendingAutoplayRef.current = false;
-          currentTrack.set(action.track);
-          audio.src = audioUrl(action.track.sourceAssetId);
-          // No pending seek to wait for — start playing immediately.
-          // `.play()` itself invokes the resource-selection/load algorithm
-          // per spec (same as the `.load()` calls above), so this does not
-          // need to wait for `loadedmetadata` the way a preserved-position
-          // switch does.
-          void audio.play();
+        case "start-track": {
+          // The queue is the list this take was clicked from — snapshotted
+          // now, since the DOM it's read from may not survive the next
+          // navigation. A stem started from the take page's own chips isn't
+          // read into any queue (`readQueueIn` only collects master
+          // toggles), but it's still a start: `startItem` always begins on
+          // the master, so its `currentTrack.set` below restores the
+          // clicked stem as the active source.
+          const queue = queueFrom(readQueueAround(target, data), data.takeId);
+          playQueue.set(queue);
+          startItem({
+            takeId: data.takeId,
+            assetId: data.assetId,
+            title: data.title,
+            subtitle: data.subtitle,
+          });
+          if (data.sourceKind === "stem") {
+            currentTrack.set(action.track);
+          }
           break;
+        }
       }
     }
 
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, []);
+    // `startItem` is stable (`useCallback` with `[]`), so the once-registered
+    // listener closes over the same function this effect ran with — listed
+    // to satisfy the linter, not because it ever changes and re-binds this.
+  }, [startItem]);
 
   // Keep every on-page control in sync with the store — on every state
   // change, AND after every view-transition navigation (fresh, unsynced
@@ -312,6 +450,22 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     document.addEventListener("astro:page-load", onPageLoad);
     return () => document.removeEventListener("astro:page-load", onPageLoad);
   }, []);
+
+  // The lock screen / headphones remote — same transport this bar exposes,
+  // routed through the OS instead of a touch. `previoustrack` is offered
+  // whenever a queue exists at all (Previous always does something: go back,
+  // or restart), `nexttrack` only when there's somewhere to go, so a
+  // headphone press can't act on a control this bar itself doesn't show as
+  // available (see the no-fake-affordances rule).
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    const session = navigator.mediaSession;
+    session.metadata = track
+      ? new MediaMetadata({ title: track.title, artist: track.subtitle })
+      : null;
+    session.setActionHandler("previoustrack", track ? goPrevious : null);
+    session.setActionHandler("nexttrack", track && hasNext(queue) ? goNext : null);
+  }, [track, queue, goNext, goPrevious]);
 
   // The waveform for whatever source is loaded. Re-fetched on every source
   // switch, which is the entire reason peaks are stored per asset rather
@@ -762,6 +916,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             }
             isPlaying.set(false);
             currentTrack.set(null);
+            playQueue.set(null);
           }}
         >
           <svg

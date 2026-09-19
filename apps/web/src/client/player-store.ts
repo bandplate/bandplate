@@ -9,6 +9,7 @@
 // dependency of its own (nanostores itself is isomorphic) — nothing here
 // requires that, it's just never imported from server code.
 import { atom } from "nanostores";
+import type { PlayQueue } from "./player-queue.js";
 
 /** A play/solo control's persistent identity, in one place — every element wired up to the player (TakeRow's leading slot, the take-detail hero, the stems drawer) carries these as `data-*` attributes with these exact names, read by `Player.tsx`'s delegated click handler. */
 export const AUDIO_SOURCE_ATTR = "data-audio-source";
@@ -42,6 +43,8 @@ export interface PlayerTrack {
 /** `null` when nothing has ever been played this session. */
 export const currentTrack = atom<PlayerTrack | null>(null);
 export const isPlaying = atom<boolean>(false);
+/** What plays after the current take — see `player-queue.ts`. `null` until something plays. */
+export const playQueue = atom<PlayQueue | null>(null);
 
 export function audioUrl(assetId: string): string {
   return `/api/assets/${assetId}/audio`;

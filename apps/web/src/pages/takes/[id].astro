@@ -112,6 +112,11 @@ if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
+// Only the owner gets this far with a private take; its page is the stash's.
+if (detail.take.visibility === "private") {
+  return Astro.redirect(`/stash/${detail.take.id}`);
+}
+
 const { take, song, event, instruments, instrumentsById, assets, hasLossless, favorited, myVote } =
   detail;
 // Labels come from the VOCABULARY, not from `instruments` (what was played on
@@ -121,6 +126,8 @@ const { take, song, event, instruments, instrumentsById, assets, hasLossless, fa
 // after it.
 const instrumentLabelById = new Map([...instrumentsById].map(([id, i]) => [id, i.label]));
 const isAdmin = hasAllScopes(principal, ["members:admin"]);
+/** A member's own recording, published from their stash: heard, not judged. */
+const isPersonal = take.ownerMemberId !== null;
 
 // `peaks` assets are waveform data for the future player, not something a
 // member browses as a "recording" — the brief's own enumeration ("master,
@@ -189,7 +196,7 @@ const heroSubtitle = event
 // for the card is a second one to keep true.
 
 /** An admin, on a take the band has not yet ruled on. */
-const canDecide = isAdmin && (take.state === "published" || take.state === "new");
+const canDecide = isAdmin && !isPersonal && (take.state === "published" || take.state === "new");
 
 const canDelete = hasAllScopes(principal, ["members:admin"]);
 const justCreated = Astro.url.searchParams.get("created") === "1";
@@ -638,17 +645,21 @@ function assetLabel(asset: assetsRepo.Asset): string {
       )
     }
 
-    <section class="bp-take-strip">
-      <h2 class="bp-strip-label">{t.takes.yourVoteHeading}</h2>
-      <VoteToggle
-        takeId={take.id}
-        keeperVotes={take.keeperVotes}
-        totalVotes={take.totalVotes}
-        ratingScore={take.ratingScore}
-        myVote={myVote}
-        size="lg"
-      />
-    </section>
+    {
+      !isPersonal && (
+        <section class="bp-take-strip">
+          <h2 class="bp-strip-label">{t.takes.yourVoteHeading}</h2>
+          <VoteToggle
+            takeId={take.id}
+            keeperVotes={take.keeperVotes}
+            totalVotes={take.totalVotes}
+            ratingScore={take.ratingScore}
+            myVote={myVote}
+            size="lg"
+          />
+        </section>
+      )
+    }
 
       <section class="bp-take-strip">
       {/* Direction U2: the action sits beside the heading — which the island

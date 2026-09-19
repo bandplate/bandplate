@@ -92,7 +92,9 @@ if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { event, eventFavorited, takes, takeTotal } = detail;
+const { event, eventFavorited, takes, takeTotal, owner } = detail;
+/** Somebody's own stash day, not the band's event — no edit, no merge, no add-take. */
+const isPersonal = event.kind === "personal";
 const pages = pageView({
   url: Astro.url,
   page,
@@ -180,7 +182,7 @@ const [allSongs, allInstruments] = await Promise.all([
       </Banner>
     )}
     {justCreated && <Banner kind="success">{t.events.created}</Banner>}
-    {sameDayWarning && (
+    {!isPersonal && sameDayWarning && (
       <Banner kind="info" title={t.events.duplicateWarnTitle}>
         <p class="bp-m0">
           {t.events.duplicateWarnBody({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })}
@@ -190,7 +192,7 @@ const [allSongs, allInstruments] = await Promise.all([
     {justSaved && <Banner kind="success">{t.events.saved}</Banner>}
     {justTakeDeleted && <Banner kind="success">{t.events.takeDeleted}</Banner>}
     {justMerged && <Banner kind="success">{t.events.merged}</Banner>}
-    {sameDay.length > 0 && (
+    {!isPersonal && sameDay.length > 0 && (
       <Banner kind="info" title={t.events.duplicateFiledTwiceTitle}>
         {t.events.duplicateFiledTwiceBody({ kind: kindLabel, date: formatLongDate(locale, event.heldAt) })}
         <Fragment slot="action">
@@ -241,6 +243,9 @@ const [allSongs, allInstruments] = await Promise.all([
         </span>
       </h1>
       {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
+      {isPersonal && owner && (
+        <p class="bp-event-hero-title bp-m0">{t.events.recordedByLabel}: {owner.displayName}</p>
+      )}
       <div class="bp-event-hero-actions">
         {hasPlayable && (
           <button
@@ -254,9 +259,11 @@ const [allSongs, allInstruments] = await Promise.all([
             {t.events.playAll}
           </button>
         )}
-        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-event">
-          {t.events.edit}
-        </button>
+        {!isPersonal && (
+          <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-event">
+            {t.events.edit}
+          </button>
+        )}
       </div>
       {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
 
@@ -389,9 +396,11 @@ const [allSongs, allInstruments] = await Promise.all([
     <section>
       <div class="bp-title-row">
         <h2 class="bp-section-title bp-m0">{t.events.takesHeading}</h2>
-        <button type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="add-take">
-          {t.events.addTake}
-        </button>
+        {!isPersonal && (
+          <button type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="add-take">
+            {t.events.addTake}
+          </button>
+        )}
       </div>
       {takeTotal > 0 && (
         <p class="bp-event-hero-hint bp-m0">

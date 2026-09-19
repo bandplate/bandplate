@@ -24,6 +24,7 @@ const KIND_WORDS: Record<string, string> = {
   rehearsal: "zkouška",
   concert: "živě",
   session: "studio",
+  personal: "osobní nahrávky", // en: personal
 };
 
 export const events = {
@@ -31,6 +32,8 @@ export const events = {
 
   unnamed: "Bez názvu", // en: Unnamed
   allEvents: "Všechny akce", // en: All events
+
+  recordedByLabel: "Nahrál", // en: Recorded by
 
   // en: `${count} ${count === 1 ? "take" : "takes"}`
   //

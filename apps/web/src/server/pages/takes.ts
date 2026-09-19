@@ -54,7 +54,9 @@ export async function getTakeDetail(
   memberId: string,
 ): Promise<TakeDetail | undefined> {
   const take = await takesRepo.getById(db, id);
-  if (!take) {
+  // Someone else's stash take answers like a missing one. The owner gets it;
+  // the page itself then sends them to `/stash/[id]`, where it is edited.
+  if (!take || !takesRepo.isVisibleTo(take, memberId)) {
     return undefined;
   }
 
@@ -240,7 +242,9 @@ export async function updateTake(
   formData: FormData,
 ): Promise<UpdateTakeResult> {
   const take = await takesRepo.getById(db, id);
-  if (!take) {
+  // A stash take leaves the stash one way only, `publishFromStash` on
+  // `/stash/[id]`; the band's edit sheet and publish strip never touch it.
+  if (!take || take.visibility === "private") {
     return { kind: "not_found" };
   }
 
@@ -301,7 +305,9 @@ export async function setTakePublished(
   published: boolean,
 ): Promise<PublishTakeResult> {
   const take = await takesRepo.getById(db, id);
-  if (!take) {
+  // A stash take leaves the stash one way only, `publishFromStash` on
+  // `/stash/[id]`; the band's edit sheet and publish strip never touch it.
+  if (!take || take.visibility === "private") {
     return { kind: "not_found" };
   }
   if (published) {

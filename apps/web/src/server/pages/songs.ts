@@ -4,6 +4,7 @@ import {
   eventsRepo,
   favoritesRepo,
   type instrumentsRepo,
+  membersRepo,
   notificationsRepo,
   songsRepo,
   takesRepo,
@@ -92,6 +93,8 @@ export interface TakeWithContext extends takesRepo.Take {
   /** `undefined` means this member hasn't voted on this take yet — see `TakeRow`'s own `myVote` prop. */
   myVote: boolean | undefined;
   favorited: boolean;
+  /** The recording member's name, for a personal recording. Null for a band take. */
+  ownerName: string | null;
 }
 
 export interface SongDetail {
@@ -142,15 +145,20 @@ export async function getSongDetail(
 
   const takeIds = takes.map((t) => t.id);
   const eventIds = [...new Set(takes.map((t) => t.eventId))];
-  const [instrumentsByTake, events, playableByTakeId, myVoteByTakeId, favoriteTakeIds] =
+  const ownerIds = [
+    ...new Set(takes.map((t) => t.ownerMemberId).filter((id): id is string => id !== null)),
+  ];
+  const [instrumentsByTake, events, playableByTakeId, myVoteByTakeId, favoriteTakeIds, owners] =
     await Promise.all([
       takesRepo.listInstrumentsForTakes(db, takeIds),
       eventsRepo.getByIds(db, eventIds),
       assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
       votesRepo.listByMemberForTakes(db, memberId, takeIds),
       favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
+      membersRepo.getByIds(db, ownerIds),
     ]);
   const eventById = new Map(events.map((e) => [e.id, e]));
+  const ownerNameById = new Map(owners.map((m) => [m.id, m.displayName]));
 
   return {
     song,
@@ -165,6 +173,7 @@ export async function getSongDetail(
       playableAssetId: playableByTakeId.get(take.id)?.id,
       myVote: myVoteByTakeId.get(take.id),
       favorited: favoriteTakeIds.has(take.id),
+      ownerName: take.ownerMemberId ? (ownerNameById.get(take.ownerMemberId) ?? null) : null,
     })),
   };
 }

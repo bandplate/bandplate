@@ -515,6 +515,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                   context={{ kind: "song", event: take.event }}
                   playableAssetId={take.playableAssetId}
                   favorited={take.favorited}
+                  ownerName={take.ownerName}
                 />
               ))}
               {foldedTakes.length > 0 && (
@@ -539,6 +540,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                         context={{ kind: "song", event: take.event }}
                         playableAssetId={take.playableAssetId}
                         favorited={take.favorited}
+                        ownerName={take.ownerName}
                       />
                     ))}
                   </div>

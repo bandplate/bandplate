@@ -130,6 +130,12 @@ export interface Props {
    * "omit it".
    */
   playableAssetId?: string;
+  /**
+   * The recording member's name, for a personal recording. Its event is a
+   * personal day with no title or venue, so the name line says WHOSE it is
+   * instead — "osobní nahrávky" in the badge, "Filip" in the line.
+   */
+  ownerName?: string | null;
 }
 
 const {
@@ -139,6 +145,7 @@ const {
   transitionName,
   favorited = false,
   playableAssetId,
+  ownerName = null,
 } = Astro.props;
 
 const locale = Astro.locals.locale;
@@ -174,7 +181,9 @@ const playSubtitle = song
 // says WHAT it was, so a name line that could only repeat that word is simply
 // not rendered rather than filled with a fallback.
 const eventName = event
-  ? eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
+  ? event.kind === "personal"
+    ? (ownerName ?? "")
+    : eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
   : "";
 // The kind of event this take came out of, WHENEVER the row can know it —
 // including on an event page, which shows no event of its own but is one.

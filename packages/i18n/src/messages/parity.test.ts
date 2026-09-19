@@ -105,6 +105,7 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "rehearsal", args: ["rehearsal"] },
     { label: "concert", args: ["concert"] },
     { label: "session", args: ["session"] },
+    { label: "personal", args: ["personal"] },
     { label: "unknown", args: ["jam"] },
   ],
   "events.takeCount": [

@@ -19,6 +19,8 @@ const KIND_WORDS: Record<string, string> = {
   rehearsal: "rehearsal",
   concert: "live",
   session: "session",
+  /** A member's own recordings, published from their stash. */
+  personal: "personal",
 };
 
 export const events = {
@@ -34,6 +36,9 @@ export const events = {
 
   /** The ledger's footer button on home. */
   allEvents: "All events",
+
+  /** A personal event's hero — who recorded it. */
+  recordedByLabel: "Recorded by",
 
   /** "3 takes" — the count under a plate, and in the ledger. */
   takeCount: (count: number): string =>

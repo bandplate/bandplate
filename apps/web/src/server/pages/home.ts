@@ -78,7 +78,9 @@ export async function getFavorites(db: Db, memberId: string): Promise<HomeFavori
   const orderedSongs = songIds
     .map((id) => songById.get(id))
     .filter((s): s is songsRepo.Song => s !== undefined && s.archivedAt === null);
-  const orderedTakes = takeIds.map((id) => takeById.get(id)).filter((t) => t !== undefined);
+  const orderedTakes = takeIds
+    .map((id) => takeById.get(id))
+    .filter((t): t is takesRepo.Take => t !== undefined && takesRepo.isVisibleTo(t, memberId));
   const orderedEvents = eventIds
     .map((id) => eventById.get(id))
     .filter((e): e is eventsRepo.Event => e !== undefined && e.archivedAt === null);
@@ -182,7 +184,7 @@ async function getPinned(
   for (const row of rows) {
     if (row.targetType === "take") {
       const take = takeById.get(row.targetId);
-      if (!take) {
+      if (!take || !takesRepo.isVisibleTo(take, memberId)) {
         continue;
       }
       items.push({

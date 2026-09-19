@@ -25,12 +25,15 @@ async function targetExists(
   db: Db,
   targetType: favoritesRepo.FavoriteTargetType,
   targetId: string,
+  memberId: string,
 ): Promise<boolean> {
   switch (targetType) {
     case "song":
       return (await songsRepo.getById(db, targetId)) !== undefined;
-    case "take":
-      return (await takesRepo.getById(db, targetId)) !== undefined;
+    case "take": {
+      const take = await takesRepo.getById(db, targetId);
+      return take !== undefined && takesRepo.isVisibleTo(take, memberId);
+    }
     case "event":
       return (await eventsRepo.getById(db, targetId)) !== undefined;
   }
@@ -55,7 +58,7 @@ export async function toggleFavoriteFromForm(
     return { kind: "invalid" };
   }
 
-  const exists = await targetExists(db, parsed.data.targetType, parsed.data.targetId);
+  const exists = await targetExists(db, parsed.data.targetType, parsed.data.targetId, memberId);
   if (!exists) {
     return { kind: "not_found" };
   }

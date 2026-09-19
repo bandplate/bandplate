@@ -9,7 +9,14 @@
 // `server/pages/events.ts#getEventDetail`: one query per kind of data
 // (songs, events, instruments), never one round trip per take.
 import { type Db, assetsRepo } from "@bandplate/db";
-import { eventsRepo, type instrumentsRepo, songsRepo, takesRepo, votesRepo } from "@bandplate/db";
+import {
+  eventsRepo,
+  type instrumentsRepo,
+  membersRepo,
+  songsRepo,
+  takesRepo,
+  votesRepo,
+} from "@bandplate/db";
 
 export interface TakeWithFullContext extends takesRepo.Take {
   instruments: instrumentsRepo.Instrument[];
@@ -19,6 +26,8 @@ export interface TakeWithFullContext extends takesRepo.Take {
   playableAssetId: string | undefined;
   /** `undefined` means this member hasn't voted on this take yet — `TakeRow`'s own `myVote` prop, threaded through. */
   myVote: boolean | undefined;
+  /** The recording member's name, for a personal recording (its event says "osobní nahrávky" and this says whose). Null for a band take. */
+  ownerName: string | null;
 }
 
 /**
@@ -39,16 +48,22 @@ export async function attachFullContext(
   const takeIds = takes.map((t) => t.id);
   const songIds = [...new Set(takes.map((t) => t.songId))];
   const eventIds = [...new Set(takes.map((t) => t.eventId))];
+  const ownerIds = [
+    ...new Set(takes.map((t) => t.ownerMemberId).filter((id): id is string => id !== null)),
+  ];
 
-  const [instrumentsByTake, songs, events, playableByTakeId, myVoteByTakeId] = await Promise.all([
-    takesRepo.listInstrumentsForTakes(db, takeIds),
-    songsRepo.getByIds(db, songIds),
-    eventsRepo.getByIds(db, eventIds),
-    assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
-    memberId ? votesRepo.listByMemberForTakes(db, memberId, takeIds) : Promise.resolve(new Map()),
-  ]);
+  const [instrumentsByTake, songs, events, playableByTakeId, myVoteByTakeId, owners] =
+    await Promise.all([
+      takesRepo.listInstrumentsForTakes(db, takeIds),
+      songsRepo.getByIds(db, songIds),
+      eventsRepo.getByIds(db, eventIds),
+      assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
+      memberId ? votesRepo.listByMemberForTakes(db, memberId, takeIds) : Promise.resolve(new Map()),
+      membersRepo.getByIds(db, ownerIds),
+    ]);
   const songById = new Map(songs.map((s) => [s.id, s]));
   const eventById = new Map(events.map((e) => [e.id, e]));
+  const ownerNameById = new Map(owners.map((m) => [m.id, m.displayName]));
 
   return takes.map((take) => ({
     ...take,
@@ -57,5 +72,6 @@ export async function attachFullContext(
     event: eventById.get(take.eventId),
     playableAssetId: playableByTakeId.get(take.id)?.id,
     myVote: myVoteByTakeId.get(take.id),
+    ownerName: take.ownerMemberId ? (ownerNameById.get(take.ownerMemberId) ?? null) : null,
   }));
 }

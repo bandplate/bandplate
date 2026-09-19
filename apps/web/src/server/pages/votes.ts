@@ -45,7 +45,10 @@ export async function castVoteFromForm(
   }
 
   const take = await takesRepo.getById(db, takeId);
-  if (!take) {
+  // A private take is not there for anyone else, and a personal recording is
+  // published for listening, not judging. The page renders no vote control on
+  // either; this is the guard for a hand-built POST.
+  if (!take || !takesRepo.isVisibleTo(take, memberId) || !takesRepo.isVotable(take)) {
     return { kind: "not_found" };
   }
 

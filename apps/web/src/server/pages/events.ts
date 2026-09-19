@@ -3,6 +3,7 @@ import {
   eventsRepo,
   favoritesRepo,
   type instrumentsRepo,
+  membersRepo,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -72,6 +73,8 @@ export interface EventDetail {
   /** ONE PAGE of takes, in recorded order, plus how many the event has in all. */
   takes: TakeWithContext[];
   takeTotal: number;
+  /** Whose day this is, for a personal event. */
+  owner: membersRepo.Member | undefined;
 }
 
 /**
@@ -104,6 +107,12 @@ export async function getEventDetail(
     takesRepo.listByEvent(db, event.id, { order: "asc", page: takesPage }),
     favoritesRepo.isFavorited(db, memberId, "event", event.id),
   ]);
+  // A personal event with no band take is somebody's stash day, and does not
+  // exist for anyone — its owner included, who has the stash for that.
+  if (event.kind === "personal" && pagedTakes.total === 0) {
+    return undefined;
+  }
+  const [owner] = event.ownerMemberId ? await membersRepo.getByIds(db, [event.ownerMemberId]) : [];
   const takes = pagedTakes.rows;
   const takeIds = takes.map((t) => t.id);
   const songIds = [...new Set(takes.map((t) => t.songId))];
@@ -120,6 +129,7 @@ export async function getEventDetail(
   return {
     event,
     eventFavorited,
+    owner,
     takeTotal: pagedTakes.total,
     takes: takes.map((take) => ({
       ...take,
@@ -267,7 +277,11 @@ export async function updateEvent(
     return invalidEvent(parsed);
   }
   const event = await eventsRepo.getById(db, id);
-  if (!event) {
+  // A personal event is one member's stash day, not the band's to rename,
+  // re-kind or re-date. The event page never shows its edit sheet for one
+  // (`isPersonal` in `events/[id].astro`); this is the guard for a
+  // hand-built POST that never saw the hidden button.
+  if (!event || event.kind === "personal") {
     return { kind: "not_found" };
   }
   await eventsRepo.update(db, id, {

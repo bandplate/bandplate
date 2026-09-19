@@ -27,6 +27,7 @@ import { type Db, assetsRepo, instrumentsRepo, takesRepo } from "@bandplate/db";
 import { z } from "zod";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";
+import { viewerMemberId } from "../viewer.js";
 
 export interface TakeAssetRouteDeps {
   db: Db;
@@ -55,7 +56,7 @@ const declareAssetSchema = z.object({
   kind: z.enum(["master", "stem"]),
   instrumentId: z.string().trim().min(1).nullish(),
   tier: z.enum(["lossy", "lossless"]),
-  format: z.enum(["opus", "mp3", "flac", "wav"]),
+  format: z.enum(["opus", "mp3", "flac", "wav", "webm", "m4a"]),
   bytes: z.number().int().positive(),
   durationMs: z.number().int().nonnegative().nullish(),
   /**
@@ -85,7 +86,9 @@ export function registerTakeAssetRoutes(router: GuardedRouter, deps: TakeAssetRo
     const input = parsed.data;
 
     const take = await takesRepo.getById(deps.db, takeId);
-    if (!take) {
+    // Someone else's private take answers exactly like a missing one: its
+    // existence is itself something only its owner may know.
+    if (!take || !takesRepo.isVisibleTo(take, viewerMemberId(c))) {
       return errorResponse(c, 404, "take_not_found", "Take not found.");
     }
 
@@ -197,6 +200,10 @@ export function registerTakeAssetRoutes(router: GuardedRouter, deps: TakeAssetRo
     if (!asset) {
       return errorResponse(c, 404, "asset_not_found", "Asset not found.");
     }
+    const take = await takesRepo.getById(deps.db, asset.takeId);
+    if (!take || !takesRepo.isVisibleTo(take, viewerMemberId(c))) {
+      return errorResponse(c, 404, "asset_not_found", "Asset not found.");
+    }
     if (asset.status === "ready") {
       return c.json({ assetId, status: "ready", alreadyReady: true });
     }
@@ -230,12 +237,9 @@ export function registerTakeAssetRoutes(router: GuardedRouter, deps: TakeAssetRo
     // This is the first code in the app that ever sets `takes.durationMs`:
     // ingest declares whatever the bridge was told, and the seed invents one.
     let takeDurationMs: number | null = null;
-    if (asset.kind === "master" && measuredDuration !== null) {
-      const take = await takesRepo.getById(deps.db, asset.takeId);
-      if (take && take.durationMs === null) {
-        await takesRepo.update(deps.db, take.id, { durationMs: measuredDuration, updatedAt: now });
-        takeDurationMs = measuredDuration;
-      }
+    if (asset.kind === "master" && measuredDuration !== null && take.durationMs === null) {
+      await takesRepo.update(deps.db, take.id, { durationMs: measuredDuration, updatedAt: now });
+      takeDurationMs = measuredDuration;
     }
 
     return c.json({ assetId, status: "ready", takeDurationMs });

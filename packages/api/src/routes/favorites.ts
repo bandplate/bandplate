@@ -27,12 +27,15 @@ async function targetExists(
   db: Db,
   targetType: "song" | "take" | "event",
   targetId: string,
+  memberId: string,
 ): Promise<boolean> {
   switch (targetType) {
     case "song":
       return (await songsRepo.getById(db, targetId)) !== undefined;
-    case "take":
-      return (await takesRepo.getById(db, targetId)) !== undefined;
+    case "take": {
+      const take = await takesRepo.getById(db, targetId);
+      return take !== undefined && takesRepo.isVisibleTo(take, memberId);
+    }
     case "event":
       return (await eventsRepo.getById(db, targetId)) !== undefined;
   }
@@ -61,7 +64,12 @@ export function registerFavoriteRoutes(router: GuardedRouter, deps: FavoriteRout
       );
     }
 
-    const exists = await targetExists(deps.db, parsed.data.targetType, parsed.data.targetId);
+    const exists = await targetExists(
+      deps.db,
+      parsed.data.targetType,
+      parsed.data.targetId,
+      principal.memberId,
+    );
     if (!exists) {
       return errorResponse(c, 404, "not_found", "That song, take, or event was not found.");
     }

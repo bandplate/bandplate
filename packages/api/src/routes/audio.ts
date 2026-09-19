@@ -1,8 +1,9 @@
 // `GET /assets/:id/audio` — the one way audio bytes ever reach the
 // browser. Authenticates and authorises (any principal with `takes:read`
-// — every signed-in member, same as the rest of the read surface, no
-// per-take restriction: the app has no concept of a take some members
-// can't see), then 302s to a presigned GET. The `<audio>` element follows
+// — every signed-in member, same as the rest of the read surface — plus
+// `takesRepo.isVisibleTo`: a private stash take is its owner's alone and
+// 404s for everyone else, same as it does everywhere else in the read
+// surface), then 302s to a presigned GET. The `<audio>` element follows
 // the redirect and issues `Range` requests straight at the bucket — this
 // route is never on the hot path for the actual bytes, and Safari
 // re-hitting it on every seek (it re-requests and re-follows the
@@ -20,6 +21,7 @@ import { type Storage, playableSources } from "@bandplate/core";
 import { type Db, assetsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";
+import { viewerMemberId } from "../viewer.js";
 
 export interface AudioRouteDeps {
   db: Db;
@@ -107,13 +109,20 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
       return errorResponse(c, 400, "invalid_request", "Missing id parameter.");
     }
 
-    const asset = await assetsRepo.getById(deps.db, id);
+    const found = await assetsRepo.getByIdWithTakeAccess(deps.db, id);
+    const asset = found?.asset;
     // A take with no playable asset gets no play control in the UI at
     // all (see TakeRow/the take detail page) — reaching this route for a
     // missing/not-ready asset means either a stale link or a direct
     // request, not a real user flow. 404 either way; no distinction
-    // between "doesn't exist" and "not ready yet" is leaked.
-    if (!asset || asset.status !== "ready") {
+    // between "doesn't exist" and "not ready yet" is leaked. Someone else's
+    // private take gets the same 404 — see `takesRepo.isVisibleTo`.
+    if (
+      !found ||
+      !asset ||
+      asset.status !== "ready" ||
+      !takesRepo.isVisibleTo(found, viewerMemberId(c))
+    ) {
       return errorResponse(c, 404, "not_found", "Asset not found.");
     }
     // `peaks` assets are waveform data, not audio — they have their own
@@ -153,7 +162,7 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
     }
 
     const take = await takesRepo.getById(deps.db, id);
-    if (!take) {
+    if (!take || !takesRepo.isVisibleTo(take, viewerMemberId(c))) {
       return errorResponse(c, 404, "not_found", "Take not found.");
     }
 
@@ -204,8 +213,14 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
       return errorResponse(c, 400, "invalid_request", "Missing id parameter.");
     }
 
-    const audio = await assetsRepo.getById(deps.db, id);
-    if (!audio || audio.status !== "ready") {
+    const found = await assetsRepo.getByIdWithTakeAccess(deps.db, id);
+    const audio = found?.asset;
+    if (
+      !found ||
+      !audio ||
+      audio.status !== "ready" ||
+      !takesRepo.isVisibleTo(found, viewerMemberId(c))
+    ) {
       return errorResponse(c, 404, "not_found", "Asset not found.");
     }
     if (audio.kind !== "master" && audio.kind !== "stem") {
@@ -267,8 +282,16 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
       return errorResponse(c, 404, "not_found", "Asset not found.");
     }
 
+    // Same access check as `/audio` and `/peaks`, done explicitly here rather
+    // than through `getByIdWithTakeAccess`: this route also needs the take's
+    // song and duration for the filename below, which that lookup doesn't
+    // carry — so the take is fetched in full and checked before anything
+    // else uses it.
     const take = await takesRepo.getById(deps.db, asset.takeId);
-    const song = take ? await songsRepo.getById(deps.db, take.songId) : undefined;
+    if (!take || !takesRepo.isVisibleTo(take, viewerMemberId(c))) {
+      return errorResponse(c, 404, "not_found", "Asset not found.");
+    }
+    const song = await songsRepo.getById(deps.db, take.songId);
     const instrument = asset.instrumentId
       ? await instrumentsRepo.getById(deps.db, asset.instrumentId)
       : undefined;
@@ -279,7 +302,7 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
       responseContentDisposition: contentDisposition(
         downloadFilename({
           songTitle: song?.title,
-          recordedAt: take?.recordedAt ?? asset.createdAt,
+          recordedAt: take.recordedAt,
           kind: asset.kind,
           tier: asset.tier,
           format: asset.format,

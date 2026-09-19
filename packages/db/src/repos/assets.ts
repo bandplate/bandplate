@@ -2,6 +2,7 @@ import { uuidv7 } from "@bandplate/core";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { assets, takes } from "../schema/sqlite/index.js";
+import type { TakeVisibility } from "./takes.js";
 
 export type Asset = typeof assets.$inferSelect;
 export type AssetKind = Asset["kind"];
@@ -314,4 +315,29 @@ export async function tallyByTake(db: Db, takeId: string): Promise<AssetTally> {
     .from(assets)
     .where(eq(assets.takeId, takeId));
   return { files: rows[0]?.files ?? 0, bytes: rows[0]?.bytes ?? 0 };
+}
+
+export interface AssetWithTakeAccess {
+  asset: Asset;
+  visibility: TakeVisibility;
+  ownerMemberId: string | null;
+}
+
+/**
+ * An asset plus the two facts that decide who may fetch it, in ONE query.
+ * `GET /assets/:id/audio` is re-hit on every Safari seek, so its authorization
+ * has to stay a single indexed read — a second round trip for the take would
+ * double the cost of the hottest route in the app.
+ */
+export async function getByIdWithTakeAccess(
+  db: Db,
+  id: string,
+): Promise<AssetWithTakeAccess | undefined> {
+  const [row] = await db
+    .select({ asset: assets, visibility: takes.visibility, ownerMemberId: takes.ownerMemberId })
+    .from(assets)
+    .innerJoin(takes, eq(takes.id, assets.takeId))
+    .where(eq(assets.id, id))
+    .limit(1);
+  return row;
 }

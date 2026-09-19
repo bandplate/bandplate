@@ -50,8 +50,11 @@ export function registerVoteRoutes(router: GuardedRouter, deps: VoteRouteDeps): 
     }
 
     const take = await takesRepo.getById(deps.db, parsed.data.takeId);
-    if (!take) {
+    if (!take || !takesRepo.isVisibleTo(take, principal.memberId)) {
       return errorResponse(c, 404, "not_found", "Take not found.");
+    }
+    if (!takesRepo.isVotable(take)) {
+      return errorResponse(c, 409, "not_votable", "A personal recording is not voted on.");
     }
 
     await votesRepo.castVote(deps.db, {

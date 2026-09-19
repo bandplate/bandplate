@@ -45,6 +45,11 @@ export function contentTypeForFormat(format: AssetFormat): string {
       return "audio/wav";
     case "json":
       return "application/json";
+    case "webm":
+      return "audio/webm";
+    // AAC in an MP4 container, which is what MediaRecorder writes on iOS Safari.
+    case "m4a":
+      return "audio/mp4";
   }
 }
 

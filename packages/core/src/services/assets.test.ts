@@ -121,6 +121,10 @@ describe("contentTypeForFormat / hexSha256ToBase64", () => {
     expect(contentTypeForFormat("flac")).toBe("audio/flac");
     expect(contentTypeForFormat("wav")).toBe("audio/wav");
     expect(contentTypeForFormat("json")).toBe("application/json");
+    expect(contentTypeForFormat("webm")).toBe("audio/webm");
+    // MediaRecorder on iOS Safari writes AAC in an MP4 container. `audio/mp4` is
+    // the type every browser's <audio> accepts for it; `audio/x-m4a` is not.
+    expect(contentTypeForFormat("m4a")).toBe("audio/mp4");
   });
 
   it("encodes a hex digest as standard base64, not base64url", () => {

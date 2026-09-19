@@ -327,7 +327,7 @@ export const events = sqliteTable(
   "events",
   {
     id: id(),
-    kind: text("kind", { enum: ["rehearsal", "concert", "session"] }).notNull(),
+    kind: text("kind", { enum: ["rehearsal", "concert", "session", "personal"] }).notNull(),
     title: text("title"),
     heldAt: ts("held_at").notNull(),
     venue: text("venue"),
@@ -337,6 +337,18 @@ export const events = sqliteTable(
     archivedAt: ts("archived_at"),
     createdAt: ts("created_at").notNull(),
     updatedAt: ts("updated_at").notNull(),
+    // Whose stash day this is, for `kind = 'personal'` only — NULL on every
+    // band event. A personal event holds one member's recordings from one Prague
+    // day (see `eventsRepo.findOrCreatePersonal`), and exists because
+    // `takes.event_id` is NOT NULL: a stash take needs an event from the moment
+    // it is created. Hidden from every listing until it holds a band-visible
+    // take — see `eventsRepo`'s `visibleToBandCondition`.
+    //
+    // No `.references(() => members.id)`, deliberately: FKs are never enforced
+    // here (D1 parity), so the clause would be documentation only, and adding a
+    // column WITH a reference is the shape drizzle-kit is most likely to turn
+    // into a full table rebuild. This comment is the documentation instead.
+    ownerMemberId: text("owner_member_id"),
   },
   // Deliberately NO (archived_at, held_at) index. The archive listing filters
   // `archived_at IS NULL` on top of this one, and at band scale — hundreds of
@@ -391,12 +403,31 @@ export const takes = sqliteTable(
     // `takes_push_pending_idx`, hand-added in the migration SQL (a raw
     // partial index isn't expressible through drizzle-kit's schema DSL).
     pushBatchedAt: ts("push_batched_at"),
+    // The member whose recording this is, or NULL for a band take (ingest, the
+    // upload panel). Set on every stash take and KEPT when it is published —
+    // that is what marks a published take as a personal recording, which is
+    // never voted on and never pushed (`takesRepo.isVotable`). Same no-FK
+    // reasoning as `events.ownerMemberId`.
+    ownerMemberId: text("owner_member_id"),
+    // `private`: in its owner's stash, invisible to everyone else in every form
+    // (no row, no count, no search hit). `band`: everything else, which is
+    // every take that existed before this column did — hence the default.
+    // Invariant, kept by code: `private` implies `ownerMemberId IS NOT NULL`.
+    visibility: text("visibility", { enum: ["private", "band"] })
+      .notNull()
+      .default("band"),
   },
   (t) => [
     index("takes_song_id_recorded_at_idx").on(t.songId, t.recordedAt),
     index("takes_event_id_recorded_at_idx").on(t.eventId, t.recordedAt),
     index("takes_state_recorded_at_idx").on(t.state, t.recordedAt),
     index("takes_state_rating_score_idx").on(t.state, t.ratingScore),
+    // The stash listing and counts: one member's private takes, newest first.
+    index("takes_owner_member_id_visibility_recorded_at_idx").on(
+      t.ownerMemberId,
+      t.visibility,
+      t.recordedAt,
+    ),
   ],
 );
 
@@ -436,7 +467,9 @@ export const assets = sqliteTable(
     // `peaksStorageKey`). The slot index below already keeps those apart.
     instrumentId: text("instrument_id").references(() => instruments.id),
     tier: text("tier", { enum: ["lossy", "lossless"] }).notNull(),
-    format: text("format", { enum: ["opus", "mp3", "flac", "wav", "json"] }).notNull(),
+    format: text("format", {
+      enum: ["opus", "mp3", "flac", "wav", "json", "webm", "m4a"],
+    }).notNull(),
     storageKey: text("storage_key").notNull().unique(),
     contentType: text("content_type").notNull(),
     bytes: integer("bytes").notNull(),

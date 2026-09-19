@@ -1564,3 +1564,76 @@ describe("takes.countUnvotedByMembers", () => {
     expect(query.toSQL().params.length).toBeLessThanOrEqual(100);
   });
 });
+
+describe("take visibility predicates", () => {
+  const band = { visibility: "band" as const, ownerMemberId: null };
+  const personal = { visibility: "band" as const, ownerMemberId: "m-1" };
+  const stashed = { visibility: "private" as const, ownerMemberId: "m-1" };
+
+  it("a band take is visible to every member and to a caller with no member", () => {
+    expect(takes.isVisibleTo(band, "m-2")).toBe(true);
+    expect(takes.isVisibleTo(band, undefined)).toBe(true);
+    expect(takes.isVisibleTo(personal, "m-2")).toBe(true);
+  });
+
+  it("a private take is visible to its owner and nobody else", () => {
+    expect(takes.isVisibleTo(stashed, "m-1")).toBe(true);
+    expect(takes.isVisibleTo(stashed, "m-2")).toBe(false);
+    expect(takes.isVisibleTo(stashed, undefined)).toBe(false);
+  });
+
+  it("only a band take with no owner is voted on", () => {
+    expect(takes.isVotable(band)).toBe(true);
+    expect(takes.isVotable(personal)).toBe(false);
+    expect(takes.isVotable(stashed)).toBe(false);
+  });
+});
+
+describe("takes.create visibility", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  it("files a take as a band take with no owner unless told otherwise", async () => {
+    const song = await songs.create(db, { title: "S", slug: "s", createdAt: 1, updatedAt: 1 });
+    const event = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const plain = await takes.create(db, {
+      songId: song.id,
+      eventId: event.id,
+      recordedAt: 1,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    expect(plain.visibility).toBe("band");
+    expect(plain.ownerMemberId).toBeNull();
+    expect((await takes.getById(db, plain.id))?.visibility).toBe("band");
+
+    const personalEvent = await events.create(db, {
+      kind: "personal",
+      ownerMemberId: "m-1",
+      heldAt: 1,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    expect(personalEvent.ownerMemberId).toBe("m-1");
+    const stashed = await takes.create(db, {
+      songId: song.id,
+      eventId: personalEvent.id,
+      recordedAt: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      visibility: "private",
+      ownerMemberId: "m-1",
+    });
+    const stored = await takes.getById(db, stashed.id);
+    expect(stored?.visibility).toBe("private");
+    expect(stored?.ownerMemberId).toBe("m-1");
+  });
+});

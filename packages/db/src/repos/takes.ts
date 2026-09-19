@@ -32,6 +32,33 @@ import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 
 export type Take = typeof takes.$inferSelect;
 export type TakeState = Take["state"];
+export type TakeVisibility = Take["visibility"];
+
+type VisibilityFacts = { visibility: TakeVisibility; ownerMemberId: string | null };
+
+/**
+ * Whether `memberId` may see this take at all — the one authorization rule for
+ * the stash. A band take is everyone's; a private take is its owner's alone,
+ * and a caller that is not a member (a service token, nobody) sees no private
+ * take. Every route and loader that resolves a take BY ID asks this; listings
+ * never need to, because `bandVisibleCondition` keeps private rows out of
+ * their SQL.
+ */
+export function isVisibleTo(take: VisibilityFacts, memberId: string | undefined): boolean {
+  if (take.visibility === "band") {
+    return true;
+  }
+  return memberId !== undefined && take.ownerMemberId === memberId;
+}
+
+/**
+ * Whether the band votes on this take. A personal recording (one with an owner)
+ * is published for listening, not for judging: no vote control, never in "not
+ * voted by me", never in the weekly reminder.
+ */
+export function isVotable(take: VisibilityFacts): boolean {
+  return take.visibility === "band" && take.ownerMemberId === null;
+}
 
 export interface CreateTakeInput {
   songId: string;
@@ -46,6 +73,10 @@ export interface CreateTakeInput {
   updatedAt: number;
   /** Instruments present on this take (populates take_instruments). */
   instrumentIds?: string[];
+  /** Defaults to `band`. Only the stash passes `private`. */
+  visibility?: TakeVisibility;
+  /** Only the stash sets this; NULL is a band take. */
+  ownerMemberId?: string | null;
 }
 
 /**
@@ -79,6 +110,8 @@ export async function create(db: Db, input: CreateTakeInput): Promise<Take> {
     publishedAt: null,
     purgedAt: null,
     pushBatchedAt: null,
+    ownerMemberId: input.ownerMemberId ?? null,
+    visibility: input.visibility ?? "band",
   };
 
   const insertTake = db.insert(takes).values(row);

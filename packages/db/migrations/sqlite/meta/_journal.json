@@ -71,6 +71,13 @@
       "when": 1789737279224,
       "tag": "0009_push_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789815845754,
+      "tag": "0010_stash",
+      "breakpoints": true
     }
   ]
 }

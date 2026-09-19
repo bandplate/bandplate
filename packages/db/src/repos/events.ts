@@ -16,6 +16,7 @@ export interface CreateEventInput {
   clientRef?: string | null;
   createdAt: number;
   updatedAt: number;
+  ownerMemberId?: string | null;
 }
 
 export async function create(db: Db, input: CreateEventInput): Promise<Event> {
@@ -31,6 +32,7 @@ export async function create(db: Db, input: CreateEventInput): Promise<Event> {
       clientRef: input.clientRef ?? null,
       createdAt: input.createdAt,
       updatedAt: input.updatedAt,
+      ownerMemberId: input.ownerMemberId ?? null,
     })
     .returning();
 

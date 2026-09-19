@@ -174,4 +174,6 @@ export const takes = {
       ? `${head} It is the only thing this take can be played from, so the take will have nothing to play.`
       : `${head} The take keeps its other files.`;
   },
+  /** Beside a listed take while the player is on it. Lower case: it reads as part of the row's second line. */
+  nowPlaying: "playing",
 };

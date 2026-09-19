@@ -39,6 +39,7 @@ import { MIN_MIXER_STEMS } from "../client/mixer-tracks.js";
 import { controlState, decidePlayerClickAction } from "../client/player-actions.js";
 import {
   type QueueItem,
+  canGoPrevious,
   decidePrevious,
   hasNext,
   nextIndex,
@@ -260,17 +261,17 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       const item = queue?.items[index];
       if (!queue || !item) return;
       const next = { ...queue, index };
-      // Next into the last take unmounts the Next button that was just
-      // pressed (no fake affordances: there is nowhere further to go), and
-      // a focused element that leaves the DOM drops focus to <body>. Hand
-      // it to the play/pause button on the same surface, bar or sheet,
-      // before the re-render takes the button away. Covers auto-advance
-      // too, which can end the queue under a focused Next just the same.
+      // Next into the last take (or Previous into the first) disables the
+      // button that was just pressed, and a focused element that becomes
+      // disabled drops focus to <body>. Hand it to the play/pause button on
+      // the same surface, bar or sheet, before the re-render disables it.
+      // Covers auto-advance too, which can end the queue under a focused
+      // Next just the same.
       const focused = document.activeElement;
       if (
-        !hasNext(next) &&
         focused instanceof HTMLElement &&
-        focused.hasAttribute("data-player-next")
+        ((!hasNext(next) && focused.hasAttribute("data-player-next")) ||
+          (!canGoPrevious(next, 0) && focused.hasAttribute("data-player-prev")))
       ) {
         focused
           .closest(".bp-player-transport, .bp-now-playing-foot")
@@ -779,7 +780,14 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             control belongs without being one. The bar is chrome you operate,
             not a picture of a record player. */}
         <div class="bp-player-transport">
-          <button type="button" class="bp-player-skip" onClick={goPrevious} aria-label={t.previous}>
+          <button
+            type="button"
+            class="bp-player-skip"
+            data-player-prev
+            disabled={!canGoPrevious(queue, playhead)}
+            onClick={goPrevious}
+            aria-label={t.previous}
+          >
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <path
                 d="M6.5 5.5v13"
@@ -828,26 +836,27 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
               </svg>
             )}
           </button>
-          {hasNext(queue) && (
-            <button
-              type="button"
-              class="bp-player-skip"
-              data-player-next
-              onClick={goNext}
-              aria-label={t.next}
-            >
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                <path
-                  d="M17.5 5.5v13"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                  stroke-linecap="round"
-                />
-                <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
-              </svg>
-            </button>
-          )}
+          {/* Always there, disabled on the last take: the transport keeps its
+              shape, so play never jumps sideways when the queue runs out. */}
+          <button
+            type="button"
+            class="bp-player-skip"
+            data-player-next
+            disabled={!hasNext(queue)}
+            onClick={goNext}
+            aria-label={t.next}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                d="M17.5 5.5v13"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+              <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
+            </svg>
+          </button>
         </div>
 
         {/* The title is the way into the "Hraje" sheet — what's playing,
@@ -992,6 +1001,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           queue={queue}
           onPick={playIndex}
           onPrevious={goPrevious}
+          canPrevious={canGoPrevious(queue, playhead)}
           onNext={goNext}
           onToggle={togglePlayback}
           playing={playing}

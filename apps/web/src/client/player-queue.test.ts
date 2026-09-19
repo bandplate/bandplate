@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type QueueItem,
   RESTART_THRESHOLD_SECONDS,
+  canGoPrevious,
   decidePrevious,
   hasNext,
   nextIndex,
@@ -40,6 +41,18 @@ describe("next", () => {
     expect(hasNext(queueFrom(three, "take-3"))).toBe(false);
     expect(nextIndex(queueFrom(three, "take-3"))).toBeNull();
     expect(hasNext(null)).toBe(false);
+  });
+});
+
+describe("canGoPrevious", () => {
+  it("is off at the start of the first take and of a queue of one", () => {
+    expect(canGoPrevious(queueFrom(three, "take-1"), 0)).toBe(false);
+    expect(canGoPrevious(queueFrom([item(1)], "take-1"), 1)).toBe(false);
+    expect(canGoPrevious(null, 0)).toBe(false);
+  });
+  it("is on once there is something to restart, or a take to go back to", () => {
+    expect(canGoPrevious(queueFrom(three, "take-1"), RESTART_THRESHOLD_SECONDS + 0.1)).toBe(true);
+    expect(canGoPrevious(queueFrom(three, "take-2"), 0)).toBe(true);
   });
 });
 

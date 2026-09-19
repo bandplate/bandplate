@@ -52,6 +52,19 @@ export function decidePrevious(queue: PlayQueue | null, positionSeconds: number)
   return { kind: "go", index: queue.index - 1 };
 }
 
+/**
+ * Whether Previous would do anything right now. On the first take (or a
+ * queue of one) it can only restart, and restarting a take that has barely
+ * begun is nothing: the button shows disabled until the playhead passes the
+ * threshold, then it restarts.
+ */
+export function canGoPrevious(queue: PlayQueue | null, positionSeconds: number): boolean {
+  return (
+    decidePrevious(queue, positionSeconds).kind === "go" ||
+    positionSeconds > RESTART_THRESHOLD_SECONDS
+  );
+}
+
 export function queuePosition(queue: PlayQueue | null): { current: number; total: number } | null {
   if (!queue || queue.items.length < 2) {
     return null;

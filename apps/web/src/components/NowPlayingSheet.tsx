@@ -27,6 +27,7 @@ export interface NowPlayingSheetProps {
   onPick: (index: number) => void;
   /** The foot transport — same handlers and classes as the bar's own. */
   onPrevious: () => void;
+  canPrevious: boolean;
   onNext: () => void;
   onToggle: () => void;
   playing: boolean;
@@ -46,6 +47,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
     queue,
     onPick,
     onPrevious,
+    canPrevious,
     onNext,
     onToggle,
     playing,
@@ -198,6 +200,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
                     <span class="bp-now-playing-num" aria-hidden="true">
                       {i === queue.index ? (
                         <svg
+                          class={`bp-now-playing-eq${playing ? " is-playing" : ""}`}
                           viewBox="0 0 24 24"
                           width="16"
                           height="16"
@@ -228,7 +231,14 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
           previous/play-pause/next have to be reachable from inside the top
           layer — same classes, same handlers as the bar's own. */}
         <div class="bp-now-playing-foot">
-          <button type="button" class="bp-player-skip" onClick={onPrevious} aria-label={t.previous}>
+          <button
+            type="button"
+            class="bp-player-skip"
+            data-player-prev
+            disabled={!canPrevious}
+            onClick={onPrevious}
+            aria-label={t.previous}
+          >
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <path
                 d="M6.5 5.5v13"
@@ -270,26 +280,25 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
               </svg>
             )}
           </button>
-          {canNext && (
-            <button
-              type="button"
-              class="bp-player-skip"
-              data-player-next
-              onClick={onNext}
-              aria-label={t.next}
-            >
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                <path
-                  d="M17.5 5.5v13"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                  stroke-linecap="round"
-                />
-                <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
-              </svg>
-            </button>
-          )}
+          <button
+            type="button"
+            class="bp-player-skip"
+            data-player-next
+            disabled={!canNext}
+            onClick={onNext}
+            aria-label={t.next}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                d="M17.5 5.5v13"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+              <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
+            </svg>
+          </button>
         </div>
       </div>
     </dialog>

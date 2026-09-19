@@ -201,4 +201,5 @@ export const takes = {
       ? `${head} Je to jediné, z čeho se tahle nahrávka dá přehrát, takže pak nebude co pouštět.`
       : `${head} Ostatní soubory nahrávce zůstanou.`;
   },
+  nowPlaying: "hraje", // en: playing
 } satisfies typeof enTakes;

@@ -147,7 +147,8 @@ const justMerged = Astro.url.searchParams.get("merged") === "1";
 // The duplicate this app cannot prevent, offered a repair. Shown to anyone —
 // the split is worth knowing about — but only an admin gets the merge link,
 // because it archives an event.
-const sameDay = await findSameDayEvents(appDeps.db, event);
+// Never for a personal event: it has no duplicates to repair.
+const sameDay = isPersonal ? [] : await findSameDayEvents(appDeps.db, event);
 const [allSongs, allInstruments] = await Promise.all([
   songsRepo.list(appDeps.db),
   instrumentsRepo.list(appDeps.db),

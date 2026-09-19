@@ -7,6 +7,15 @@
 import type { Db } from "@bandplate/db";
 import { songsRepo, takesRepo } from "@bandplate/db";
 
+/**
+ * A member's personal recording is theirs, not the band's to judge: keeper
+ * and rejected are band decisions about band takes. One that was added to its
+ * song still carries its owner, and is refused the same way.
+ */
+function isPersonal(take: takesRepo.Take): boolean {
+  return take.ownerMemberId !== null;
+}
+
 export interface TakeForAdminAction {
   take: takesRepo.Take;
   song: songsRepo.Song | undefined;
@@ -17,7 +26,7 @@ export async function getTakeForAdminAction(
   id: string,
 ): Promise<TakeForAdminAction | undefined> {
   const take = await takesRepo.getById(db, id);
-  if (!take) {
+  if (!take || isPersonal(take)) {
     return undefined;
   }
   const song = await songsRepo.getById(db, take.songId);
@@ -33,7 +42,7 @@ export async function setTakeState(
   now: number,
 ): Promise<SetTakeStateResult> {
   const existing = await takesRepo.getById(db, id);
-  if (!existing) {
+  if (!existing || isPersonal(existing)) {
     return { kind: "not_found" };
   }
   await takesRepo.setState(db, id, state, now);

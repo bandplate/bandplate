@@ -23,6 +23,17 @@ describe("parseEventsListKindFilter", () => {
   it("returns an empty array (no filter) for no kind param", () => {
     expect(parseEventsListKindFilter(new URLSearchParams())).toEqual([]);
   });
+
+  it("reads every band kind ticked as no filter, the same as a bare /events", () => {
+    // Otherwise the all-three URL silently hides the personal events a bare
+    // /events lists, while its pills look exactly the same.
+    const params = new URLSearchParams("kind=session&kind=rehearsal&kind=concert");
+    expect(parseEventsListKindFilter(params)).toEqual([]);
+  });
+
+  it("does not take a personal kind from the URL: there is no pill for it", () => {
+    expect(parseEventsListKindFilter(new URLSearchParams("kind=personal"))).toEqual([]);
+  });
 });
 
 describe("listEventsForArchive / getEventDetail", () => {

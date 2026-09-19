@@ -279,6 +279,23 @@ describe("mergeEvents", () => {
     expect(await mergeEvents(db, 5000, manual.id, "nope")).toEqual({ kind: "not_found" });
     expect(await mergeEvents(db, 5000, "nope", manual.id)).toEqual({ kind: "not_found" });
   });
+
+  it("never merges a personal event, from either side", async () => {
+    const { manual } = await seedPair();
+    const personal = await eventsRepo.findOrCreatePersonal(db, {
+      memberId: "m-filip",
+      dayKey: "1970-01-01",
+      heldAt: 1000,
+      now: 1000,
+    });
+
+    expect(await mergeEvents(db, 5000, manual.id, personal.id)).toEqual({ kind: "not_found" });
+    expect(await mergeEvents(db, 5000, personal.id, manual.id)).toEqual({ kind: "not_found" });
+    // Nothing moved, nothing archived.
+    expect((await eventsRepo.getById(db, personal.id))?.archivedAt).toBeNull();
+    expect((await eventsRepo.getById(db, manual.id))?.archivedAt).toBeNull();
+    expect(await takesRepo.countByEvent(db, manual.id)).toBe(1);
+  });
 });
 
 describe("findSameDayEvents", () => {
@@ -307,5 +324,23 @@ describe("findSameDayEvents", () => {
     await setEventArchived(db, 3000, archived.event.id, true);
 
     expect(await findSameDayEvents(db, base.event)).toEqual([]);
+  });
+
+  it("never offers a personal event a same-day duplicate", async () => {
+    // Two members' stash days on one date are two days, not a split one.
+    const filip = await eventsRepo.findOrCreatePersonal(db, {
+      memberId: "m-filip",
+      dayKey: "1970-01-01",
+      heldAt: 1000,
+      now: 1000,
+    });
+    await eventsRepo.findOrCreatePersonal(db, {
+      memberId: "m-jana",
+      dayKey: "1970-01-01",
+      heldAt: 2000,
+      now: 2000,
+    });
+
+    expect(await findSameDayEvents(db, filip)).toEqual([]);
   });
 });

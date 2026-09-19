@@ -17,15 +17,25 @@ import { z } from "zod";
 
 export type EventListItem = eventsRepo.EventWithTakeCount;
 
+/** The kinds the archive has a pill for. A personal event has none. */
 const VALID_KINDS: readonly eventsRepo.EventKind[] = ["rehearsal", "concert", "session"];
 
-/** Parses `/events`'s `?kind=` query param (repeatable, like `?kind=concert&kind=session`). */
+/**
+ * Parses `/events`'s `?kind=` query param (repeatable, like `?kind=concert&kind=session`).
+ *
+ * Every band kind ticked is read as no filter at all, the same as a bare
+ * `/events`: the pills already show both states identically, and a filter of
+ * all three would quietly drop the personal events (a member's day with a
+ * take added to its song) that the unfiltered archive lists.
+ */
 export function parseEventsListKindFilter(searchParams: URLSearchParams): eventsRepo.EventKind[] {
   const raw = searchParams.getAll("kind");
-  const valid = raw.filter((k): k is eventsRepo.EventKind =>
-    (VALID_KINDS as readonly string[]).includes(k),
-  );
-  return [...new Set(valid)];
+  const valid = [
+    ...new Set(
+      raw.filter((k): k is eventsRepo.EventKind => (VALID_KINDS as readonly string[]).includes(k)),
+    ),
+  ];
+  return valid.length === VALID_KINDS.length ? [] : valid;
 }
 
 /** `?archived=1` — see the note on `SongsListQuery.archived`; same rule here. */
@@ -355,7 +365,10 @@ export async function mergeEvents(
     eventsRepo.getById(db, keepId),
     eventsRepo.getById(db, mergeId),
   ]);
-  if (!keep || !merge) {
+  // A personal event is one member's stash day, never half of a band
+  // duplicate: merging would hand their recordings to a band event, or fold
+  // a band event into their day.
+  if (!keep || !merge || keep.kind === "personal" || merge.kind === "personal") {
     return { kind: "not_found" };
   }
 
@@ -391,6 +404,11 @@ export async function findSameDayEvents(
   db: Db,
   event: eventsRepo.Event,
 ): Promise<eventsRepo.Event[]> {
+  // A personal event is one member's day: another member's on the same date
+  // is not a duplicate of it, and neither is merged (see `mergeEvents`).
+  if (event.kind === "personal") {
+    return [];
+  }
   const dayStart = new Date(event.heldAt);
   dayStart.setHours(0, 0, 0, 0);
   const start = dayStart.getTime();

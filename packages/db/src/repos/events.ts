@@ -1,5 +1,5 @@
 import { uuidv7 } from "@bandplate/core";
-import { type SQL, and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { events, takes } from "../schema/sqlite/index.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
@@ -142,10 +142,16 @@ export interface ListRecentOptions {
  * reasoning, same fix, as `takesRepo.listBySong`.
  */
 export async function listRecent(db: Db, options: ListRecentOptions = {}): Promise<Event[]> {
+  // Never a personal event: this is the picker a member files a band take
+  // under, and somebody's stash day is not an event anyone else adds to.
+  const conditions: SQL[] = [ne(events.kind, "personal")];
+  if (!options.includeArchived) {
+    conditions.push(isNull(events.archivedAt));
+  }
   const query = db
     .select()
     .from(events)
-    .where(options.includeArchived ? undefined : isNull(events.archivedAt))
+    .where(and(...conditions))
     .orderBy(desc(events.heldAt), desc(events.id));
   if (options.limit !== undefined) {
     return query.limit(options.limit);
@@ -174,11 +180,22 @@ export interface ListRecentWithTakeCountsOptions {
 }
 
 /**
+ * Whether the band can see this event. A personal event is one member's stash
+ * day: while it holds nothing but private takes it must not exist for anyone —
+ * not in the archive, not on home, not in a count. It surfaces the moment one
+ * of its takes is added to its song. A correlated EXISTS rather than a join so
+ * it composes with `listRecentWithTakeCounts`'s own left join and GROUP BY.
+ */
+function visibleToBandCondition(): SQL {
+  return sql`(${events.kind} <> 'personal' or exists (select 1 from ${takes} where ${takes.eventId} = ${events.id} and ${takes.visibility} = 'band'))`;
+}
+
+/**
  * The conditions both the page query and its count run against, built once.
  * See `takesRepo.searchConditions` for why this is not two copies.
  */
 function eventConditions(options: ListRecentWithTakeCountsOptions): SQL[] {
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [visibleToBandCondition()];
   if (options.kind !== undefined && options.kind.length > 0) {
     conditions.push(inArray(events.kind, options.kind));
   }
@@ -199,7 +216,7 @@ export async function count(
   const rows = await db
     .select({ value: sql<number>`count(*)` })
     .from(events)
-    .where(conditions.length > 0 ? and(...conditions) : undefined);
+    .where(and(...conditions));
   return rows[0]?.value ?? 0;
 }
 
@@ -226,8 +243,8 @@ export async function listRecentWithTakeCounts(
     db
       .select({ event: events, takeCount: sql<number>`count(${takes.id})` })
       .from(events)
-      .leftJoin(takes, eq(takes.eventId, events.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .leftJoin(takes, and(eq(takes.eventId, events.id), eq(takes.visibility, "band")))
+      .where(and(...conditions))
       .groupBy(events.id)
       // See `listRecent` for why `id` is here — this is the archive's paged
       // query, so a non-contractual order for same-day events is not cosmetic.

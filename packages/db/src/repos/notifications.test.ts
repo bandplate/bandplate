@@ -279,3 +279,32 @@ describe("notificationsRepo", () => {
     });
   });
 });
+
+describe("personal recordings and the new-takes push", () => {
+  it("a published take with an owner is never pending and never claimed", async () => {
+    const db = await createTestDb();
+    const song = await songs.create(db, { title: "S", slug: "s", createdAt: 1, updatedAt: 1 });
+    const personal = await events.create(db, {
+      kind: "personal",
+      ownerMemberId: "m-1",
+      heldAt: 1,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const take = await takes.create(db, {
+      songId: song.id,
+      eventId: personal.id,
+      recordedAt: 1,
+      ownerMemberId: "m-1",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    // Published with push_batched_at still NULL — the shape an admin
+    // unpublish/republish cycle can leave behind. Only the owner filter keeps
+    // it out.
+    await takes.setStateWithPublishedAt(db, take.id, "published", 1_000, 1_000);
+
+    expect(await notifications.listPendingTakeBatches(db)).toEqual([]);
+    expect(await notifications.claimTakeBatch(db, personal.id, 10_000_000, 1)).toEqual([]);
+  });
+});

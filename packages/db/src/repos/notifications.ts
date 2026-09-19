@@ -23,6 +23,10 @@ export interface PendingTakeBatch {
  * push_batched_at IS NULL`), grouped — what the tick scans each run to
  * decide which events might be ready for a "new takes" push. Reads the
  * partial index `takes_push_pending_idx` (hand-added in migration 0009).
+ *
+ * A take with an owner is a personal recording and is never announced:
+ * `publishFromStash` stamps `push_batched_at` when it publishes, and this
+ * filter holds even if something later clears it.
  */
 export async function listPendingTakeBatches(db: Db): Promise<PendingTakeBatch[]> {
   const rows = await db
@@ -32,7 +36,9 @@ export async function listPendingTakeBatches(db: Db): Promise<PendingTakeBatch[]
       lastPublishedAt: max(takes.publishedAt),
     })
     .from(takes)
-    .where(and(isNotNull(takes.publishedAt), isNull(takes.pushBatchedAt)))
+    .where(
+      and(isNotNull(takes.publishedAt), isNull(takes.pushBatchedAt), isNull(takes.ownerMemberId)),
+    )
     .groupBy(takes.eventId);
 
   return rows
@@ -72,6 +78,7 @@ export async function claimTakeBatch(
         eq(takes.eventId, eventId),
         isNotNull(takes.publishedAt),
         isNull(takes.pushBatchedAt),
+        isNull(takes.ownerMemberId),
         notExists(
           db
             .select({ one: sql`1` })
@@ -81,6 +88,7 @@ export async function claimTakeBatch(
                 eq(t2.eventId, eventId),
                 isNotNull(t2.publishedAt),
                 isNull(t2.pushBatchedAt),
+                isNull(t2.ownerMemberId),
                 gt(t2.publishedAt, now - quietMs),
               ),
             ),

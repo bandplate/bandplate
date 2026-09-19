@@ -1637,3 +1637,121 @@ describe("takes.create visibility", () => {
     expect(stored?.ownerMemberId).toBe("m-1");
   });
 });
+
+describe("private and personal takes stay out of band views", () => {
+  let db: Db;
+  let songId: string;
+  let bandEventId: string;
+  let personalEventId: string;
+  let ownerId: string;
+  let otherId: string;
+  let bandTakeId: string;
+  let stashedTakeId: string;
+  let personalTakeId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    const owner = await members.create(db, {
+      displayName: "Owner",
+      slug: "owner",
+      email: "owner@example.com",
+      createdAt: 1,
+    });
+    const other = await members.create(db, {
+      displayName: "Other",
+      slug: "other",
+      email: "other@example.com",
+      createdAt: 1,
+    });
+    ownerId = owner.id;
+    otherId = other.id;
+    const song = await songs.create(db, {
+      title: "Čoudy",
+      slug: "coudy",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    songId = song.id;
+    const band = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const personal = await events.create(db, {
+      kind: "personal",
+      ownerMemberId: ownerId,
+      heldAt: 2000,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    bandEventId = band.id;
+    personalEventId = personal.id;
+    bandTakeId = (
+      await takes.create(db, {
+        songId,
+        eventId: bandEventId,
+        recordedAt: 1000,
+        state: "published",
+        createdAt: 1,
+        updatedAt: 1,
+      })
+    ).id;
+    stashedTakeId = (
+      await takes.create(db, {
+        songId,
+        eventId: personalEventId,
+        recordedAt: 2000,
+        visibility: "private",
+        ownerMemberId: ownerId,
+        createdAt: 1,
+        updatedAt: 1,
+      })
+    ).id;
+    // A stash take after "Přidat k písni": band-visible, still owned.
+    personalTakeId = (
+      await takes.create(db, {
+        songId,
+        eventId: personalEventId,
+        recordedAt: 3000,
+        state: "published",
+        ownerMemberId: ownerId,
+        createdAt: 1,
+        updatedAt: 1,
+      })
+    ).id;
+  });
+
+  it("song and event listings, and their counts, skip a private take — for its owner too", async () => {
+    const bySong = await takes.listBySong(db, songId);
+    expect(bySong.rows.map((t) => t.id).sort()).toEqual([bandTakeId, personalTakeId].sort());
+    expect(bySong.total).toBe(2);
+    expect(await takes.countBySong(db, songId)).toBe(2);
+
+    const byEvent = await takes.listByEvent(db, personalEventId);
+    expect(byEvent.rows.map((t) => t.id)).toEqual([personalTakeId]);
+    expect(await takes.countByEvent(db, personalEventId)).toBe(1);
+
+    const grouped = await takes.listByEvents(db, [personalEventId]);
+    expect(grouped.get(personalEventId)?.map((t) => t.id)).toEqual([personalTakeId]);
+    expect((await takes.countBySongs(db, [songId])).get(songId)).toBe(2);
+    expect((await takes.countByEvents(db, [personalEventId])).get(personalEventId)).toBe(1);
+  });
+
+  it("the archive search skips a private take, in the rows and in the total", async () => {
+    const result = await takes.search(db);
+    expect(result.rows.map((t) => t.id)).not.toContain(stashedTakeId);
+    expect(result.total).toBe(2);
+  });
+
+  it("nobody is asked to vote on a personal recording", async () => {
+    const unvoted = await takes.listUnvotedByMember(db, otherId);
+    expect(unvoted.map((t) => t.id)).toEqual([bandTakeId]);
+
+    const filtered = await takes.search(db, { unvotedByMemberId: otherId });
+    expect(filtered.rows.map((t) => t.id)).toEqual([bandTakeId]);
+    expect(filtered.total).toBe(1);
+
+    expect((await takes.countUnvotedByMembers(db, [otherId, ownerId])).get(otherId)).toBe(1);
+  });
+});

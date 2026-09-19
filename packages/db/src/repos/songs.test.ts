@@ -614,3 +614,34 @@ describe("songs repo", () => {
     expect(await notifications.listSongChangesInWindow(db, song.id, 0, 1000)).toEqual([]);
   });
 });
+
+describe("listWithStats and private takes", () => {
+  it("counts only band takes, and a private one does not make a song 'recently played'", async () => {
+    const db = await createTestDb();
+    const song = await songs.create(db, {
+      title: "Neon",
+      slug: "neon",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const personal = await events.create(db, {
+      kind: "personal",
+      ownerMemberId: "m-1",
+      heldAt: 5000,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await takes.create(db, {
+      songId: song.id,
+      eventId: personal.id,
+      recordedAt: 5000,
+      visibility: "private",
+      ownerMemberId: "m-1",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const { rows } = await songs.listWithStats(db);
+    expect(rows[0]?.takeCount).toBe(0);
+    expect(rows[0]?.lastPlayedAt).toBeNull();
+  });
+});

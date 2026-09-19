@@ -295,7 +295,12 @@ function songConditions(db: Db, options: ListWithStatsOptions): SQL[] {
         db
           .select({ songId: takes.songId })
           .from(takes)
-          .where(takesRepo.hasAllInstruments(db, options.instrumentIds)),
+          .where(
+            and(
+              takesRepo.hasAllInstruments(db, options.instrumentIds),
+              takesRepo.bandVisibleCondition(),
+            ),
+          ),
       ),
     );
   }
@@ -363,7 +368,7 @@ export async function listWithStats(
         lastPlayedAt: sql<number | null>`max(${takes.recordedAt})`,
       })
       .from(songs)
-      .leftJoin(takes, eq(takes.songId, songs.id))
+      .leftJoin(takes, and(eq(takes.songId, songs.id), eq(takes.visibility, "band")))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .groupBy(songs.id)
       .orderBy(...orderBy)

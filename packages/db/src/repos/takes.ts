@@ -60,6 +60,25 @@ export function isVotable(take: VisibilityFacts): boolean {
   return take.visibility === "band" && take.ownerMemberId === null;
 }
 
+/**
+ * The floor under every band view: a private take never appears in a listing,
+ * a count or a search — not even for its owner, who sees it in the stash views
+ * instead (`listStash`). Exported so `songsRepo` composes the same condition.
+ */
+export function bandVisibleCondition(): SQL {
+  return eq(takes.visibility, "band");
+}
+
+/**
+ * What the band votes on: no owner. `owner_member_id IS NULL` already implies
+ * `band` (a private take always has an owner), and — unlike `eq` — it binds no
+ * parameter, which matters inside `buildCountUnvotedByMembersChunkQuery`'s
+ * D1 parameter budget.
+ */
+function votableCondition(): SQL {
+  return isNull(takes.ownerMemberId);
+}
+
 export interface CreateTakeInput {
   songId: string;
   eventId: string;
@@ -340,7 +359,7 @@ export async function listBySong(
     db
       .select()
       .from(takes)
-      .where(eq(takes.songId, songId))
+      .where(and(eq(takes.songId, songId), bandVisibleCondition()))
       .orderBy(...TAKE_LIST_ORDER)
       .limit(limit)
       .offset(offset),
@@ -354,6 +373,9 @@ export async function listBySong(
  * (deleting a song walks its takes to collect storage keys). Named for what it
  * does so that reaching for it on a browse surface reads as the mistake it
  * would be; `listBySong` is what a page wants.
+ *
+ * UNFILTERED by visibility on purpose: deleting a song must take its members'
+ * private takes with it.
  */
 export async function listAllBySong(db: Db, songId: string): Promise<Take[]> {
   return db
@@ -393,7 +415,7 @@ export async function listByEvent(
     db
       .select()
       .from(takes)
-      .where(eq(takes.eventId, eventId))
+      .where(and(eq(takes.eventId, eventId), bandVisibleCondition()))
       .orderBy(direction, tieBreak)
       .limit(limit)
       .offset(offset),
@@ -426,7 +448,7 @@ export async function listByEvents(
   const rows = await db
     .select()
     .from(takes)
-    .where(inArray(takes.eventId, eventIds))
+    .where(and(inArray(takes.eventId, eventIds), bandVisibleCondition()))
     .orderBy(direction, tieBreak);
 
   for (const row of rows) {
@@ -503,7 +525,7 @@ export async function listByInstruments(db: Db, instrumentIds: string[]): Promis
   return db
     .select()
     .from(takes)
-    .where(hasAllInstruments(db, instrumentIds))
+    .where(and(hasAllInstruments(db, instrumentIds), bandVisibleCondition()))
     .orderBy(desc(takes.recordedAt), desc(takes.id));
 }
 
@@ -575,7 +597,9 @@ export async function listUnvotedByMember(
     db
       .select()
       .from(takes)
-      .where(and(eq(takes.state, "published"), notInArray(takes.id, votedTakeIds)))
+      .where(
+        and(eq(takes.state, "published"), votableCondition(), notInArray(takes.id, votedTakeIds)),
+      )
       // See `listBySong`'s comment on `desc(takes.id)` as a deterministic
       // tie-break for takes sharing a `recordedAt`.
       .orderBy(desc(takes.recordedAt), desc(takes.id))
@@ -656,7 +680,7 @@ export type SearchResult = Paged<Take>;
  * reporting a total that disagrees with the rows under it.
  */
 function searchConditions(db: Db, filters: SearchFilters): SQL[] {
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [bandVisibleCondition()];
 
   if (filters.instrumentIds && filters.instrumentIds.length > 0) {
     conditions.push(hasAllInstruments(db, filters.instrumentIds));
@@ -688,6 +712,7 @@ function searchConditions(db: Db, filters: SearchFilters): SQL[] {
     // take is not something anyone is being asked to judge, so "waiting for my
     // ear" would otherwise count takes still uploading.
     conditions.push(eq(takes.state, "published"));
+    conditions.push(votableCondition());
     conditions.push(notInArray(takes.id, votedTakeIds));
   }
 
@@ -702,7 +727,7 @@ export async function search(
   const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
   const offset = options.page?.offset ?? 0;
   const conditions = searchConditions(db, filters);
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const where = and(...conditions);
 
   // `desc(takes.id)` is the same deterministic tie-break `listBySong` uses —
   // see its comment. It is the LAST key in both orderings (after whatever the
@@ -734,7 +759,7 @@ export async function countBySong(db: Db, songId: string): Promise<number> {
   const rows = await db
     .select({ value: sql<number>`count(*)` })
     .from(takes)
-    .where(eq(takes.songId, songId));
+    .where(and(eq(takes.songId, songId), bandVisibleCondition()));
   return rows[0]?.value ?? 0;
 }
 
@@ -743,7 +768,7 @@ export async function countByEvent(db: Db, eventId: string): Promise<number> {
   const rows = await db
     .select({ value: sql<number>`count(*)` })
     .from(takes)
-    .where(eq(takes.eventId, eventId));
+    .where(and(eq(takes.eventId, eventId), bandVisibleCondition()));
   return rows[0]?.value ?? 0;
 }
 
@@ -763,7 +788,7 @@ export async function countBySongs(db: Db, songIds: string[]): Promise<Map<strin
   const rows = await db
     .select({ songId: takes.songId, value: sql<number>`count(*)` })
     .from(takes)
-    .where(inArray(takes.songId, songIds))
+    .where(and(inArray(takes.songId, songIds), bandVisibleCondition()))
     .groupBy(takes.songId);
   for (const row of rows) {
     result.set(row.songId, row.value);
@@ -780,7 +805,7 @@ export async function countByEvents(db: Db, eventIds: string[]): Promise<Map<str
   const rows = await db
     .select({ eventId: takes.eventId, value: sql<number>`count(*)` })
     .from(takes)
-    .where(inArray(takes.eventId, eventIds))
+    .where(and(inArray(takes.eventId, eventIds), bandVisibleCondition()))
     .groupBy(takes.eventId);
   for (const row of rows) {
     result.set(row.eventId, row.value);
@@ -806,7 +831,7 @@ export function buildCountUnvotedByMembersChunkQuery(db: Db, ids: string[]) {
   return db
     .select({ memberId: members.id, value: sql<number>`count(*)` })
     .from(members)
-    .innerJoin(takes, eq(takes.state, "published"))
+    .innerJoin(takes, and(eq(takes.state, "published"), votableCondition()))
     .leftJoin(votes, and(eq(votes.takeId, takes.id), eq(votes.memberId, members.id)))
     .where(and(inArray(members.id, ids), isNull(votes.takeId)))
     .groupBy(members.id);

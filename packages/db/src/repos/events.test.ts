@@ -375,3 +375,67 @@ describe("events repo", () => {
     });
   });
 });
+
+describe("personal events", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  async function seed() {
+    const song = await songs.create(db, { title: "S", slug: "s", createdAt: 1, updatedAt: 1 });
+    const band = await events.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const personal = await events.create(db, {
+      kind: "personal",
+      ownerMemberId: "m-1",
+      heldAt: 2000,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await takes.create(db, {
+      songId: song.id,
+      eventId: personal.id,
+      recordedAt: 2000,
+      visibility: "private",
+      ownerMemberId: "m-1",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    return { song, band, personal };
+  }
+
+  it("stay out of every listing and count while they hold only private takes", async () => {
+    const { band } = await seed();
+    const listed = await events.listRecentWithTakeCounts(db);
+    expect(listed.rows.map((e) => e.id)).toEqual([band.id]);
+    expect(listed.total).toBe(1);
+    expect(await events.count(db)).toBe(1);
+  });
+
+  it("appear once they hold a band take, counting only that take", async () => {
+    const { song, personal } = await seed();
+    await takes.create(db, {
+      songId: song.id,
+      eventId: personal.id,
+      recordedAt: 2500,
+      ownerMemberId: "m-1",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const listed = await events.listRecentWithTakeCounts(db);
+    const row = listed.rows.find((e) => e.id === personal.id);
+    expect(row?.takeCount).toBe(1);
+    expect(await events.count(db)).toBe(2);
+  });
+
+  it("are never offered by listRecent, the add-take form's event picker", async () => {
+    const { band } = await seed();
+    expect((await events.listRecent(db)).map((e) => e.id)).toEqual([band.id]);
+  });
+});

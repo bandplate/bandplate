@@ -28,6 +28,13 @@ export interface FailurePoint {
 export interface PendingStashItem {
   /** IndexedDB key, and the take's `clientRef` on the server. */
   localId: string;
+  /**
+   * The member who recorded it. A shared browser holds several members'
+   * queues in one IndexedDB, and each member syncs, sees and discards only
+   * their own. Optional: records saved before it existed have none, and
+   * `ownedBy` treats those as nobody's.
+   */
+  memberId?: string | null;
   songId: string;
   /** Kept locally so the stash can name a recording with no signal at all. */
   songTitle: string;
@@ -57,6 +64,7 @@ export type PendingSummary = Omit<PendingStashItem, "blob">;
 
 export interface NewPendingInput {
   localId: string;
+  memberId: string;
   songId: string;
   songTitle: string;
   label: string | null;
@@ -82,6 +90,26 @@ export function newPendingItem(input: NewPendingInput): PendingStashItem {
 export function summarize(item: PendingStashItem): PendingSummary {
   const { blob: _blob, ...rest } = item;
   return rest;
+}
+
+/**
+ * Whether this recording is the signed-in member's. A record with no member
+ * (saved before the field existed) is nobody's: syncing it would put it into
+ * whoever happens to be signed in, so it is left exactly where it is.
+ */
+export function ownedBy(
+  item: Pick<PendingSummary, "memberId">,
+  memberId: string | null | undefined,
+): boolean {
+  return Boolean(memberId) && item.memberId === memberId;
+}
+
+/** Only the signed-in member's recordings; every other one is left alone. */
+export function ownPending<T extends Pick<PendingSummary, "memberId">>(
+  items: T[],
+  memberId: string | null | undefined,
+): T[] {
+  return items.filter((item) => ownedBy(item, memberId));
 }
 
 export type SyncStep = "create" | "upload";
@@ -184,6 +212,8 @@ export function pendingForTake(
  */
 export function pendingToRender(
   items: PendingSummary[],
+  /** The signed-in member. Another member's recordings on this device are not drawn. */
+  memberId: string | null,
   serverTakeIds: ReadonlySet<string>,
   /**
    * Takes just deleted from this page. Their local copies are on their way
@@ -191,7 +221,7 @@ export function pendingToRender(
    */
   deletedTakeIds: ReadonlySet<string> = new Set(),
 ): PendingSummary[] {
-  return items
+  return ownPending(items, memberId)
     .filter(
       (item) =>
         !(item.takeId && (serverTakeIds.has(item.takeId) || deletedTakeIds.has(item.takeId))),

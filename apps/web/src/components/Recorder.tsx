@@ -29,6 +29,8 @@ import { newPendingItem } from "../client/stash-sync-logic.js";
 
 interface Props {
   locale: Locale;
+  /** The signed-in member: the recording is theirs, on a browser others may share. */
+  memberId: string;
   /** The whole library, by title. */
   songs: SongOption[];
   /** The band's most recently played songs, most recent first. */
@@ -102,6 +104,7 @@ function MicIcon() {
 
 export default function Recorder({
   locale,
+  memberId,
   songs,
   recentIds,
   preselectedSongId,
@@ -296,6 +299,7 @@ export default function Recorder({
       await putPending(
         newPendingItem({
           localId: crypto.randomUUID(),
+          memberId,
           songId: song.id,
           songTitle: song.title,
           label: label.trim() || null,
@@ -312,7 +316,7 @@ export default function Recorder({
     }
     // Saved means safe: leave. The stash page's sync takes it from here.
     window.location.assign(STASH_HREF);
-  }, [label, song, state.elapsedMs]);
+  }, [label, memberId, song, state.elapsedMs]);
 
   // The clock. From the state machine's own start time, so a throttled
   // background timer cannot make the recording look shorter than it is.

@@ -6,6 +6,11 @@
 // response costs nothing), then declare → PUT → verify exactly as the upload
 // panel does, then delete the local copy. The local copy goes ONLY after
 // verify says the object arrived whole.
+//
+// A shared browser keeps every member's recordings in the one IndexedDB. The
+// runner works only on the signed-in member's (`ownPending`): another
+// member's are not uploaded, not listed and not discarded, and a record from
+// before the member was stored belongs to no one and is left alone.
 import { deletePending, listPending, putPending } from "./stash-db.js";
 import { pendingStash, stashUploadsFinished } from "./stash-store.js";
 import {
@@ -15,6 +20,8 @@ import {
   canRetryByHand,
   classifyFailure,
   nextSyncStep,
+  ownPending,
+  ownedBy,
   pendingForTake,
   retryItem,
   shouldSync,
@@ -22,6 +29,14 @@ import {
 } from "./stash-sync-logic.js";
 
 const LOCK_NAME = "bandplate-stash-sync";
+
+/** Who is signed in on this document; set once by `startStashSync`. */
+let currentMemberId: string | null = null;
+
+/** This member's recordings on this device, bytes and all. */
+async function listOwnPending(): Promise<PendingStashItem[]> {
+  return ownPending(await listPending(), currentMemberId);
+}
 
 class HttpFailure extends Error {
   constructor(
@@ -49,7 +64,7 @@ async function failureOf(request: SyncRequest, res: Response): Promise<HttpFailu
 
 export async function refreshPendingStash(): Promise<void> {
   try {
-    pendingStash.set((await listPending()).map(summarize));
+    pendingStash.set((await listOwnPending()).map(summarize));
   } catch {
     // No IndexedDB (a locked-down private window): nothing can be pending.
     pendingStash.set([]);
@@ -138,7 +153,7 @@ async function syncOne(item: PendingStashItem): Promise<void> {
 async function runOnce(): Promise<void> {
   let items: PendingStashItem[];
   try {
-    items = await listPending();
+    items = await listOwnPending();
   } catch {
     pendingStash.set([]);
     return;
@@ -178,7 +193,7 @@ export function syncPendingStash(): Promise<void> {
 
 /** The "Zkusit znovu" button on a recording the server refused. */
 export async function retryPending(localId: string): Promise<void> {
-  const item = (await listPending()).find((i) => i.localId === localId);
+  const item = (await listOwnPending()).find((i) => i.localId === localId);
   if (item && canRetryByHand(item)) {
     await save(retryItem(item));
     await syncPendingStash();
@@ -205,7 +220,12 @@ async function exclusive(fn: () => Promise<void>): Promise<void> {
  * press, after a confirm, reaches this.
  */
 export async function discardPending(localId: string): Promise<void> {
-  await exclusive(() => deletePending(localId));
+  await exclusive(async () => {
+    const item = (await listPending()).find((i) => i.localId === localId);
+    if (item && ownedBy(item, currentMemberId)) {
+      await deletePending(localId);
+    }
+  });
   await refreshPendingStash();
 }
 
@@ -215,7 +235,7 @@ export async function discardPending(localId: string): Promise<void> {
  */
 export async function discardPendingForTake(takeId: string): Promise<void> {
   await exclusive(async () => {
-    for (const localId of pendingForTake(await listPending(), takeId)) {
+    for (const localId of pendingForTake(await listOwnPending(), takeId)) {
       await deletePending(localId);
     }
   });
@@ -224,12 +244,16 @@ export async function discardPendingForTake(takeId: string): Promise<void> {
 
 let started = false;
 
-/** Called once per document from AppLayout. */
-export function startStashSync(): void {
+/**
+ * Called once per document from AppLayout, with the signed-in member. Without
+ * one nothing is synced: every recording on the device is somebody else's.
+ */
+export function startStashSync(memberId: string | null): void {
   if (started || typeof window === "undefined") {
     return;
   }
   started = true;
+  currentMemberId = memberId || null;
   window.addEventListener("online", () => {
     void syncPendingStash();
   });

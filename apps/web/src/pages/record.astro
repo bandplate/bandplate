@@ -36,6 +36,7 @@ const closeHref = preselected ? `/songs/${preselected.slug}` : "/takes?stash=1";
   <Recorder
     client:load
     locale={locale}
+    memberId={principal.memberId}
     songs={options}
     recentIds={recentIds}
     preselectedSongId={preselected?.id ?? null}

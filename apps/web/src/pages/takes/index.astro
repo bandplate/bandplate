@@ -344,6 +344,7 @@ const countLabel = t.takes.count(total);
         <StashPendingList
           client:load
           locale={locale}
+          memberId={principal.memberId}
           serverTakeIds={stashRows.map((row) => row.id)}
           deletedTakeId={deletedTakeId}
         />

@@ -30,6 +30,11 @@ import {
 
 interface Props {
   locale: Locale;
+  /**
+   * The signed-in member. A shared browser holds other members' recordings
+   * too; those are not drawn, so they cannot be discarded from here either.
+   */
+  memberId: string;
   /** The server rows on this page — a recording already among them is not drawn twice. */
   serverTakeIds: string[];
   /**
@@ -41,7 +46,12 @@ interface Props {
 
 const TRASH_PATH = "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3";
 
-export default function StashPendingList({ locale, serverTakeIds, deletedTakeId }: Props) {
+export default function StashPendingList({
+  locale,
+  memberId,
+  serverTakeIds,
+  deletedTakeId,
+}: Props) {
   const lc = currentLocale(locale);
   const t = stashMessages(lc);
   const pending = useStore(pendingStash);
@@ -100,6 +110,7 @@ export default function StashPendingList({ locale, serverTakeIds, deletedTakeId 
   const rows = mounted
     ? pendingToRender(
         pending,
+        memberId,
         new Set(serverTakeIds),
         new Set(deletedTakeId ? [deletedTakeId] : []),
       )

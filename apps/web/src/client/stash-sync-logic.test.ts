@@ -6,6 +6,8 @@ import {
   classifyFailure,
   newPendingItem,
   nextSyncStep,
+  ownPending,
+  ownedBy,
   pendingForTake,
   pendingToRender,
   retryItem,
@@ -20,6 +22,7 @@ function item(over: Partial<PendingSummary> = {}): PendingSummary {
     ...summarize(
       newPendingItem({
         localId: "l-1",
+        memberId: "m-a",
         songId: "s-1",
         songTitle: "Čoudy",
         label: null,
@@ -38,6 +41,7 @@ describe("a new pending recording", () => {
   it("waits, has no take yet, and knows its own size", () => {
     const fresh = newPendingItem({
       localId: "l-1",
+      memberId: "m-a",
       songId: "s-1",
       songTitle: "Čoudy",
       label: "bridge",
@@ -53,6 +57,7 @@ describe("a new pending recording", () => {
       attempts: 0,
       lastError: null,
       bytes: 12,
+      memberId: "m-a",
     });
     expect("blob" in summarize(fresh)).toBe(false);
   });
@@ -113,7 +118,10 @@ describe("pendingToRender", () => {
     const a = item({ localId: "a", recordedAt: 1 });
     const b = item({ localId: "b", recordedAt: 3, takeId: "t-b" });
     const c = item({ localId: "c", recordedAt: 2, takeId: "t-c" });
-    expect(pendingToRender([a, b, c], new Set(["t-b"])).map((i) => i.localId)).toEqual(["c", "a"]);
+    expect(pendingToRender([a, b, c], "m-a", new Set(["t-b"])).map((i) => i.localId)).toEqual([
+      "c",
+      "a",
+    ]);
   });
 });
 
@@ -176,8 +184,52 @@ describe("a deleted take's local copy", () => {
   it("is not drawn once its take is known to be deleted", () => {
     const a = item({ localId: "a", takeId: "t-gone" });
     const b = item({ localId: "b", takeId: "t-live", recordedAt: 5 });
-    expect(pendingToRender([a, b], new Set(), new Set(["t-gone"])).map((i) => i.localId)).toEqual([
-      "b",
+    expect(
+      pendingToRender([a, b], "m-a", new Set(), new Set(["t-gone"])).map((i) => i.localId),
+    ).toEqual(["b"]);
+  });
+});
+
+describe("a shared browser: each member's own queue", () => {
+  it("belongs to the member who recorded it, and to no one else", () => {
+    expect(ownedBy(item({ memberId: "m-a" }), "m-a")).toBe(true);
+    expect(ownedBy(item({ memberId: "m-a" }), "m-b")).toBe(false);
+  });
+
+  it("belongs to no one while nobody is signed in", () => {
+    expect(ownedBy(item({ memberId: "m-a" }), null)).toBe(false);
+    expect(ownedBy(item({ memberId: "m-a" }), undefined)).toBe(false);
+    expect(ownedBy(item({ memberId: "m-a" }), "")).toBe(false);
+  });
+
+  it("treats a record saved before members were stored as nobody's", () => {
+    // A record from before the field: the key is absent, not null.
+    const { memberId: _gone, ...rest } = item();
+    const legacy: PendingSummary = rest;
+    expect(ownedBy(legacy, "m-a")).toBe(false);
+    expect(ownedBy(item({ memberId: null }), "m-a")).toBe(false);
+  });
+
+  it("keeps only the signed-in member's recordings, in order", () => {
+    const mine1 = item({ localId: "a", memberId: "m-a" });
+    const theirs = item({ localId: "b", memberId: "m-b" });
+    const legacy = item({ localId: "c", memberId: null });
+    const mine2 = item({ localId: "d", memberId: "m-a" });
+    expect(ownPending([mine1, theirs, legacy, mine2], "m-a").map((i) => i.localId)).toEqual([
+      "a",
+      "d",
     ]);
+    expect(ownPending([mine1, theirs, legacy, mine2], "m-b").map((i) => i.localId)).toEqual(["b"]);
+    expect(ownPending([mine1, theirs, legacy, mine2], null)).toEqual([]);
+  });
+
+  it("draws neither another member's recordings nor nobody's", () => {
+    const mine = item({ localId: "a", memberId: "m-a", recordedAt: 1 });
+    const theirs = item({ localId: "b", memberId: "m-b", recordedAt: 2 });
+    const legacy = item({ localId: "c", memberId: null, recordedAt: 3 });
+    expect(pendingToRender([mine, theirs, legacy], "m-a", new Set()).map((i) => i.localId)).toEqual(
+      ["a"],
+    );
+    expect(pendingToRender([mine, theirs, legacy], null, new Set())).toEqual([]);
   });
 });

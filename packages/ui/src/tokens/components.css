@@ -4025,7 +4025,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-accent);
 }
 
-/* The "playing" mark on line two: the same equaliser the Hraje sheet's order
+/* The "playing" mark beside the duration: the same equaliser the Hraje sheet's order
    list uses, moving while the take plays. Absent from every other row. */
 .bp-take-now-playing {
   display: none;
@@ -4259,6 +4259,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-muted);
   min-width: 3.25ch;
   text-align: right;
+  /* Holds the "playing" mark too, just before the time: the two answer "where
+     is this take at", and the mark on the words line collided with the
+     instrument set. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 /* Line two. Everything the take has that is not the title and not a number:

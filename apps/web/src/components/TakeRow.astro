@@ -246,7 +246,21 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
     </span>
   </div>
 
-  <span class="bp-take-row-duration">{formatDuration(take.durationMs)}</span>
+  <span class="bp-take-row-duration">
+    {/* Shown only while the player is on this take (CSS keys it off the row's
+        own play toggle, which `syncButtons()` marks), and animated only while
+        it actually plays. Hidden from assistive tech: the toggle's own label
+        already says "Pause …". */}
+    <span class="bp-take-now-playing" aria-hidden="true">
+      <svg class="bp-now-playing-eq" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+        <rect x="4" y="10" width="3" height="8" />
+        <rect x="10.5" y="5" width="3" height="13" />
+        <rect x="17" y="13" width="3" height="5" />
+      </svg>
+      {t.takes.nowPlaying}
+    </span>
+    {formatDuration(take.durationMs)}
+  </span>
 
   {/* At the row's far right end, past the duration — where `.bp-song-row` and
       the event ledger have always put theirs. It sat beside the title until
@@ -289,18 +303,6 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
           <span class="bp-take-fixed">{formatShortDate(locale, take.recordedAt)}</span>
         </>
       )}
-    </span>
-    {/* Shown only while the player is on this take (CSS keys it off the row's
-        own play toggle, which `syncButtons()` marks), and animated only while
-        it actually plays. Hidden from assistive tech: the toggle's own label
-        already says "Pause …". */}
-    <span class="bp-take-now-playing" aria-hidden="true">
-      <svg class="bp-now-playing-eq" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-        <rect x="4" y="10" width="3" height="8" />
-        <rect x="10.5" y="5" width="3" height="13" />
-        <rect x="17" y="13" width="3" height="5" />
-      </svg>
-      {t.takes.nowPlaying}
     </span>
     {/* No rule between the words and the set: the set carries its own tinted
         pad, which is what holds it together as one object. */}

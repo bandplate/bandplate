@@ -7,6 +7,7 @@ import {
   nextIndex,
   queueFrom,
   queuePosition,
+  sameQueue,
   sheetHasContent,
 } from "./player-queue.js";
 
@@ -77,5 +78,31 @@ describe("sheetHasContent", () => {
     expect(
       sheetHasContent({ sourceCount: 1, stemCount: 0, queueLength: 2, minMixerStems: 2 }),
     ).toBe(true);
+  });
+});
+
+describe("sameQueue", () => {
+  it("the same list from the same take is the same queue", () => {
+    expect(sameQueue(queueFrom(three, "take-2"), queueFrom([...three], "take-2"))).toBe(true);
+  });
+  it("a relabelled take is still the same queue", () => {
+    const renamed = [item(1), { ...item(2), title: "Renamed" }, item(3)];
+    expect(sameQueue(queueFrom(three, "take-2"), queueFrom(renamed, "take-2"))).toBe(true);
+  });
+  it("a different list around the same take is a different queue", () => {
+    const other = [item(7), item(2), item(8), item(9)];
+    expect(sameQueue(queueFrom(three, "take-2"), queueFrom(other, "take-2"))).toBe(false);
+  });
+  it("the same takes in another order are a different queue", () => {
+    const reversed = [item(3), item(2), item(1)];
+    expect(sameQueue(queueFrom(three, "take-2"), queueFrom(reversed, "take-2"))).toBe(false);
+  });
+  it("the same list at another take is a different queue", () => {
+    expect(sameQueue(queueFrom(three, "take-1"), queueFrom(three, "take-2"))).toBe(false);
+  });
+  it("no queue only matches no queue", () => {
+    expect(sameQueue(null, null)).toBe(true);
+    expect(sameQueue(null, queueFrom(three, "take-1"))).toBe(false);
+    expect(sameQueue(queueFrom(three, "take-1"), null)).toBe(false);
   });
 });

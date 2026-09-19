@@ -31,6 +31,8 @@ export interface NowPlayingSheetProps {
   onToggle: () => void;
   playing: boolean;
   canNext: boolean;
+  /** The bar's track-change announcement — spoken from here while the sheet is open. */
+  announced: string;
   t: ReturnType<typeof playerMessages>;
 }
 
@@ -48,6 +50,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
     onToggle,
     playing,
     canNext,
+    announced,
     t,
   } = props;
   const ref = useRef<HTMLDialogElement>(null);
@@ -84,6 +87,14 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
       }}
     >
       <div class="bp-now-playing-body">
+        {/* The bar's live region is inert behind `showModal()`, so an
+          auto-advance would go unannounced while this is open. Rendered
+          only while open, so exactly one live region can speak at a time. */}
+        {open && (
+          <p class="sr-only" aria-live="polite">
+            {announced}
+          </p>
+        )}
         <div class="bp-now-playing-head">
           <div class="bp-now-playing-heading">
             <span class="bp-eyebrow">
@@ -260,7 +271,13 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
             )}
           </button>
           {canNext && (
-            <button type="button" class="bp-player-skip" onClick={onNext} aria-label={t.next}>
+            <button
+              type="button"
+              class="bp-player-skip"
+              data-player-next
+              onClick={onNext}
+              aria-label={t.next}
+            >
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path
                   d="M17.5 5.5v13"

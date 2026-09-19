@@ -44,6 +44,7 @@ import {
   nextIndex,
   queueFrom,
   queuePosition,
+  sameQueue,
   sheetHasContent,
 } from "../client/player-queue.js";
 import {
@@ -141,7 +142,7 @@ function readButtonData(el: HTMLElement): SourceButtonData | null {
 
 /**
  * The list a toggle was pressed in, as queue items, in document order. Only
- * plain toggles count (not the take page's source chips), and only masters:
+ * plain master toggles count, which is every play control a take row has:
  * a queued take starts on its master. A toggle outside any
  * `[data-play-queue]` is a queue of one.
  */
@@ -200,6 +201,21 @@ function syncButtons(track: PlayerTrack | null, playing: boolean): void {
   }
 }
 
+/**
+ * `play()` for the fire-and-forget callers. A second `src` change before the
+ * first `play()` settles (Next, Next, Next) rejects the earlier promise with
+ * an AbortError: that is the browser saying "superseded", not a failure, and
+ * left alone it lands in the console as an unhandled rejection on every
+ * rapid skip. Anything else (a NotAllowedError, say) still surfaces.
+ */
+function playQuietly(audio: HTMLAudioElement): void {
+  audio.play().catch((error: unknown) => {
+    if ((error as { name?: unknown } | null)?.name !== "AbortError") {
+      throw error;
+    }
+  });
+}
+
 export default function Player({ locale }: { locale?: Locale } = {}) {
   const track = useStore(currentTrack);
   const playing = useStore(isPlaying);
@@ -214,6 +230,8 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   // resume) is applied there instead of immediately after `audio.src = `.
   const pendingSeekRef = useRef<number | null>(null);
   const pendingAutoplayRef = useRef(false);
+  /** Read by `playIndex`, which is a stable callback and so cannot close over the state itself. */
+  const sheetOpenRef = useRef(false);
 
   // The one way a queued take gets onto the `<audio>` element — used by the
   // click handler's "start-track"/Play-all paths and by the Next/Previous
@@ -233,7 +251,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       sourceName: "",
     });
     audio.src = audioUrl(item.assetId);
-    void audio.play();
+    playQuietly(audio);
   }, []);
 
   const playIndex = useCallback(
@@ -241,15 +259,36 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       const queue = playQueue.get();
       const item = queue?.items[index];
       if (!queue || !item) return;
-      playQueue.set({ ...queue, index });
+      const next = { ...queue, index };
+      // Next into the last take unmounts the Next button that was just
+      // pressed (no fake affordances: there is nowhere further to go), and
+      // a focused element that leaves the DOM drops focus to <body>. Hand
+      // it to the play/pause button on the same surface, bar or sheet,
+      // before the re-render takes the button away. Covers auto-advance
+      // too, which can end the queue under a focused Next just the same.
+      const focused = document.activeElement;
+      if (
+        !hasNext(next) &&
+        focused instanceof HTMLElement &&
+        focused.hasAttribute("data-player-next")
+      ) {
+        focused
+          .closest(".bp-player-transport, .bp-now-playing-foot")
+          ?.querySelector<HTMLElement>(".bp-player-play")
+          ?.focus();
+      }
+      playQueue.set(next);
       startItem(item);
       // Only the queue moving the track (Next, Previous, auto-advance, the
       // Hraje sheet's own order list) scrolls the row into view — a user's
       // own tap on `start-track` skips this because they are already
-      // looking at that row. `scrollIntoView` alone stops at the SCROLL
-      // CONTAINER's edge, which is well behind the fixed player bar and tab
-      // bar; `.bp-take-row`'s `scroll-margin-bottom` (components.css) is
-      // what actually keeps the row clear of them.
+      // looking at that row. Nor while the sheet is open: the page is inert
+      // and covered, and scrolling it there moves something nobody can see.
+      // `scrollIntoView` alone stops at the SCROLL CONTAINER's edge, which is
+      // well behind the fixed player bar and tab bar; `.bp-take-row`'s
+      // `scroll-margin-bottom` (components.css) is what actually keeps the
+      // row clear of them.
+      if (sheetOpenRef.current) return;
       const row = document
         .querySelector(`[data-play-queue] [data-take-id="${CSS.escape(item.takeId)}"]`)
         ?.closest(".bp-take-row");
@@ -287,7 +326,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       return;
     }
     if (audio.paused) {
-      void audio.play();
+      playQuietly(audio);
     } else {
       audio.pause();
     }
@@ -306,8 +345,9 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   const [sources, setSources] = useState<PlayerSource[] | null>(null);
   /** How many of them are stems — what decides whether a mixer is worth offering. */
   const stemCount = sources?.filter((source) => source.kind === "stem").length ?? 0;
-  /** The title button opens this; Task 4 renders the sheet that reads it. */
+  /** Whether the Hraje sheet is showing — the title button opens it, `NowPlayingSheet` renders it. */
   const [sheetOpen, setSheetOpen] = useState(false);
+  sheetOpenRef.current = sheetOpen;
 
   // `playIndex` closed over by `onEnded` below, which is registered once
   // (`[]` deps, same reason as the click handler) — the ref is what lets it
@@ -347,7 +387,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       }
       if (pendingAutoplayRef.current) {
         pendingAutoplayRef.current = false;
-        void audio.play();
+        playQuietly(audio);
       }
     };
     audio.addEventListener("play", onPlay);
@@ -412,13 +452,27 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       switch (action.kind) {
         case "noop":
           break;
-        case "toggle-playback":
+        case "toggle-playback": {
+          // The current take, tapped in a DIFFERENT list than the one it was
+          // started from (the song page after the session page, say): a
+          // pause or a resume, never a restart, but from here on Next
+          // follows the list that was tapped. Only inside a list: a lone
+          // toggle (the take page's hero, a pinned plate) is a queue of one,
+          // and pausing there must not throw away the session's queue.
+          const list = target.closest<HTMLElement>("[data-play-queue]");
+          if (list) {
+            const queue = queueFrom(readQueueIn(list), data.takeId);
+            if (!sameQueue(playQueue.get(), queue)) {
+              playQueue.set(queue);
+            }
+          }
           if (audio.paused) {
-            void audio.play();
+            playQuietly(audio);
           } else {
             audio.pause();
           }
           break;
+        }
         case "switch-source":
           pendingSeekRef.current = audio.currentTime;
           pendingAutoplayRef.current = !audio.paused;
@@ -434,11 +488,10 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
         case "start-track": {
           // The queue is the list this take was clicked from — snapshotted
           // now, since the DOM it's read from may not survive the next
-          // navigation. A stem started from the take page's own chips isn't
-          // read into any queue (`readQueueIn` only collects master
-          // toggles), but it's still a start: `startItem` always begins on
-          // the master, so its `currentTrack.set` below restores the
-          // clicked stem as the active source.
+          // navigation. Every control that can land here is a master
+          // toggle: the only stem controls left are the Hraje sheet's
+          // source pills, and those always belong to the take already
+          // loaded, so they switch source instead of starting anything.
           const queue = queueFrom(readQueueAround(target, data), data.takeId);
           playQueue.set(queue);
           startItem({
@@ -447,9 +500,6 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             title: data.title,
             subtitle: data.subtitle,
           });
-          if (data.sourceKind === "stem") {
-            currentTrack.set(action.track);
-          }
           break;
         }
       }
@@ -553,14 +603,15 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     };
   }, [sourceAssetId]);
 
-  // What this take can be heard as — fetched when the switch is OPENED, so a
-  // take nobody switches on never pays for the request.
+  // What this take can be heard as — fetched with the take rather than on
+  // opening the sheet, because whether the title opens a sheet at all
+  // depends on the answer.
   const takeId = track?.takeId;
   // Cleared on every take change first, so a take with no fetch yet in
   // flight never reports the PREVIOUS take's source count — that count
   // feeds `canOpenSheet` and the subtitle's source label below. The gate
   // is on the TAKE, not on anything being open: the list loads with the
-  // track, and Task 4's sheet reads it whenever it renders.
+  // track, and the Hraje sheet reads it whenever it renders.
   useEffect(() => {
     setSources(null);
     if (!takeId) {
@@ -716,7 +767,8 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     <div class="bp-player" hidden={!track} data-testid="bp-player" ref={playerRef}>
       {/* Track-change-only announcements — never touched by a timeupdate
           handler, which is what keeps this from spamming a screen reader on
-          every second of playback. */}
+          every second of playback. Inert while the Hraje sheet is open, so
+          the sheet carries its own copy for that stretch. */}
       <p class="sr-only" aria-live="polite">
         {announced}
       </p>
@@ -777,7 +829,13 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             )}
           </button>
           {hasNext(queue) && (
-            <button type="button" class="bp-player-skip" onClick={goNext} aria-label={t.next}>
+            <button
+              type="button"
+              class="bp-player-skip"
+              data-player-next
+              onClick={goNext}
+              aria-label={t.next}
+            >
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path
                   d="M17.5 5.5v13"
@@ -938,6 +996,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           onToggle={togglePlayback}
           playing={playing}
           canNext={hasNext(queue)}
+          announced={announced}
           t={t}
         />
       )}

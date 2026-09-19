@@ -13,9 +13,9 @@ import { canPublish, hasAllScopes } from "@bandplate/core";
 // master, and "Open in mixer" beside it. A row of per-stem "Solo" chips used
 // to sit here too; it is gone. It said the same thing three times over — the
 // play button already plays the master, which was its first chip, and the
-// shell player's own source switcher still swaps to a single stem WITHOUT
-// leaving the page, which is strictly better than a drawer that only works
-// on this one. What the drawer could never do is play the stems together,
+// player's Hraje sheet (opened from the bar's title) still swaps to a single
+// stem WITHOUT leaving the page, on any page, which is strictly better than
+// a drawer that only works on this one. What the drawer could never do is play the stems together,
 // and that is what the mixer is for.
 //
 // That mixer's existence overturned this file's original ruling, which said
@@ -590,9 +590,8 @@ function assetLabel(asset: assetsRepo.Asset): string {
                  to listen to this take, so it belongs on that line. The
                  per-stem "Solo" chips that used to sit here are gone — the
                  play button already plays the master, which was the drawer's
-                 first chip, and a stem on its own is still one press away in
-                 the player bar's own source switcher, which does it without
-                 leaving the page.
+                 first chip, and a stem on its own is still in the player's
+                 Hraje sheet, which switches to it without leaving the page.
 
                  `data-astro-reload` is load-bearing, not a preference. The
                  shell player is `transition:persist`, so a view transition

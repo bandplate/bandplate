@@ -68,3 +68,22 @@ export function sheetHasContent(input: {
 }): boolean {
   return input.sourceCount > 1 || input.stemCount >= input.minMixerStems || input.queueLength > 1;
 }
+
+/**
+ * Whether two queues would play the same takes in the same order from the
+ * same place. Re-tapping the current take from a DIFFERENT list is a pause
+ * or a resume, never a restart, but Next has to follow the list that was
+ * tapped last; this is what tells `Player.tsx` the queue needs replacing.
+ * Compared by take and position only: a title re-rendered with a newer
+ * label is still the same queue.
+ */
+export function sameQueue(a: PlayQueue | null, b: PlayQueue | null): boolean {
+  if (!a || !b) {
+    return a === b;
+  }
+  return (
+    a.index === b.index &&
+    a.items.length === b.items.length &&
+    a.items.every((it, i) => it.takeId === b.items[i]?.takeId)
+  );
+}

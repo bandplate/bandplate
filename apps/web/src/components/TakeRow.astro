@@ -102,7 +102,7 @@ import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 // that script: with JS off, this attribute just sits there unused and
 // round 1's first-occurrence-wins naming is exactly what still happens.
 import { formatShortDate, messages } from "@bandplate/i18n";
-import { eventLabel, formatDuration, takeNote } from "../server/format.js";
+import { formatDuration, eventName as nameOfEvent, takeNote } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
 import InstrumentSet from "./InstrumentSet.astro";
 import PlayToggleButton from "./PlayToggleButton.astro";
@@ -180,10 +180,12 @@ const playSubtitle = song
 // common case for a seeded rehearsal: the kind badge beside the title already
 // says WHAT it was, so a name line that could only repeat that word is simply
 // not rendered rather than filled with a fallback.
+// A personal event is named for whose day it was (`nameOfEvent`).
 const eventName = event
-  ? event.kind === "personal"
-    ? (ownerName ?? "")
-    : eventLabel({ title: event.title ?? null, venue: event.venue ?? null })
+  ? nameOfEvent(
+      { kind: event.kind, title: event.title ?? null, venue: event.venue ?? null },
+      ownerName,
+    )
   : "";
 // The kind of event this take came out of, WHENEVER the row can know it —
 // including on an event page, which shows no event of its own but is one.

@@ -28,7 +28,7 @@ import EventLedger from "../components/EventLedger.astro";
 import PinnedPlate from "../components/PinnedPlate.astro";
 import AppLayout from "../layouts/AppLayout.astro";
 import { getAppDeps } from "../server/app.js";
-import { eventLabel } from "../server/format.js";
+import { eventName } from "../server/format.js";
 import { getHomeData, pinnedKindWord } from "../server/pages/home.js";
 
 const principal = Astro.locals.principal;
@@ -67,7 +67,15 @@ function heroLines(item: typeof hero): string[] {
     return [];
   }
   if (item.kind === "take") {
-    const name = item.event ? eventLabel(item.event) : "";
+    // A personal take's event has no name of its own, and the kind beside it
+    // here says "Take", not whose: so the line says both.
+    const name = !item.event
+      ? ""
+      : item.event.kind === "personal"
+        ? item.ownerName
+          ? t.events.personalOf(item.ownerName)
+          : ""
+        : eventName(item.event, null);
     return [name, formatShortDate(locale, item.take.recordedAt)].filter(Boolean);
   }
   if (item.kind === "song") {
@@ -76,7 +84,7 @@ function heroLines(item: typeof hero): string[] {
   // An untitled event IS its date — that is what the plate's label and the
   // title both say — so repeating it underneath told the member nothing twice.
   // What it has instead is a count.
-  const name = eventLabel(item.event);
+  const name = eventName(item.event, item.ownerName);
   const count = t.events.takeCount(item.takeCount);
   return name ? [name, formatShortDate(locale, item.event.heldAt)] : [count];
 }

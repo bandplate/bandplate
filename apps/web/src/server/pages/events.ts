@@ -15,7 +15,29 @@ import {
 import { type Locale, messages } from "@bandplate/i18n";
 import { z } from "zod";
 
-export type EventListItem = eventsRepo.EventWithTakeCount;
+export interface EventListItem extends eventsRepo.EventWithTakeCount {
+  /** Whose day this is, for a personal event. Null on a band event. */
+  ownerName: string | null;
+}
+
+/**
+ * Event rows with the owner's name each personal one is labelled with. One
+ * batched read for the page, and none at all when no row is personal.
+ */
+export async function withOwnerNames(
+  db: Db,
+  events: eventsRepo.EventWithTakeCount[],
+): Promise<EventListItem[]> {
+  const ownerIds = [
+    ...new Set(events.map((e) => e.ownerMemberId).filter((id): id is string => Boolean(id))),
+  ];
+  const owners = ownerIds.length > 0 ? await membersRepo.getByIds(db, ownerIds) : [];
+  const nameById = new Map(owners.map((m) => [m.id, m.displayName]));
+  return events.map((event) => ({
+    ...event,
+    ownerName: event.ownerMemberId ? (nameById.get(event.ownerMemberId) ?? null) : null,
+  }));
+}
 
 /** The kinds the archive has a pill for. A personal event has none. */
 const VALID_KINDS: readonly eventsRepo.EventKind[] = ["rehearsal", "concert", "session"];
@@ -54,11 +76,12 @@ export async function listEventsForArchive(
 ): Promise<Paged<EventListItem>> {
   // `onlyArchived` is a repo option now rather than a `.filter()` here — see
   // `listSongsForLibrary` for why a page cannot be narrowed after the fact.
-  return eventsRepo.listRecentWithTakeCounts(db, {
+  const paged = await eventsRepo.listRecentWithTakeCounts(db, {
     kind,
     onlyArchived: archived,
     page,
   });
+  return { ...paged, rows: await withOwnerNames(db, paged.rows) };
 }
 
 /** How many events are archived — the Archived pill shows nothing when it is 0. */

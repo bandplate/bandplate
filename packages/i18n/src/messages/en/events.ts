@@ -40,6 +40,12 @@ export const events = {
   /** A personal event's hero — who recorded it. */
   recordedByLabel: "Recorded by",
 
+  /**
+   * A personal recording's event, where no kind column sits beside the name to
+   * say it (home's pinned hero): whose personal recordings these are.
+   */
+  personalOf: (owner: string): string => `Personal recordings, ${owner}`,
+
   /** "3 takes" — the count under a plate, and in the ledger. */
   takeCount: (count: number): string =>
     `${count} ${plural("en", count, { one: "take", other: "takes" })}`,

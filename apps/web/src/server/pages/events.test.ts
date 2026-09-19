@@ -1,5 +1,12 @@
 import type { Db } from "@bandplate/db";
-import { assetsRepo, eventsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import {
+  assetsRepo,
+  eventsRepo,
+  instrumentsRepo,
+  membersRepo,
+  songsRepo,
+  takesRepo,
+} from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getEventDetail, listEventsForArchive, parseEventsListKindFilter } from "./events.js";
@@ -59,6 +66,48 @@ describe("listEventsForArchive / getEventDetail", () => {
 
     const { rows: events } = await listEventsForArchive(db, [], false, { limit: 25, offset: 0 });
     expect(events.map((e) => e.id)).toEqual([concert.id, rehearsal.id]);
+  });
+
+  it("names the member whose personal day it is, and nobody on a band event", async () => {
+    const filip = await membersRepo.create(db, {
+      displayName: "Filip",
+      slug: "filip",
+      email: "filip@example.com",
+      createdAt: 1000,
+    });
+    const song = await songsRepo.create(db, {
+      title: "Čoudy",
+      slug: "coudy",
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    const personal = await eventsRepo.findOrCreatePersonal(db, {
+      memberId: filip.id,
+      dayKey: "1970-01-01",
+      heldAt: 2000,
+      now: 2000,
+    });
+    await takesRepo.create(db, {
+      songId: song.id,
+      eventId: personal.id,
+      recordedAt: 2000,
+      createdAt: 2000,
+      updatedAt: 2000,
+      ownerMemberId: filip.id,
+      visibility: "band",
+    });
+    const rehearsal = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: 1000,
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+
+    const { rows } = await listEventsForArchive(db, [], false, { limit: 25, offset: 0 });
+    expect(rows.map((e) => [e.id, e.ownerName])).toEqual([
+      [personal.id, "Filip"],
+      [rehearsal.id, null],
+    ]);
   });
 
   it("filters to only the requested kinds", async () => {

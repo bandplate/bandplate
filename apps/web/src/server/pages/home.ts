@@ -3,6 +3,7 @@ import {
   eventsRepo,
   favoritesRepo,
   type instrumentsRepo,
+  membersRepo,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -23,6 +24,7 @@ import {
 // newest events to render a list nobody was reading cost four extra queries
 // per page load.
 import { type Locale, messages } from "@bandplate/i18n";
+import { type EventListItem, withOwnerNames } from "./events.js";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
 /** How many events the ledger lists before pointing at `/events` for the rest. */
@@ -109,9 +111,18 @@ export type PinnedItem =
       event: eventsRepo.Event | undefined;
       /** See `assetsRepo.listPlayableMastersByTakeIds` — undefined means "no play control". */
       playableAssetId: string | undefined;
+      /** The recording member's name, for a personal recording. Null for a band take. */
+      ownerName: string | null;
     }
   | { kind: "song"; id: string; song: songsRepo.Song; takeCount: number }
-  | { kind: "event"; id: string; event: eventsRepo.Event; takeCount: number };
+  | {
+      kind: "event";
+      id: string;
+      event: eventsRepo.Event;
+      takeCount: number;
+      /** Whose day this is, for a personal event. Null on a band event. */
+      ownerName: string | null;
+    };
 
 /**
  * The one word that says what a pinned thing IS — "Take", "Song", or the
@@ -176,6 +187,16 @@ async function getPinned(
     takesRepo.countBySongs(db, songIds),
   ]);
 
+  // Whose each personal take and personal event is: one read for all of them.
+  const ownerIds = [
+    ...new Set(
+      [...takes, ...events].map((x) => x.ownerMemberId).filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const owners = ownerIds.length > 0 ? await membersRepo.getByIds(db, ownerIds) : [];
+  const ownerNameById = new Map(owners.map((m) => [m.id, m.displayName]));
+  const ownerName = (id: string | null) => (id ? (ownerNameById.get(id) ?? null) : null);
+
   const songById = new Map([...songs, ...takeSongs].map((x) => [x.id, x]));
   const eventById = new Map([...events, ...takeEvents].map((x) => [x.id, x]));
   const takeById = new Map(takes.map((t) => [t.id, t]));
@@ -194,6 +215,7 @@ async function getPinned(
         song: songById.get(take.songId),
         event: take.eventId ? eventById.get(take.eventId) : undefined,
         playableAssetId: playableByTakeId.get(take.id)?.id,
+        ownerName: ownerName(take.ownerMemberId),
       });
     } else if (row.targetType === "song") {
       const song = songById.get(row.targetId);
@@ -216,6 +238,7 @@ async function getPinned(
           id: event.id,
           event,
           takeCount: takeCountByPinnedEvent.get(event.id) ?? 0,
+          ownerName: ownerName(event.ownerMemberId),
         });
       }
     }
@@ -229,7 +252,7 @@ export interface HomeData {
   /** How many things the member has pinned in all — may exceed `pinned.length`. */
   pinnedTotal: number;
   /** The ledger — events only, newest first, each with its take count. */
-  recentEvents: eventsRepo.EventWithTakeCount[];
+  recentEvents: EventListItem[];
   /** How many recordings are in this member's stash. */
   stashCount: number;
 }
@@ -243,7 +266,7 @@ export async function getHomeData(db: Db, memberId: string): Promise<HomeData> {
   return {
     pinned: pinned.items,
     pinnedTotal: pinned.total,
-    recentEvents: recentEvents.rows,
+    recentEvents: await withOwnerNames(db, recentEvents.rows),
     stashCount,
   };
 }

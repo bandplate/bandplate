@@ -56,6 +56,19 @@ export function eventLabel(event: { title: string | null; venue: string | null }
 }
 
 /**
+ * The name a row gives an event. A band event is its title and venue; a
+ * personal event has neither, and is named for whose day it is. The row's
+ * kind column says "osobní nahrávky" beside it, so together they read as the
+ * spec's "Osobní nahrávky, Filip" in the row's own columns.
+ */
+export function eventName(
+  event: { kind: string; title: string | null; venue: string | null },
+  ownerName: string | null | undefined,
+): string {
+  return event.kind === "personal" ? (ownerName ?? "") : eventLabel(event);
+}
+
+/**
  * The one word a row shows for an event's kind.
  *
  * The words themselves live in the catalog now (`events.kindLabel`), including

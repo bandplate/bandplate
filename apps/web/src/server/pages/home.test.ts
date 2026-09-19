@@ -329,4 +329,75 @@ describe("getHomeData", () => {
     // …and the personal day it sits in is not a recent event.
     expect(data.recentEvents).toEqual([]);
   });
+
+  describe("a personal recording names whose it is", () => {
+    async function personalDay() {
+      const now = Date.now();
+      const filip = await membersRepo.create(db, {
+        displayName: "Filip",
+        slug: "filip",
+        email: "filip@example.com",
+        createdAt: now,
+      });
+      const song = await songsRepo.create(db, {
+        title: "Čoudy",
+        slug: "coudy",
+        createdAt: now,
+        updatedAt: now,
+      });
+      const event = await eventsRepo.findOrCreatePersonal(db, {
+        memberId: filip.id,
+        dayKey: "2026-09-19",
+        heldAt: now,
+        now,
+      });
+      // Added to its song, so the band can see the day at all.
+      const take = await takesRepo.create(db, {
+        songId: song.id,
+        eventId: event.id,
+        recordedAt: now,
+        createdAt: now,
+        updatedAt: now,
+        ownerMemberId: filip.id,
+        visibility: "band",
+      });
+      return { now, event, take };
+    }
+
+    it("on a pinned take and a pinned personal event", async () => {
+      const { now, event, take } = await personalDay();
+      await favoritesRepo.add(db, {
+        memberId,
+        targetType: "take",
+        targetId: take.id,
+        createdAt: now,
+      });
+      await favoritesRepo.add(db, {
+        memberId,
+        targetType: "event",
+        targetId: event.id,
+        createdAt: now + 1,
+      });
+
+      const { pinned } = await getHomeData(db, memberId);
+      const pinnedEvent = pinned.find((p) => p.kind === "event");
+      const pinnedTake = pinned.find((p) => p.kind === "take");
+      expect(pinnedEvent?.kind === "event" && pinnedEvent.ownerName).toBe("Filip");
+      expect(pinnedTake?.kind === "take" && pinnedTake.ownerName).toBe("Filip");
+    });
+
+    it("in the ledger, and leaves a band event's owner empty", async () => {
+      const { now, event } = await personalDay();
+      const band = await eventsRepo.create(db, {
+        kind: "rehearsal",
+        heldAt: now - 1000,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const { recentEvents } = await getHomeData(db, memberId);
+      expect(recentEvents.find((e) => e.id === event.id)?.ownerName).toBe("Filip");
+      expect(recentEvents.find((e) => e.id === band.id)?.ownerName).toBeNull();
+    });
+  });
 });

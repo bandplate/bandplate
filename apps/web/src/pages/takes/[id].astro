@@ -117,8 +117,18 @@ if (detail.take.visibility === "private") {
   return Astro.redirect(`/stash/${detail.take.id}`);
 }
 
-const { take, song, event, instruments, instrumentsById, assets, hasLossless, favorited, myVote } =
-  detail;
+const {
+  take,
+  song,
+  event,
+  instruments,
+  instrumentsById,
+  assets,
+  hasLossless,
+  favorited,
+  myVote,
+  ownerName,
+} = detail;
 // Labels come from the VOCABULARY, not from `instruments` (what was played on
 // this take). The two are different sets by contract, and a stem whose
 // instrument is missing from the take's list — every stem added by a later
@@ -358,6 +368,11 @@ function assetLabel(asset: assetsRepo.Asset): string {
       </div>
 
       <p class="bp-take-detail-lede bp-m0">{heroLede}</p>
+      {/* Whose it is, as the personal event's own hero says it: a labelled
+          field, because "osobní nahrávky" in the lede does not name anyone. */}
+      {isPersonal && ownerName && (
+        <p class="bp-take-detail-lede bp-m0">{t.events.recordedByLabel}: {ownerName}</p>
+      )}
 
       {/* One quiet run of everything measurable about the take. No rule against
           the instrument set on either side: the set carries a tinted pad, which

@@ -5,6 +5,7 @@ import {
   eventsRepo,
   favoritesRepo,
   instrumentsRepo,
+  membersRepo,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -46,6 +47,8 @@ export interface TakeDetail {
   favorited: boolean;
   /** `undefined` means this member hasn't voted on this take yet — see `TakeRow`'s own `myVote` prop. */
   myVote: boolean | undefined;
+  /** The recording member's name, for a personal recording. Null for a band take. */
+  ownerName: string | null;
 }
 
 export async function getTakeDetail(
@@ -69,6 +72,7 @@ export async function getTakeDetail(
     hasLossless,
     favoriteTakeIds,
     myVoteByTakeId,
+    owners,
   ] = await Promise.all([
     songsRepo.getById(db, take.songId),
     eventsRepo.getById(db, take.eventId),
@@ -80,6 +84,7 @@ export async function getTakeDetail(
     assetsRepo.takeHasLossless(db, take.id),
     favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
     votesRepo.listByMemberForTakes(db, memberId, [take.id]),
+    take.ownerMemberId ? membersRepo.getByIds(db, [take.ownerMemberId]) : Promise.resolve([]),
   ]);
 
   return {
@@ -92,6 +97,7 @@ export async function getTakeDetail(
     hasLossless,
     favorited: favoriteTakeIds.has(take.id),
     myVote: myVoteByTakeId.get(take.id),
+    ownerName: owners[0]?.displayName ?? null,
   };
 }
 

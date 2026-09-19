@@ -34,6 +34,7 @@ export const events = {
   allEvents: "Všechny akce", // en: All events
 
   recordedByLabel: "Kdo nahrál", // en: Recorded by
+  personalOf: (owner: string): string => `Osobní nahrávky, ${owner}`, // en: Personal recordings, {owner}
 
   // en: `${count} ${count === 1 ? "take" : "takes"}`
   //

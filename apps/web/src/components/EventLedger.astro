@@ -13,13 +13,17 @@
 // `/events` and in the gallery — and the last label rule that lived in three
 // places drifted in two of them.
 import { formatMonthShort, messages } from "@bandplate/i18n";
-import { eventLabel } from "../server/format.js";
+import { eventName } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
 
 import type { eventsRepo } from "@bandplate/db";
 
 export interface Props {
-  events: eventsRepo.EventWithTakeCount[];
+  /**
+   * `ownerName` names a personal event (see `withOwnerNames`): its line is
+   * whose day it was, and the kind under it says "osobní nahrávky".
+   */
+  events: (eventsRepo.EventWithTakeCount & { ownerName?: string | null })[];
   /**
    * When given, each row gets a favourite star. Home deliberately passes
    * nothing — pinning happens where you are looking at the thing, and a column
@@ -49,7 +53,7 @@ const rows = events.map((event) => {
     event,
     day: String(held.getDate()),
     month: formatMonthShort(Astro.locals.locale, held.getTime()),
-    venue: eventLabel(event),
+    venue: eventName(event, event.ownerName),
     kind: t.events.kindLabel(event.kind),
   };
 });

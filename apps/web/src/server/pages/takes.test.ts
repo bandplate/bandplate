@@ -301,4 +301,51 @@ describe("getTakeDetail", () => {
       expect(detail?.favorited).toBe(false);
     });
   });
+
+  it("names the member who recorded a personal take, and nobody on a band take", async () => {
+    const now = Date.now();
+    const filip = await membersRepo.create(db, {
+      displayName: "Filip",
+      slug: "filip",
+      email: "filip@example.com",
+      createdAt: now,
+    });
+    const song = await songsRepo.create(db, {
+      title: "Čoudy",
+      slug: "coudy",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const day = await eventsRepo.findOrCreatePersonal(db, {
+      memberId: filip.id,
+      dayKey: "2026-09-19",
+      heldAt: now,
+      now,
+    });
+    const personal = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: day.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      ownerMemberId: filip.id,
+      visibility: "band",
+    });
+    const rehearsal = await eventsRepo.create(db, {
+      kind: "rehearsal",
+      heldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const band = await takesRepo.create(db, {
+      songId: song.id,
+      eventId: rehearsal.id,
+      recordedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    expect((await getTakeDetail(db, personal.id, memberId))?.ownerName).toBe("Filip");
+    expect((await getTakeDetail(db, band.id, memberId))?.ownerName).toBeNull();
+  });
 });

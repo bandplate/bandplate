@@ -11,7 +11,7 @@
 // caption under the plate says it in words too — colour alone is never the only
 // carrier of meaning here, same rule the vote buttons follow.
 import { formatShortDate, messages, playerMessages } from "@bandplate/i18n";
-import { eventLabel } from "../server/format.js";
+import { eventName } from "../server/format.js";
 import { type PinnedItem, pinnedKindWord } from "../server/pages/home.js";
 
 export interface Props {
@@ -55,19 +55,27 @@ const label =
 // or one take of it.
 const kindWord = pinnedKindWord(item, locale);
 
+// A personal event's caption says whose day it was, beside its kind: the
+// label already carries the date, and "osobní nahrávky" alone does not say
+// whose. The count stays in the plate's accessible name.
+const personalOwner =
+  item.kind === "event" && item.event.kind === "personal" ? item.ownerName : null;
 const detail =
   item.kind === "take"
     ? formatShortDate(locale, item.take.recordedAt)
     : item.kind === "song"
       ? t.events.takeCount(item.takeCount)
-      : t.events.takeCount(item.takeCount);
+      : (personalOwner ?? t.events.takeCount(item.takeCount));
 
 const accessibleName =
   item.kind === "take"
     ? t.home.plateTakeName({ name: label, date: detail })
     : item.kind === "song"
       ? t.home.plateSongName({ name: label, detail })
-      : t.home.plateEventName({ name: eventLabel(item.event) || kindWord, detail });
+      : t.home.plateEventName({
+          name: eventName(item.event, item.ownerName) || kindWord,
+          detail: t.events.takeCount(item.takeCount),
+        });
 
 // Gold for a take, bone for a container. See the header comment.
 const labelTone = item.kind === "take" ? "take" : "container";

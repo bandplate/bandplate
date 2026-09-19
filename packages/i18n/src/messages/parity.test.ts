@@ -124,6 +124,7 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "personal", args: ["personal"] },
     { label: "unknown", args: ["jam"] },
   ],
+  "events.personalOf": [{ label: "owner", args: ["Filip"] }],
   "events.takeCount": [
     { label: "one", args: [1] },
     { label: "few", args: [3] },

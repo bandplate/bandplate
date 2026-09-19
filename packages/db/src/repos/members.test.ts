@@ -276,3 +276,18 @@ describe("members repo", () => {
     });
   });
 });
+
+describe("members.getByIds", () => {
+  it("returns only the requested members, and nothing for an empty list", async () => {
+    const db = await createTestDb();
+    const a = await members.create(db, {
+      displayName: "A",
+      slug: "a",
+      email: "a@example.com",
+      createdAt: 1,
+    });
+    await members.create(db, { displayName: "B", slug: "b", email: "b@example.com", createdAt: 1 });
+    expect((await members.getByIds(db, [a.id])).map((m) => m.displayName)).toEqual(["A"]);
+    expect(await members.getByIds(db, [])).toEqual([]);
+  });
+});

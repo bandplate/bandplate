@@ -269,3 +269,11 @@ export async function listInstrumentsForMembers(
   }
   return result;
 }
+
+/** Batch lookup — the owner names on a list of personal recordings, in one query. */
+export async function getByIds(db: Db, ids: string[]): Promise<Member[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return db.select().from(members).where(inArray(members.id, ids));
+}

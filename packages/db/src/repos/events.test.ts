@@ -439,3 +439,40 @@ describe("personal events", () => {
     expect((await events.listRecent(db)).map((e) => e.id)).toEqual([band.id]);
   });
 });
+
+describe("events.findOrCreatePersonal", () => {
+  it("returns the same event for one member and one day, and a new one otherwise", async () => {
+    const db = await createTestDb();
+    const a = await events.findOrCreatePersonal(db, {
+      memberId: "m-1",
+      dayKey: "2026-09-19",
+      heldAt: 10,
+      now: 10,
+    });
+    const again = await events.findOrCreatePersonal(db, {
+      memberId: "m-1",
+      dayKey: "2026-09-19",
+      heldAt: 99,
+      now: 99,
+    });
+    const otherDay = await events.findOrCreatePersonal(db, {
+      memberId: "m-1",
+      dayKey: "2026-09-20",
+      heldAt: 20,
+      now: 20,
+    });
+    const otherMember = await events.findOrCreatePersonal(db, {
+      memberId: "m-2",
+      dayKey: "2026-09-19",
+      heldAt: 10,
+      now: 10,
+    });
+
+    expect(again.id).toBe(a.id);
+    expect(a.kind).toBe("personal");
+    expect(a.ownerMemberId).toBe("m-1");
+    expect(a.heldAt).toBe(10);
+    expect(a.clientRef).toBe(events.personalEventClientRef("m-1", "2026-09-19"));
+    expect(new Set([a.id, otherDay.id, otherMember.id]).size).toBe(3);
+  });
+});

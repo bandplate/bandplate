@@ -294,3 +294,55 @@ export async function listOnDay(
     .where(and(...conditions))
     .orderBy(desc(events.heldAt), desc(events.id));
 }
+
+/**
+ * The idempotency key of one member's stash day. `events.client_ref` is
+ * UNIQUE, which is exactly the guarantee find-or-create needs, and the prefix
+ * keeps it out of the bridge's namespace (its refs are Reaper project GUIDs).
+ */
+export function personalEventClientRef(memberId: string, dayKey: string): string {
+  return `personal:${memberId}:${dayKey}`;
+}
+
+export interface FindOrCreatePersonalInput {
+  memberId: string;
+  /** `YYYY-MM-DD` in the band's zone — the caller's `zonedParts(recordedAt).date`. */
+  dayKey: string;
+  /** When the first recording of that day was made. */
+  heldAt: number;
+  now: number;
+}
+
+/**
+ * The member's personal event for one day, created on first use. Title and
+ * venue stay NULL: the event reads as its kind and date ("osobní nahrávky,
+ * 19. 9."), like any untitled event. A racing create (two recordings syncing
+ * at once from two tabs) loses on the UNIQUE `client_ref` and re-reads the
+ * winner's row rather than failing the upload.
+ */
+export async function findOrCreatePersonal(
+  db: Db,
+  input: FindOrCreatePersonalInput,
+): Promise<Event> {
+  const clientRef = personalEventClientRef(input.memberId, input.dayKey);
+  const existing = await getByClientRef(db, clientRef);
+  if (existing) {
+    return existing;
+  }
+  try {
+    return await create(db, {
+      kind: "personal",
+      ownerMemberId: input.memberId,
+      heldAt: input.heldAt,
+      clientRef,
+      createdAt: input.now,
+      updatedAt: input.now,
+    });
+  } catch (err) {
+    const raced = await getByClientRef(db, clientRef);
+    if (raced) {
+      return raced;
+    }
+    throw err;
+  }
+}

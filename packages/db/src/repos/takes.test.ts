@@ -1755,3 +1755,74 @@ describe("private and personal takes stay out of band views", () => {
     expect((await takes.countUnvotedByMembers(db, [otherId, ownerId])).get(otherId)).toBe(1);
   });
 });
+
+describe("the stash", () => {
+  let db: Db;
+  let songId: string;
+  let otherSongId: string;
+  let eventId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    songId = (await songs.create(db, { title: "A", slug: "a", createdAt: 1, updatedAt: 1 })).id;
+    otherSongId = (await songs.create(db, { title: "B", slug: "b", createdAt: 1, updatedAt: 1 }))
+      .id;
+    eventId = (
+      await events.create(db, {
+        kind: "personal",
+        ownerMemberId: "m-1",
+        heldAt: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      })
+    ).id;
+  });
+
+  async function stash(memberId: string, song: string, recordedAt: number) {
+    return takes.create(db, {
+      songId: song,
+      eventId,
+      recordedAt,
+      visibility: "private",
+      ownerMemberId: memberId,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+  }
+
+  it("lists and counts only my private takes, newest first, optionally for one song", async () => {
+    const older = await stash("m-1", songId, 100);
+    const newer = await stash("m-1", otherSongId, 200);
+    await stash("m-2", songId, 300);
+    await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: 400,
+      ownerMemberId: "m-1",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    expect((await takes.listStash(db, "m-1")).map((t) => t.id)).toEqual([newer.id, older.id]);
+    expect(await takes.countStash(db, "m-1")).toBe(2);
+    expect((await takes.listStash(db, "m-1", { songId })).map((t) => t.id)).toEqual([older.id]);
+    expect(await takes.countStash(db, "m-1", { songId })).toBe(1);
+    expect(await takes.countStash(db, "m-3")).toBe(0);
+  });
+
+  it("publishing flips visibility, publishes, and marks the push as already batched", async () => {
+    const take = await stash("m-1", songId, 100);
+    expect(await takes.publishFromStash(db, take.id, "m-2", 5_000)).toBe(false);
+    expect(await takes.publishFromStash(db, take.id, "m-1", 5_000)).toBe(true);
+
+    const published = await takes.getById(db, take.id);
+    expect(published?.visibility).toBe("band");
+    expect(published?.ownerMemberId).toBe("m-1");
+    expect(published?.state).toBe("published");
+    expect(published?.publishedAt).toBe(5_000);
+    expect(published?.pushBatchedAt).toBe(5_000);
+    // Once out of the stash it is not in it any more, and a second press is a no-op.
+    expect(await takes.countStash(db, "m-1")).toBe(0);
+    expect(await takes.publishFromStash(db, take.id, "m-1", 6_000)).toBe(false);
+  });
+});

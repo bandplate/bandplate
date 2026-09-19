@@ -870,3 +870,82 @@ export async function countUnvotedByMembers(
   }
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// the stash
+// ---------------------------------------------------------------------------
+
+export interface StashOptions {
+  /** Only this song's — the song page's "Ve tvém šuplíku: N". */
+  songId?: string;
+}
+
+function stashConditions(memberId: string, options: StashOptions): SQL[] {
+  const conditions: SQL[] = [eq(takes.ownerMemberId, memberId), eq(takes.visibility, "private")];
+  if (options.songId) {
+    conditions.push(eq(takes.songId, options.songId));
+  }
+  return conditions;
+}
+
+/**
+ * One member's stash, newest first. Unpaged with the same defensive ceiling
+ * `listUnvotedByMember` uses: a stash is ideas waiting to be sorted, and a
+ * member with 500 of them has a different problem than paging.
+ */
+export async function listStash(
+  db: Db,
+  memberId: string,
+  options: StashOptions = {},
+): Promise<Take[]> {
+  return db
+    .select()
+    .from(takes)
+    .where(and(...stashConditions(memberId, options)))
+    .orderBy(desc(takes.recordedAt), desc(takes.id))
+    .limit(DEFAULT_TAKE_LIST_CAP);
+}
+
+export async function countStash(
+  db: Db,
+  memberId: string,
+  options: StashOptions = {},
+): Promise<number> {
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(takes)
+    .where(and(...stashConditions(memberId, options)));
+  return rows[0]?.value ?? 0;
+}
+
+/**
+ * "Přidat k písni": one statement that moves a stash take into the band's view.
+ *
+ * `push_batched_at` is stamped with `published_at` in the same write, so the
+ * new-takes tick has nothing to announce — a personal recording never pushes.
+ * (`notificationsRepo` also filters owned takes out, so this holds even if an
+ * admin later unpublishes and republishes it.) Conditional on owner AND
+ * `private`, so a second press, or anyone else's press, changes nothing and
+ * returns false.
+ */
+export async function publishFromStash(
+  db: Db,
+  id: string,
+  memberId: string,
+  now: number,
+): Promise<boolean> {
+  const rows = await db
+    .update(takes)
+    .set({
+      visibility: "band",
+      state: "published",
+      publishedAt: now,
+      pushBatchedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(eq(takes.id, id), eq(takes.ownerMemberId, memberId), eq(takes.visibility, "private")),
+    )
+    .returning({ id: takes.id });
+  return rows.length === 1;
+}

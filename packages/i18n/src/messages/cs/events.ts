@@ -33,7 +33,7 @@ export const events = {
   unnamed: "Bez názvu", // en: Unnamed
   allEvents: "Všechny akce", // en: All events
 
-  recordedByLabel: "Nahrál", // en: Recorded by
+  recordedByLabel: "Kdo nahrál", // en: Recorded by
 
   // en: `${count} ${count === 1 ? "take" : "takes"}`
   //

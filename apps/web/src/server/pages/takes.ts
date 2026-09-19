@@ -211,7 +211,12 @@ export async function createTake(
   if (!song) {
     return { kind: "unknown_parent", field: "songId" };
   }
-  if (!event) {
+  // A personal event is one member's stash day. The picker that fills this
+  // form never offers one (`listEventsForTakePicker` excludes `personal`),
+  // so this is the guard for a hand-built POST — filing a band take under
+  // someone else's stash day would otherwise be indistinguishable from a
+  // take they recorded and published themselves.
+  if (!event || event.kind === "personal") {
     return { kind: "unknown_parent", field: "eventId" };
   }
 

@@ -8,7 +8,7 @@ import { getEventDetail, updateEvent } from "./events.js";
 import { toggleFavoriteFromForm } from "./favorites.js";
 import { getFavorites } from "./home.js";
 import { attachFullContext } from "./take-context.js";
-import { getTakeDetail, setTakePublished, updateTake } from "./takes.js";
+import { createTake, getTakeDetail, setTakePublished, updateTake } from "./takes.js";
 import { castVoteFromForm } from "./votes.js";
 
 describe("stash takes in the web app", () => {
@@ -123,5 +123,14 @@ describe("stash takes in the web app", () => {
     expect(result.kind).toBe("not_found");
     const after = await eventsRepo.getById(db, eventId);
     expect(after).toEqual(before);
+  });
+
+  it("nobody can file a band take under someone else's personal day — the picker never offers one, and this is the guard for a hand-built POST", async () => {
+    const form = new FormData();
+    form.set("songId", songId);
+    form.set("eventId", eventId);
+    form.set("recordedAt", "2026-09-19");
+    const result = await createTake(db, 5, form);
+    expect(result).toEqual({ kind: "unknown_parent", field: "eventId" });
   });
 });

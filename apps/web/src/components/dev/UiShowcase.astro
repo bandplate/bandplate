@@ -293,7 +293,29 @@ const scale = [
     <div class="flex flex-wrap items-center gap-2">
       <button type="button" class="bp-btn bp-btn-primary">Send me a link</button>
       <button type="button" class="bp-btn bp-btn-secondary">Cancel</button>
-      <button type="button" class="bp-btn bp-btn-danger">Delete take</button>
+      <button type="button" class="bp-btn bp-btn-danger">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+        </svg>
+        Delete take
+      </button>
+      {/* Beside Delete on purpose: both are red, and the whole argument in
+          `.bp-record-btn` is that they must not be mistakable for one another.
+          Solid plate plus a trash glyph is destructive; tint plus a ring and a
+          dot is record. If a future token change ever collapses that
+          difference, this row is where it shows, in both themes at once. */}
+      <button type="button" class="bp-btn bp-record-btn">
+        <span class="bp-record-mark" aria-hidden="true"></span>
+        Record an idea
+      </button>
       <button type="button" class="bp-btn">Plain</button>
       <button type="button" class="bp-btn bp-btn-sm">Small</button>
       <button type="button" class="bp-btn bp-btn-primary" disabled>Disabled</button>

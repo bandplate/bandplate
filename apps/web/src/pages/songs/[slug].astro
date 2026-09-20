@@ -334,6 +334,11 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           edit of it. `data-astro-reload` because `/record` runs with no
           router and no shell player — see that page.
 
+          Red, with the record dot: the gold mic it wore read as "audio", and
+          the one thing pressing this does is start a recording. Tint and ring
+          rather than a solid plate, because the solid danger fill on this
+          page belongs to Delete — see `.bp-record-btn`.
+
           Always here, whether or not the stash section below exists: a
           member who only scans the hero (never reaches the aside, or the
           aside is folded below the chart on a phone) still has to see how
@@ -341,13 +346,8 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           one control, always in the same place, rather than the same
           "record" affordance risking two spellings of itself on one page. */}
       <div class="bp-pills bp-song-record">
-        <a href={`/record?song=${song.slug}`} class="bp-pill" data-astro-reload>
-          <span class="bp-pill-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="3" width="6" height="12" rx="3" />
-              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-            </svg>
-          </span>
+        <a href={`/record?song=${song.slug}`} class="bp-pill bp-record-btn bp-pill--record" data-astro-reload>
+          <span class="bp-record-mark" aria-hidden="true"></span>
           {t.stash.recordIdea}
         </a>
       </div>

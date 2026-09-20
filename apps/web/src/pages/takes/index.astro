@@ -191,14 +191,14 @@ const countLabel = t.takes.count(total);
         {stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
       </a>
       {/* In the stash, the way in to the recorder where the filters were: the
-          mic alone, in the gold tint. The words would not fit beside the title
-          and the pill on a phone, and they are still what is read out. */}
+          record mark alone — a red dot inside the button's own red ring. The
+          words would not fit beside the title and the pill on a phone, and
+          they are still what is read out. It was a gold mic, which said
+          "audio" rather than "record"; see `.bp-record-btn` for why red here
+          is a ring and a tint and never the solid plate Delete wears. */}
       {viewingStash ? (
-        <a href="/record" class="bp-btn bp-stash-record" data-astro-reload>
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="3" width="6" height="12" rx="3" />
-            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-          </svg>
+        <a href="/record" class="bp-btn bp-record-btn bp-stash-record" data-astro-reload>
+          <span class="bp-record-mark" aria-hidden="true"></span>
           <span class="bp-visually-hidden">{t.stash.recordIdea}</span>
         </a>
       ) : (

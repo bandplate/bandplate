@@ -107,23 +107,12 @@ function CloseIcon() {
   );
 }
 
-function MicIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <rect x="9" y="3" width="6" height="11" rx="3" />
-      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-    </svg>
-  );
+/* The record mark: a red dot, not a mic. A mic says "audio"; this button
+   starts a recording. Styled entirely by `.bp-record-mark` — see the record
+   affordance block in components.css for why the red is a tint and a ring
+   rather than the solid plate a destructive action wears. */
+function RecordMark() {
+  return <span class="bp-record-mark" aria-hidden="true" />;
 }
 
 export default function Recorder({
@@ -521,10 +510,10 @@ export default function Recorder({
         <div class="bp-rec-foot">
           <button
             type="button"
-            class="bp-btn bp-btn-primary bp-rec-cta"
+            class="bp-btn bp-record-btn bp-rec-cta"
             onClick={() => void startRecording()}
           >
-            <MicIcon />
+            <RecordMark />
             {recordCtaLabel(song, { recordFor: t.recordFor, withoutSong: t.recordWithoutSong })}
           </button>
         </div>
@@ -696,7 +685,7 @@ export default function Recorder({
           ) : state.phase === "armed" || state.phase === "error" ? (
             <button
               type="button"
-              class="bp-rec-stop"
+              class="bp-rec-stop bp-rec-stop--start"
               aria-label={t.start}
               onClick={() => void startRecording()}
             >

@@ -80,8 +80,9 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   ],
   "auth.slowLede": [{ label: "seconds", args: ["45"] }],
   "mixer.pageTitle": [{ label: "take", args: ["Čoudy"] }],
-  "stash.inYourStash": [
+  "stash.songSectionCount": [
     { label: "one", args: [1] },
+    { label: "few", args: [3] },
     { label: "many", args: [5] },
   ],
   "stash.homeLine": [

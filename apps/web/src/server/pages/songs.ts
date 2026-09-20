@@ -107,14 +107,15 @@ export interface SongDetail {
   /** ONE PAGE of takes, newest first, plus how many the song has in all. */
   takes: TakeWithContext[];
   takeTotal: number;
-  /** This member's recordings of this song still in their stash. Never anyone else's — see `stashRows`. */
-  stashCount: number;
   /**
    * This member's own private takes of this song, full rows for the song
-   * page's own stash section (real section, not the old one-line mention).
-   * `takesRepo.listStash`/`countStash` are scoped by owner AND
+   * page's own stash section. `takesRepo.listStash` is scoped by owner AND
    * `visibility='private'` already, so this never carries another member's
    * recording — see `songs.test.ts`'s "another member sees none" case.
+   *
+   * No separate count beside it: the section draws every row it is given
+   * (a member's stash of ONE song is small), so `stashRows.length` IS the
+   * count, and a second field saying so could only ever disagree.
    */
   stashRows: StashRowData[];
   /** This member's own display name — every `stashRows` row is theirs, so it's asked once for the item sheet. */
@@ -186,7 +187,6 @@ export async function getSongDetail(
     aliases,
     instrumentNotes,
     takeTotal: pagedTakes.total,
-    stashCount: stashRows.length,
     stashRows,
     stashOwnerName: ownerNameById.get(memberId),
     takes: takes.map((take) => ({

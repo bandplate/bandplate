@@ -478,7 +478,7 @@ export default function Recorder({
               <button
                 type="button"
                 class="bp-btn bp-btn-secondary bp-btn-sm bp-rec-skip-song"
-                aria-pressed={state.songId === null ? "true" : "false"}
+                aria-pressed={state.songChosen && state.songId === null ? "true" : "false"}
                 onClick={() => dispatch({ type: "select", songId: null })}
               >
                 {t.noSongYet}

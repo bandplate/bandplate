@@ -64,6 +64,22 @@ describe("reduceRecorder", () => {
     expect(reduceRecorder(initialRecorderState(null), { type: "start" }).phase).toBe("starting");
   });
 
+  it("knows an unanswered picker from one answered with 'no song'", () => {
+    // The "Zatím bez písně" button draws itself pressed from this, and on
+    // first paint nothing has been pressed yet.
+    const fresh = initialRecorderState(null);
+    expect(fresh).toMatchObject({ songId: null, songChosen: false });
+    expect(reduceRecorder(fresh, { type: "select", songId: null })).toMatchObject({
+      songId: null,
+      songChosen: true,
+    });
+    // A song on the link is an answer too, just not one typed here.
+    expect(initialRecorderState("s-1").songChosen).toBe(true);
+    // And it survives going back to the picker to change it.
+    const back = reduceRecorder(initialRecorderState("s-1"), { type: "change-song" });
+    expect(back).toMatchObject({ phase: "pick", songId: "s-1", songChosen: true });
+  });
+
   it("takes 'no song' as an answer, and takes it back", () => {
     const none = reduceRecorder(picked(), { type: "select", songId: null });
     expect(none.songId).toBeNull();
@@ -102,6 +118,7 @@ describe("reduceRecorder", () => {
     const review: RecorderState = {
       phase: "review",
       songId: "s-1",
+      songChosen: true,
       startedAt: 0,
       elapsedMs: 9_000,
       error: null,
@@ -115,7 +132,14 @@ describe("reduceRecorder", () => {
 
   it("a failed save returns to the review with the error, keeping the recording", () => {
     const saving = reduceRecorder(
-      { phase: "review", songId: "s-1", startedAt: 0, elapsedMs: 9_000, error: null },
+      {
+        phase: "review",
+        songId: "s-1",
+        songChosen: true,
+        startedAt: 0,
+        elapsedMs: 9_000,
+        error: null,
+      },
       { type: "save" },
     );
     expect(saving.phase).toBe("saving");

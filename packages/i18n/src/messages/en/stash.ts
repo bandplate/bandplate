@@ -1,6 +1,8 @@
 // The stash: a member's private recordings, the recorder that makes them, and
 // the sheet that adds one to its song. Pages read it as `t.stash`; the two
 // islands (`Recorder`, `StashPendingList`) import `stashMessages` directly.
+import { plural } from "../../plural.js";
+
 export const stash = {
   // --- the stash view on /takes -------------------------------------------
   pill: "Stash",
@@ -19,9 +21,20 @@ export const stash = {
   chipFailed: "Couldn't upload",
   retry: "Try again",
   discardPendingBody: "It is only on this device, so throwing it away loses it for good.",
-  open: "Open",
-  /** Under a song's takes: "In your stash: 2". */
-  inYourStash: (count: number): string => `In your stash: ${count}`,
+  /**
+   * The song page's own section of the member's recordings of that song,
+   * under the band's takes. A section TITLE, so it is a name and not a
+   * sentence: the count goes under the list (`songSectionCount`), which is
+   * where the takes section above puts its own.
+   */
+  songSection: "In your stash",
+  /**
+   * How many, under that section's list — where the takes section above puts
+   * its own. "recordings", not "takes": in the stash it is not a take yet,
+   * and every other string here calls it a recording.
+   */
+  songSectionCount: (count: number): string =>
+    `${count} ${plural("en", count, { one: "recording", other: "recordings" })}`,
   /** Home, above the recent events. */
   homeLine: (count: number): string => `${count} in your stash`,
 

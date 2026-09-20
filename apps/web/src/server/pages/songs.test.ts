@@ -205,9 +205,9 @@ describe("getSongDetail and the stash", () => {
       });
     }
     const mine = await getSongDetail(db, "coudy", me.id);
-    expect(mine?.stashCount).toBe(2);
+    expect(mine?.stashRows).toHaveLength(2);
     expect(mine?.takeTotal).toBe(0);
-    expect((await getSongDetail(db, "coudy", them.id))?.stashCount).toBe(0);
+    expect((await getSongDetail(db, "coudy", them.id))?.stashRows).toEqual([]);
   });
 
   it("the song page's own stash section carries only the viewer's rows — another member sees none of it", async () => {
@@ -247,19 +247,17 @@ describe("getSongDetail and the stash", () => {
       updatedAt: 2,
     });
 
-    // The owner sees their own row, by id, with the count matching it and
-    // their own name attached for the item sheet's "Kdo nahrál".
+    // The owner sees their own row, by id, with their own name attached for
+    // the item sheet's "Kdo nahrál".
     const mine = await getSongDetail(db, "coudy", me.id);
     expect(mine?.stashRows.map((row) => row.id)).toEqual([myTake.id]);
-    expect(mine?.stashCount).toBe(mine?.stashRows.length);
     expect(mine?.stashOwnerName).toBe("Filip");
 
-    // A different member of the band gets neither the row nor a non-zero
-    // count — `takesRepo.listStash`/`countStash` scope by owner AND
-    // `visibility='private'`, and this is the loader test proving the song
-    // page's own query never leaks around that.
+    // A different member of the band gets no row at all —
+    // `takesRepo.listStash` scopes by owner AND `visibility='private'`, and
+    // this is the loader test proving the song page's own query never leaks
+    // around that.
     const theirs = await getSongDetail(db, "coudy", them.id);
     expect(theirs?.stashRows).toEqual([]);
-    expect(theirs?.stashCount).toBe(0);
   });
 });

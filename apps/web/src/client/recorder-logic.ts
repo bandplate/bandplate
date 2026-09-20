@@ -91,6 +91,17 @@ export interface RecorderState {
    * is a legal state to record in, so nothing here gates on it.
    */
   songId: string | null;
+  /**
+   * Whether the member has answered the picker's question at all.
+   *
+   * `songId: null` says two different things — "no song for this one" and
+   * "nobody has said yet" — and the picker's own "Zatím bez písně" button
+   * has to tell them apart: it is the ANSWER, so drawing it pressed before
+   * anything was pressed says the member chose it when the picker is still
+   * waiting for them. A song arriving with the link (`?song=`) is an answer
+   * too; it just was not typed here.
+   */
+  songChosen: boolean;
   /** A monotonic clock reading (`performance.now()`), not a wall-clock time. */
   startedAt: number | null;
   elapsedMs: number;
@@ -116,6 +127,7 @@ export function initialRecorderState(preselectedSongId: string | null): Recorder
   return {
     phase: preselectedSongId ? "armed" : "pick",
     songId: preselectedSongId,
+    songChosen: preselectedSongId !== null,
     startedAt: null,
     elapsedMs: 0,
     error: null,
@@ -132,7 +144,7 @@ const CAN_START: readonly RecorderPhase[] = ["pick", "armed", "review", "error"]
 export function reduceRecorder(state: RecorderState, event: RecorderEvent): RecorderState {
   switch (event.type) {
     case "select":
-      return state.phase === "pick" ? { ...state, songId: event.songId } : state;
+      return state.phase === "pick" ? { ...state, songId: event.songId, songChosen: true } : state;
     case "change-song":
       return state.phase === "armed" || state.phase === "error"
         ? { ...state, phase: "pick", error: null }

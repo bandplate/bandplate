@@ -36,6 +36,7 @@ import {
 import { applyStashWrite } from "../../server/pages/stash.js";
 import { type TakeField, createTake } from "../../server/pages/takes.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
+import { withQuery } from "../../server/safe-redirect.js";
 import { songToRows } from "../../server/song-chart-rows.js";
 import { KNOWN_SECTION_WORDS, buildSongChart } from "../../server/song-text.js";
 
@@ -122,7 +123,7 @@ if (Astro.request.method === "POST") {
         // page — the controller's ruling: publishing from HERE should come
         // back HERE, with the same confirmation `/takes/[id]?published=1`
         // shows (`t.takes.published`, rendered below as `justPublished`).
-        return Astro.redirect(`${result.returnTo}?published=1`);
+        return Astro.redirect(withQuery(result.returnTo, "published=1"));
       }
       if (result.kind === "renamed") {
         return Astro.redirect(`/songs/${slug}?stash_renamed=${result.takeId}`);
@@ -660,12 +661,16 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             same affordance twice on one page. */}
         {hasStash && (
           <section class="bp-song-aside-section">
-            <h2 class="bp-section-title bp-m0">{t.stash.inYourStash(stashRows.length)}</h2>
+            <h2 class="bp-section-title bp-m0">{t.stash.songSection}</h2>
             <div class="bp-take-list" data-play-queue>
               {stashRows.map((row) => (
                 <StashRow row={row} />
               ))}
             </div>
+            {/* How many, under the list — where the takes section above puts
+                its own count, in the same words. The section draws every row
+                it has, so this is never a "first N of". */}
+            <p class="bp-takes-count bp-m0">{t.stash.songSectionCount(stashRows.length)}</p>
             {/* Parked after the row list, same reasoning as `/takes?stash=1`'s
                 own `[data-stash-sheets]`: the list staggers its rows' entry by
                 `nth-child`, and a dialog between two of them would shift every

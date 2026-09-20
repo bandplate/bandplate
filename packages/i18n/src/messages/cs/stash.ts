@@ -6,7 +6,16 @@
 // │ WORTH CHECKING: "Kdo nahrál" is the owner's settled label. A question,  │
 // │ not "Nahrál", so the label does not guess the member's gender.         │
 // └────────────────────────────────────────────────────────────────────────┘
+import { plural } from "../../plural.js";
 import type { stash as enStash } from "../en/stash.js";
+
+// Stejné slovo jako u nahrávek kapely: v šuplíku je to pořád nahrávka.
+const RECORDING_FORMS = {
+  one: "nahrávka",
+  few: "nahrávky",
+  many: "nahrávky",
+  other: "nahrávek",
+};
 
 export const stash = {
   pill: "Šuplík", // en: Stash
@@ -20,8 +29,9 @@ export const stash = {
   chipFailed: "Nejde nahrát", // en: Couldn't upload
   retry: "Zkusit znovu", // en: Try again
   discardPendingBody: "Je jen v tomhle zařízení, takže ji zahodíš natrvalo.", // en: It is only on this device, so throwing it away loses it for good.
-  open: "Otevřít", // en: Open
-  inYourStash: (count: number): string => `Ve tvém šuplíku: ${count}`, // en: In your stash: N
+  songSection: "Ve tvém šuplíku", // en: In your stash
+  // en: `${n} ${n === 1 ? "recording" : "recordings"}`
+  songSectionCount: (count: number): string => `${count} ${plural("cs", count, RECORDING_FORMS)}`,
   homeLine: (count: number): string => `V šuplíku ${count}`, // en: N in your stash
 
   close: "Zavřít", // en: Close

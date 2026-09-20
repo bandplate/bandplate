@@ -7,6 +7,7 @@ import {
   hasNext,
   nextIndex,
   queueFrom,
+  queueHoldsSource,
   queuePosition,
   sameQueue,
   sheetHasContent,
@@ -117,5 +118,20 @@ describe("sameQueue", () => {
     expect(sameQueue(null, null)).toBe(true);
     expect(sameQueue(null, queueFrom(three, "take-1"))).toBe(false);
     expect(sameQueue(queueFrom(three, "take-1"), null)).toBe(false);
+  });
+});
+
+describe("an object URL the queue still needs", () => {
+  const local = { ...item(4), src: "blob:local-4" };
+
+  it("is held by any item in the queue, not just the one playing", () => {
+    const queue = { items: [item(1), local, item(3)], index: 0 };
+    expect(queueHoldsSource(queue, "blob:local-4")).toBe(true);
+    expect(queueHoldsSource(queue, "blob:gone")).toBe(false);
+  });
+
+  it("is held by nothing when there is no queue at all", () => {
+    expect(queueHoldsSource(null, "blob:local-4")).toBe(false);
+    expect(queueHoldsSource({ items: three, index: 0 }, "blob:local-4")).toBe(false);
   });
 });

@@ -10,28 +10,25 @@
 // navigation), and without it the link goes to the page that renders the same
 // controls as plain blocks.
 //
+// The sheet itself is rendered by the PAGE, after the list: `.bp-take-list`
+// staggers its entry animation with `> *:nth-child(N)`, so a row that emitted
+// a dialog beside itself would have shifted every delay after it.
+//
 // `StashPendingList.tsx` draws the same row for recordings still on the phone.
 // Astro and Preact cannot share a component, so the markup is written twice;
 // the classes are the same, so the styling lives once. Change one, change both.
 import { formatShortDate, messages } from "@bandplate/i18n";
-import type { SongOption } from "../client/recorder-logic.js";
 import { stashName, stashNote } from "../client/stash-display.js";
+import { stashSheetId } from "../client/stash-sheet-ids.js";
 import { formatDuration } from "../server/format.js";
 import type { StashRowData } from "../server/pages/stash.js";
 import PlayToggleButton from "./PlayToggleButton.astro";
-import StashItemSheet from "./StashItemSheet.astro";
 
 export interface Props {
   row: StashRowData;
-  /** Who recorded it — the sheet's "Kdo nahrál". */
-  ownerName: string | undefined;
-  /** The library, for a recording with no song yet. */
-  songChoices: SongOption[];
-  /** Set when THIS recording's rename was refused. */
-  renameError?: string | undefined;
 }
 
-const { row, ownerName, songChoices, renameError } = Astro.props;
+const { row } = Astro.props;
 const locale = Astro.locals.locale;
 const t = messages(locale);
 // The recording's own name leads and the song goes under it; see `stashName`.
@@ -56,7 +53,7 @@ const date = formatShortDate(locale, row.recordedAt);
   </div>
   <div class="bp-take-row-line">
     <span class="bp-take-row-name">
-      <a href={`/stash/${row.id}`} class="bp-take-label" data-sheet-open={`stash-${row.id}`}>{title}</a>
+      <a href={`/stash/${row.id}`} class="bp-take-label" data-sheet-open={stashSheetId(row.id)}>{title}</a>
     </span>
   </div>
   <span class="bp-take-row-duration">{formatDuration(row.durationMs)}</span>
@@ -84,4 +81,3 @@ const date = formatShortDate(locale, row.recordedAt);
     </span>
   </div>
 </div>
-<StashItemSheet row={row} ownerName={ownerName} songChoices={songChoices} renameError={renameError} />

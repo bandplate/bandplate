@@ -27,6 +27,7 @@ import { instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
+import StashItemSheet from "../../components/StashItemSheet.astro";
 import StashPendingList from "../../components/StashPendingList.tsx";
 import StashRow from "../../components/StashRow.astro";
 import TakeRow from "../../components/TakeRow.astro";
@@ -80,6 +81,12 @@ if (Astro.request.method === "POST") {
     }
     if (result.kind === "not_found") {
       return new Response("Not found.", { status: 404 });
+    }
+    // A form naming no recording, or an intent this page has no write for.
+    // Nothing happened, and rendering the list as if it had would say a
+    // change landed.
+    if (result.kind === "ignored") {
+      return new Response("Bad request.", { status: 400 });
     }
     if (result.kind === "error") {
       // Twice for a label that will not fit: in the field, where it was
@@ -399,16 +406,24 @@ const countLabel = t.takes.count(total);
         />
         {stashRows.length > 0 && (
           <div class="bp-take-list bp-take-list--wide" data-play-queue>
-            {stashRows.map((row) => (
-              <StashRow
-                row={row}
-                ownerName={stash.owner?.displayName}
-                songChoices={stash.songChoices}
-                renameError={row.id === renamedTakeId ? renameError : undefined}
-              />
-            ))}
+            {stashRows.map((row) => <StashRow row={row} />)}
           </div>
         )}
+        {/* The sheets live here rather than beside their rows: the list
+            staggers its rows' entry by `nth-child`, and a dialog between two
+            of them would shift every delay after it. It is also where the
+            island appends the sheet for a recording that went up while this
+            page was open — always rendered, so there is somewhere to put it. */}
+        <div class="bp-stash-sheets" data-stash-sheets>
+          {stashRows.map((row) => (
+            <StashItemSheet
+              row={row}
+              ownerName={stash.owner?.displayName}
+              songChoices={stash.songChoices}
+              renameError={row.id === renamedTakeId ? renameError : undefined}
+            />
+          ))}
+        </div>
       </div>
     ) : (
       <div class="bp-search-results">

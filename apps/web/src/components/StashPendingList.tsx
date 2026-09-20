@@ -35,8 +35,11 @@ import { useStore } from "@nanostores/preact";
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
-import { currentTrack } from "../client/player-store.js";
+import { queueHoldsSource } from "../client/player-queue.js";
+import { currentTrack, playQueue } from "../client/player-store.js";
 import { stashName, stashNote } from "../client/stash-display.js";
+import { stashSheetId } from "../client/stash-sheet-ids.js";
+import { dropStashSheets, ensureStashSheets } from "../client/stash-sheets.js";
 import { pendingStash, syncedStash } from "../client/stash-store.js";
 import {
   type LocalStashRow,
@@ -72,18 +75,29 @@ interface Props {
 const TRASH_PATH = "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3";
 
 /**
- * Hands an object URL back. Immediately, unless the player is on it — audio
- * in this app plays across navigation, and revoking the URL under a playing
- * `<audio>` would cut the recording off mid-bar. Then it goes when the player
- * moves to something else.
+ * Whether revoking this URL would break playback. Not just the track playing
+ * now: the queue this row was started from holds the rows AFTER it too, and
+ * auto-advancing into a revoked URL loads nothing and looks like a track that
+ * silently ends the queue.
+ */
+function urlInUse(url: string): boolean {
+  return currentTrack.get()?.src === url || queueHoldsSource(playQueue.get(), url);
+}
+
+/**
+ * Hands an object URL back. Immediately, unless the player still needs it —
+ * audio in this app plays across navigation, and revoking under a playing
+ * `<audio>` cuts the recording off mid-bar. Then it goes at the first track
+ * change that leaves it unused, which is also when a queue holding it is
+ * replaced by another list.
  */
 function releaseObjectUrl(url: string): void {
-  if (currentTrack.get()?.src !== url) {
+  if (!urlInUse(url)) {
     URL.revokeObjectURL(url);
     return;
   }
-  const stop = currentTrack.listen((track) => {
-    if (track?.src !== url) {
+  const stop = currentTrack.listen(() => {
+    if (!urlInUse(url)) {
       stop();
       URL.revokeObjectURL(url);
     }
@@ -217,7 +231,11 @@ export default function StashPendingList({
   // not. A recording that has just finished uploading brings its bytes with
   // it, so there is no moment where the file is neither in IndexedDB nor in
   // hand.
-  const rowIds = rows.map((entry) => entry.row.localId).join(" ");
+  // The KIND is part of the key: a pending row whose blob could not be read
+  // (IndexedDB refused, or the sync runner was mid-write) becomes a synced row
+  // with its bytes in hand, and that row must get its URL then rather than
+  // staying inert until something else changes.
+  const rowIds = rows.map((entry) => `${entry.kind}:${entry.row.localId}`).join(" ");
   // biome-ignore lint/correctness/useExhaustiveDependencies: the row ids are the trigger; the rows and the blobs are re-read inside
   useEffect(() => {
     let cancelled = false;
@@ -264,9 +282,25 @@ export default function StashPendingList({
     };
   }, [rowIds]);
 
-  // The page is leaving. Nothing is drawn from these URLs any more, and the
-  // one the player may still be on outlives this list by exactly as long as
-  // it is playing.
+  // A recording that went up while this view was open has a page and a sheet
+  // on the server now, and the page it is being drawn on was rendered before
+  // either existed. Fetch them in, so the row the member just made opens what
+  // every other row opens.
+  const syncedTakeIds = rows
+    .flatMap((entry) => (entry.kind === "synced" ? [entry.row.takeId] : []))
+    .join(" ");
+  useEffect(() => {
+    if (syncedTakeIds === "") {
+      return;
+    }
+    for (const takeId of syncedTakeIds.split(" ")) {
+      void ensureStashSheets(takeId);
+    }
+  }, [syncedTakeIds]);
+
+  // The page is leaving. The sheets this island fetched go with it, and so do
+  // the URLs — except the one the player may still be on, which outlives this
+  // list by exactly as long as it is needed.
   useEffect(() => {
     const held = urlsRef.current;
     return () => {
@@ -274,6 +308,7 @@ export default function StashPendingList({
         releaseObjectUrl(url);
       }
       held.clear();
+      dropStashSheets();
     };
   }, []);
 
@@ -363,9 +398,16 @@ export default function StashPendingList({
           // A recording the server now has has a page of its own, and its own
           // sheet on the next render; one still on the phone has neither, so
           // its name is text rather than a link that goes nowhere.
+          // `data-sheet-open` whether or not the sheet has arrived: the
+          // handler leaves a trigger whose sheet is missing alone, and the
+          // link then does what it says and opens the page.
           const heading: ComponentChildren =
             entry.kind === "synced" ? (
-              <a href={`/stash/${entry.row.takeId}`} class="bp-take-label">
+              <a
+                href={`/stash/${entry.row.takeId}`}
+                class="bp-take-label"
+                data-sheet-open={stashSheetId(entry.row.takeId)}
+              >
                 {title}
               </a>
             ) : (

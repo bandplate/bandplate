@@ -46,11 +46,19 @@ if (Astro.request.method === "POST") {
   if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
     formError = t.common.originError;
   } else {
+    const formData = await Astro.request.formData();
+    // This page is ABOUT one recording, so a form naming a different one is
+    // not a write it can carry out — and applying it here would report the
+    // result on the wrong recording's page. The stash list, where a form can
+    // legitimately name any row, is the one that takes the id from the body.
+    if (String(formData.get("takeId") ?? "") !== id) {
+      return new Response("Not found.", { status: 404 });
+    }
     const result = await applyStashWrite(
       appDeps.db,
       appDeps.clock.now(),
       principal.memberId,
-      await Astro.request.formData(),
+      formData,
     );
     if (result.kind === "published") {
       return Astro.redirect(`/takes/${result.takeId}?published=1`);
@@ -60,6 +68,9 @@ if (Astro.request.method === "POST") {
     }
     if (result.kind === "not_found") {
       return new Response("Not found.", { status: 404 });
+    }
+    if (result.kind === "ignored") {
+      return new Response("Bad request.", { status: 400 });
     }
     if (result.kind === "error") {
       formError =

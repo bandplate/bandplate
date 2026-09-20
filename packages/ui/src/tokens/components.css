@@ -3436,6 +3436,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
   .bp-sheet,
   .bp-sheet:not([open]) {
     display: flex;
+    /* `flex-direction` lives on `.bp-sheet[open]`, which a sheet that is never
+       opened never matches — so every no-JS sheet laid its head BESIDE its
+       body and `overflow: hidden` cut the fields off. Found by measuring
+       `scrollWidth` against `clientWidth` in a sandboxed (script-free)
+       iframe, which is the only way to see this page as a no-JS reader does. */
+    flex-direction: column;
     position: static;
     width: auto;
     height: auto;
@@ -9107,6 +9113,16 @@ html:has(dialog.bp-filter-sheet[open]) body {
   .bp-stash-row .bp-take-rule {
     display: inline-block;
   }
+}
+
+/* Every stash sheet, parked after the row list rather than between its rows —
+   the list staggers its entry by `nth-child`, and a dialog in among them would
+   shift every delay after it. `display: contents`, so the box itself is never
+   a row in the column: closed, a `<dialog>` is `display: none`, and with no
+   scripting each sheet lays out as a block in the flow (see the
+   `scripting: none` rule on `.bp-sheet`). */
+.bp-stash-sheets {
+  display: contents;
 }
 
 /* The stash line on a song page and on home: the count, and a way in. */

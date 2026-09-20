@@ -24,6 +24,7 @@ import { formatShortDate, messages } from "@bandplate/i18n";
 import Field from "@bandplate/ui/components/Field.astro";
 import type { SongOption } from "../client/recorder-logic.js";
 import { stashName, stashNote, stashSongField } from "../client/stash-display.js";
+import { stashRenameSheetId, stashSheetId } from "../client/stash-sheet-ids.js";
 import { formatDuration } from "../server/format.js";
 import type { StashRowData } from "../server/pages/stash.js";
 import RecordSheet from "./RecordSheet.astro";
@@ -56,7 +57,7 @@ const needsSong = !row.songId;
 const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoices.length > 0);
 ---
 
-<RecordSheet id={`stash-${row.id}`} eyebrow={t.stash.sheetEyebrow} title={title} subtitle={subtitle}>
+<RecordSheet id={stashSheetId(row.id)} eyebrow={t.stash.sheetEyebrow} title={title} subtitle={subtitle}>
   <form method="post" class="bp-sheet-form">
     <input type="hidden" name="intent" value="publish" />
     <input type="hidden" name="takeId" value={row.id} />
@@ -103,7 +104,7 @@ const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoice
       )}
 
       <div class="bp-sheet-extras">
-        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open={`stash-rename-${row.id}`}>
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open={stashRenameSheetId(row.id)}>
           {t.stash.rename}
         </button>
         {row.playableAssetId && (
@@ -135,7 +136,7 @@ const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoice
   </form>
 </RecordSheet>
 
-<RecordSheet id={`stash-rename-${row.id}`} eyebrow={t.stash.rename} title={title}>
+<RecordSheet id={stashRenameSheetId(row.id)} eyebrow={t.stash.rename} title={title}>
   <form method="post" class="bp-sheet-form" novalidate>
     <input type="hidden" name="intent" value="rename" />
     <input type="hidden" name="takeId" value={row.id} />

@@ -34,6 +34,16 @@ export function queueFrom(items: QueueItem[], startTakeId: string): PlayQueue {
   return { items: unique, index: Math.max(0, index) };
 }
 
+/**
+ * Whether anything in the queue would play from this source. Asked about an
+ * object URL before it is revoked: the current track is not the only thing
+ * that will load one — the take after it is already in hand, and auto-advance
+ * into a revoked URL loads nothing at all.
+ */
+export function queueHoldsSource(queue: PlayQueue | null, src: string): boolean {
+  return Boolean(queue?.items.some((item) => item.src === src));
+}
+
 export function nextIndex(queue: PlayQueue | null): number | null {
   if (!queue || queue.index + 1 >= queue.items.length) {
     return null;

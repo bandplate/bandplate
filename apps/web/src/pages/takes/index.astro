@@ -173,7 +173,17 @@ const countLabel = t.takes.count(total);
   <div class={viewingStash ? "bp-takes bp-takes--stash" : "bp-takes"}>
     <div class="bp-takes-bar">
       <h1 class="bp-page-title bp-m0 bp-takes-bar-title">
-        {viewingStash ? t.stash.viewTitle(t.takes.title) : t.takes.title}
+        {/* On a phone the joined title wrapped onto two lines beside two
+            pills. There it is the drawer's own name; the page it belongs to
+            is one tap behind the cross next to it. */}
+        {viewingStash ? (
+          <>
+            <span class="bp-record-word">{t.stash.viewTitle(t.takes.title)}</span>
+            <span class="bp-record-word-short">{t.stash.pill}</span>
+          </>
+        ) : (
+          t.takes.title
+        )}
       </h1>
       {/* The stash, as a pill beside the filters: a different list of MY
           recordings, toggled like the Archived pill on /events. The count is

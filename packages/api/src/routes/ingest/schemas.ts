@@ -4,7 +4,27 @@
 // document (`openapi.ts`'s `zodToJsonSchema` walks these same objects) —
 // the contract's own promise ("generated from the same Zod schemas that
 // validate requests") would be a lie if the two ever drifted apart.
+import { STASH_CLIENT_REF_PREFIX } from "@bandplate/core";
 import { z } from "zod";
+
+/**
+ * A bridge's own idempotency key — and never one of the browser's.
+ *
+ * The stash writes its takes' `client_ref` behind `stash:`
+ * (`STASH_CLIENT_REF_PREFIX`) so the two namespaces cannot collide. Nothing
+ * ENFORCED that until here: a bridge posting `clientRef: "stash:local-9"`
+ * would have matched a member's private recording on the way in, and
+ * `ingest/takes.ts` asserts the take it finds by clientRef has a song, which
+ * a stash recording need not. So the prefix is refused at the door, where the
+ * assertion can rest on it.
+ */
+const bridgeClientRef = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((ref) => !ref.startsWith(STASH_CLIENT_REF_PREFIX), {
+    message: `must not start with "${STASH_CLIENT_REF_PREFIX}" — that prefix belongs to members' own recordings`,
+  });
 
 /** ISO-8601 timestamp WITH a numeric offset — contract v1 §4: "the offset is
  * how it knows what you meant." `Z` counts as an offset (zod's `offset: true`
@@ -16,7 +36,7 @@ export const isoDatetimeWithOffset = z
 export const eventKindSchema = z.enum(["rehearsal", "concert", "session"]);
 
 export const createEventSchema = z.object({
-  clientRef: z.string().trim().min(1),
+  clientRef: bridgeClientRef,
   /**
    * Apply this body's descriptive fields to an event that already exists.
    *
@@ -98,7 +118,7 @@ export const songRefSchema = z.object({
 });
 
 export const createTakeSchema = z.object({
-  clientRef: z.string().trim().min(1),
+  clientRef: bridgeClientRef,
   eventClientRef: z.string().trim().min(1),
   song: songRefSchema,
   recordedAt: isoDatetimeWithOffset,

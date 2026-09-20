@@ -6,7 +6,7 @@
 // idempotency proved by DIFFING DATABASE STATE across a repeated run, not
 // by asserting a status code twice.
 import { createHash } from "node:crypto";
-import { createServiceToken } from "@bandplate/core";
+import { STASH_CLIENT_REF_PREFIX, createServiceToken } from "@bandplate/core";
 import {
   assetsRepo,
   eventsRepo,
@@ -255,6 +255,44 @@ describe("ingest API", () => {
       const body = await res.json();
       expect(body.error.code).toBe("validation_failed");
     });
+
+    it("422s on a clientRef in the stash's namespace", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      const res = await testApp.app.request("/ingest/v1/events", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          clientRef: `${STASH_CLIENT_REF_PREFIX}local-9`,
+          kind: "rehearsal",
+          heldAt: "2026-09-05T19:30:00+02:00",
+        }),
+      });
+      expect(res.status).toBe(422);
+      expect((await res.json()).error.code).toBe("validation_failed");
+    });
+  });
+
+  // The bridge and the browser share one `client_ref` column, kept apart by
+  // the `stash:` prefix — and `ingest/takes.ts` leans on that to assert every
+  // take it finds by clientRef has a song. A bridge allowed to claim the
+  // prefix could hand it a member's songless private recording instead.
+  it("refuses a take whose clientRef claims the stash's namespace", async () => {
+    const testApp = await buildTestApp();
+    const auth = await ingestToken(testApp);
+    const res = await testApp.app.request("/ingest/v1/takes", {
+      method: "POST",
+      headers: { ...jsonHeaders, ...auth },
+      body: JSON.stringify({
+        clientRef: `${STASH_CLIENT_REF_PREFIX}local-9`,
+        eventClientRef: "proj-1",
+        song: { title: "Dub Corner", createIfMissing: true },
+        recordedAt: "2026-09-05T20:14:33+02:00",
+        assets: [{ kind: "master", format: "opus", tier: "lossy", bytes: 10 }],
+      }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe("validation_failed");
   });
 
   describe("full three-phase flow (contract v1 §4/§10)", () => {

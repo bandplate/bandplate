@@ -23,9 +23,16 @@ function unwrap(schema: ZodTypeAny): { inner: ZodTypeAny; optional: boolean; nul
   while (
     def.typeName === "ZodOptional" ||
     def.typeName === "ZodNullable" ||
-    def.typeName === "ZodDefault"
+    def.typeName === "ZodDefault" ||
+    def.typeName === "ZodEffects"
   ) {
-    if (def.typeName === "ZodOptional") {
+    if (def.typeName === "ZodEffects") {
+      // A `.refine()`. The refinement itself has no JSON Schema (it is a
+      // predicate, not a shape), but the string underneath it does — without
+      // this, `clientRef` would document as accept-anything, which is exactly
+      // the opposite of what the refinement says.
+      inner = def.schema;
+    } else if (def.typeName === "ZodOptional") {
       optional = true;
       inner = def.innerType;
     } else if (def.typeName === "ZodNullable") {

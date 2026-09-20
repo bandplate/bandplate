@@ -15,6 +15,7 @@ import { type Locale, formatDuration, formatShortDate, stashMessages } from "@ba
 import { useStore } from "@nanostores/preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
+import { stashName, stashNote } from "../client/stash-display.js";
 import { pendingStash, stashUploadsFinished } from "../client/stash-store.js";
 import {
   type PendingSummary,
@@ -188,29 +189,75 @@ export default function StashPendingList({
   return (
     <>
       <div class="bp-take-list bp-take-list--wide">
-        {rows.map((row) => (
-          <div class="bp-take-row bp-stash-row" key={row.localId}>
-            <div class="bp-take-row-lead">
-              <span class="bp-take-plate" aria-hidden="true" />
-            </div>
-            <div class="bp-take-row-line">
-              <span class="bp-take-row-name">
-                {/* Not `.bp-take-label`: that one stretches a link over the whole
+        {rows.map((row) => {
+          // A recording with no song yet goes by its own label; see `stashName`.
+          const nameParts = { songId: row.songId, songTitle: row.songTitle, label: row.label };
+          const nameWords = { noSong: t.noSongYet, unknownSong: t.unknownSong };
+          const note = stashNote(nameParts, nameWords);
+          return (
+            <div class="bp-take-row bp-stash-row" key={row.localId}>
+              <div class="bp-take-row-lead">
+                <span class="bp-take-plate" aria-hidden="true" />
+              </div>
+              <div class="bp-take-row-line">
+                <span class="bp-take-row-name">
+                  {/* Not `.bp-take-label`: that one stretches a link over the whole
                     row, and this row has no page yet — and buttons of its own. */}
-                <span class="bp-stash-pending-title">{row.songTitle}</span>
-              </span>
-            </div>
-            <span class="bp-take-row-duration">{formatDuration(row.durationMs)}</span>
-            <div class="bp-take-line2">
-              <span class="bp-take-textrun">
-                <span
-                  class={
-                    row.status === "failed"
-                      ? "bp-badge bp-stash-chip is-failed"
-                      : "bp-badge bp-stash-chip"
-                  }
-                >
-                  {row.status === "waiting" && (
+                  <span class="bp-stash-pending-title">{stashName(nameParts, nameWords)}</span>
+                </span>
+              </div>
+              <span class="bp-take-row-duration">{formatDuration(row.durationMs)}</span>
+              <div class="bp-take-line2">
+                <span class="bp-take-textrun">
+                  <span
+                    class={
+                      row.status === "failed"
+                        ? "bp-badge bp-stash-chip is-failed"
+                        : "bp-badge bp-stash-chip"
+                    }
+                  >
+                    {row.status === "waiting" && (
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="m2 2 20 20M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.31-.19M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07" />
+                      </svg>
+                    )}
+                    {chip(row)}
+                  </span>
+                  {note && (
+                    <>
+                      <span class="bp-take-note bp-take-elastic">{note}</span>
+                      <span class="bp-take-rule" />
+                    </>
+                  )}
+                  <span class="bp-take-fixed">{formatShortDate(lc, row.recordedAt)}</span>
+                </span>
+              </div>
+              {/* A line of its own, under the facts: on a phone, line two cannot
+                hold the chip, the label, the date AND two buttons. */}
+              {row.status === "failed" && (
+                <div class="bp-stash-row-actions">
+                  {canRetryByHand(row) && (
+                    <button
+                      type="button"
+                      class="bp-btn bp-btn-secondary bp-btn-sm"
+                      onClick={() => void retryPending(row.localId)}
+                    >
+                      {t.retry}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    class="bp-btn bp-btn-danger bp-btn-sm"
+                    onClick={() => setDiscarding(row)}
+                  >
                     <svg
                       aria-hidden="true"
                       viewBox="0 0 24 24"
@@ -220,55 +267,15 @@ export default function StashPendingList({
                       stroke-linecap="round"
                       stroke-linejoin="round"
                     >
-                      <path d="m2 2 20 20M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.31-.19M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07" />
+                      <path d={TRASH_PATH} />
                     </svg>
-                  )}
-                  {chip(row)}
-                </span>
-                {row.label && (
-                  <>
-                    <span class="bp-take-note bp-take-elastic">{row.label}</span>
-                    <span class="bp-take-rule" />
-                  </>
-                )}
-                <span class="bp-take-fixed">{formatShortDate(lc, row.recordedAt)}</span>
-              </span>
-            </div>
-            {/* A line of its own, under the facts: on a phone, line two cannot
-                hold the chip, the label, the date AND two buttons. */}
-            {row.status === "failed" && (
-              <div class="bp-stash-row-actions">
-                {canRetryByHand(row) && (
-                  <button
-                    type="button"
-                    class="bp-btn bp-btn-secondary bp-btn-sm"
-                    onClick={() => void retryPending(row.localId)}
-                  >
-                    {t.retry}
+                    {t.discard}
                   </button>
-                )}
-                <button
-                  type="button"
-                  class="bp-btn bp-btn-danger bp-btn-sm"
-                  onClick={() => setDiscarding(row)}
-                >
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d={TRASH_PATH} />
-                  </svg>
-                  {t.discard}
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       {dialog}
     </>

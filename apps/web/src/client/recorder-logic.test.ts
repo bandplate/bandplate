@@ -8,6 +8,7 @@ import {
   needsDurationFix,
   pickRecorderMime,
   pickerGroups,
+  recordCtaLabel,
   reduceRecorder,
   shapeForMime,
   shouldDrawWaveform,
@@ -56,9 +57,20 @@ describe("reduceRecorder", () => {
     expect(initialRecorderState("s-1")).toMatchObject({ phase: "armed", songId: "s-1" });
   });
 
-  it("will not start without a song", () => {
-    expect(reduceRecorder(initialRecorderState(null), { type: "start" }).phase).toBe("pick");
+  it("starts with a song and, since 0011, without one", () => {
     expect(reduceRecorder(picked(), { type: "start" }).phase).toBe("starting");
+    // "Zatím bez písně": the song is chosen when the recording is added to
+    // the band, so nothing here waits for one.
+    expect(reduceRecorder(initialRecorderState(null), { type: "start" }).phase).toBe("starting");
+  });
+
+  it("takes 'no song' as an answer, and takes it back", () => {
+    const none = reduceRecorder(picked(), { type: "select", songId: null });
+    expect(none.songId).toBeNull();
+    expect(reduceRecorder(none, { type: "select", songId: "s-2" }).songId).toBe("s-2");
+    // Off the picker, a stray select changes nothing.
+    const armed = reduceRecorder(initialRecorderState("s-1"), { type: "select", songId: null });
+    expect(armed.songId).toBe("s-1");
   });
 
   it("runs the clock from the moment recording actually started", () => {
@@ -235,5 +247,16 @@ describe("pickerGroups", () => {
   });
   it("has nothing to group in an empty library", () => {
     expect(pickerGroups([], [], "")).toEqual([]);
+  });
+});
+
+describe("recordCtaLabel", () => {
+  const words = { recordFor: (t: string) => `Nahrávat k ${t}`, withoutSong: "Nahrávat bez písně" };
+
+  it("names the song when there is one, and says so when there is not", () => {
+    expect(recordCtaLabel({ id: "s-1", title: "Čoudy", slug: "coudy" }, words)).toBe(
+      "Nahrávat k Čoudy",
+    );
+    expect(recordCtaLabel(undefined, words)).toBe("Nahrávat bez písně");
   });
 });

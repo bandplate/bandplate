@@ -78,6 +78,13 @@
       "when": 1789815845754,
       "tag": "0010_stash",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1789883605346,
+      "tag": "0011_song_optional",
+      "breakpoints": true
     }
   ]
 }

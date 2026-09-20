@@ -211,6 +211,62 @@ describe("the stash pages", () => {
     expect((await takesRepo.getById(db, takeId))?.visibility).toBe("band");
   });
 
+  it("a songless recording picks its song on the way out, and cannot go without one", async () => {
+    const event = await eventsRepo.findOrCreatePersonal(db, {
+      memberId: ownerId,
+      dayKey: "2026-09-20",
+      heldAt: 2,
+      now: 2,
+    });
+    const songless = await takesRepo.create(db, {
+      songId: null,
+      eventId: event.id,
+      recordedAt: 2,
+      label: "nápad na mezihru",
+      visibility: "private",
+      ownerMemberId: ownerId,
+      createdAt: 2,
+      updatedAt: 2,
+    });
+    await readyMaster(songless.id);
+
+    // It shows up in the stash, named by its own label, with no song.
+    const row = (await getStashRows(db, ownerId)).find((r) => r.id === songless.id);
+    expect(row?.songId).toBeNull();
+    expect(row?.song).toBeUndefined();
+    expect((await getStashItem(db, songless.id, ownerId))?.song).toBeUndefined();
+
+    // Nothing offered: refused, and still in the stash.
+    expect((await publishStashTake(db, 5, songless.id, ownerId)).kind).toBe("no_song");
+    expect((await publishStashTake(db, 5, songless.id, ownerId, "  ")).kind).toBe("no_song");
+    expect((await takesRepo.getById(db, songless.id))?.visibility).toBe("private");
+
+    // A song that is not in the library: also refused, and named as such.
+    expect((await publishStashTake(db, 5, songless.id, ownerId, "nope")).kind).toBe(
+      "song_not_found",
+    );
+    expect((await takesRepo.getById(db, songless.id))?.visibility).toBe("private");
+
+    // The song it is given is set in the same write that publishes it.
+    expect((await publishStashTake(db, 6, songless.id, ownerId, songId)).kind).toBe("ok");
+    const published = await takesRepo.getById(db, songless.id);
+    expect(published?.songId).toBe(songId);
+    expect(published?.visibility).toBe("band");
+    expect(published?.publishedAt).toBe(6);
+  });
+
+  it("a recording that already has a song ignores one offered with the press", async () => {
+    const other = await songsRepo.create(db, {
+      title: "Jiná",
+      slug: "jina",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await readyMaster(takeId);
+    expect((await publishStashTake(db, 5, takeId, ownerId, other.id)).kind).toBe("ok");
+    expect((await takesRepo.getById(db, takeId))?.songId).toBe(songId);
+  });
+
   it("renames, clears, and refuses a label that will not fit", async () => {
     const form = (label: string) => {
       const f = new FormData();

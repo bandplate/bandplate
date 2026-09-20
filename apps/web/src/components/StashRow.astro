@@ -9,6 +9,7 @@
 // Astro and Preact cannot share a component, so the markup is written twice;
 // the classes are the same, so the styling lives once. Change one, change both.
 import { formatShortDate, messages } from "@bandplate/i18n";
+import { stashName, stashNote } from "../client/stash-display.js";
 import { formatDuration } from "../server/format.js";
 import type { StashRowData } from "../server/pages/stash.js";
 import PlayToggleButton from "./PlayToggleButton.astro";
@@ -20,7 +21,11 @@ export interface Props {
 const { row } = Astro.props;
 const locale = Astro.locals.locale;
 const t = messages(locale);
-const title = row.song?.title ?? t.stash.unknownSong;
+// A recording with no song yet goes by its own label; see `stashName`.
+const nameParts = { songId: row.songId, songTitle: row.song?.title, label: row.label };
+const nameWords = { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong };
+const title = stashName(nameParts, nameWords);
+const note = stashNote(nameParts, nameWords);
 const date = formatShortDate(locale, row.recordedAt);
 ---
 
@@ -53,9 +58,9 @@ const date = formatShortDate(locale, row.recordedAt);
         )
       }
       {
-        row.label && (
+        note && (
           <>
-            <span class="bp-take-note bp-take-elastic">{row.label}</span>
+            <span class="bp-take-note bp-take-elastic">{note}</span>
             <span class="bp-take-rule" />
           </>
         )

@@ -369,9 +369,12 @@ export const takes = sqliteTable(
   "takes",
   {
     id: id(),
-    songId: text("song_id")
-      .notNull()
-      .references(() => songs.id),
+    // NULLABLE since migration 0011: a recording can reach the stash before
+    // its member has decided what song it is. The invariant the code keeps
+    // (`takesRepo.create`, `publishFromStash`) is the other half: a take
+    // whose `visibility` is `band` ALWAYS has a song, so no band-facing
+    // listing, count or search can ever meet a songless row.
+    songId: text("song_id").references(() => songs.id),
     eventId: text("event_id")
       .notNull()
       .references(() => events.id),

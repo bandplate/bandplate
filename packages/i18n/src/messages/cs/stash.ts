@@ -14,6 +14,7 @@ export const stash = {
   recordIdea: "Nahrát nápad", // en: Record an idea
   empty: "Šuplík je prázdný. Nahraj nápad a objeví se tady.", // en: Your stash is empty. Record an idea and it lands here.
   unknownSong: "Neznámá píseň", // en: Unknown song
+  noSongYet: "Zatím bez písně", // en: No song yet
   chipWaiting: "Čeká na signál", // en: Waiting for signal
   chipSyncing: "Nahrává se", // en: Uploading
   chipFailed: "Nejde nahrát", // en: Couldn't upload
@@ -33,6 +34,7 @@ export const stash = {
   noSongMatch: "Žádná píseň tomu neodpovídá.", // en: No song matches that.
   noSongs: "V knihovně zatím nejsou žádné písně. Nejdřív nějakou přidej.", // en: The library has no songs yet. Add one first.
   recordFor: (title: string): string => `Nahrávat k ${title}`, // en: Record for {title}
+  recordWithoutSong: "Nahrávat bez písně", // en: Record without a song
   recordingInto: "Nahrávám do šuplíku", // en: Recording into your stash
   screenNote: "Displej může zhasnout, nahrávání běží dál.", // en: The screen may go dark; recording keeps going.
   levelHint: "Kroužek ukazuje hlasitost. Když svítí celý, jsi moc blízko.", // en: The ring shows your level. If it's full all the way round, you're too close.
@@ -68,6 +70,10 @@ export const stash = {
   personalEvent: (date: string): string => `Osobní nahrávky, ${date}`, // en: Personal recordings, {date}
   publishNote: "Uvidí ji celá kapela u písně. Nehlasuje se o ní a nikomu nepřijde upozornění.", // en: The whole band will see it …
   publish: "Přidat k písni", // en: Add to song
+  chooseSong: "Ke které písni to patří?", // en: Which song is this?
+  chooseSongPlaceholder: "Vyber píseň", // en: Pick a song
+  noSongChosen: "Nejdřív vyber píseň, pak ji přidej.", // en: Pick a song first, then add it.
+  songGone: "Tahle píseň už v knihovně není.", // en: That song is not in the library any more.
   stillUploading: "Nahrávka je ještě na cestě z telefonu, který ji nahrál.", // en: This recording is still on its way …
   rename: "Přejmenovat", // en: Rename
   renameSave: "Uložit", // en: Save

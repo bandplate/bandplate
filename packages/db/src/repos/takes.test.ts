@@ -1778,7 +1778,7 @@ describe("the stash", () => {
     ).id;
   });
 
-  async function stash(memberId: string, song: string, recordedAt: number) {
+  async function stash(memberId: string, song: string | null, recordedAt: number) {
     return takes.create(db, {
       songId: song,
       eventId,
@@ -1812,8 +1812,8 @@ describe("the stash", () => {
 
   it("publishing flips visibility, publishes, and marks the push as already batched", async () => {
     const take = await stash("m-1", songId, 100);
-    expect(await takes.publishFromStash(db, take.id, "m-2", 5_000)).toBe(false);
-    expect(await takes.publishFromStash(db, take.id, "m-1", 5_000)).toBe(true);
+    expect(await takes.publishFromStash(db, take.id, "m-2", 5_000)).toBe("not_found");
+    expect(await takes.publishFromStash(db, take.id, "m-1", 5_000)).toBe("ok");
 
     const published = await takes.getById(db, take.id);
     expect(published?.visibility).toBe("band");
@@ -1823,6 +1823,69 @@ describe("the stash", () => {
     expect(published?.pushBatchedAt).toBe(5_000);
     // Once out of the stash it is not in it any more, and a second press is a no-op.
     expect(await takes.countStash(db, "m-1")).toBe(0);
-    expect(await takes.publishFromStash(db, take.id, "m-1", 6_000)).toBe(false);
+    expect(await takes.publishFromStash(db, take.id, "m-1", 6_000)).toBe("not_found");
+  });
+
+  // --- the invariant: a band-visible take always has a song ------------------
+
+  it("allows a private take with no song and refuses a band one", async () => {
+    const songless = await stash("m-1", null, 100);
+    expect(songless.songId).toBeNull();
+    expect(await takes.countStash(db, "m-1")).toBe(1);
+
+    await expect(
+      takes.create(db, {
+        // The union says this at compile time; the cast is how a caller that
+        // built its input dynamically would get here, which is what the
+        // runtime guard is for.
+        ...{ songId: null, visibility: "band" as const },
+        eventId,
+        recordedAt: 100,
+        createdAt: 1,
+        updatedAt: 1,
+      } as unknown as Parameters<typeof takes.create>[1]),
+    ).rejects.toThrow(/needs a song/);
+  });
+
+  it("refuses to publish a songless take, and files it under the song it is given", async () => {
+    const songless = await stash("m-1", null, 100);
+    expect(await takes.publishFromStash(db, songless.id, "m-1", 5_000)).toBe("no_song");
+    // Still private, still in the stash: a refusal changes nothing.
+    expect((await takes.getById(db, songless.id))?.visibility).toBe("private");
+    expect(await takes.countStash(db, "m-1")).toBe(1);
+
+    expect(await takes.publishFromStash(db, songless.id, "m-1", 6_000, otherSongId)).toBe("ok");
+    const published = await takes.getById(db, songless.id);
+    expect(published?.songId).toBe(otherSongId);
+    expect(published?.visibility).toBe("band");
+    expect(published?.publishedAt).toBe(6_000);
+
+    // A take that already has a song keeps it, even when a song is offered:
+    // the offer is for a recording that has none, never a refiling.
+    const filed = await stash("m-1", songId, 300);
+    expect(await takes.publishFromStash(db, filed.id, "m-1", 7_000, otherSongId)).toBe("ok");
+    expect((await takes.getById(db, filed.id))?.songId).toBe(songId);
+  });
+
+  it("no band-facing query ever meets a songless take", async () => {
+    const songless = await stash("m-1", null, 100);
+    const banded = await takes.create(db, {
+      songId,
+      eventId,
+      recordedAt: 200,
+      state: "published",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    expect((await takes.listBySong(db, songId)).rows.map((t) => t.id)).toEqual([banded.id]);
+    expect((await takes.listAllBySong(db, songId)).map((t) => t.id)).toEqual([banded.id]);
+    expect((await takes.listByEvent(db, eventId)).rows.map((t) => t.id)).toEqual([banded.id]);
+    expect(await takes.countBySong(db, songId)).toBe(1);
+    expect(await takes.countByEvent(db, eventId)).toBe(1);
+    expect([...(await takes.countBySongs(db, [songId])).entries()]).toEqual([[songId, 1]]);
+    expect((await takes.search(db, {})).rows.map((t) => t.id)).toEqual([banded.id]);
+    // And the songless one is exactly where it belongs.
+    expect((await takes.listStash(db, "m-1")).map((t) => t.id)).toEqual([songless.id]);
   });
 });

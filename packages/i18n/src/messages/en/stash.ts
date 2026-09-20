@@ -8,6 +8,12 @@ export const stash = {
   recordIdea: "Record an idea",
   empty: "Your stash is empty. Record an idea and it lands here.",
   unknownSong: "Unknown song",
+  /**
+   * A recording whose member has not chosen a song for it. Both the name such
+   * a recording goes by when it has no label of its own, and the picker's way
+   * past the song: one phrase, one key.
+   */
+  noSongYet: "No song yet",
   chipWaiting: "Waiting for signal",
   chipSyncing: "Uploading",
   chipFailed: "Couldn't upload",
@@ -31,6 +37,8 @@ export const stash = {
   noSongMatch: "No song matches that.",
   noSongs: "The library has no songs yet. Add one first.",
   recordFor: (title: string): string => `Record for ${title}`,
+  /** The CTA when nothing is selected: record now, choose the song later. */
+  recordWithoutSong: "Record without a song",
   recordingInto: "Recording into your stash",
   screenNote: "The screen may go dark; recording keeps going.",
   /** Under the level ring on the recording stage. */
@@ -69,6 +77,11 @@ export const stash = {
   publishNote:
     "The whole band will see it with the song. There's no vote on it and nobody gets notified.",
   publish: "Add to song",
+  /** The picker on a recording that has no song, above "Add to song". */
+  chooseSong: "Which song is this?",
+  chooseSongPlaceholder: "Pick a song",
+  noSongChosen: "Pick a song first, then add it.",
+  songGone: "That song is not in the library any more.",
   stillUploading: "This recording is still on its way from the phone that made it.",
   rename: "Rename",
   renameSave: "Save",

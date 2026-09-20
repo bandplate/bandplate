@@ -148,7 +148,7 @@ export async function getEventDetail(
   const [owner] = event.ownerMemberId ? await membersRepo.getByIds(db, [event.ownerMemberId]) : [];
   const takes = pagedTakes.rows;
   const takeIds = takes.map((t) => t.id);
-  const songIds = [...new Set(takes.map((t) => t.songId))];
+  const songIds = takesRepo.songIdsOf(takes);
   const [instrumentsByTake, songs, playableByTakeId, myVoteByTakeId, favoriteTakeIds] =
     await Promise.all([
       takesRepo.listInstrumentsForTakes(db, takeIds),
@@ -167,7 +167,7 @@ export async function getEventDetail(
     takes: takes.map((take) => ({
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],
-      song: songById.get(take.songId),
+      song: take.songId ? songById.get(take.songId) : undefined,
       playableAssetId: playableByTakeId.get(take.id)?.id,
       myVote: myVoteByTakeId.get(take.id),
       favorited: favoriteTakeIds.has(take.id),

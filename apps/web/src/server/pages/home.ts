@@ -176,7 +176,7 @@ async function getPinned(
   // A pinned take names its own song and event; both may be missing if the
   // row was pinned and the target later archived, which is why every lookup
   // below is allowed to come back undefined rather than asserted.
-  const takeSongIds = [...new Set(takes.map((t) => t.songId))];
+  const takeSongIds = takesRepo.songIdsOf(takes);
   const takeEventIds = [...new Set(takes.map((t) => t.eventId).filter((id) => id !== null))];
   const [takeSongs, takeEvents, songTakeCount] = await Promise.all([
     songsRepo.getByIds(db, takeSongIds),
@@ -212,7 +212,7 @@ async function getPinned(
         kind: "take",
         id: take.id,
         take,
-        song: songById.get(take.songId),
+        song: take.songId ? songById.get(take.songId) : undefined,
         event: take.eventId ? eventById.get(take.eventId) : undefined,
         playableAssetId: playableByTakeId.get(take.id)?.id,
         ownerName: ownerName(take.ownerMemberId),

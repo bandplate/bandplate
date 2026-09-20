@@ -68,7 +68,7 @@ export async function getStashRows(db: Db, memberId: string): Promise<StashRowDa
     return [];
   }
   const [songs, playable] = await Promise.all([
-    songsRepo.getByIds(db, [...new Set(rows.map((t) => t.songId))]),
+    songsRepo.getByIds(db, takesRepo.songIdsOf(rows)),
     assetsRepo.listPlayableMastersByTakeIds(
       db,
       rows.map((t) => t.id),
@@ -77,7 +77,7 @@ export async function getStashRows(db: Db, memberId: string): Promise<StashRowDa
   const songById = new Map(songs.map((s) => [s.id, s]));
   return rows.map((take) => ({
     ...take,
-    song: songById.get(take.songId),
+    song: take.songId ? songById.get(take.songId) : undefined,
     playableAssetId: playable.get(take.id)?.id,
   }));
 }
@@ -112,7 +112,7 @@ export async function getStashItem(
     return undefined;
   }
   const [song, event, owners, playable] = await Promise.all([
-    songsRepo.getById(db, take.songId),
+    take.songId ? songsRepo.getById(db, take.songId) : undefined,
     eventsRepo.getById(db, take.eventId),
     membersRepo.getByIds(db, [memberId]),
     assetsRepo.listPlayableMastersByTakeIds(db, [take.id]),
@@ -124,13 +124,23 @@ export type PublishStashResult =
   | { kind: "ok"; take: takesRepo.Take }
   | { kind: "not_found" }
   /** The file has not landed yet — the page shows no button then, so this is a stale page. */
-  | { kind: "nothing_to_play" };
+  | { kind: "nothing_to_play" }
+  /** No song on the take and none chosen in the form. The picker says so. */
+  | { kind: "no_song" }
+  /** A song was chosen that is not in the library — a stale page, or a hand-made POST. */
+  | { kind: "song_not_found" };
 
+/**
+ * "Přidat k písni". `songId` is the song chosen on the way out, for a
+ * recording that was made before its member decided what song it was; a
+ * recording that already has one needs none and ignores it.
+ */
 export async function publishStashTake(
   db: Db,
   now: number,
   id: string,
   memberId: string,
+  songId?: string | null,
 ): Promise<PublishStashResult> {
   const take = await ownStashTake(db, id, memberId);
   if (!take) {
@@ -139,10 +149,24 @@ export async function publishStashTake(
   if (!canPublish(await assetsRepo.listByTake(db, id))) {
     return { kind: "nothing_to_play" };
   }
-  // Conditional on owner + private in SQL too; a double press loses here.
-  return (await takesRepo.publishFromStash(db, id, memberId, now))
-    ? { kind: "ok", take }
-    : { kind: "not_found" };
+  // Only when the take needs one: a chosen song never overrides a filed one,
+  // so a stale hidden field cannot refile somebody's recording.
+  // Trimmed here rather than only at the form: an empty select and a select
+  // full of spaces both mean "nothing chosen", and only one of them looks it.
+  const chosen = take.songId ? null : songId?.trim() || null;
+  if (!take.songId && !chosen) {
+    return { kind: "no_song" };
+  }
+  if (chosen && !(await songsRepo.getById(db, chosen))) {
+    return { kind: "song_not_found" };
+  }
+  // Conditional on owner + private + a song in SQL too; a double press loses
+  // here, and so does a songless take that slipped past the check above.
+  const result = await takesRepo.publishFromStash(db, id, memberId, now, chosen);
+  if (result === "ok") {
+    return { kind: "ok", take };
+  }
+  return result === "no_song" ? { kind: "no_song" } : { kind: "not_found" };
 }
 
 const labelSchema = z.string().trim().max(200);

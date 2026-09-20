@@ -61,6 +61,28 @@ describe("a new pending recording", () => {
     });
     expect("blob" in summarize(fresh)).toBe(false);
   });
+
+  it("keeps a recording that has no song yet", () => {
+    // "Zatím bez písně": the queue carries it exactly as it is, and the song
+    // is chosen when the recording is added to the band.
+    const fresh = newPendingItem({
+      localId: "l-2",
+      memberId: "m-a",
+      songId: null,
+      songTitle: null,
+      label: "nápad na mezihru",
+      recordedAt: 2_000,
+      durationMs: 9_000,
+      mime: "audio/mp4",
+      format: "m4a",
+      blob,
+    });
+    expect(fresh).toMatchObject({ songId: null, songTitle: null, status: "waiting" });
+    // Nothing about syncing it is different: it is still a create, then a put.
+    expect(nextSyncStep(fresh)).toBe("create");
+    expect(shouldSync(fresh)).toBe(true);
+    expect(ownedBy(fresh, "m-a")).toBe(true);
+  });
 });
 
 describe("nextSyncStep", () => {

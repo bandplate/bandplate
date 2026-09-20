@@ -7,6 +7,7 @@ import {
   eq,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lte,
   notInArray,
@@ -70,6 +71,18 @@ export function bandVisibleCondition(): SQL {
 }
 
 /**
+ * The distinct song ids of these takes, songless ones dropped.
+ *
+ * Every loader that renders a list of takes needs this to hydrate the titles,
+ * and since 0011 a stash take may have no song. Written once here rather than
+ * as a `.filter(...)` repeated in six loaders, so "why can this be null" has
+ * one place to be answered.
+ */
+export function songIdsOf(rows: Pick<Take, "songId">[]): string[] {
+  return [...new Set(rows.flatMap((row) => (row.songId === null ? [] : [row.songId])))];
+}
+
+/**
  * What the band votes on: no owner. `owner_member_id IS NULL` already implies
  * `band` (a private take always has an owner), and — unlike `eq` — it binds no
  * parameter, which matters inside `buildCountUnvotedByMembersChunkQuery`'s
@@ -79,8 +92,7 @@ function votableCondition(): SQL {
   return isNull(takes.ownerMemberId);
 }
 
-export interface CreateTakeInput {
-  songId: string;
+interface CreateTakeCommon {
   eventId: string;
   label?: string | null;
   recordedAt: number;
@@ -92,11 +104,32 @@ export interface CreateTakeInput {
   updatedAt: number;
   /** Instruments present on this take (populates take_instruments). */
   instrumentIds?: string[];
-  /** Defaults to `band`. Only the stash passes `private`. */
-  visibility?: TakeVisibility;
   /** Only the stash sets this; NULL is a band take. */
   ownerMemberId?: string | null;
 }
+
+/**
+ * A take to insert, in the two shapes the invariant allows.
+ *
+ * THE INVARIANT: a band-visible take always has a song. A recording may reach
+ * the stash before its member has decided what song it is, and the song is
+ * chosen when it is added to the band — so `songId` is optional exactly when
+ * `visibility` is `private`, and required otherwise. Split into a union rather
+ * than left loose with a runtime check, because the compiler can say this at
+ * the call site of every one of the band-side writers (ingest, the upload
+ * panel, the seed) for free.
+ */
+export type CreateTakeInput =
+  | (CreateTakeCommon & {
+      /** Defaults to `band`. */
+      visibility?: "band";
+      songId: string;
+    })
+  | (CreateTakeCommon & {
+      visibility: "private";
+      /** NULL is a recording whose song is not decided yet. */
+      songId?: string | null;
+    });
 
 /**
  * Inserts a take and its take_instruments rows atomically. The id is
@@ -110,10 +143,17 @@ export interface CreateTakeInput {
  * constructed locally, matching the column defaults declared in the schema.
  */
 export async function create(db: Db, input: CreateTakeInput): Promise<Take> {
+  const visibility = input.visibility ?? "band";
+  // The union above says this at compile time; this says it to a caller that
+  // built the object dynamically, or cast. A band take with no song would be
+  // invisible to nothing — it would sit in every listing with a blank title.
+  if (input.songId == null && visibility !== "private") {
+    throw new Error("a band-visible take needs a song");
+  }
   const id = uuidv7();
   const row: Take = {
     id,
-    songId: input.songId,
+    songId: input.songId ?? null,
     eventId: input.eventId,
     label: input.label ?? null,
     recordedAt: input.recordedAt,
@@ -130,7 +170,7 @@ export async function create(db: Db, input: CreateTakeInput): Promise<Take> {
     purgedAt: null,
     pushBatchedAt: null,
     ownerMemberId: input.ownerMemberId ?? null,
-    visibility: input.visibility ?? "band",
+    visibility,
   };
 
   const insertTake = db.insert(takes).values(row);
@@ -791,7 +831,11 @@ export async function countBySongs(db: Db, songIds: string[]): Promise<Map<strin
     .where(and(inArray(takes.songId, songIds), bandVisibleCondition()))
     .groupBy(takes.songId);
   for (const row of rows) {
-    result.set(row.songId, row.value);
+    // `songId` is nullable since 0011, but `inArray` already excluded NULL —
+    // this is the typechecker asking, not a case that happens.
+    if (row.songId !== null) {
+      result.set(row.songId, row.value);
+    }
   }
   return result;
 }
@@ -918,34 +962,76 @@ export async function countStash(
   return rows[0]?.value ?? 0;
 }
 
+export type PublishFromStashResult =
+  | "ok"
+  /** Not this member's, not private any more, or gone. A second press lands here. */
+  | "not_found"
+  /**
+   * The take has no song and the caller named none. The floor under the
+   * invariant: this is the one write that turns a private take band-visible,
+   * so it is the one place a songless take could cross into the band's view.
+   */
+  | "no_song";
+
 /**
- * "Přidat k písni": one statement that moves a stash take into the band's view.
+ * "Přidat k písni": one statement that moves a stash take into the band's view,
+ * optionally filing it under the song chosen on the way out.
  *
  * `push_batched_at` is stamped with `published_at` in the same write, so the
  * new-takes tick has nothing to announce — a personal recording never pushes.
  * (`notificationsRepo` also filters owned takes out, so this holds even if an
  * admin later unpublishes and republishes it.) Conditional on owner AND
- * `private`, so a second press, or anyone else's press, changes nothing and
- * returns false.
+ * `private`, so a second press, or anyone else's press, changes nothing.
+ *
+ * `songId` is set in the SAME statement rather than in an update before it: a
+ * recording that got its song and then failed to publish would be a private
+ * take silently refiled under a song its owner only offered conditionally. It
+ * goes in through `coalesce`, so it FILLS a missing song and never overwrites
+ * one that is already there — a stale form cannot refile somebody's recording.
+ * When no `songId` is given, the WHERE clause insists the take already has
+ * one, so nothing songless can become band-visible even under a race.
+ *
+ * The follow-up read only happens when the write moved nothing, to tell the
+ * two refusals apart — there is no partial write to be atomic about by then.
  */
 export async function publishFromStash(
   db: Db,
   id: string,
   memberId: string,
   now: number,
-): Promise<boolean> {
+  songId?: string | null,
+): Promise<PublishFromStashResult> {
+  const conditions = [
+    eq(takes.id, id),
+    eq(takes.ownerMemberId, memberId),
+    eq(takes.visibility, "private"),
+  ];
+  if (!songId) {
+    conditions.push(isNotNull(takes.songId));
+  }
   const rows = await db
     .update(takes)
     .set({
+      ...(songId ? { songId: sql`coalesce(${takes.songId}, ${songId})` } : {}),
       visibility: "band",
       state: "published",
       publishedAt: now,
       pushBatchedAt: now,
       updatedAt: now,
     })
-    .where(
-      and(eq(takes.id, id), eq(takes.ownerMemberId, memberId), eq(takes.visibility, "private")),
-    )
+    .where(and(...conditions))
     .returning({ id: takes.id });
-  return rows.length === 1;
+  if (rows.length === 1) {
+    return "ok";
+  }
+  const take = await getById(db, id);
+  if (
+    take &&
+    take.ownerMemberId === memberId &&
+    take.visibility === "private" &&
+    take.songId === null
+  ) {
+    return "no_song";
+  }
+  return "not_found";
 }

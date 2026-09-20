@@ -291,7 +291,9 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
     if (!take || !takesRepo.isVisibleTo(take, viewerMemberId(c))) {
       return errorResponse(c, 404, "not_found", "Asset not found.");
     }
-    const song = await songsRepo.getById(deps.db, take.songId);
+    // A stash recording may not have a song yet; `downloadFilename` already
+    // falls back to "Take" for the name, so there is nothing to refuse here.
+    const song = take.songId ? await songsRepo.getById(deps.db, take.songId) : undefined;
     const instrument = asset.instrumentId
       ? await instrumentsRepo.getById(deps.db, asset.instrumentId)
       : undefined;

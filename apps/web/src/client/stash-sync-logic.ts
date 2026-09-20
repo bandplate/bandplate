@@ -35,9 +35,14 @@ export interface PendingStashItem {
    * `ownedBy` treats those as nobody's.
    */
   memberId?: string | null;
-  songId: string;
+  /**
+   * The song this is for, or NULL for a recording whose member has not decided
+   * yet. Optional: records saved before the song could be skipped always have
+   * one, and a missing field reads the same as NULL.
+   */
+  songId?: string | null;
   /** Kept locally so the stash can name a recording with no signal at all. */
-  songTitle: string;
+  songTitle?: string | null;
   label: string | null;
   /** Wall clock at the start of the recording. */
   recordedAt: number;
@@ -65,8 +70,8 @@ export type PendingSummary = Omit<PendingStashItem, "blob">;
 export interface NewPendingInput {
   localId: string;
   memberId: string;
-  songId: string;
-  songTitle: string;
+  songId: string | null;
+  songTitle: string | null;
   label: string | null;
   recordedAt: number;
   durationMs: number;

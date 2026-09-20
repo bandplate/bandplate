@@ -15,7 +15,13 @@ export const STASH_CLIENT_REF_PREFIX = "stash:";
 export interface CreateStashTakeInput {
   /** The recording's local id (IndexedDB key). */
   clientRef: string;
-  songId: string;
+  /**
+   * The song this is for, or NULL for a recording whose member has not decided
+   * yet. A stash take may have no song; it gets one when it is added to the
+   * band (`publishStashTake`), which is the only place the invariant "a
+   * band-visible take always has a song" can be broken.
+   */
+  songId: string | null;
   label: string | null;
   /** Wall-clock start of the recording, epoch ms. */
   recordedAt: number;
@@ -53,8 +59,9 @@ export async function createStashTake(
     };
   }
 
-  const song = await songsRepo.getById(db, input.songId);
-  if (!song) {
+  // A named song must exist; no song named is its own, allowed answer.
+  const song = input.songId ? await songsRepo.getById(db, input.songId) : null;
+  if (input.songId && !song) {
     return { kind: "song_not_found" };
   }
 
@@ -67,7 +74,7 @@ export async function createStashTake(
 
   try {
     const take = await takesRepo.create(db, {
-      songId: song.id,
+      songId: song?.id ?? null,
       eventId: event.id,
       label: input.label,
       recordedAt: input.recordedAt,

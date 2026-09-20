@@ -74,7 +74,7 @@ export async function getTakeDetail(
     myVoteByTakeId,
     owners,
   ] = await Promise.all([
-    songsRepo.getById(db, take.songId),
+    take.songId ? songsRepo.getById(db, take.songId) : undefined,
     eventsRepo.getById(db, take.eventId),
     takesRepo.listInstrumentsForTakes(db, [take.id]),
     // Archived included: a stem recorded on an instrument the band has since

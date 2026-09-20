@@ -29,7 +29,7 @@ export async function getTakeForAdminAction(
   if (!take || isPersonal(take)) {
     return undefined;
   }
-  const song = await songsRepo.getById(db, take.songId);
+  const song = take.songId ? await songsRepo.getById(db, take.songId) : undefined;
   return { take, song };
 }
 

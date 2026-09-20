@@ -76,7 +76,7 @@ async function seedSong(testApp: TestApp) {
   });
 }
 
-function stashBody(songId: string, over: Record<string, unknown> = {}) {
+function stashBody(songId: string | null, over: Record<string, unknown> = {}) {
   return {
     clientRef: "0192f5b8-local-recording",
     songId,
@@ -154,6 +154,35 @@ describe("POST /stash/takes", () => {
     expect(retry.masterReady).toBe(true);
   });
 
+  it("files a recording that has no song yet", async () => {
+    // "Zatím bez písně": the song is chosen when the recording is added to
+    // the band, so the create must take `songId` absent, not just null.
+    const testApp = await build();
+    const { cookie, memberId } = await signIn(testApp, "robin");
+
+    const body = stashBody(null);
+    body.songId = undefined as unknown as string;
+    const res = await post(testApp, "/stash/takes", cookie, body);
+    expect(res.status).toBe(201);
+
+    const take = await takesRepo.getById(testApp.db, (await res.json()).takeId);
+    expect(take?.songId).toBeNull();
+    expect(take?.visibility).toBe("private");
+    expect(take?.ownerMemberId).toBe(memberId);
+    // It still gets its personal event, same as any other stash recording.
+    const event = take ? await eventsRepo.getById(testApp.db, take.eventId) : undefined;
+    expect(event?.kind).toBe("personal");
+  });
+
+  it("takes an explicit null song the same way", async () => {
+    const testApp = await build();
+    const { cookie } = await signIn(testApp, "robin");
+    const res = await post(testApp, "/stash/takes", cookie, stashBody(null));
+    expect(res.status).toBe(201);
+    const take = await takesRepo.getById(testApp.db, (await res.json()).takeId);
+    expect(take?.songId).toBeNull();
+  });
+
   it("404s a song that does not exist", async () => {
     const testApp = await build();
     const { cookie } = await signIn(testApp, "robin");
@@ -173,14 +202,15 @@ describe("POST /stash/takes", () => {
     expect((await res.json()).error.code).toBe("client_ref_taken");
   });
 
-  it("422s a body with no song", async () => {
+  it("422s a body missing what it still needs", async () => {
+    // No song is fine since 0011; no clientRef and no recordedAt never are —
+    // one is the idempotency key, the other is when it happened.
     const testApp = await build();
     const { cookie } = await signIn(testApp, "robin");
-    const res = await post(testApp, "/stash/takes", cookie, {
-      clientRef: "0192f5b8-local",
-      recordedAt: 1,
-    });
-    expect(res.status).toBe(422);
+    expect((await post(testApp, "/stash/takes", cookie, { recordedAt: 1 })).status).toBe(422);
+    expect(
+      (await post(testApp, "/stash/takes", cookie, { clientRef: "0192f5b8-local" })).status,
+    ).toBe(422);
   });
 
   it("403s a service token, even one holding takes:write — only a member has a stash", async () => {

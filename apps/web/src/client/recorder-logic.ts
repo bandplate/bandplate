@@ -85,6 +85,11 @@ export type RecorderError = "denied" | "no-mic" | "unsupported" | "save-failed";
 
 export interface RecorderState {
   phase: RecorderPhase;
+  /**
+   * The song this recording is for, or NULL for "Zatím bez písně" — a
+   * recording whose song is chosen later, when it is added to the band. NULL
+   * is a legal state to record in, so nothing here gates on it.
+   */
   songId: string | null;
   /** A monotonic clock reading (`performance.now()`), not a wall-clock time. */
   startedAt: number | null;
@@ -93,7 +98,8 @@ export interface RecorderState {
 }
 
 export type RecorderEvent =
-  | { type: "select"; songId: string }
+  /** `songId: null` is "Zatím bez písně" — record now, file it later. */
+  | { type: "select"; songId: string | null }
   | { type: "change-song" }
   | { type: "start" }
   | { type: "started"; at: number }
@@ -132,7 +138,10 @@ export function reduceRecorder(state: RecorderState, event: RecorderEvent): Reco
         ? { ...state, phase: "pick", error: null }
         : state;
     case "start":
-      if (!state.songId || !CAN_START.includes(state.phase)) {
+      // No song required: a recording can reach the stash before its member
+      // has decided what it is, and the song is picked when it is added to
+      // the band. See `takesRepo.CreateTakeInput`.
+      if (!CAN_START.includes(state.phase)) {
         return state;
       }
       return { ...state, phase: "starting", startedAt: null, elapsedMs: 0, error: null };
@@ -272,6 +281,18 @@ export function filterSongs(songs: SongOption[], query: string): SongOption[] {
     return songs;
   }
   return songs.filter((song) => foldForSearch(song.title).includes(needle));
+}
+
+/**
+ * What the picker's CTA says. A selected song by name, and otherwise the
+ * honest alternative — the button is there either way, because recording
+ * without a song is a thing the member is allowed to do, not a fallback.
+ */
+export function recordCtaLabel(
+  song: SongOption | undefined,
+  words: { recordFor: (title: string) => string; withoutSong: string },
+): string {
+  return song ? words.recordFor(song.title) : words.withoutSong;
 }
 
 export interface PickerGroup {

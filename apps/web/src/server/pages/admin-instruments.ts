@@ -301,7 +301,7 @@ export async function previewInstrumentMerge(
       continue;
     }
     const take = await takesRepo.getById(db, asset.takeId);
-    const song = take ? await songsRepo.getById(db, take.songId) : undefined;
+    const song = take?.songId ? await songsRepo.getById(db, take.songId) : undefined;
     losingTakes.push({
       assetId,
       takeId: asset.takeId,

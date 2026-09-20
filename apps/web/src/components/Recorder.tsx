@@ -20,6 +20,7 @@ import {
   needsDurationFix,
   pickRecorderMime,
   pickerGroups,
+  recordCtaLabel,
   reduceRecorder,
   shapeForMime,
   shouldDrawWaveform,
@@ -331,7 +332,9 @@ export default function Recorder({
   const save = useCallback(async () => {
     const blob = blobRef.current;
     const shape = shapeForMime(mimeRef.current);
-    if (!blob || !shape || !song) {
+    // No `song` check: a recording with no song yet is the point of
+    // "Zatím bez písně", and the stash takes it as it is.
+    if (!blob || !shape) {
       return;
     }
     dispatch({ type: "save" });
@@ -340,8 +343,8 @@ export default function Recorder({
         newPendingItem({
           localId: crypto.randomUUID(),
           memberId,
-          songId: song.id,
-          songTitle: song.title,
+          songId: song?.id ?? null,
+          songTitle: song?.title ?? null,
           label: label.trim() || null,
           recordedAt: recordedAtRef.current,
           durationMs: Math.round(state.elapsedMs),
@@ -458,15 +461,27 @@ export default function Recorder({
             <label class="bp-visually-hidden" for="rec-song-search">
               {t.searchLabel}
             </label>
-            <input
-              id="rec-song-search"
-              class="bp-input bp-rec-search"
-              type="search"
-              placeholder={t.searchLabel}
-              autocomplete="off"
-              value={query}
-              onInput={(event) => setQuery((event.currentTarget as HTMLInputElement).value)}
-            />
+            <div class="bp-rec-search-row">
+              <input
+                id="rec-song-search"
+                class="bp-input bp-rec-search"
+                type="search"
+                placeholder={t.searchLabel}
+                autocomplete="off"
+                value={query}
+                onInput={(event) => setQuery((event.currentTarget as HTMLInputElement).value)}
+              />
+              {/* The way past the picker. Pressed, it clears any selection, so
+                  the CTA below it reads "Nahrávat bez písně" and means it. */}
+              <button
+                type="button"
+                class="bp-btn bp-btn-secondary bp-btn-sm bp-rec-skip-song"
+                aria-pressed={state.songId === null ? "true" : "false"}
+                onClick={() => dispatch({ type: "select", songId: null })}
+              >
+                {t.noSongYet}
+              </button>
+            </div>
             {groups.map((group) => {
               const heading = groupHeading[group.kind];
               return (
@@ -499,18 +514,18 @@ export default function Recorder({
             })}
           </>
         )}
-        {song && (
-          <div class="bp-rec-foot">
-            <button
-              type="button"
-              class="bp-btn bp-btn-primary bp-rec-cta"
-              onClick={() => void startRecording()}
-            >
-              <MicIcon />
-              {t.recordFor(song.title)}
-            </button>
-          </div>
-        )}
+        {/* Always there: with nothing selected it records without a song,
+            which is a choice the member is allowed to make, not a dead end. */}
+        <div class="bp-rec-foot">
+          <button
+            type="button"
+            class="bp-btn bp-btn-primary bp-rec-cta"
+            onClick={() => void startRecording()}
+          >
+            <MicIcon />
+            {recordCtaLabel(song, { recordFor: t.recordFor, withoutSong: t.recordWithoutSong })}
+          </button>
+        </div>
       </div>
     );
   }
@@ -521,7 +536,7 @@ export default function Recorder({
       <div class="bp-rec bp-rec--review">
         <div class="bp-rec-intro">
           <p class="bp-eyebrow bp-m0">{t.stepTwo}</p>
-          <h1 class="bp-rec-heading">{song?.title}</h1>
+          <h1 class="bp-rec-heading">{song?.title ?? t.noSongYet}</h1>
           <p class="bp-rec-length bp-m0">{formatElapsed(state.elapsedMs)}</p>
         </div>
         <div class="bp-rec-player">
@@ -668,7 +683,7 @@ export default function Recorder({
         ) : (
           <span class="bp-rec-close-slot" />
         )}
-        <p class="bp-rec-song-title bp-m0">{song?.title}</p>
+        <p class="bp-rec-song-title bp-m0">{song?.title ?? t.noSongYet}</p>
         <span class="bp-rec-close-slot" />
       </div>
       <div class="bp-rec-center">

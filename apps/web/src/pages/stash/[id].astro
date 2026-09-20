@@ -10,13 +10,19 @@
 import { formatShortDate, messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import { stashName, stashSongField } from "../../client/stash-display.js";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { formatDuration } from "../../server/format.js";
-import { getStashItem, publishStashTake, renameStashTake } from "../../server/pages/stash.js";
+import {
+  getStashItem,
+  listRecordableSongs,
+  publishStashTake,
+  renameStashTake,
+} from "../../server/pages/stash.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -42,11 +48,13 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const intent = formData.get("intent");
     if (intent === "publish") {
+      const chosenSong = String(formData.get("songId") ?? "").trim();
       const result = await publishStashTake(
         appDeps.db,
         appDeps.clock.now(),
         id,
         principal.memberId,
+        chosenSong === "" ? null : chosenSong,
       );
       if (result.kind === "ok") {
         return Astro.redirect(`/takes/${id}?published=1`);
@@ -54,7 +62,12 @@ if (Astro.request.method === "POST") {
       if (result.kind === "not_found") {
         return new Response("Not found.", { status: 404 });
       }
-      formError = t.stash.stillUploading;
+      formError =
+        result.kind === "no_song"
+          ? t.stash.noSongChosen
+          : result.kind === "song_not_found"
+            ? t.stash.songGone
+            : t.stash.stillUploading;
     } else if (intent === "rename") {
       const result = await renameStashTake(
         appDeps.db,
@@ -83,7 +96,16 @@ if (!item) {
   return new Response("Not found.", { status: 404 });
 }
 const { take, song, event, owner, playableAsset } = item;
-const title = song?.title ?? t.stash.unknownSong;
+const nameParts = { songId: take.songId, songTitle: song?.title, label: take.label };
+const nameWords = { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong };
+// What this recording is called, and what its "Píseň" field says — two
+// different questions once a recording can have no song. See `stash-display`.
+const title = stashName(nameParts, nameWords);
+const songField = stashSongField(nameParts, nameWords);
+// The song has to be chosen before it can be added to the band, so the picker
+// is part of the publish form rather than a step before it. Same list the
+// recorder uses; loaded only when there is a choice to make.
+const songChoices = take.songId ? [] : (await listRecordableSongs(appDeps.db)).songs;
 const justRenamed = Astro.url.searchParams.get("renamed") === "1";
 const length = formatDuration(take.durationMs);
 ---
@@ -100,9 +122,9 @@ const length = formatDuration(take.durationMs);
         so the line under it is only the length rather than the title twice. */}
     <div class="bp-title-row">
       <div>
-        <h1 class="bp-hero-title bp-m0">{take.label ?? title}</h1>
+        <h1 class="bp-hero-title bp-m0">{title}</h1>
         <p class="bp-stash-sub bp-m0">
-          {take.label ? t.stash.songAndLength(title, length) : length}
+          {take.label && song ? t.stash.songAndLength(song.title, length) : length}
         </p>
       </div>
       {playableAsset && (
@@ -114,7 +136,7 @@ const length = formatDuration(take.durationMs);
     <dl class="bp-stash-facts">
       <div>
         <dt>{t.stash.fieldSong}</dt>
-        <dd>{title}</dd>
+        <dd>{songField}</dd>
       </div>
       <div>
         <dt>{t.stash.fieldEvent}</dt>
@@ -126,11 +148,27 @@ const length = formatDuration(take.durationMs);
       </div>
     </dl>
 
-    {playableAsset ? (
+    {/* No fake affordances: with no song on the take and no song in the
+        library, "Přidat k písni" cannot work, so the page says what is in
+        the way instead of drawing a button that would refuse. */}
+    {!take.songId && songChoices.length === 0 ? (
+      <p class="bp-field-hint bp-m0">{t.stash.noSongs}</p>
+    ) : playableAsset ? (
       <div class="bp-stash-publish">
         <p class="bp-m0">{t.stash.publishNote}</p>
         <form method="post">
           <input type="hidden" name="intent" value="publish" />
+          {!take.songId && (
+            <div class="bp-stash-song-pick">
+              <label class="bp-field-label" for="publish-song">{t.stash.chooseSong}</label>
+              <select id="publish-song" name="songId" class="bp-input" required>
+                <option value="">{t.stash.chooseSongPlaceholder}</option>
+                {songChoices.map((choice) => (
+                  <option value={choice.id}>{choice.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button type="submit" class="bp-btn bp-btn-primary">{t.stash.publish}</button>
         </form>
       </div>

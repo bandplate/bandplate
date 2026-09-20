@@ -8599,8 +8599,33 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-muted);
 }
 
+/* The search and the way past it, on one line. The skip states its own floor
+   (`flex-basis: max-content`) so the row wraps at a narrow width rather than
+   squeezing the label — see docs/frontend-traps.md on flex-wrap. */
+.bp-rec-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .bp-rec-search {
+  flex: 1 1 12rem;
+  min-width: 0;
   width: 100%;
+}
+
+.bp-rec-skip-song {
+  flex: 0 0 max-content;
+}
+
+/* Pressed reads exactly the way a chosen song row does (`.bp-rec-song`): a
+   gold wash and the accent on the label. One selection language for the two
+   halves of the same choice — a song, or no song. */
+.bp-rec-skip-song[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 18%, transparent);
+  border-color: var(--bp-color-accent);
+  color: var(--bp-color-accent);
 }
 
 .bp-rec-group {
@@ -9035,6 +9060,25 @@ html:has(dialog.bp-filter-sheet[open]) body {
   flex-direction: column;
   gap: 0.75rem;
   align-items: flex-start;
+}
+
+/* The publish form's own stack: the song picker (only on a recording that has
+   no song yet) sits above the button, not beside it — on a phone the two do
+   not share a line. */
+.bp-stash-publish form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.bp-stash-song-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 22rem;
 }
 
 .bp-stash-secondary {

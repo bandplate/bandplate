@@ -21,7 +21,9 @@ export interface StashRouteDeps {
 
 const createStashTakeSchema = z.object({
   clientRef: z.string().trim().min(8).max(100),
-  songId: z.string().trim().min(1, "A recording belongs to a song."),
+  // Optional: a recording can reach the stash before its member has decided
+  // what song it is. A song NAMED still has to exist (404 below).
+  songId: z.string().trim().min(1).nullish(),
   label: z.string().trim().max(200).nullish(),
   recordedAt: z.number().int().positive(),
   durationMs: z.number().int().nonnegative().nullish(),
@@ -48,7 +50,7 @@ export function registerStashRoutes(router: GuardedRouter, deps: StashRouteDeps)
 
     const result = await createStashTake(deps.db, deps.clock.now(), memberId, {
       clientRef: input.clientRef,
-      songId: input.songId,
+      songId: input.songId ? input.songId : null,
       label: input.label ? input.label : null,
       recordedAt: input.recordedAt,
       durationMs: input.durationMs ?? null,

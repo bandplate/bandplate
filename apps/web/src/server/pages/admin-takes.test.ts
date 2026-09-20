@@ -24,15 +24,23 @@ describe("admin keeper / reject", () => {
     ).id;
   });
 
-  async function take(over: Partial<takesRepo.CreateTakeInput> = {}) {
-    return takesRepo.create(db, {
+  async function take(
+    over: { ownerMemberId?: string | null; visibility?: takesRepo.TakeVisibility } = {},
+  ) {
+    // Branched rather than spread, because `CreateTakeInput` is a union
+    // discriminated on `visibility` (a band take must name a song) and a
+    // spread of a widened `visibility` narrows to neither arm.
+    const base = {
       songId,
       eventId,
       recordedAt: 1000,
       createdAt: 1000,
       updatedAt: 1000,
-      ...over,
-    });
+      ownerMemberId: over.ownerMemberId ?? null,
+    };
+    return over.visibility === "private"
+      ? takesRepo.create(db, { ...base, visibility: "private" })
+      : takesRepo.create(db, { ...base, visibility: "band" });
   }
 
   it("marks a band take keeper or rejected", async () => {

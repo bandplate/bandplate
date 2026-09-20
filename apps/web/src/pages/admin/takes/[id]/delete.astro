@@ -52,7 +52,7 @@ if (!take) {
   return new Response("Take not found.", { status: 404 });
 }
 const [song, assets] = await Promise.all([
-  songsRepo.getById(appDeps.db, take.songId),
+  take.songId ? songsRepo.getById(appDeps.db, take.songId) : undefined,
   assetsRepo.listByTake(appDeps.db, id),
 ]);
 const what = song ? song.title : `the take of ${formatLongDate(take.recordedAt)}`;

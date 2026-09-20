@@ -112,6 +112,18 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
       // treating the first successful declaration as authoritative is the
       // safer default over silently mutating a take's identity underneath
       // already-cast votes/favorites.
+      // A take with no song is a stash recording whose member has not chosen
+      // one yet. The bridge cannot reach one — stash client_refs live behind
+      // a `stash:` prefix — and `songId` in the answer has nothing truthful to
+      // say about it, so refuse rather than invent a song.
+      if (existingTake.songId === null) {
+        return errorResponse(
+          c,
+          409,
+          "client_ref_taken",
+          `The take clientRef ${input.clientRef} is not a bridge take.`,
+        );
+      }
       takeId = existingTake.id;
       songId = existingTake.songId;
       songCreated = false;

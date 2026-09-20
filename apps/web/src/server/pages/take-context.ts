@@ -46,7 +46,7 @@ export async function attachFullContext(
   }
 
   const takeIds = takes.map((t) => t.id);
-  const songIds = [...new Set(takes.map((t) => t.songId))];
+  const songIds = takesRepo.songIdsOf(takes);
   const eventIds = [...new Set(takes.map((t) => t.eventId))];
   const ownerIds = [
     ...new Set(takes.map((t) => t.ownerMemberId).filter((id): id is string => id !== null)),
@@ -68,7 +68,7 @@ export async function attachFullContext(
   return takes.map((take) => ({
     ...take,
     instruments: instrumentsByTake.get(take.id) ?? [],
-    song: songById.get(take.songId),
+    song: take.songId ? songById.get(take.songId) : undefined,
     event: eventById.get(take.eventId),
     playableAssetId: playableByTakeId.get(take.id)?.id,
     myVote: myVoteByTakeId.get(take.id),

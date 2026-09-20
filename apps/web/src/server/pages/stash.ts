@@ -264,7 +264,14 @@ export type StashWriteError =
   | "label_too_long";
 
 export type StashWriteResult =
-  | { kind: "published"; takeId: string }
+  /**
+   * `returnTo` is where the sheet's caller wants the member back — its own
+   * page, not necessarily the stash view. Always set: a hidden `returnTo`
+   * field on the form when the sheet's caller cares (the song page's own
+   * section does), and the take's own page (today's behaviour, unchanged)
+   * when it's absent — the stash view's sheet never sends one.
+   */
+  | { kind: "published"; takeId: string; returnTo: string }
   | { kind: "renamed"; takeId: string }
   /** No intent this page knows — a stale form, or a hand-made POST. */
   | { kind: "ignored" }
@@ -298,7 +305,8 @@ export async function applyStashWrite(
     const chosen = String(formData.get("songId") ?? "").trim();
     const result = await publishStashTake(db, now, takeId, memberId, chosen === "" ? null : chosen);
     if (result.kind === "ok") {
-      return { kind: "published", takeId };
+      const requestedReturnTo = String(formData.get("returnTo") ?? "").trim();
+      return { kind: "published", takeId, returnTo: requestedReturnTo || `/takes/${takeId}` };
     }
     if (result.kind === "not_found") {
       return { kind: "not_found" };

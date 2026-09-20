@@ -422,11 +422,26 @@ describe("a write from a recording's sheet", () => {
       takeId,
     });
     expect((await takesRepo.getById(db, takeId))?.label).toBe("sloka");
+    // No `returnTo` in the form, so the write defaults to the take's own
+    // page — see `applyStashWrite`'s own test below for a caller that sends
+    // one instead.
     expect(await applyStashWrite(db, 6, ownerId, form({ intent: "publish", takeId }))).toEqual({
       kind: "published",
       takeId,
+      returnTo: `/takes/${takeId}`,
     });
     expect((await takesRepo.getById(db, takeId))?.visibility).toBe("band");
+  });
+
+  it("sends the write's caller back where it asked, when it asks — the song page's own sheet, not the take's page", async () => {
+    expect(
+      await applyStashWrite(
+        db,
+        6,
+        ownerId,
+        form({ intent: "publish", takeId, returnTo: "/songs/coudy" }),
+      ),
+    ).toEqual({ kind: "published", takeId, returnTo: "/songs/coudy" });
   });
 
   it("answers a stranger's hand-built POST as if the recording did not exist, and changes nothing", async () => {

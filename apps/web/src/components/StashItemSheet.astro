@@ -37,9 +37,18 @@ export interface Props {
   songChoices: SongOption[];
   /** Set under the field when THIS recording's rename was refused. */
   renameError?: string | undefined;
+  /**
+   * Where this sheet's own caller wants the member back after a write —
+   * its own page, not necessarily the stash view. Undefined (the default)
+   * is the stash view's own behaviour: publish lands on the take's own
+   * page (`applyStashWrite`'s default) and delete's confirm goes back to
+   * `/takes?stash=1`. The song page's own stash section passes its own URL
+   * here so both writes return to it instead.
+   */
+  returnTo?: string;
 }
 
-const { row, ownerName, songChoices, renameError } = Astro.props;
+const { row, ownerName, songChoices, renameError, returnTo } = Astro.props;
 const locale = Astro.locals.locale;
 const t = messages(locale);
 const nameParts = { songId: row.songId, songTitle: row.song?.title, label: row.label };
@@ -61,6 +70,7 @@ const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoice
   <form method="post" class="bp-sheet-form">
     <input type="hidden" name="intent" value="publish" />
     <input type="hidden" name="takeId" value={row.id} />
+    {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
     <div class="bp-sheet-body">
       {/* Labelled fields, not a run joined by dots: three different facts. */}
       <dl class="bp-stash-facts">
@@ -120,7 +130,9 @@ const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoice
           data-confirm-body={t.stash.deleteBody}
           data-confirm-action={`/stash/${row.id}/delete`}
           data-confirm-cta={t.stash.deleteCta}
-          data-confirm-redirect={`/takes?stash=1&deleted=${row.id}`}
+          data-confirm-redirect={returnTo
+            ? `${returnTo}?stash_deleted=${row.id}`
+            : `/takes?stash=1&deleted=${row.id}`}
         >
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />

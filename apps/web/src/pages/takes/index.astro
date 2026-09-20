@@ -74,7 +74,10 @@ if (Astro.request.method === "POST") {
       await Astro.request.formData(),
     );
     if (result.kind === "published") {
-      return Astro.redirect(`/takes/${result.takeId}?published=1`);
+      // `returnTo` defaults to the take's own page — this list's sheet never
+      // sends one, so this is unchanged from before `returnTo` existed. See
+      // `applyStashWrite`.
+      return Astro.redirect(`${result.returnTo}?published=1`);
     }
     if (result.kind === "renamed") {
       return Astro.redirect(`/takes?stash=1&renamed=${result.takeId}`);

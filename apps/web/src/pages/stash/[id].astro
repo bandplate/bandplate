@@ -61,7 +61,10 @@ if (Astro.request.method === "POST") {
       formData,
     );
     if (result.kind === "published") {
-      return Astro.redirect(`/takes/${result.takeId}?published=1`);
+      // No `returnTo` field on this page's own inline form, so this is
+      // `applyStashWrite`'s default: the take's own page, unchanged from
+      // before `returnTo` existed.
+      return Astro.redirect(`${result.returnTo}?published=1`);
     }
     if (result.kind === "renamed") {
       return Astro.redirect(`/stash/${result.takeId}?renamed=1`);

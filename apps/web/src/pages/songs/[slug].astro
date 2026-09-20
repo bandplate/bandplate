@@ -117,7 +117,12 @@ if (Astro.request.method === "POST") {
         formData,
       );
       if (result.kind === "published") {
-        return Astro.redirect(`/takes/${result.takeId}?published=1`);
+        // The sheet's `returnTo` hidden field (set below, to this page's own
+        // URL) makes this land back on the song rather than the take's own
+        // page — the controller's ruling: publishing from HERE should come
+        // back HERE, with the same confirmation `/takes/[id]?published=1`
+        // shows (`t.takes.published`, rendered below as `justPublished`).
+        return Astro.redirect(`${result.returnTo}?published=1`);
       }
       if (result.kind === "renamed") {
         return Astro.redirect(`/songs/${slug}?stash_renamed=${result.takeId}`);
@@ -170,6 +175,10 @@ const stashJustRenamed = Astro.url.searchParams.get("stash_renamed");
 const stashRenamedRow = stashJustRenamed
   ? stashRows.find((row) => row.id === stashJustRenamed)
   : undefined;
+// The song page's own landing after `applyStashWrite`'s "published" result —
+// same confirmation `/takes/[id]?published=1` shows, said here instead
+// because `returnTo` sent the member back to the song rather than the take.
+const justPublished = Astro.url.searchParams.get("published") === "1";
 const pages = pageView({
   url: Astro.url,
   page,
@@ -285,6 +294,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
     )}
     {justCreated && <Banner kind="success">{t.songs.created}</Banner>}
     {justSaved && <Banner kind="success">{t.songs.saved}</Banner>}
+    {justPublished && <Banner kind="success">{t.takes.published}</Banner>}
     {stashRenamedRow && <Banner kind="success">{t.stash.renamed}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
@@ -323,24 +333,23 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           edit of it. `data-astro-reload` because `/record` runs with no
           router and no shell player — see that page.
 
-          Only up here when there is no stash section to carry it instead: a
-          member with recordings for this song already sees it as that
-          section's own action button (below, in the aside) — same control,
-          one legible place, not two competing "record" affordances on one
-          page. */}
-      {!hasStash && (
-        <div class="bp-pills bp-song-record">
-          <a href={`/record?song=${song.slug}`} class="bp-pill" data-astro-reload>
-            <span class="bp-pill-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="3" width="6" height="12" rx="3" />
-                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-              </svg>
-            </span>
-            {t.stash.recordIdea}
-          </a>
-        </div>
-      )}
+          Always here, whether or not the stash section below exists: a
+          member who only scans the hero (never reaches the aside, or the
+          aside is folded below the chart on a phone) still has to see how
+          to record. The stash section below carries no button of its own —
+          one control, always in the same place, rather than the same
+          "record" affordance risking two spellings of itself on one page. */}
+      <div class="bp-pills bp-song-record">
+        <a href={`/record?song=${song.slug}`} class="bp-pill" data-astro-reload>
+          <span class="bp-pill-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="3" width="6" height="12" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+            </svg>
+          </span>
+          {t.stash.recordIdea}
+        </a>
+      </div>
 
     </div>
 
@@ -643,19 +652,15 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             `visibility='private'` — see `takesRepo.listStash`), so this can
             never show anyone else's, and it renders nothing at all when
             there isn't one: no lock icon standing in for "nobody else can
-            see this", just an absent section. */}
+            see this", just an absent section.
+
+            No "Record an idea" button of its own — the hero above always
+            carries that control now (a member scanning only the hero still
+            has to see how to record), so a second one here would be the
+            same affordance twice on one page. */}
         {hasStash && (
           <section class="bp-song-aside-section">
-            <div class="bp-title-row">
-              <h2 class="bp-section-title bp-m0">{t.stash.inYourStash(stashRows.length)}</h2>
-              <a
-                href={`/record?song=${song.slug}`}
-                class="bp-btn bp-btn-secondary bp-btn-xs"
-                data-astro-reload
-              >
-                {t.stash.recordIdea}
-              </a>
-            </div>
+            <h2 class="bp-section-title bp-m0">{t.stash.inYourStash(stashRows.length)}</h2>
             <div class="bp-take-list" data-play-queue>
               {stashRows.map((row) => (
                 <StashRow row={row} />
@@ -672,6 +677,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                   ownerName={stashOwnerName}
                   songChoices={[]}
                   renameError={row.id === stashRenameTakeId ? stashRenameError : undefined}
+                  returnTo={`/songs/${slug}`}
                 />
               ))}
             </div>

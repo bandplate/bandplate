@@ -225,6 +225,28 @@ export function localPlayId(localId: string): string {
 export type SyncedSummary = PendingSummary & { takeId: string };
 
 /**
+ * Which handed-over rows belong to the render that is on screen.
+ *
+ * A row the sync runner hands over belongs to exactly ONE page render: the one
+ * that was up when the upload landed, which the server drew before the take
+ * existed. `pageSeq` is that render, counted up on every navigation.
+ *
+ * It has to go at the next render, and "is it still in the server's list?"
+ * cannot decide that: a take the new page does not list is either one the
+ * render predates (keep) or one that has LEFT the stash — added to a song, or
+ * deleted (drop). Those look identical from the ids alone, and guessing wrong
+ * is the bug this exists for: a published recording drawn as a stash row for
+ * the rest of the session, with a name that 404s through `/stash/<id>`. The
+ * render it belongs to is the fact that tells them apart.
+ *
+ * So nothing outlives its render. What the next one draws is the server's own
+ * row, which is the truth about where that recording now lives.
+ */
+export function syncedForRender<T extends { pageSeq: number }>(items: T[], pageSeq: number): T[] {
+  return items.filter((item) => item.pageSeq === pageSeq);
+}
+
+/**
  * One row the stash view's island draws: a recording still waiting to go up,
  * or one that went up while this view was open and has not been through a
  * server render yet. Both play from the bytes on this device.

@@ -8,8 +8,10 @@
 // phone — for a moment it is the only copy of it anywhere — so there is
 // nothing to wait for: the island makes an object URL per row and hands it to
 // the player as `data-audio-src` (see `PlayerTrack.src`). It owns those URLs
-// and revokes them, either when the row goes or, if the player is on one at
-// the time, when the player moves off it.
+// and revokes them: when the row goes, when the page is swapped out from
+// under the list (`astro:before-swap`, since the router never unmounts an
+// island and a Preact cleanup would never run), or — if the player is on one
+// at the time — when the player moves off it.
 //
 // When an upload finishes the row does NOT go away and the page is NOT
 // reloaded: `syncedStash` hands the row the take's real id and its bytes, so
@@ -39,7 +41,7 @@ import { queueHoldsSource } from "../client/player-queue.js";
 import { currentTrack, playQueue } from "../client/player-store.js";
 import { stashName, stashNote } from "../client/stash-display.js";
 import { stashSheetId } from "../client/stash-sheet-ids.js";
-import { dropStashSheets, ensureStashSheets } from "../client/stash-sheets.js";
+import { type StashSheets, createStashSheets } from "../client/stash-sheets.js";
 import { pendingStash, syncedStash } from "../client/stash-store.js";
 import {
   type LocalStashRow,
@@ -182,6 +184,23 @@ export default function StashPendingList({
   /** localId -> object URL. The ref is the truth; the state is what re-renders. */
   const urlsRef = useRef(new Map<string, string>());
   const [urls, setUrls] = useState<ReadonlyMap<string, string>>(new Map());
+  /**
+   * The sheets THIS island fetched. Per instance, never per module: the router
+   * leaves a retired island alive (see below), and a module-level set would let
+   * its cleanup remove a server-rendered sheet of the same id from the page
+   * that is actually up.
+   */
+  const sheetsRef = useRef<StashSheets | null>(null);
+  if (sheetsRef.current === null) {
+    sheetsRef.current = createStashSheets();
+  }
+  /**
+   * The page this island was drawn on has been swapped out. `<ClientRouter />`
+   * never unmounts an island, so nothing else would ever say so, and a retired
+   * island that kept making object URLs for a detached list would hold every
+   * recording's bytes for the rest of the session.
+   */
+  const retiredRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -238,6 +257,9 @@ export default function StashPendingList({
   const rowIds = rows.map((entry) => `${entry.kind}:${entry.row.localId}`).join(" ");
   // biome-ignore lint/correctness/useExhaustiveDependencies: the row ids are the trigger; the rows and the blobs are re-read inside
   useEffect(() => {
+    if (retiredRef.current) {
+      return;
+    }
     let cancelled = false;
     const live = new Set(rows.map((entry) => entry.row.localId));
     const held = urlsRef.current;
@@ -289,27 +311,36 @@ export default function StashPendingList({
   const syncedTakeIds = rows
     .flatMap((entry) => (entry.kind === "synced" ? [entry.row.takeId] : []))
     .join(" ");
+  // One fetch for all of them: the response is the whole stash view either way.
   useEffect(() => {
-    if (syncedTakeIds === "") {
+    if (syncedTakeIds === "" || retiredRef.current) {
       return;
     }
-    for (const takeId of syncedTakeIds.split(" ")) {
-      void ensureStashSheets(takeId);
-    }
+    void sheetsRef.current?.ensure(syncedTakeIds.split(" "));
   }, [syncedTakeIds]);
 
-  // The page is leaving. The sheets this island fetched go with it, and so do
-  // the URLs — except the one the player may still be on, which outlives this
-  // list by exactly as long as it is needed.
+  // The page is leaving. `astro:before-swap`, not a Preact cleanup: the router
+  // swaps the body without unmounting islands (see AppLayout), so the cleanup
+  // this used to be never ran — which made the ownership claim above false and
+  // left every object URL held for the life of the tab.
+  //
+  // The sheets this island fetched go with the page, and so do the URLs —
+  // except the one the player may still be on, which outlives this list by
+  // exactly as long as it is needed.
   useEffect(() => {
     const held = urlsRef.current;
-    return () => {
+    const sheets = sheetsRef.current;
+    function retire() {
+      retiredRef.current = true;
       for (const url of held.values()) {
         releaseObjectUrl(url);
       }
       held.clear();
-      dropStashSheets();
-    };
+      setUrls(new Map());
+      sheets?.drop();
+    }
+    document.addEventListener("astro:before-swap", retire);
+    return () => document.removeEventListener("astro:before-swap", retire);
   }, []);
 
   const chip = (row: PendingSummary): string =>

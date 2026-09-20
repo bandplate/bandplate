@@ -13,6 +13,7 @@ import {
   retryItem,
   shouldSync,
   summarize,
+  syncedForRender,
 } from "./stash-sync-logic.js";
 
 const blob = new Blob([new Uint8Array(12)], { type: "audio/webm" });
@@ -285,5 +286,34 @@ describe("a shared browser: each member's own queue", () => {
     // member's row either.
     const theirsDone = { ...theirs, takeId: "t-b" };
     expect(localStashRows([], [theirsDone], "m-a", new Set())).toEqual([]);
+  });
+});
+
+describe("syncedForRender", () => {
+  const handed = (localId: string, pageSeq: number) => ({
+    row: { ...item({ localId, takeId: `t-${localId}` }), takeId: `t-${localId}` },
+    pageSeq,
+  });
+
+  it("keeps the rows handed over on the render that is up", () => {
+    expect(syncedForRender([handed("a", 3), handed("b", 3)], 3).map((i) => i.row.localId)).toEqual([
+      "a",
+      "b",
+    ]);
+  });
+
+  it("drops a row from an earlier render, whatever became of its take", () => {
+    // The bug this is here for: after "Přidat k písni" the take is no longer
+    // in the member's stash, so the next render does not list it — and the
+    // handed-over row would go on being drawn, with a name that 404s through
+    // `/stash/<id>`. The render it belongs to is what decides, not the list.
+    expect(syncedForRender([handed("a", 1), handed("b", 2)], 2).map((i) => i.row.localId)).toEqual([
+      "b",
+    ]);
+    expect(syncedForRender([handed("a", 1)], 2)).toEqual([]);
+  });
+
+  it("has nothing to say about an empty store", () => {
+    expect(syncedForRender([], 7)).toEqual([]);
   });
 });

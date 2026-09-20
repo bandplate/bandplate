@@ -26,12 +26,23 @@ import {
   retryItem,
   shouldSync,
   summarize,
+  syncedForRender,
 } from "./stash-sync-logic.js";
 
 const LOCK_NAME = "bandplate-stash-sync";
 
 /** Who is signed in on this document; set once by `startStashSync`. */
 let currentMemberId: string | null = null;
+
+/**
+ * Which page render is on screen, counted up on every navigation.
+ *
+ * `<ClientRouter />` swaps the body and never unmounts an island, so this
+ * module outlives every page that uses it — which is why a row handed over on
+ * one render must be stamped with that render and dropped at the next. See
+ * `syncedForRender` for what goes wrong without it.
+ */
+let pageSeq = 0;
 
 /** This member's recordings on this device, bytes and all. */
 async function listOwnPending(): Promise<PendingStashItem[]> {
@@ -136,7 +147,7 @@ async function finish(item: PendingStashItem): Promise<void> {
   if (takeId) {
     syncedStash.set([
       ...syncedStash.get().filter((done) => done.row.localId !== item.localId),
-      { row: { ...summarize(item), takeId }, blob: item.blob },
+      { row: { ...summarize(item), takeId }, blob: item.blob, pageSeq },
     ]);
   }
 }
@@ -284,6 +295,15 @@ export function startStashSync(memberId: string | null): void {
   }
   started = true;
   currentMemberId = memberId || null;
+  // A navigation is the moment the server gets to say where every recording
+  // now lives, so it is where a handed-over row's render ends. `before-swap`
+  // rather than `page-load`: it fires on navigations only (never on the first
+  // load, which needs no clearing), and it fires before the new page's island
+  // draws anything.
+  document.addEventListener("astro:before-swap", () => {
+    pageSeq += 1;
+    syncedStash.set(syncedForRender(syncedStash.get(), pageSeq));
+  });
   window.addEventListener("online", () => {
     void syncPendingStash();
   });

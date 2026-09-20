@@ -113,7 +113,7 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
       // safer default over silently mutating a take's identity underneath
       // already-cast votes/favorites.
       takeId = existingTake.id;
-      // `takes.song_id` is nullable since migration 0011, but only a STASH
+      // `takes.song_id` is nullable since migration 0010, but only a STASH
       // recording is ever songless, and this lookup cannot return one: the
       // stash writes its `client_ref` behind a `stash:` prefix
       // (`STASH_CLIENT_REF_PREFIX`), which no bridge clientRef can carry.

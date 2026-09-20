@@ -203,7 +203,7 @@ describe("POST /stash/takes", () => {
   });
 
   it("422s a body missing what it still needs", async () => {
-    // No song is fine since 0011; no clientRef and no recordedAt never are —
+    // No song is fine since the stash migration; no clientRef and no recordedAt never are —
     // one is the idempotency key, the other is when it happened.
     const testApp = await build();
     const { cookie } = await signIn(testApp, "robin");

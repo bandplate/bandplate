@@ -74,7 +74,7 @@ export function bandVisibleCondition(): SQL {
  * The distinct song ids of these takes, songless ones dropped.
  *
  * Every loader that renders a list of takes needs this to hydrate the titles,
- * and since 0011 a stash take may have no song. Written once here rather than
+ * and since 0010 a stash take may have no song. Written once here rather than
  * as a `.filter(...)` repeated in six loaders, so "why can this be null" has
  * one place to be answered.
  */
@@ -831,7 +831,7 @@ export async function countBySongs(db: Db, songIds: string[]): Promise<Map<strin
     .where(and(inArray(takes.songId, songIds), bandVisibleCondition()))
     .groupBy(takes.songId);
   for (const row of rows) {
-    // `songId` is nullable since 0011, but `inArray` already excluded NULL —
+    // `songId` is nullable since 0010, but `inArray` already excluded NULL —
     // this is the typechecker asking, not a case that happens.
     if (row.songId !== null) {
       result.set(row.songId, row.value);

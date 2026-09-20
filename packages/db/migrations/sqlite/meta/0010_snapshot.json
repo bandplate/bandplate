@@ -1392,7 +1392,7 @@
           "name": "song_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "event_id": {

@@ -228,18 +228,18 @@ and `notificationsRepo.listPendingTakeBatches` quietly goes back to scanning
 the whole table.
 
 **How it was caught.** By reading the generated SQL against `sqlite_master`
-rather than trusting it: `takes` carries **seven** indexes after 0010, and the
-generated file's `CREATE INDEX` lines numbered **six**. `createTestDb()`
-cannot show this — it migrates an EMPTY database in one run, so "the schema
-afterwards" is whatever the last migration built, never "what the previous one
-built and this one lost".
+rather than trusting it: `takes` carries **seven** indexes after the stash
+migration, and the generated file's `CREATE INDEX` lines numbered **six**.
+`createTestDb()` cannot show this — it migrates an EMPTY database in one run,
+so "the schema afterwards" is whatever the last migration built, never "what
+the previous one built and this one lost".
 
 **Rule.** Any migration that rebuilds a table re-adds every raw index by hand,
 and says in its header comment that it had to. The test that pins it is
-`migration-0011-song-optional.test.ts`: it runs 0000→0010 on a POPULATED
-database, snapshots `select name from sqlite_master where tbl_name = 'takes'`,
-runs the rebuild, and asserts the set is **identical** — plus that the partial
-index still carries its `WHERE` clause, since a same-named index over the same
+`migration-0010-stash.test.ts`: it runs 0000→0009 on a POPULATED database,
+snapshots `select name from sqlite_master where tbl_name = 'takes'`, runs the
+rebuild, and asserts every index is still there — plus that the partial index
+still carries its `WHERE` clause, since a same-named index over the same
 columns without it is a different index.
 
 The general shape: after a rebuild, compare the whole row set (`select *`

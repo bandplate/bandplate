@@ -57,7 +57,7 @@ describe("reduceRecorder", () => {
     expect(initialRecorderState("s-1")).toMatchObject({ phase: "armed", songId: "s-1" });
   });
 
-  it("starts with a song and, since 0011, without one", () => {
+  it("starts with a song and, since 0010, without one", () => {
     expect(reduceRecorder(picked(), { type: "start" }).phase).toBe("starting");
     // "Zatím bez písně": the song is chosen when the recording is added to
     // the band, so nothing here waits for one.

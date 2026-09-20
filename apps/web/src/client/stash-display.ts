@@ -8,7 +8,7 @@
 // with the date. So the label is the title and the song is the second line.
 //
 // Pure, and here rather than repeated in three templates, because since
-// migration 0011 there are three different reasons a song title can be missing
+// migration 0010 there are three different reasons a song title can be missing
 // and they do not mean the same thing to a reader:
 //
 //   - the recording has no song yet (it was made before its member decided),

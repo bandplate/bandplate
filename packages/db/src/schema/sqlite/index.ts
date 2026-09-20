@@ -369,7 +369,7 @@ export const takes = sqliteTable(
   "takes",
   {
     id: id(),
-    // NULLABLE since migration 0011: a recording can reach the stash before
+    // NULLABLE since migration 0010: a recording can reach the stash before
     // its member has decided what song it is. The invariant the code keeps
     // (`takesRepo.create`, `publishFromStash`) is the other half: a take
     // whose `visibility` is `band` ALWAYS has a song, so no band-facing

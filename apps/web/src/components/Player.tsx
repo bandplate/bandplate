@@ -121,6 +121,8 @@ interface SourceButtonData {
   sourceName: string;
   /** "source-select" (the Hraje sheet's source pills) keeps its own text as its name; the default play/pause toggle gets a Play/Pause label. */
   role: string;
+  /** `data-audio-src`: an object URL to play instead of the asset route, for a recording the server does not have yet. */
+  src?: string;
 }
 
 function readButtonData(el: HTMLElement): SourceButtonData | null {
@@ -138,6 +140,7 @@ function readButtonData(el: HTMLElement): SourceButtonData | null {
     sourceKind: el.dataset.sourceKind === "stem" ? "stem" : "master",
     sourceName: el.dataset.sourceName ?? "",
     role: el.dataset.role ?? "toggle",
+    src: el.dataset.audioSrc,
   };
 }
 
@@ -154,6 +157,7 @@ function readQueueAround(target: HTMLElement, clicked: SourceButtonData): QueueI
     assetId: clicked.assetId,
     title: clicked.title,
     subtitle: clicked.subtitle,
+    src: clicked.src,
   };
   if (!container) {
     return [self];
@@ -171,6 +175,7 @@ function readQueueIn(container: HTMLElement): QueueItem[] {
         assetId: data.assetId,
         title: data.title,
         subtitle: data.subtitle,
+        src: data.src,
       });
     }
   }
@@ -250,8 +255,11 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       sourceAssetId: item.assetId,
       sourceKind: "master",
       sourceName: "",
+      src: item.src,
     });
-    audio.src = audioUrl(item.assetId);
+    // A recording still on this device plays from the object URL its row
+    // owns; everything the server has plays from the asset route.
+    audio.src = item.src ?? audioUrl(item.assetId);
     playQuietly(audio);
   }, []);
 
@@ -477,7 +485,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
         case "switch-source":
           pendingSeekRef.current = audio.currentTime;
           pendingAutoplayRef.current = !audio.paused;
-          audio.src = audioUrl(action.track.sourceAssetId);
+          audio.src = action.track.src ?? audioUrl(action.track.sourceAssetId);
           // `preload="none"` means changing `.src` alone does NOT start
           // fetching — `loadedmetadata` (which applies the pending seek
           // below) would never fire while paused, silently stranding the
@@ -500,6 +508,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             assetId: data.assetId,
             title: data.title,
             subtitle: data.subtitle,
+            src: data.src,
           });
           break;
         }
@@ -570,9 +579,13 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   // switch, which is the entire reason peaks are stored per asset rather
   // than per take — see `peaksStorageKey`. A 404 is the ordinary case today
   // (nothing computes peaks yet) and lands on `null`, i.e. the plain rail.
+  // A recording still on this device: the server has no asset behind it, so
+  // there are no peaks and no source list to ask for. Both fetches would 404
+  // on an id only this browser knows.
+  const localSource = Boolean(track?.src);
   const sourceAssetId = track?.sourceAssetId;
   useEffect(() => {
-    if (!sourceAssetId) {
+    if (!sourceAssetId || localSource) {
       setPeaks(null);
       return;
     }
@@ -602,7 +615,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [sourceAssetId]);
+  }, [sourceAssetId, localSource]);
 
   // What this take can be heard as — fetched with the take rather than on
   // opening the sheet, because whether the title opens a sheet at all
@@ -615,7 +628,8 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   // track, and the Hraje sheet reads it whenever it renders.
   useEffect(() => {
     setSources(null);
-    if (!takeId) {
+    if (!takeId || localSource) {
+      setSources([]);
       return;
     }
     let cancelled = false;
@@ -634,7 +648,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [takeId]);
+  }, [takeId, localSource]);
 
   // Keeps `--bp-player-height` (declared on `.bp-shell`, consumed by
   // `.bp-shell-main`'s reserved bottom padding — see components.css) equal

@@ -205,3 +205,56 @@ describe("controlState", () => {
     });
   });
 });
+
+describe("a recording that is still only on this device", () => {
+  const local = {
+    takeId: "stash-local:l-1",
+    assetId: "stash-local:l-1",
+    title: "nápad na mezihru",
+    subtitle: "Čoudy",
+    sourceKind: "master" as const,
+    sourceName: "",
+    role: "toggle",
+    src: "blob:https://example.test/abc",
+  };
+
+  it("starts from the URL its row owns, not from an asset route", () => {
+    const action = decidePlayerClickAction(null, local);
+    expect(action).toEqual({
+      kind: "start-track",
+      track: {
+        takeId: "stash-local:l-1",
+        title: "nápad na mezihru",
+        subtitle: "Čoudy",
+        sourceAssetId: "stash-local:l-1",
+        sourceKind: "master",
+        sourceName: "",
+        src: "blob:https://example.test/abc",
+      },
+    });
+  });
+
+  it("hands the next take back to the asset route rather than keeping the blob", () => {
+    const playingLocal = {
+      takeId: "stash-local:l-1",
+      title: "nápad na mezihru",
+      subtitle: "Čoudy",
+      sourceAssetId: "stash-local:l-1",
+      sourceKind: "master" as const,
+      sourceName: "",
+      src: "blob:https://example.test/abc",
+    };
+    const server = {
+      takeId: "take-9",
+      assetId: "asset-9",
+      title: "Čoudy",
+      subtitle: "",
+      sourceKind: "master" as const,
+      sourceName: "",
+      role: "toggle",
+    };
+    const action = decidePlayerClickAction(playingLocal, server);
+    expect(action.kind).toBe("start-track");
+    expect(action.kind === "start-track" && action.track.src).toBeUndefined();
+  });
+});

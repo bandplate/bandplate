@@ -38,6 +38,13 @@ export interface PlayerTrack {
    * from a listening (and accessibility) standpoint.
    */
   sourceName: string;
+  /**
+   * Where the audio actually comes from, when it is not the asset route: an
+   * object URL for a recording still on the phone that made it, which the
+   * stash view owns (see `StashPendingList.tsx`). Undefined everywhere else,
+   * and everywhere else is every take the server knows about.
+   */
+  src?: string;
 }
 
 /** `null` when nothing has ever been played this session. */

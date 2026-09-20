@@ -4,6 +4,7 @@
 // deletes, answering `ok` to the dialog's fetch or redirecting a plain form.
 import { messages } from "@bandplate/i18n";
 import ConfirmActionPage from "@bandplate/ui/components/ConfirmActionPage.astro";
+import { stashName } from "../../../client/stash-display.js";
 import Layout from "../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
@@ -44,7 +45,12 @@ const item = await getStashItem(appDeps.db, id, principal.memberId);
 if (!item) {
   return new Response("Not found.", { status: 404 });
 }
-const title = item.song?.title ?? t.stash.unknownSong;
+// The same name the row and the sheet use: the recording's own, then its
+// song. A confirm that names something else names the wrong recording.
+const title = stashName(
+  { songId: item.take.songId, songTitle: item.song?.title, label: item.take.label },
+  { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong },
+);
 ---
 
 <Layout title={t.stash.delete}>

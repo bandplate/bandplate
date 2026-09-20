@@ -81,6 +81,13 @@ const { id, eyebrow, title, subtitle } = Astro.props;
   // Delegated from `document` and re-resolved per event: `<ClientRouter />`
   // replaces the document on every navigation, so a listener bound to the
   // first render's elements would be gone after the first save.
+  //
+  // CAPTURE phase, like `ConfirmDialog`'s trigger and for the same reason: a
+  // trigger can be a link (the stash row's name), and `<ClientRouter />`'s own
+  // click listener is on `document` too. In the bubble phase whichever was
+  // registered first wins, and the router reads `defaultPrevented` before this
+  // has had a chance to set it — the sheet opened and the page navigated out
+  // from under it.
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
@@ -89,7 +96,16 @@ const { id, eyebrow, title, subtitle } = Astro.props;
 
     const opener = target.closest("[data-sheet-open]");
     if (opener) {
-      sheetFor(opener)?.showModal();
+      const sheet = sheetFor(opener);
+      if (sheet) {
+        // A trigger can be a LINK to the record's own page — the stash row's
+        // name is one — and that page is the no-JS path. With script the
+        // sheet is the answer, so the navigation is stopped here rather than
+        // both happening. A trigger whose sheet is missing is left alone, and
+        // a link then does what it says.
+        event.preventDefault();
+        sheet.showModal();
+      }
       return;
     }
 
@@ -106,5 +122,5 @@ const { id, eyebrow, title, subtitle } = Astro.props;
     if (target instanceof HTMLDialogElement && target.open && target.matches("[data-sheet]")) {
       target.close();
     }
-  });
+  }, true);
 </script>

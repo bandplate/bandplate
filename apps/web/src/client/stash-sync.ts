@@ -11,8 +11,8 @@
 // runner works only on the signed-in member's (`ownPending`): another
 // member's are not uploaded, not listed and not discarded, and a record from
 // before the member was stored belongs to no one and is left alone.
-import { deletePending, listPending, putPending } from "./stash-db.js";
-import { pendingStash, stashUploadsFinished } from "./stash-store.js";
+import { deletePending, getPending, listPending, putPending } from "./stash-db.js";
+import { pendingStash, syncedStash } from "./stash-store.js";
 import {
   type PendingStashItem,
   type SyncRequest,
@@ -71,6 +71,21 @@ export async function refreshPendingStash(): Promise<void> {
   }
 }
 
+/**
+ * The bytes of one of this member's pending recordings, so the stash view can
+ * play it while it is still on its way up. Another member's recording on a
+ * shared device is not handed out, exactly as it is not listed or synced.
+ */
+export async function pendingBlob(localId: string): Promise<Blob | null> {
+  try {
+    const item = await getPending(localId);
+    return item && ownedBy(item, currentMemberId) ? item.blob : null;
+  } catch {
+    // No IndexedDB: nothing is pending, so there is nothing to play.
+    return null;
+  }
+}
+
 async function save(item: PendingStashItem): Promise<void> {
   await putPending(item);
   await refreshPendingStash();
@@ -110,9 +125,20 @@ async function uploadMaster(item: PendingStashItem): Promise<void> {
   }
 }
 
+/**
+ * The local copy goes, and the row it was drawn as stays: the take's id and
+ * the bytes are handed to the store, so the stash view can keep drawing and
+ * playing that recording without fetching the page again. See `syncedStash`.
+ */
 async function finish(item: PendingStashItem): Promise<void> {
+  const takeId = item.takeId;
   await deletePending(item.localId);
-  stashUploadsFinished.set(stashUploadsFinished.get() + 1);
+  if (takeId) {
+    syncedStash.set([
+      ...syncedStash.get().filter((done) => done.row.localId !== item.localId),
+      { row: { ...summarize(item), takeId }, blob: item.blob },
+    ]);
+  }
 }
 
 async function syncOne(item: PendingStashItem): Promise<void> {
@@ -239,6 +265,10 @@ export async function discardPendingForTake(takeId: string): Promise<void> {
       await deletePending(localId);
     }
   });
+  // A copy that finished uploading into this take while the view was open is
+  // drawn from the store rather than from IndexedDB, and the take it points at
+  // is gone.
+  syncedStash.set(syncedStash.get().filter((done) => done.row.takeId !== takeId));
   await refreshPendingStash();
 }
 

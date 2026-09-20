@@ -9,6 +9,8 @@ export interface QueueItem {
   assetId: string;
   title: string;
   subtitle: string;
+  /** An object URL, for a recording the server does not have yet. See `PlayerTrack.src`. */
+  src?: string;
 }
 
 export interface PlayQueue {

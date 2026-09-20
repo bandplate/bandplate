@@ -4,12 +4,12 @@ import {
   afterFailure,
   canRetryByHand,
   classifyFailure,
+  localStashRows,
   newPendingItem,
   nextSyncStep,
   ownPending,
   ownedBy,
   pendingForTake,
-  pendingToRender,
   retryItem,
   shouldSync,
   summarize,
@@ -135,15 +135,39 @@ describe("afterFailure and retryItem", () => {
   });
 });
 
-describe("pendingToRender", () => {
+describe("the rows the stash view's island draws", () => {
   it("shows each recording once: a take the server already lists is its row, not ours", () => {
     const a = item({ localId: "a", recordedAt: 1 });
     const b = item({ localId: "b", recordedAt: 3, takeId: "t-b" });
     const c = item({ localId: "c", recordedAt: 2, takeId: "t-c" });
-    expect(pendingToRender([a, b, c], "m-a", new Set(["t-b"])).map((i) => i.localId)).toEqual([
-      "c",
-      "a",
+    expect(
+      localStashRows([a, b, c], [], "m-a", new Set(["t-b"])).map((entry) => entry.row.localId),
+    ).toEqual(["c", "a"]);
+  });
+
+  it("keeps an uploaded recording in place, newest first, with the take it now has", () => {
+    const waiting = item({ localId: "a", recordedAt: 1 });
+    const done = { ...item({ localId: "b", recordedAt: 3, takeId: "t-b" }), takeId: "t-b" };
+    expect(localStashRows([waiting], [done], "m-a", new Set())).toEqual([
+      { kind: "synced", row: done },
+      { kind: "pending", row: waiting },
     ]);
+  });
+
+  it("draws a recording the sync runner has handed over exactly once", () => {
+    // The pending store is only re-read at the end of a run, so between the
+    // hand-over and that refresh both stores name the same recording.
+    const stale = item({ localId: "a", takeId: "t-a" });
+    const done = { ...stale, takeId: "t-a" };
+    expect(localStashRows([stale], [done], "m-a", new Set())).toEqual([
+      { kind: "synced", row: done },
+    ]);
+  });
+
+  it("stops drawing an uploaded recording once the server's own row is on the page", () => {
+    const done = { ...item({ localId: "a", takeId: "t-a" }), takeId: "t-a" };
+    expect(localStashRows([], [done], "m-a", new Set(["t-a"]))).toEqual([]);
+    expect(localStashRows([], [done], "m-a", new Set(), new Set(["t-a"]))).toEqual([]);
   });
 });
 
@@ -207,7 +231,9 @@ describe("a deleted take's local copy", () => {
     const a = item({ localId: "a", takeId: "t-gone" });
     const b = item({ localId: "b", takeId: "t-live", recordedAt: 5 });
     expect(
-      pendingToRender([a, b], "m-a", new Set(), new Set(["t-gone"])).map((i) => i.localId),
+      localStashRows([a, b], [], "m-a", new Set(), new Set(["t-gone"])).map(
+        (entry) => entry.row.localId,
+      ),
     ).toEqual(["b"]);
   });
 });
@@ -249,9 +275,15 @@ describe("a shared browser: each member's own queue", () => {
     const mine = item({ localId: "a", memberId: "m-a", recordedAt: 1 });
     const theirs = item({ localId: "b", memberId: "m-b", recordedAt: 2 });
     const legacy = item({ localId: "c", memberId: null, recordedAt: 3 });
-    expect(pendingToRender([mine, theirs, legacy], "m-a", new Set()).map((i) => i.localId)).toEqual(
-      ["a"],
-    );
-    expect(pendingToRender([mine, theirs, legacy], null, new Set())).toEqual([]);
+    expect(
+      localStashRows([mine, theirs, legacy], [], "m-a", new Set()).map(
+        (entry) => entry.row.localId,
+      ),
+    ).toEqual(["a"]);
+    expect(localStashRows([mine, theirs, legacy], [], null, new Set())).toEqual([]);
+    // A recording that went up on another member's watch is not this
+    // member's row either.
+    const theirsDone = { ...theirs, takeId: "t-b" };
+    expect(localStashRows([], [theirsDone], "m-a", new Set())).toEqual([]);
   });
 });

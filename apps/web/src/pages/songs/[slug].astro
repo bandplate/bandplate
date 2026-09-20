@@ -571,10 +571,6 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             `stashCount` is this member's own private takes of this song. */}
         {stashCount > 0 && (
           <p class="bp-stash-line bp-m0">
-            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="5" y="11" width="14" height="10" rx="2" />
-              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-            </svg>
             {t.stash.inYourStash(stashCount)}
             <a href="/takes?stash=1">{t.stash.open}</a>
           </p>

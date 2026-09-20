@@ -1,0 +1,150 @@
+---
+// One recording from the stash, opened from its row — what it is (song, the
+// personal day it sits in, who recorded it), the one thing to do with it (add
+// it to the song, where the band hears it) and the three lesser ones (rename,
+// download, delete).
+//
+// A SHEET, like every other "a panel of controls about one thing" in this app
+// (see `RecordSheet.astro`): the member is looking at a list of four ideas
+// from last Tuesday, and picking one should not take the list away. The
+// recording still has a page of its own at `/stash/[id]`, which is where the
+// row's link goes when there is no script to open the sheet with. That page
+// says the same things in the same order; the two share what matters (the
+// name, and the write), and a change to one is a change to both.
+//
+// Two forms, two sheets. HTML drops a `<form>` inside a `<form>` (see
+// docs/frontend-traps.md), so renaming is not a field tucked into the publish
+// form: it is its own sheet beside this one, opened from it, and with
+// scripting off both render as plain blocks and both still submit.
+//
+// Every write posts to the CURRENT page with the take named in the body, so
+// this component works unchanged in the list and on the item's own page. The
+// owner check is on the write itself (`applyStashWrite`), never on the route.
+import { formatShortDate, messages } from "@bandplate/i18n";
+import Field from "@bandplate/ui/components/Field.astro";
+import type { SongOption } from "../client/recorder-logic.js";
+import { stashName, stashNote, stashSongField } from "../client/stash-display.js";
+import { formatDuration } from "../server/format.js";
+import type { StashRowData } from "../server/pages/stash.js";
+import RecordSheet from "./RecordSheet.astro";
+
+export interface Props {
+  row: StashRowData;
+  /** Who recorded it — every row in a member's stash is that member's. */
+  ownerName: string | undefined;
+  /** The library, for a recording that has no song yet. Empty otherwise. */
+  songChoices: SongOption[];
+  /** Set under the field when THIS recording's rename was refused. */
+  renameError?: string | undefined;
+}
+
+const { row, ownerName, songChoices, renameError } = Astro.props;
+const locale = Astro.locals.locale;
+const t = messages(locale);
+const nameParts = { songId: row.songId, songTitle: row.song?.title, label: row.label };
+const nameWords = { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong };
+// What this recording is called, what goes under that, and what its "Píseň"
+// field says — three different questions since a recording can have no song.
+const title = stashName(nameParts, nameWords);
+const note = stashNote(nameParts, nameWords);
+const songField = stashSongField(nameParts, nameWords);
+const length = formatDuration(row.durationMs);
+const subtitle = note ? t.stash.songAndLength(note, length) : length;
+// The song has to be chosen before the recording can go to the band, so the
+// picker is part of the publish form rather than a step before it.
+const needsSong = !row.songId;
+const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoices.length > 0);
+---
+
+<RecordSheet id={`stash-${row.id}`} eyebrow={t.stash.sheetEyebrow} title={title} subtitle={subtitle}>
+  <form method="post" class="bp-sheet-form">
+    <input type="hidden" name="intent" value="publish" />
+    <input type="hidden" name="takeId" value={row.id} />
+    <div class="bp-sheet-body">
+      {/* Labelled fields, not a run joined by dots: three different facts. */}
+      <dl class="bp-stash-facts">
+        <div>
+          <dt>{t.stash.fieldSong}</dt>
+          <dd>{songField}</dd>
+        </div>
+        <div>
+          <dt>{t.stash.fieldEvent}</dt>
+          <dd>{t.stash.personalEvent(formatShortDate(locale, row.event?.heldAt ?? row.recordedAt))}</dd>
+        </div>
+        <div>
+          <dt>{t.stash.fieldBy}</dt>
+          <dd>{ownerName}</dd>
+        </div>
+      </dl>
+
+      {/* No fake affordances, and the NEAREST obstacle first: a recording still
+          on its way from the phone cannot be added whatever the library holds,
+          so that is what the sheet says. Only once the file has landed is an
+          empty library the thing in the way. */}
+      {!row.playableAssetId ? (
+        <p class="bp-field-hint bp-m0">{t.stash.stillUploading}</p>
+      ) : needsSong && songChoices.length === 0 ? (
+        <p class="bp-field-hint bp-m0">{t.stash.noSongs}</p>
+      ) : (
+        <>
+          <p class="bp-m0">{t.stash.publishNote}</p>
+          {needsSong && (
+            <div class="bp-stash-song-pick">
+              <label class="bp-field-label" for={`publish-song-${row.id}`}>{t.stash.chooseSong}</label>
+              <select id={`publish-song-${row.id}`} name="songId" class="bp-input" required>
+                <option value="">{t.stash.chooseSongPlaceholder}</option>
+                {songChoices.map((choice) => (
+                  <option value={choice.id}>{choice.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </>
+      )}
+
+      <div class="bp-sheet-extras">
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open={`stash-rename-${row.id}`}>
+          {t.stash.rename}
+        </button>
+        {row.playableAssetId && (
+          <a href={`/api/assets/${row.playableAssetId}/download`} class="bp-btn bp-btn-secondary bp-btn-sm">
+            {t.stash.download}
+          </a>
+        )}
+        <a
+          href={`/stash/${row.id}/delete`}
+          class="bp-btn bp-btn-danger bp-btn-sm"
+          data-confirm
+          data-confirm-title={t.stash.deleteTitle(title)}
+          data-confirm-body={t.stash.deleteBody}
+          data-confirm-action={`/stash/${row.id}/delete`}
+          data-confirm-cta={t.stash.deleteCta}
+          data-confirm-redirect={`/takes?stash=1&deleted=${row.id}`}
+        >
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+          </svg>
+          {t.stash.delete}
+        </a>
+      </div>
+    </div>
+    <div class="bp-sheet-foot">
+      {canPublishHere && <button type="submit" class="bp-btn bp-btn-primary">{t.stash.publish}</button>}
+      <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.stash.close}</button>
+    </div>
+  </form>
+</RecordSheet>
+
+<RecordSheet id={`stash-rename-${row.id}`} eyebrow={t.stash.rename} title={title}>
+  <form method="post" class="bp-sheet-form" novalidate>
+    <input type="hidden" name="intent" value="rename" />
+    <input type="hidden" name="takeId" value={row.id} />
+    <div class="bp-sheet-body">
+      <Field label={t.stash.labelField} name="label" id={`stash-label-${row.id}`} value={row.label ?? ""} maxlength={200} error={renameError} />
+    </div>
+    <div class="bp-sheet-foot">
+      <button type="submit" class="bp-btn bp-btn-primary">{t.stash.renameSave}</button>
+      <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.stash.cancel}</button>
+    </div>
+  </form>
+</RecordSheet>

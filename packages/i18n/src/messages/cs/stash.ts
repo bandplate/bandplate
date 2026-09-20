@@ -62,6 +62,7 @@ export const stash = {
   errUnsupported: "Tenhle prohlížeč neumí nahrávat zvuk.", // en: This browser can't record audio.
   errSaveFailed: "Nahrávku se nepodařilo uložit do zařízení. Zkus to znovu.", // en: Couldn't keep the recording on this device. Try again.
 
+  sheetEyebrow: "V šuplíku", // en: In your stash
   pageTitle: (title: string): string => `${title} v šuplíku`, // en: {title} in your stash
   songAndLength: (title: string, length: string): string => `${title}, ${length}`, // en: {title}, {m:ss}
   backToStash: "Zpět do šuplíku", // en: Back to the stash

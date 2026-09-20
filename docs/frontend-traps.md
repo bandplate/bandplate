@@ -38,6 +38,19 @@ references it by id:
 `new DOMParser().parseFromString(html, 'text/html').querySelector('.bp-merge-form')`
 said absent. Only the second is the truth.
 
+### A link that opens a sheet needs the CAPTURE phase
+
+`<ClientRouter />` listens for clicks on `document` too, and it decides
+whether to navigate by reading `event.defaultPrevented` when its own listener
+runs. Two bubble-phase listeners on the same node run in registration order,
+which is bundling order, which is not yours to pick: the sheet opened, and
+half a second later the router swapped the page out from under it. It looks
+like the sheet "flashed".
+
+So a delegated handler that has to WIN against the router registers with
+`{capture: true}` — `RecordSheet.astro`'s does, and `ConfirmDialog.tsx`'s
+always did. Only then is `preventDefault()` set before the router looks.
+
 ---
 
 ## "My CSS declaration is just... gone"

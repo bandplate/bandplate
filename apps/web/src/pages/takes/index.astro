@@ -25,12 +25,14 @@ import { instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 // `display: none`, which the no-JS rule below overrides), and the form's own
 // submit button applies the filters.
 import { messages } from "@bandplate/i18n";
+import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
 import StashPendingList from "../../components/StashPendingList.tsx";
 import StashRow from "../../components/StashRow.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
+import { isSameOrigin } from "../../server/csrf.js";
 import {
   RECORDED_WINDOWS,
   type SearchTakesResult,
@@ -40,7 +42,7 @@ import {
   parseSearchQuery,
   searchTakes,
 } from "../../server/pages/search.js";
-import { getStashRows } from "../../server/pages/stash.js";
+import { applyStashWrite, getStashView } from "../../server/pages/stash.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
@@ -49,8 +51,55 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
+const locale = Astro.locals.locale;
+const t = messages(locale);
 const query = parseSearchQuery(Astro.url.searchParams);
 const viewingStash = Astro.url.searchParams.get("stash") === "1";
+
+// A recording's sheet posts to the page it was opened on, which is this one.
+// The take is named in the form and the write checks it belongs to the member
+// signing the request, so a hand-built POST reaches nothing of anybody else's.
+let formError: string | undefined;
+let renameError: string | undefined;
+let renamedTakeId: string | undefined;
+if (Astro.request.method === "POST") {
+  if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+    formError = t.common.originError;
+  } else {
+    const result = await applyStashWrite(
+      appDeps.db,
+      appDeps.clock.now(),
+      principal.memberId,
+      await Astro.request.formData(),
+    );
+    if (result.kind === "published") {
+      return Astro.redirect(`/takes/${result.takeId}?published=1`);
+    }
+    if (result.kind === "renamed") {
+      return Astro.redirect(`/takes?stash=1&renamed=${result.takeId}`);
+    }
+    if (result.kind === "not_found") {
+      return new Response("Not found.", { status: 404 });
+    }
+    if (result.kind === "error") {
+      // Twice for a label that will not fit: in the field, where it was
+      // typed, and in a banner, because with script the sheet is closed
+      // again by the time this page is back.
+      formError =
+        result.error === "no_song"
+          ? t.stash.noSongChosen
+          : result.error === "song_not_found"
+            ? t.stash.songGone
+            : result.error === "nothing_to_play"
+              ? t.stash.stillUploading
+              : t.stash.labelTooLong;
+      if (result.error === "label_too_long") {
+        renameError = formError;
+        renamedTakeId = result.takeId;
+      }
+    }
+  }
+}
 // Set by the delete on `/stash/[id]`: the take just deleted, whose local copy
 // (if this device still holds one) the list below drops.
 const deletedTakeId = viewingStash
@@ -59,7 +108,7 @@ const deletedTakeId = viewingStash
 const filtersApplied = hasAnyFilter(query) || query.sort !== "recent";
 
 const { page, args: takesPage } = pageRequest(Astro.url.searchParams, TAKES_PER_PAGE);
-const [{ results, total }, instruments, songs, stashCount, stashRows] = await Promise.all([
+const [{ results, total }, instruments, songs, stashCount, stash] = await Promise.all([
   // The stash is a different list, not a filter on this one: nothing below the
   // bar is searched while it is open.
   viewingStash
@@ -71,8 +120,15 @@ const [{ results, total }, instruments, songs, stashCount, stashRows] = await Pr
   // script, and it works with JS off like every other control here.
   songsRepo.list(appDeps.db),
   takesRepo.countStash(appDeps.db, principal.memberId),
-  viewingStash ? getStashRows(appDeps.db, principal.memberId) : Promise.resolve([]),
+  viewingStash
+    ? getStashView(appDeps.db, principal.memberId)
+    : Promise.resolve({ rows: [], owner: undefined, songChoices: [] }),
 ]);
+const stashRows = stash.rows;
+// `?renamed=` names the recording, so the banner is about the one that was
+// renamed rather than about "something on this page".
+const justRenamed = Astro.url.searchParams.get("renamed");
+const renamedRow = justRenamed ? stashRows.find((row) => row.id === justRenamed) : undefined;
 
 // How many filters are actually on — the number on the trigger, so a member
 // who left one set two days ago sees that before wondering where their takes
@@ -88,9 +144,6 @@ const activeFilterCount = [
 // picked "Past month" should not have two empty date fields sitting under it
 // implying they still have to fill something in.
 const usingExactDates = Boolean(query.dateFrom) || Boolean(query.dateTo);
-
-const locale = Astro.locals.locale;
-const t = messages(locale);
 
 const pages = pageView({ url: Astro.url, page, perPage: TAKES_PER_PAGE, total });
 // A filtered link whose page has since fallen off the end lands on the last
@@ -118,12 +171,6 @@ const countLabel = t.takes.count(total);
         class="bp-pill"
         aria-pressed={viewingStash ? "true" : "false"}
       >
-        <span class="bp-pill-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="11" width="14" height="10" rx="2" />
-            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-          </svg>
-        </span>
         {t.stash.pill}
         {stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
       </a>
@@ -340,6 +387,8 @@ const countLabel = t.takes.count(total);
 
     {viewingStash ? (
       <div class="bp-search-results">
+        {formError && <Banner kind="error">{formError}</Banner>}
+        {renamedRow && <Banner kind="success">{t.stash.renamed}</Banner>}
         <p class="bp-stash-lede bp-m0">{t.stash.viewLede}</p>
         <StashPendingList
           client:load
@@ -350,7 +399,14 @@ const countLabel = t.takes.count(total);
         />
         {stashRows.length > 0 && (
           <div class="bp-take-list bp-take-list--wide" data-play-queue>
-            {stashRows.map((row) => <StashRow row={row} />)}
+            {stashRows.map((row) => (
+              <StashRow
+                row={row}
+                ownerName={stash.owner?.displayName}
+                songChoices={stash.songChoices}
+                renameError={row.id === renamedTakeId ? renameError : undefined}
+              />
+            ))}
           </div>
         )}
       </div>

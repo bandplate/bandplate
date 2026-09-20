@@ -209,27 +209,59 @@ export function pendingForTake(
 }
 
 /**
- * The local rows the stash view should draw, newest first.
+ * The player identity of a row this island draws.
  *
- * A recording whose take the server already created is ALSO a server row on
- * the same page (with its own "Čeká na signál" chip until the file lands), so
- * drawing it here too would show it twice.
+ * Its OWN id, never the take's, and it keeps it after the upload lands: the
+ * player is told which take is loaded by whatever started it, and a row that
+ * renamed itself mid-playback would stop showing as the one playing. The
+ * server's row for the same take carries the take id and is a different row
+ * — which is correct, because it plays a different URL.
  */
-export function pendingToRender(
-  items: PendingSummary[],
-  /** The signed-in member. Another member's recordings on this device are not drawn. */
+export function localPlayId(localId: string): string {
+  return `stash-local:${localId}`;
+}
+
+/** A recording the server now has, still drawn by the island that queued it. */
+export type SyncedSummary = PendingSummary & { takeId: string };
+
+/**
+ * One row the stash view's island draws: a recording still waiting to go up,
+ * or one that went up while this view was open and has not been through a
+ * server render yet. Both play from the bytes on this device.
+ */
+export type LocalStashRow =
+  | { kind: "pending"; row: PendingSummary }
+  | { kind: "synced"; row: SyncedSummary };
+
+/**
+ * Every row the island draws, newest first — the two kinds in ONE order,
+ * because to a member they are one list of their own recordings and an upload
+ * finishing must not make a row jump.
+ *
+ * Same exclusions throughout: another member's recording on a shared device,
+ * a take the server already drew on this page, and a take just deleted (whose
+ * local copies are on their way out of IndexedDB) are none of them drawn.
+ */
+export function localStashRows(
+  pending: PendingSummary[],
+  synced: SyncedSummary[],
   memberId: string | null,
   serverTakeIds: ReadonlySet<string>,
-  /**
-   * Takes just deleted from this page. Their local copies are on their way
-   * out of IndexedDB, and must not flash back as rows meanwhile.
-   */
   deletedTakeIds: ReadonlySet<string> = new Set(),
-): PendingSummary[] {
-  return ownPending(items, memberId)
-    .filter(
-      (item) =>
-        !(item.takeId && (serverTakeIds.has(item.takeId) || deletedTakeIds.has(item.takeId))),
-    )
-    .sort((a, b) => b.recordedAt - a.recordedAt);
+): LocalStashRow[] {
+  const gone = (takeId: string | null): boolean =>
+    takeId !== null && (serverTakeIds.has(takeId) || deletedTakeIds.has(takeId));
+  // The sync runner deletes the local copy and hands the row over in one step,
+  // but the pending store is only re-read once the whole run is done. Between
+  // the two it still lists a recording that is already somebody else's row.
+  const handedOver = new Set(synced.map((row) => row.localId));
+  const rows: LocalStashRow[] = [
+    ...ownPending(pending, memberId)
+      .filter((row) => !gone(row.takeId) && !handedOver.has(row.localId))
+      .map((row): LocalStashRow => ({ kind: "pending", row })),
+    ...ownPending(synced, memberId)
+      .filter((row) => !gone(row.takeId))
+      .map((row): LocalStashRow => ({ kind: "synced", row })),
+  ];
+  return rows.sort((a, b) => b.row.recordedAt - a.row.recordedAt);
 }

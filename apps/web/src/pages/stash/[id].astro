@@ -1,8 +1,14 @@
 ---
-// "Přidat k písni" — one recording from the stash. What it is (song, the
-// personal day it sits in, who recorded it), the one thing to do with it
-// (add it to the song, where the band hears it) and the three lesser ones
-// (rename, download, delete).
+// One recording from the stash, as a PAGE. The surface a member actually uses
+// is `StashItemSheet.astro`, opened from the row on `/takes?stash=1`; this is
+// where the row's link goes when there is no script to open it with, and where
+// a bookmark or a link from anywhere else lands.
+//
+// So the two say the same things in the same order — the facts, the one thing
+// to do with the recording, then rename, download, delete — and a change to
+// one is a change to both. They share the logic that matters: what the
+// recording is CALLED (`stash-display.ts`) and what a write does
+// (`applyStashWrite`), which is also where the owner check lives.
 //
 // Publishing and renaming are plain POSTs to this page, like every other M8
 // write; delete is the shared `data-confirm` modal, with `/stash/[id]/delete`
@@ -17,12 +23,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { formatDuration } from "../../server/format.js";
-import {
-  getStashItem,
-  listRecordableSongs,
-  publishStashTake,
-  renameStashTake,
-} from "../../server/pages/stash.js";
+import { applyStashWrite, getStashItem, listRecordableSongs } from "../../server/pages/stash.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -45,48 +46,36 @@ if (Astro.request.method === "POST") {
   if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
     formError = t.common.originError;
   } else {
-    const formData = await Astro.request.formData();
-    const intent = formData.get("intent");
-    if (intent === "publish") {
-      const chosenSong = String(formData.get("songId") ?? "").trim();
-      const result = await publishStashTake(
-        appDeps.db,
-        appDeps.clock.now(),
-        id,
-        principal.memberId,
-        chosenSong === "" ? null : chosenSong,
-      );
-      if (result.kind === "ok") {
-        return Astro.redirect(`/takes/${id}?published=1`);
-      }
-      if (result.kind === "not_found") {
-        return new Response("Not found.", { status: 404 });
-      }
+    const result = await applyStashWrite(
+      appDeps.db,
+      appDeps.clock.now(),
+      principal.memberId,
+      await Astro.request.formData(),
+    );
+    if (result.kind === "published") {
+      return Astro.redirect(`/takes/${result.takeId}?published=1`);
+    }
+    if (result.kind === "renamed") {
+      return Astro.redirect(`/stash/${result.takeId}?renamed=1`);
+    }
+    if (result.kind === "not_found") {
+      return new Response("Not found.", { status: 404 });
+    }
+    if (result.kind === "error") {
       formError =
-        result.kind === "no_song"
+        result.error === "no_song"
           ? t.stash.noSongChosen
-          : result.kind === "song_not_found"
+          : result.error === "song_not_found"
             ? t.stash.songGone
-            : t.stash.stillUploading;
-    } else if (intent === "rename") {
-      const result = await renameStashTake(
-        appDeps.db,
-        appDeps.clock.now(),
-        id,
-        principal.memberId,
-        formData,
-      );
-      if (result.kind === "ok") {
-        return Astro.redirect(`/stash/${id}?renamed=1`);
+            : result.error === "nothing_to_play"
+              ? t.stash.stillUploading
+              : t.stash.labelTooLong;
+      // Twice: in the field, for the page where the sheet is a plain block,
+      // and in a banner, because with script the sheet is closed again by the
+      // time this page is back.
+      if (result.error === "label_too_long") {
+        renameError = formError;
       }
-      if (result.kind === "not_found") {
-        return new Response("Not found.", { status: 404 });
-      }
-      // Twice: in the field, for the no-JS page where the sheet is a plain
-      // block, and in a banner, because with script the sheet is closed again
-      // by the time this page is back.
-      renameError = t.stash.labelTooLong;
-      formError = renameError;
     }
   }
 }
@@ -101,7 +90,7 @@ const nameWords = { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong 
 // What this recording is called, and what its "Píseň" field says — two
 // different questions once a recording can have no song. See `stash-display`.
 const title = stashName(nameParts, nameWords);
-// The label only says something NEW when it is not already the title.
+// The song, said only where it is not already the title.
 const note = stashNote(nameParts, nameWords);
 const songField = stashSongField(nameParts, nameWords);
 // The song has to be chosen before it can be added to the band, so the picker
@@ -119,15 +108,14 @@ const length = formatDuration(take.durationMs);
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <p class="bp-eyebrow bp-m0">{t.stash.addTitle}</p>
-    {/* The design's heading: the recording's own name, then the song it is
-        for and how long it runs. An unnamed recording is called by its song,
-        so the line under it is only the length rather than the title twice. */}
+    {/* The heading: the recording's own name, then the song it is for and how
+        long it runs. A recording with no name of its own is called by its
+        song, so the line under it is only the length rather than the title
+        twice. */}
     <div class="bp-title-row">
       <div>
         <h1 class="bp-hero-title bp-m0">{title}</h1>
-        <p class="bp-stash-sub bp-m0">
-          {note && song ? t.stash.songAndLength(song.title, length) : length}
-        </p>
+        <p class="bp-stash-sub bp-m0">{note ? t.stash.songAndLength(note, length) : length}</p>
       </div>
       {playableAsset && (
         <PlayToggleButton takeId={take.id} assetId={playableAsset.id} title={title} subtitle={note ?? ""} size="lg" />
@@ -163,6 +151,7 @@ const length = formatDuration(take.durationMs);
         <p class="bp-m0">{t.stash.publishNote}</p>
         <form method="post">
           <input type="hidden" name="intent" value="publish" />
+          <input type="hidden" name="takeId" value={take.id} />
           {!take.songId && (
             <div class="bp-stash-song-pick">
               <label class="bp-field-label" for="publish-song">{t.stash.chooseSong}</label>
@@ -208,6 +197,7 @@ const length = formatDuration(take.durationMs);
     <RecordSheet id="rename-stash" eyebrow={t.stash.rename} title={title}>
       <form method="post" class="bp-sheet-form" novalidate>
         <input type="hidden" name="intent" value="rename" />
+        <input type="hidden" name="takeId" value={take.id} />
         <div class="bp-sheet-body">
           <Field label={t.stash.labelField} name="label" value={take.label ?? ""} maxlength={200} error={renameError} />
         </div>

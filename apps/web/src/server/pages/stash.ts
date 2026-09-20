@@ -57,6 +57,8 @@ export async function resolvePreselectedSong(
 
 export interface StashRowData extends takesRepo.Take {
   song: songsRepo.Song | undefined;
+  /** The personal day this recording sits in — a fact the row's sheet reports. */
+  event: eventsRepo.Event | undefined;
   /** Undefined until the recording has landed — the row shows the chip instead of a play control. */
   playableAssetId: string | undefined;
 }
@@ -67,19 +69,45 @@ export async function getStashRows(db: Db, memberId: string): Promise<StashRowDa
   if (rows.length === 0) {
     return [];
   }
-  const [songs, playable] = await Promise.all([
+  const [songs, events, playable] = await Promise.all([
     songsRepo.getByIds(db, takesRepo.songIdsOf(rows)),
+    eventsRepo.getByIds(db, [...new Set(rows.map((t) => t.eventId))]),
     assetsRepo.listPlayableMastersByTakeIds(
       db,
       rows.map((t) => t.id),
     ),
   ]);
   const songById = new Map(songs.map((s) => [s.id, s]));
+  const eventById = new Map(events.map((e) => [e.id, e]));
   return rows.map((take) => ({
     ...take,
     song: take.songId ? songById.get(take.songId) : undefined,
+    event: eventById.get(take.eventId),
     playableAssetId: playable.get(take.id)?.id,
   }));
+}
+
+/** Everything the stash view draws: the rows, and what each row's sheet reports. */
+export interface StashView {
+  rows: StashRowData[];
+  /** The signed-in member — every row here is theirs, so this is asked once. */
+  owner: membersRepo.Member | undefined;
+  /**
+   * The picker's options, loaded only when some row still has no song. A
+   * library nobody needs to choose from is a query nobody needs to run.
+   */
+  songChoices: SongOption[];
+}
+
+export async function getStashView(db: Db, memberId: string): Promise<StashView> {
+  const rows = await getStashRows(db, memberId);
+  const [owners, songChoices] = await Promise.all([
+    membersRepo.getByIds(db, [memberId]),
+    rows.some((row) => !row.songId)
+      ? listRecordableSongs(db).then((found) => found.songs)
+      : Promise.resolve<SongOption[]>([]),
+  ]);
+  return { rows, owner: owners[0], songChoices };
 }
 
 export interface StashItem {
@@ -212,4 +240,67 @@ export async function deleteStashTake(
     return { kind: "not_found" };
   }
   return deleteTake(db, storage, id);
+}
+
+/** What went wrong with a write the sheet asked for, in the page's words. */
+export type StashWriteError =
+  /** No song on the take and none chosen. */
+  | "no_song"
+  /** A song was chosen that is not in the library. */
+  | "song_not_found"
+  /** The file has not landed yet, so there is nothing to add. */
+  | "nothing_to_play"
+  | "label_too_long";
+
+export type StashWriteResult =
+  | { kind: "published"; takeId: string }
+  | { kind: "renamed"; takeId: string }
+  /** No intent this page knows — a stale form, or a hand-made POST. */
+  | { kind: "ignored" }
+  | { kind: "not_found" }
+  | { kind: "error"; takeId: string; error: StashWriteError };
+
+/**
+ * One write from a recording's sheet, wherever the sheet was opened: the stash
+ * list and the recording's own no-JS page post the same fields to themselves
+ * and land here.
+ *
+ * The take is named by the FORM, not by the route, so this is the one place
+ * the owner check has to hold — and it does, because every write underneath
+ * goes through `ownStashTake`. A hand-built POST naming somebody else's
+ * recording is answered exactly as one naming a recording that does not
+ * exist.
+ */
+export async function applyStashWrite(
+  db: Db,
+  now: number,
+  memberId: string,
+  formData: FormData,
+): Promise<StashWriteResult> {
+  const intent = String(formData.get("intent") ?? "");
+  const takeId = String(formData.get("takeId") ?? "").trim();
+  if (!takeId || (intent !== "publish" && intent !== "rename")) {
+    return { kind: "ignored" };
+  }
+
+  if (intent === "publish") {
+    const chosen = String(formData.get("songId") ?? "").trim();
+    const result = await publishStashTake(db, now, takeId, memberId, chosen === "" ? null : chosen);
+    if (result.kind === "ok") {
+      return { kind: "published", takeId };
+    }
+    if (result.kind === "not_found") {
+      return { kind: "not_found" };
+    }
+    return { kind: "error", takeId, error: result.kind };
+  }
+
+  const result = await renameStashTake(db, now, takeId, memberId, formData);
+  if (result.kind === "ok") {
+    return { kind: "renamed", takeId };
+  }
+  if (result.kind === "not_found") {
+    return { kind: "not_found" };
+  }
+  return { kind: "error", takeId, error: "label_too_long" };
 }

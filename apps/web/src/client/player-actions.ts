@@ -31,6 +31,8 @@ export interface ClickedSource {
   sourceName: string;
   /** "source-select" (the Hraje sheet's source pills) vs. the default "toggle" play/pause control — see the module comment, case 1. */
   role: string;
+  /** An object URL to play instead of the asset route — see `PlayerTrack.src`. */
+  src?: string;
 }
 
 export type PlayerClickAction =
@@ -60,6 +62,10 @@ export function decidePlayerClickAction(
         sourceAssetId: clicked.assetId,
         sourceKind: clicked.sourceKind,
         sourceName: clicked.sourceName,
+        // The control that was pressed says where its audio comes from. The
+        // track being switched INTO may be a plain asset while the one
+        // playing was a local blob, so this is overwritten, never inherited.
+        src: clicked.src,
       },
       preservePosition: true,
     };
@@ -74,6 +80,7 @@ export function decidePlayerClickAction(
       sourceAssetId: clicked.assetId,
       sourceKind: clicked.sourceKind,
       sourceName: clicked.sourceName,
+      src: clicked.src,
     },
   };
 }

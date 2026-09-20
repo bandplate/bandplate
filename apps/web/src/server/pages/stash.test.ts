@@ -5,9 +5,11 @@ import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   RECENT_SONGS_LIMIT,
+  applyStashWrite,
   deleteStashTake,
   getStashItem,
   getStashRows,
+  getStashView,
   listRecordableSongs,
   publishStashTake,
   renameStashTake,
@@ -295,5 +297,190 @@ describe("the stash pages", () => {
     expect((await deleteStashTake(db, storage, takeId, ownerId)).kind).toBe("ok");
     expect(await takesRepo.getById(db, takeId)).toBeUndefined();
     expect(deleted).toEqual([`takes/${takeId}/master/lossy.m4a`]);
+  });
+  it("gives the stash view the row, who recorded it, and a picker only when one is needed", async () => {
+    await readyMaster(takeId);
+    const filed = await getStashView(db, ownerId);
+    expect(filed.rows.map((row) => [row.id, row.song?.title, row.event?.kind])).toEqual([
+      [takeId, "Čoudy", "personal"],
+    ]);
+    expect(filed.owner?.displayName).toBe("Filip");
+    // Every row has its song already: nothing to choose from, so the library
+    // is not read at all.
+    expect(filed.songChoices).toEqual([]);
+
+    const event = await eventsRepo.findOrCreatePersonal(db, {
+      memberId: ownerId,
+      dayKey: "2026-09-20",
+      heldAt: 2,
+      now: 2,
+    });
+    await takesRepo.create(db, {
+      songId: null,
+      eventId: event.id,
+      recordedAt: 2,
+      label: "nápad",
+      visibility: "private",
+      ownerMemberId: ownerId,
+      createdAt: 2,
+      updatedAt: 2,
+    });
+    const songless = await getStashView(db, ownerId);
+    expect(songless.songChoices.map((choice) => choice.title)).toEqual(["Čoudy"]);
+  });
+});
+
+// The sheet names the take in the form rather than in the route, so this is
+// where "only the owner writes" has to hold. A hand-built POST is exactly a
+// call to this function with somebody else's take id.
+describe("a write from a recording's sheet", () => {
+  let db: Db;
+  let ownerId: string;
+  let strangerId: string;
+  let songId: string;
+  let takeId: string;
+
+  /** A recording whose file has landed — publishing needs one. */
+  async function readyMaster(id: string): Promise<void> {
+    const [asset] = await assetsRepo.createMany(db, [
+      {
+        takeId: id,
+        kind: "master",
+        instrumentId: null,
+        tier: "lossy",
+        format: "m4a",
+        storageKey: `takes/${id}/master/lossy.m4a`,
+        contentType: "audio/mp4",
+        bytes: 10,
+        sha256: null,
+        durationMs: 1000,
+        sampleRate: null,
+        channels: null,
+        status: "pending",
+        createdAt: 1,
+      },
+    ]);
+    if (!asset) throw new Error("no asset");
+    await assetsRepo.markReady(db, asset.id, 2, { durationMs: 1000 });
+  }
+
+  function form(fields: Record<string, string>): FormData {
+    const data = new FormData();
+    for (const [key, value] of Object.entries(fields)) {
+      data.set(key, value);
+    }
+    return data;
+  }
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    ownerId = (
+      await membersRepo.create(db, {
+        displayName: "Filip",
+        slug: "filip",
+        email: "f@example.com",
+        createdAt: 1,
+      })
+    ).id;
+    strangerId = (
+      await membersRepo.create(db, {
+        displayName: "Jana",
+        slug: "jana",
+        email: "j@example.com",
+        createdAt: 1,
+      })
+    ).id;
+    songId = (
+      await songsRepo.create(db, { title: "Čoudy", slug: "coudy", createdAt: 1, updatedAt: 1 })
+    ).id;
+    const event = await eventsRepo.findOrCreatePersonal(db, {
+      memberId: ownerId,
+      dayKey: "2026-09-19",
+      heldAt: 1,
+      now: 1,
+    });
+    takeId = (
+      await takesRepo.create(db, {
+        songId,
+        eventId: event.id,
+        recordedAt: 1,
+        label: "mezihra",
+        visibility: "private",
+        ownerMemberId: ownerId,
+        createdAt: 1,
+        updatedAt: 1,
+      })
+    ).id;
+    await readyMaster(takeId);
+  });
+
+  it("renames and publishes the owner's own recording", async () => {
+    expect(
+      await applyStashWrite(db, 5, ownerId, form({ intent: "rename", takeId, label: "sloka" })),
+    ).toEqual({
+      kind: "renamed",
+      takeId,
+    });
+    expect((await takesRepo.getById(db, takeId))?.label).toBe("sloka");
+    expect(await applyStashWrite(db, 6, ownerId, form({ intent: "publish", takeId }))).toEqual({
+      kind: "published",
+      takeId,
+    });
+    expect((await takesRepo.getById(db, takeId))?.visibility).toBe("band");
+  });
+
+  it("answers a stranger's hand-built POST as if the recording did not exist, and changes nothing", async () => {
+    expect(
+      await applyStashWrite(db, 5, strangerId, form({ intent: "rename", takeId, label: "moje" })),
+    ).toEqual({ kind: "not_found" });
+    expect(await applyStashWrite(db, 5, strangerId, form({ intent: "publish", takeId }))).toEqual({
+      kind: "not_found",
+    });
+    const take = await takesRepo.getById(db, takeId);
+    expect(take?.label).toBe("mezihra");
+    expect(take?.visibility).toBe("private");
+  });
+
+  it("reports what the member can fix, naming the recording it happened to", async () => {
+    expect(
+      await applyStashWrite(
+        db,
+        5,
+        ownerId,
+        form({ intent: "rename", takeId, label: "a".repeat(201) }),
+      ),
+    ).toEqual({ kind: "error", takeId, error: "label_too_long" });
+    const songless = await takesRepo.create(db, {
+      songId: null,
+      eventId: (await takesRepo.getById(db, takeId))?.eventId ?? "",
+      recordedAt: 2,
+      label: "nápad",
+      visibility: "private",
+      ownerMemberId: ownerId,
+      createdAt: 2,
+      updatedAt: 2,
+    });
+    await readyMaster(songless.id);
+    expect(
+      await applyStashWrite(db, 5, ownerId, form({ intent: "publish", takeId: songless.id })),
+    ).toEqual({ kind: "error", takeId: songless.id, error: "no_song" });
+    expect(
+      await applyStashWrite(
+        db,
+        5,
+        ownerId,
+        form({ intent: "publish", takeId: songless.id, songId: "s-gone" }),
+      ),
+    ).toEqual({ kind: "error", takeId: songless.id, error: "song_not_found" });
+  });
+
+  it("does nothing at all for a form that names no take or no intent it knows", async () => {
+    expect(await applyStashWrite(db, 5, ownerId, form({ intent: "publish" }))).toEqual({
+      kind: "ignored",
+    });
+    expect(await applyStashWrite(db, 5, ownerId, form({ intent: "delete", takeId }))).toEqual({
+      kind: "ignored",
+    });
+    expect((await takesRepo.getById(db, takeId))?.visibility).toBe("private");
   });
 });

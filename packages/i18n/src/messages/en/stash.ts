@@ -73,7 +73,9 @@ export const stash = {
   errUnsupported: "This browser can't record audio.",
   errSaveFailed: "Couldn't keep the recording on this device. Try again.",
 
-  // --- one stash item: "Add to song" ----------------------------------------
+  // --- one stash item: its sheet, and the page behind it --------------------
+  /** Above the recording's name in the sheet its row opens. */
+  sheetEyebrow: "In your stash",
   pageTitle: (title: string): string => `${title} in your stash`,
   songAndLength: (title: string, length: string): string => `${title}, ${length}`,
   backToStash: "Back to the stash",
@@ -97,7 +99,7 @@ export const stash = {
   labelTooLong: "That label is too long. 200 characters fit.",
   download: "Download",
   delete: "Delete",
-  deleteTitle: (title: string): string => `Delete this recording of ${title}?`,
+  deleteTitle: (title: string): string => `Delete this recording: ${title}?`,
   deleteBody: "It's gone for good, file included. Nobody else ever saw it.",
   deleteCta: "Delete recording",
 };

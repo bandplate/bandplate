@@ -54,6 +54,11 @@ export async function putPending(item: PendingStashItem): Promise<void> {
   await withStore("readwrite", (store) => store.put(item));
 }
 
+/** One recording with its bytes — what the stash view plays before the upload lands. */
+export async function getPending(localId: string): Promise<PendingStashItem | undefined> {
+  return withStore("readonly", (store) => store.get(localId) as IDBRequest<PendingStashItem>);
+}
+
 export async function listPending(): Promise<PendingStashItem[]> {
   return withStore("readonly", (store) => store.getAll() as IDBRequest<PendingStashItem[]>);
 }

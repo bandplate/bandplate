@@ -8845,17 +8845,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   max-width: 22rem;
 }
 
-.bp-rec-private {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.bp-rec-private svg {
-  flex: none;
-  margin-top: 0.15em;
-}
-
 .bp-rec-confirm {
   display: flex;
   flex-direction: column;
@@ -9120,7 +9109,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 }
 
-/* The stash line on a song page and on home: a lock, the count, a link. */
+/* The stash line on a song page and on home: the count, and a way in. */
 .bp-stash-line {
   display: inline-flex;
   flex-wrap: wrap;

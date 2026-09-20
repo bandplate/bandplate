@@ -7283,6 +7283,16 @@ html:has(dialog.bp-filter-sheet[open]) body {
   cursor: pointer;
 }
 
+/* A pill doing a BUTTON's job — open the stash, close it, record an idea —
+   rather than a filter's. It sits beside real buttons ("Add event", "All
+   events"), so it is the same size as `.bp-btn-sm`: same 44px floor, same
+   14px type, same padding. The 36px above stays what it was for, a row of
+   filters that is read as one object rather than as controls. */
+.bp-pill--action {
+  min-height: 44px;
+  font-size: 0.875rem;
+}
+
 .bp-pill:hover {
   background: var(--bp-fill-raised);
 }
@@ -9365,7 +9375,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-home-stash {
   align-self: flex-start;
   margin-bottom: 1rem;
-  min-height: 44px;
 }
 
 .bp-song-record {

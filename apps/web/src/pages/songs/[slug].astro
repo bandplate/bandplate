@@ -346,7 +346,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           one control, always in the same place, rather than the same
           "record" affordance risking two spellings of itself on one page. */}
       <div class="bp-pills bp-song-record">
-        <a href={`/record?song=${song.slug}`} class="bp-pill bp-record-btn bp-pill--record" data-astro-reload>
+        <a href={`/record?song=${song.slug}`} class="bp-pill bp-pill--action bp-record-btn bp-pill--record" data-astro-reload>
           <span class="bp-record-mark" aria-hidden="true"></span>
           {t.stash.recordIdea}
         </a>

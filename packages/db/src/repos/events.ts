@@ -296,12 +296,22 @@ export async function listOnDay(
 }
 
 /**
+ * Reserved: every `events.client_ref` behind this belongs to a member's stash
+ * day and to nothing else. Named rather than spelled out at each site, because
+ * a reservation only holds where it is ENFORCED — `@bandplate/api`'s ingest
+ * schemas refuse it on the way in, which is what keeps a bridge from creating,
+ * matching or editing somebody's personal day. Companion to
+ * `STASH_CLIENT_REF_PREFIX`, which reserves the same thing for takes.
+ */
+export const PERSONAL_EVENT_CLIENT_REF_PREFIX = "personal:";
+
+/**
  * The idempotency key of one member's stash day. `events.client_ref` is
  * UNIQUE, which is exactly the guarantee find-or-create needs, and the prefix
  * keeps it out of the bridge's namespace (its refs are Reaper project GUIDs).
  */
 export function personalEventClientRef(memberId: string, dayKey: string): string {
-  return `personal:${memberId}:${dayKey}`;
+  return `${PERSONAL_EVENT_CLIENT_REF_PREFIX}${memberId}:${dayKey}`;
 }
 
 export interface FindOrCreatePersonalInput {

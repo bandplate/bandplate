@@ -256,43 +256,88 @@ describe("ingest API", () => {
       expect(body.error.code).toBe("validation_failed");
     });
 
-    it("422s on a clientRef in the stash's namespace", async () => {
+    it("422s on a clientRef in either of the stash's namespaces", async () => {
       const testApp = await buildTestApp();
       const auth = await ingestToken(testApp);
+      for (const clientRef of [
+        `${STASH_CLIENT_REF_PREFIX}local-9`,
+        `${eventsRepo.PERSONAL_EVENT_CLIENT_REF_PREFIX}m-1:2026-09-05`,
+      ]) {
+        const res = await testApp.app.request("/ingest/v1/events", {
+          method: "POST",
+          headers: { ...jsonHeaders, ...auth },
+          body: JSON.stringify({
+            clientRef,
+            kind: "rehearsal",
+            heldAt: "2026-09-05T19:30:00+02:00",
+          }),
+        });
+        expect(res.status).toBe(422);
+        expect((await res.json()).error.code).toBe("validation_failed");
+      }
+    });
+
+    // The sharp end of it: a member's stash day is a real row in the same
+    // table, with a `client_ref` a bridge can work out from a member id and a
+    // date. Reaching it would have matched their day (and, with
+    // `updateMetadata`, retitled it) rather than declared a rehearsal.
+    it("cannot reach a member's existing personal day, even naming it exactly", async () => {
+      const testApp = await buildTestApp();
+      const auth = await ingestToken(testApp);
+      const mine = await eventsRepo.findOrCreatePersonal(testApp.db, {
+        memberId: "m-1",
+        dayKey: "2026-09-19",
+        heldAt: 1_000,
+        now: 1_000,
+      });
+
       const res = await testApp.app.request("/ingest/v1/events", {
         method: "POST",
         headers: { ...jsonHeaders, ...auth },
         body: JSON.stringify({
-          clientRef: `${STASH_CLIENT_REF_PREFIX}local-9`,
-          kind: "rehearsal",
-          heldAt: "2026-09-05T19:30:00+02:00",
+          clientRef: eventsRepo.personalEventClientRef("m-1", "2026-09-19"),
+          updateMetadata: true,
+          kind: "concert",
+          heldAt: "2026-09-19T19:30:00+02:00",
+          title: "Not your day any more",
+        }),
+      });
+      expect(res.status).toBe(422);
+
+      const after = await eventsRepo.getById(testApp.db, mine.id);
+      expect(after).toMatchObject({ kind: "personal", ownerMemberId: "m-1", title: null });
+    });
+  });
+
+  // The bridge and the browser share one `client_ref` column on takes AND one
+  // on events, kept apart by a prefix each. `ingest/takes.ts` leans on the
+  // take one to assert every take it finds by clientRef has a song, which a
+  // stash recording need not; the event one guards the day those recordings
+  // sit in, and `eventClientRef` is a LOOKUP, so it is reserved just as hard.
+  it("refuses a take that claims either of the stash's namespaces", async () => {
+    const testApp = await buildTestApp();
+    const auth = await ingestToken(testApp);
+    const personalDay = eventsRepo.personalEventClientRef("m-1", "2026-09-19");
+    const bodies = [
+      { clientRef: `${STASH_CLIENT_REF_PREFIX}local-9`, eventClientRef: "proj-1" },
+      // A band take filed into somebody's stash day, where it would be drawn
+      // beside their own private recordings.
+      { clientRef: "reaper:region-guid:AAA", eventClientRef: personalDay },
+    ];
+    for (const ids of bodies) {
+      const res = await testApp.app.request("/ingest/v1/takes", {
+        method: "POST",
+        headers: { ...jsonHeaders, ...auth },
+        body: JSON.stringify({
+          ...ids,
+          song: { title: "Dub Corner", createIfMissing: true },
+          recordedAt: "2026-09-05T20:14:33+02:00",
+          assets: [{ kind: "master", format: "opus", tier: "lossy", bytes: 10 }],
         }),
       });
       expect(res.status).toBe(422);
       expect((await res.json()).error.code).toBe("validation_failed");
-    });
-  });
-
-  // The bridge and the browser share one `client_ref` column, kept apart by
-  // the `stash:` prefix — and `ingest/takes.ts` leans on that to assert every
-  // take it finds by clientRef has a song. A bridge allowed to claim the
-  // prefix could hand it a member's songless private recording instead.
-  it("refuses a take whose clientRef claims the stash's namespace", async () => {
-    const testApp = await buildTestApp();
-    const auth = await ingestToken(testApp);
-    const res = await testApp.app.request("/ingest/v1/takes", {
-      method: "POST",
-      headers: { ...jsonHeaders, ...auth },
-      body: JSON.stringify({
-        clientRef: `${STASH_CLIENT_REF_PREFIX}local-9`,
-        eventClientRef: "proj-1",
-        song: { title: "Dub Corner", createIfMissing: true },
-        recordedAt: "2026-09-05T20:14:33+02:00",
-        assets: [{ kind: "master", format: "opus", tier: "lossy", bytes: 10 }],
-      }),
-    });
-    expect(res.status).toBe(422);
-    expect((await res.json()).error.code).toBe("validation_failed");
+    }
   });
 
   describe("full three-phase flow (contract v1 §4/§10)", () => {

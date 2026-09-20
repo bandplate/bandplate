@@ -19,6 +19,7 @@ const RECORDING_FORMS = {
 
 export const stash = {
   pill: "Šuplík", // en: Stash
+  pillClose: "Zavřít šuplík", // en: Close stash
   viewLede: "Nahrávky, které vidíš jen ty.", // en: Recordings only you can see.
   recordIdea: "Nahrát nápad", // en: Record an idea
   empty: "Šuplík je prázdný. Nahraj nápad a objeví se tady.", // en: Your stash is empty. Record an idea and it lands here.

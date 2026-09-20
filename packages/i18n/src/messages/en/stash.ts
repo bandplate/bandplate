@@ -6,6 +6,9 @@ import { plural } from "../../plural.js";
 export const stash = {
   // --- the stash view on /takes -------------------------------------------
   pill: "Stash",
+  // The same pill, once the stash is open: pressing it again closes the drawer
+  // and puts the band's recordings back.
+  pillClose: "Close stash",
   viewLede: "Recordings only you can see.",
   recordIdea: "Record an idea",
   empty: "Your stash is empty. Record an idea and it lands here.",

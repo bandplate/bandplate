@@ -176,13 +176,18 @@ const countLabel = t.takes.count(total);
       {/* The stash, as a pill beside the filters: a different list of MY
           recordings, toggled like the Archived pill on /events. The count is
           server-side only; recordings still on the phone are counted by
-          nobody but the list itself. */}
+          nobody but the list itself.
+
+          Open, the pill says what pressing it does rather than where it goes:
+          the drawer below is unmistakably a different place, and a pressed
+          pill still reading "Stash" beside it read as a label for the view
+          rather than as the way out of it. */}
       <a
         href={viewingStash ? "/takes" : "/takes?stash=1"}
         class="bp-pill"
         aria-pressed={viewingStash ? "true" : "false"}
       >
-        {t.stash.pill}
+        {viewingStash ? t.stash.pillClose : t.stash.pill}
         {stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
       </a>
       {/* In the stash, the way in to the recorder where the filters were: the
@@ -396,8 +401,15 @@ const countLabel = t.takes.count(total);
       </dialog>
     )}
 
+    {/* The stash is the same results column, drawn as a drawer pulled open.
+        No extra wrapper: the recess, the lip and the grip are all on this one
+        box, so the rows inside keep the flex column they already had and the
+        sheets keep their `display: contents` place in it. The grip is a
+        `::before`, not an element — it is the drawer's front edge, nothing
+        presses it, and the pill above is the control that opens and closes
+        it. */}
     {viewingStash ? (
-      <div class="bp-search-results">
+      <div class="bp-search-results bp-stash-drawer">
         {formError && <Banner kind="error">{formError}</Banner>}
         {renamedRow && <Banner kind="success">{t.stash.renamed}</Banner>}
         <p class="bp-stash-lede bp-m0">{t.stash.viewLede}</p>

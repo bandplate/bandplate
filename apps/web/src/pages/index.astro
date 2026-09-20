@@ -166,6 +166,7 @@ function heroLines(item: typeof hero): string[] {
     </section>
 
     <section class="bp-home-ledger">
+      {stashCount > 0 && <h2 class="bp-section-title">{t.stash.homeHeading(stashCount)}</h2>}
       {stashCount > 0 && (
         <a href="/takes?stash=1" class="bp-pill bp-pill--action bp-home-stash">
           <svg

@@ -48,6 +48,9 @@ export const stash = {
     `${count} ${plural("en", count, { one: "recording", other: "recordings" })}`,
   /** Home, above the recent events: the way into the stash, carrying its count. */
   showStash: "Show stash",
+  /** The heading over it, in the shape home's other sections use. */
+  homeHeading: (count: number): string =>
+    `You have ${count} ${plural("en", count, { one: "recording", other: "recordings" })} in your stash`,
 
   // --- the recorder ---------------------------------------------------------
   close: "Close",

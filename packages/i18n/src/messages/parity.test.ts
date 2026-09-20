@@ -90,6 +90,11 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   ],
   "stash.recordFor": [{ label: "t", args: ["Čoudy"] }],
   "stash.viewTitle": [{ label: "t", args: ["Nahrávky"] }],
+  "stash.homeHeading": [
+    { label: "one", args: [1] },
+    { label: "few", args: [3] },
+    { label: "many", args: [15] },
+  ],
   "stash.pageTitle": [{ label: "t", args: ["Čoudy"] }],
   "stash.songAndLength": [{ label: "t", args: ["Čoudy", "2:47"] }],
   "stash.personalEvent": [{ label: "d", args: ["19. 9. 2026"] }],

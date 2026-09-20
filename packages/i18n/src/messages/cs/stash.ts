@@ -10,6 +10,15 @@ import { plural } from "../../plural.js";
 import type { stash as enStash } from "../en/stash.js";
 
 // Stejné slovo jako u nahrávek kapely: v šuplíku je to pořád nahrávka.
+// "Máš jednu nahrávku": the heading below counts them as the object of a verb,
+// so it needs the accusative, where every other count here is nominative.
+const RECORDING_FORMS_ACC = {
+  one: "nahrávku",
+  few: "nahrávky",
+  many: "nahrávky",
+  other: "nahrávek",
+};
+
 const RECORDING_FORMS = {
   one: "nahrávka",
   few: "nahrávky",
@@ -37,6 +46,9 @@ export const stash = {
   // en: `${n} ${n === 1 ? "recording" : "recordings"}`
   songSectionCount: (count: number): string => `${count} ${plural("cs", count, RECORDING_FORMS)}`,
   showStash: "Ukázat šuplík", // en: Show stash
+  // en: `You have ${n} ${n === 1 ? "recording" : "recordings"} in your stash`
+  homeHeading: (count: number): string =>
+    `V šuplíku máš ${count} ${plural("cs", count, RECORDING_FORMS_ACC)}`,
 
   close: "Zavřít", // en: Close
   stepOne: "Krok 1 ze 2", // en: Step 1 of 2

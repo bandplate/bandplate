@@ -9391,7 +9391,10 @@ html:has(dialog.bp-filter-sheet[open]) body {
    gap is its own: the heading brings no margin of its own to lean on. */
 .bp-home-stash {
   align-self: flex-start;
-  margin-bottom: 1rem;
+  /* It is the end of its own section, and "Recent events" begins right under
+     it: the gap has to read as a section break rather than as a line of the
+     same block. */
+  margin-bottom: 2rem;
 }
 
 .bp-song-record {

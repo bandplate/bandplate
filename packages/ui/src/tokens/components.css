@@ -1015,7 +1015,11 @@ a.bp-btn {
 .bp-ledger-row {
   border: none;
   border-radius: 12px;
-  padding-block: 0.875rem;
+  /* Tight on the Y axis on purpose: these lists are read by scrolling, and a
+     row that breathes in isolation costs a screenful over twenty of them. The
+     row's own `min-height` (44px) is the floor, so the thumb target survives
+     the smaller padding. */
+  padding-block: 0.5rem;
   background: transparent;
 }
 
@@ -3912,7 +3916,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   align-items: center;
   gap: 0.5rem;
   min-height: 44px;
-  padding-block: 1rem;
+  padding-block: 0.5rem;
 }
 
 .bp-song-row-link {
@@ -4031,7 +4035,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
     ".    line2 line2 line2";
   align-items: center;
   column-gap: 0.75rem;
-  row-gap: 0.25rem;
+  row-gap: 0.125rem;
   min-height: 44px;
   /* The containing block for the stretched link below. WITHOUT IT that overlay
      anchors to whatever ancestor happens to be positioned and covers the page:
@@ -4475,7 +4479,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
   align-items: center;
   gap: 0.5rem;
   flex: none;
-  padding: 0.3125rem 0.625rem;
+  /* The vertical half is 2px: on a take row this box IS line two's height,
+     so padding here is row height twenty times over down a list. */
+  padding: 0.125rem 0.625rem;
   border-radius: 6px;
   background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
   color: var(--bp-color-muted);

@@ -36,6 +36,9 @@ const IDENTICAL_IS_FINE = new Set<string>([
   "auth.setupTokenLabel",
   // An em dash is an em dash.
   "me.ledgerNoAnswer",
+  // "REC" is what the red dot says on every recorder anyone in this band has
+  // ever touched, in either language.
+  "stash.recShort",
   // Developer vocabulary the person reading this screen already uses: they
   // set up the server. Same word in Czech.
   "admin.colSlug",
@@ -85,11 +88,8 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "few", args: [3] },
     { label: "many", args: [5] },
   ],
-  "stash.homeLine": [
-    { label: "one", args: [1] },
-    { label: "many", args: [5] },
-  ],
   "stash.recordFor": [{ label: "t", args: ["Čoudy"] }],
+  "stash.viewTitle": [{ label: "t", args: ["Nahrávky"] }],
   "stash.pageTitle": [{ label: "t", args: ["Čoudy"] }],
   "stash.songAndLength": [{ label: "t", args: ["Čoudy", "2:47"] }],
   "stash.personalEvent": [{ label: "d", args: ["19. 9. 2026"] }],

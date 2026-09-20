@@ -9216,19 +9216,18 @@ html:has(dialog.bp-filter-sheet[open]) body {
    app's reserved shape for a destructive action (see `.bp-btn-danger` above,
    and the argument there for why that shape had to be solid) — and the stash
    bar, the song page and the recorder all carry a Delete within a thumb's
-   reach of a Record. So the record controls take the danger TINT with a
-   danger RING: the ring plus the dot is the hardware REC mark, and weight
-   separates it from the solid plate exactly the way solid separates Delete
-   from Cancel.
+   reach of a Record. So the record controls take the danger TINT and the red
+   dot, and nothing else: the dot is the hardware REC mark, and the tint is
+   lighter than the solid plate exactly the way the secondary pill is lighter
+   than Delete. The ring this rule used to draw was louder than the dot it
+   framed, and the owner asked for it gone.
 
-   Contrast, measured: the ring is `--bp-color-danger` on the page ground,
-   4.6:1 dark / 6.1:1 light — well past the 3:1 a non-text control needs. The
-   dot sits on the tint, the risky pair, at 3.5:1 dark / 4.2:1 light at rest
-   and 3.0:1 / 3.5:1 on the 34% hover. Any label on the tint is
-   `--bp-color-fg` (12.3:1 / 10.6:1), never muted — the fill rule. */
+   Contrast, measured: the dot sits on the tint, the risky pair, at 3.5:1
+   dark / 4.2:1 light at rest and 3.0:1 / 3.5:1 on the 34% hover — past the
+   3:1 a non-text control needs. Any label on the tint is `--bp-color-fg`
+   (12.3:1 / 10.6:1), never muted: the fill rule. */
 .bp-record-btn {
   background: var(--bp-fill-alert);
-  box-shadow: inset 0 0 0 2px var(--bp-color-danger);
   color: var(--bp-color-fg);
 }
 
@@ -9256,13 +9255,46 @@ html:has(dialog.bp-filter-sheet[open]) body {
   padding: 0;
 }
 
-/* The song page's way in, beside the hero. A pill, not a button in the title
-   row — it adds TO the song rather than editing it — so it keeps the pill
-   shape and takes the record tint instead of a pressed state's gold. 44px
-   here rather than the pill row's 36px: this one is an action, not a filter,
-   and it has to meet the touch floor on its own. */
-.bp-pill--record {
-  min-height: 44px;
+/* The song page's way in, beside the hero, and the same control in the takes
+   bar. A pill, not a button in the title row — it adds TO the song rather
+   than editing it — so it keeps the pill shape and takes the record tint
+   instead of a pressed state's gold. It carried 44px for a while and stood a
+   head taller than the pill beside it; a row of pills that are not the same
+   height reads as a mistake, so it is a plain pill in every way but its
+   colour and the dot. Nothing to declare here: `.bp-pill` already carries
+   the height, the padding, the radius and the type. */
+
+/* The caption and its phone-sized stand-in. Both are always in the markup;
+   which one shows is a width question, and the hidden one is hidden from the
+   eye only — the long caption remains the control's accessible name, and the
+   short one is `aria-hidden`, so a screen reader hears "Record an idea" at
+   every width rather than the letters R, E, C. */
+.bp-record-word-short {
+  display: none;
+}
+
+@media (max-width: 26rem) {
+  .bp-takes-bar .bp-record-word,
+  .bp-takes-bar .bp-pill--stash-close .bp-record-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .bp-takes-bar .bp-record-word-short {
+    display: inline;
+  }
+
+  /* The cross is a glyph, not a word: it needs the button's own width to stay
+     square and thumb-sized once its label is gone. */
+  .bp-takes-bar .bp-pill--stash-close {
+    min-width: 44px;
+    justify-content: center;
+  }
 }
 
 /* `.bp-pill:hover` is declared earlier in this file and would otherwise win
@@ -9321,11 +9353,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-muted);
 }
 
+/* Home's way into the stash: the same pill the takes bar carries, so the two
+   read as one control in two places. It sits above "Recent events", and the
+   gap is its own: the heading brings no margin of its own to lean on. */
 .bp-home-stash {
+  align-self: flex-start;
+  margin-bottom: 1rem;
   min-height: 44px;
-  color: var(--bp-color-fg);
-  text-decoration: none;
-  font-weight: 600;
 }
 
 .bp-song-record {

@@ -167,8 +167,24 @@ function heroLines(item: typeof hero): string[] {
 
     <section class="bp-home-ledger">
       {stashCount > 0 && (
-        <a href="/takes?stash=1" class="bp-stash-line bp-home-stash">
-          {t.stash.homeLine(stashCount)}
+        <a href="/takes?stash=1" class="bp-pill bp-home-stash">
+          <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 5h16v6H4z" />
+          <path d="M4 13h16v6H4z" />
+          <path d="M10 8h4M10 16h4" />
+        </svg>
+          {t.stash.showStash}
+          <span class="bp-pill-count">{stashCount}</span>
         </a>
       )}
       <h2 class="bp-section-title">{t.home.recentEvents}</h2>

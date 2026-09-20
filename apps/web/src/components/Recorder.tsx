@@ -129,6 +129,12 @@ export default function Recorder({
   const [label, setLabel] = useState("");
   const [bars, setBars] = useState<number[] | null>(null);
   const [reviewUrl, setReviewUrl] = useState<string | null>(null);
+  // Leaving the review screen throws the recording away, so the close asks
+  // first. It is component state, not a recorder phase: the reducer's
+  // `confirm-discard` belongs to the stage, where "keep going" means keep
+  // RECORDING, and reusing it here would have to mean something else.
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -377,7 +383,11 @@ export default function Recorder({
 
   // Leaving with an unsaved recording asks first.
   useEffect(() => {
-    const unsaved = recording || state.phase === "review" || state.phase === "finishing";
+    // `leaving` is the member answering that exact question already: the
+    // close on the review screen asked, they chose to throw the recording
+    // away, and a second browser prompt on the way out would ask it twice.
+    const unsaved =
+      !leaving && (recording || state.phase === "review" || state.phase === "finishing");
     if (!unsaved) {
       return;
     }
@@ -386,7 +396,7 @@ export default function Recorder({
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [recording, state.phase]);
+  }, [recording, state.phase, leaving]);
 
   useEffect(() => () => releaseInput(), [releaseInput]);
   useEffect(
@@ -525,6 +535,17 @@ export default function Recorder({
   if (state.phase === "review" || state.phase === "saving") {
     return (
       <div class="bp-rec bp-rec--review">
+        <div class="bp-rec-head">
+          <button
+            type="button"
+            class="bp-rec-close"
+            aria-label={t.close}
+            onClick={() => setConfirmLeave(true)}
+            disabled={state.phase === "saving"}
+          >
+            <CloseIcon />
+          </button>
+        </div>
         <div class="bp-rec-intro">
           <p class="bp-eyebrow bp-m0">{t.stepTwo}</p>
           <h1 class="bp-rec-heading">{song?.title ?? t.noSongYet}</h1>
@@ -612,6 +633,34 @@ export default function Recorder({
             <p class="bp-field-error bp-m0" role="alert">
               {errorText[state.error]}
             </p>
+          )}
+          {confirmLeave && (
+            <div class="bp-rec-confirm" role="alertdialog" aria-label={t.discardQuestion}>
+              <p class="bp-m0">{t.discardQuestion}</p>
+              <div class="bp-rec-actions">
+                <button
+                  type="button"
+                  class="bp-btn bp-btn-secondary"
+                  onClick={() => setConfirmLeave(false)}
+                >
+                  {t.keepIt}
+                </button>
+                <a class="bp-btn bp-btn-danger" href={closeHref} onClick={() => setLeaving(true)}>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                  </svg>
+                  {t.discard}
+                </a>
+              </div>
+            </div>
           )}
           <div class="bp-rec-actions">
             <button

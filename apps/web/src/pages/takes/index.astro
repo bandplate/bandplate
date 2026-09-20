@@ -172,7 +172,9 @@ const countLabel = t.takes.count(total);
 <AppLayout title={t.takes.title} principal={principal} current="takes">
   <div class={viewingStash ? "bp-takes bp-takes--stash" : "bp-takes"}>
     <div class="bp-takes-bar">
-      <h1 class="bp-page-title bp-m0 bp-takes-bar-title">{t.takes.title}</h1>
+      <h1 class="bp-page-title bp-m0 bp-takes-bar-title">
+        {viewingStash ? t.stash.viewTitle(t.takes.title) : t.takes.title}
+      </h1>
       {/* The stash, as a pill beside the filters: a different list of MY
           recordings, toggled like the Archived pill on /events. The count is
           server-side only; recordings still on the phone are counted by
@@ -184,22 +186,62 @@ const countLabel = t.takes.count(total);
           rather than as the way out of it. */}
       <a
         href={viewingStash ? "/takes" : "/takes?stash=1"}
-        class="bp-pill"
+        class={viewingStash ? "bp-pill bp-pill--stash-close" : "bp-pill"}
         aria-pressed={viewingStash ? "true" : "false"}
       >
-        {viewingStash ? t.stash.pillClose : t.stash.pill}
+        {viewingStash ? (
+          <>
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 5h16v6H4z" />
+              <path d="M4 13h16v6H4z" />
+              <path d="M10 8h4M10 16h4" />
+            </svg>
+            <span class="bp-record-word">{t.stash.pillClose}</span>
+            <span class="bp-record-word-short" aria-hidden="true">&times;</span>
+          </>
+        ) : (
+          <>
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 5h16v6H4z" />
+              <path d="M4 13h16v6H4z" />
+              <path d="M10 8h4M10 16h4" />
+            </svg>
+            {t.stash.pill}
+          </>
+        )}
         {stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
       </a>
       {/* In the stash, the way in to the recorder where the filters were: the
-          record mark alone — a red dot inside the button's own red ring. The
-          words would not fit beside the title and the pill on a phone, and
-          they are still what is read out. It was a gold mic, which said
-          "audio" rather than "record"; see `.bp-record-btn` for why red here
-          is a ring and a tint and never the solid plate Delete wears. */}
+          SAME pill the song page carries, caption and all, so one affordance
+          is not spelled two ways. The red dot says record where a gold mic
+          only said "audio". On a phone the caption gives way to "REC" and the
+          close pill beside it drops to its cross, which is the only way both
+          fit beside the title at 375px. */}
       {viewingStash ? (
-        <a href="/record" class="bp-btn bp-record-btn bp-stash-record" data-astro-reload>
+        <a href="/record" class="bp-pill bp-record-btn bp-pill--record" data-astro-reload>
           <span class="bp-record-mark" aria-hidden="true"></span>
-          <span class="bp-visually-hidden">{t.stash.recordIdea}</span>
+          <span class="bp-record-word">{t.stash.recordIdea}</span>
+          <span class="bp-record-word-short" aria-hidden="true">{t.stash.recShort}</span>
         </a>
       ) : (
         <>

@@ -19,9 +19,12 @@ const RECORDING_FORMS = {
 
 export const stash = {
   pill: "Šuplík", // en: Stash
+  // en: `${takes} — stash`
+  viewTitle: (takes: string): string => `${takes} — šuplík`,
   pillClose: "Zavřít šuplík", // en: Close stash
   viewLede: "Nahrávky, které vidíš jen ty.", // en: Recordings only you can see.
   recordIdea: "Nahrát nápad", // en: Record an idea
+  recShort: "REC", // en: REC
   empty: "Šuplík je prázdný. Nahraj nápad a objeví se tady.", // en: Your stash is empty. Record an idea and it lands here.
   unknownSong: "Neznámá píseň", // en: Unknown song
   noSongYet: "Zatím bez písně", // en: No song yet
@@ -33,7 +36,7 @@ export const stash = {
   songSection: "Ve tvém šuplíku", // en: In your stash
   // en: `${n} ${n === 1 ? "recording" : "recordings"}`
   songSectionCount: (count: number): string => `${count} ${plural("cs", count, RECORDING_FORMS)}`,
-  homeLine: (count: number): string => `V šuplíku ${count}`, // en: N in your stash
+  showStash: "Ukázat šuplík", // en: Show stash
 
   close: "Zavřít", // en: Close
   stepOne: "Krok 1 ze 2", // en: Step 1 of 2
@@ -58,6 +61,7 @@ export const stash = {
   discardQuestion: "Zahodit nahrávku?", // en: Throw this recording away?
   discard: "Zahodit", // en: Throw away
   keepRecording: "Nahrávat dál", // en: Keep recording
+  keepIt: "Nechat", // en: Keep it
   finishing: "Dokončuju nahrávku", // en: Finishing the recording
   reviewPlay: "Přehrát", // en: Play
   reviewPause: "Pozastavit", // en: Pause

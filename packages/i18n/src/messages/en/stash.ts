@@ -6,11 +6,19 @@ import { plural } from "../../plural.js";
 export const stash = {
   // --- the stash view on /takes -------------------------------------------
   pill: "Stash",
+  /** The page's own title while the drawer is open, in the title-join shape. */
+  viewTitle: (takes: string): string => `${takes} — stash`,
   // The same pill, once the stash is open: pressing it again closes the drawer
   // and puts the band's recordings back.
   pillClose: "Close stash",
   viewLede: "Recordings only you can see.",
   recordIdea: "Record an idea",
+  /**
+   * The same control on a phone, where the caption will not fit beside the
+   * title and the close pill. The long caption stays as the accessible name,
+   * so this is only ever read by the eye.
+   */
+  recShort: "REC",
   empty: "Your stash is empty. Record an idea and it lands here.",
   unknownSong: "Unknown song",
   /**
@@ -38,8 +46,8 @@ export const stash = {
    */
   songSectionCount: (count: number): string =>
     `${count} ${plural("en", count, { one: "recording", other: "recordings" })}`,
-  /** Home, above the recent events. */
-  homeLine: (count: number): string => `${count} in your stash`,
+  /** Home, above the recent events: the way into the stash, carrying its count. */
+  showStash: "Show stash",
 
   // --- the recorder ---------------------------------------------------------
   close: "Close",
@@ -74,6 +82,11 @@ export const stash = {
   discardQuestion: "Throw this recording away?",
   discard: "Throw away",
   keepRecording: "Keep recording",
+  /**
+   * The same question on the review screen, where the recording has already
+   * stopped: keeping it means keeping the recording, not carrying on.
+   */
+  keepIt: "Keep it",
   finishing: "Finishing the recording",
   reviewPlay: "Play",
   reviewPause: "Pause",

@@ -41,3 +41,53 @@ export function safeRedirectPath(
   }
   return `${referer.pathname}${referer.search}`;
 }
+
+/**
+ * The origin a candidate path is resolved against. Never sent anywhere: it
+ * exists so the WHATWG parser can answer "does this string stay on the site it
+ * was resolved against?", which is the only question being asked.
+ */
+const PROBE_ORIGIN = "https://app.invalid";
+
+/**
+ * A destination a FORM asked for, checked before anything redirects to it.
+ *
+ * `returnTo` on a stash sheet is where its caller wants the member back — the
+ * song page's own section sends its own URL, the stash view sends nothing. The
+ * field travels through the browser, so it is the member's to edit and an
+ * attacker's to plant: forwarded verbatim it is an open redirect, which a
+ * background security scan flagged as one.
+ *
+ * Only a path ON THIS APP survives: it starts with `/`, it is not the
+ * protocol-relative `//host` (nor the backslash variant the URL parser folds
+ * into it), it carries no scheme, and resolving it leaves it on the origin it
+ * was resolved against. Anything else answers `null`, and the caller falls
+ * back to a destination it chose itself.
+ */
+export function safeAppPath(candidate: string | null | undefined): string | null {
+  const value = candidate?.trim();
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+    return null;
+  }
+  let url: URL;
+  try {
+    url = new URL(value, PROBE_ORIGIN);
+  } catch {
+    return null;
+  }
+  if (url.origin !== PROBE_ORIGIN) {
+    return null;
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+/**
+ * Adds one `name=value` to a path that may already carry a query — `?` the
+ * first time, `&` after that. `/songs/coudy` + `published=1` is
+ * `/songs/coudy?published=1`; `/takes?stash=1` + `deleted=x` is
+ * `/takes?stash=1&deleted=x`, where a second `?` would have made the whole
+ * thing one unreadable parameter.
+ */
+export function withQuery(path: string, query: string): string {
+  return `${path}${path.includes("?") ? "&" : "?"}${query}`;
+}

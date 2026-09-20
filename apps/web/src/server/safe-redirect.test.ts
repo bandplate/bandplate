@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeRedirectPath } from "./safe-redirect.js";
+import { safeAppPath, safeRedirectPath, withQuery } from "./safe-redirect.js";
 
 const APP_ORIGIN = "https://band.example";
 
@@ -40,5 +40,41 @@ describe("safeRedirectPath", () => {
     expect(
       safeRedirectPath(`https://band.example/${"\\"}evil.example/x`, APP_ORIGIN, "/fallback"),
     ).toBe("/fallback");
+  });
+});
+
+describe("safeAppPath", () => {
+  it("keeps a plain app path, query and all", () => {
+    expect(safeAppPath("/songs/coudy")).toBe("/songs/coudy");
+    expect(safeAppPath("/takes?stash=1")).toBe("/takes?stash=1");
+    expect(safeAppPath("  /takes?stash=1  ")).toBe("/takes?stash=1");
+  });
+
+  it("refuses anything that is not a path on this app", () => {
+    expect(safeAppPath(null)).toBeNull();
+    expect(safeAppPath(undefined)).toBeNull();
+    expect(safeAppPath("")).toBeNull();
+    expect(safeAppPath("   ")).toBeNull();
+    // No scheme, and nothing that is one in disguise.
+    expect(safeAppPath("https://evil.example/x")).toBeNull();
+    expect(safeAppPath("javascript:alert(1)")).toBeNull();
+    // Not a path at all: a browser resolves this against the current page.
+    expect(safeAppPath("songs/coudy")).toBeNull();
+  });
+
+  it("refuses the protocol-relative forms — never an open redirect", () => {
+    expect(safeAppPath("//evil.example/x")).toBeNull();
+    expect(safeAppPath("///evil.example/x")).toBeNull();
+    // The URL parser folds a leading backslash into `/` for special schemes,
+    // so `/\evil.example` is `//evil.example` by the time a browser sees it.
+    expect(safeAppPath("/\\evil.example/x")).toBeNull();
+    expect(safeAppPath("/\\/evil.example/x")).toBeNull();
+  });
+});
+
+describe("withQuery", () => {
+  it("opens the query, then extends it", () => {
+    expect(withQuery("/songs/coudy", "published=1")).toBe("/songs/coudy?published=1");
+    expect(withQuery("/takes?stash=1", "deleted=t-1")).toBe("/takes?stash=1&deleted=t-1");
   });
 });

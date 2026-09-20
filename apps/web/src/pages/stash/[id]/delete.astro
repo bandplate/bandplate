@@ -9,6 +9,7 @@ import Layout from "../../../layouts/Layout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
 import { deleteStashTake, getStashItem } from "../../../server/pages/stash.js";
+import { safeAppPath, safeRedirectPath, withQuery } from "../../../server/safe-redirect.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -23,6 +24,18 @@ const appDeps = await getAppDeps();
 const t = messages(Astro.locals.locale);
 const isFetch = (Astro.request.headers.get("accept") ?? "").includes("text/plain");
 
+// Where the member came from, carried on this route's own URL — the form
+// below posts to it, query and all, so the GET and the POST see the same
+// value. Checked, not trusted: it arrives through the browser (`safeAppPath`).
+//
+// The sheet puts it there only when its caller named one (the song page's own
+// stash section does). Without it the delete lands on the stash view, which is
+// also the one destination that wants `?deleted=` — its island drops a local
+// copy still waiting to upload into a take that no longer exists. Nowhere
+// else has that island, so nowhere else is told.
+const returnTo = safeAppPath(Astro.url.searchParams.get("returnTo"));
+const afterDelete = returnTo ?? withQuery("/takes?stash=1", `deleted=${id}`);
+
 if (Astro.request.method === "POST") {
   if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
     return new Response("origin check failed", { status: 403 });
@@ -36,9 +49,7 @@ if (Astro.request.method === "POST") {
   if (result.kind !== "ok") {
     return new Response("Not found.", { status: 404 });
   }
-  // `deleted` lets the stash view drop a local copy still waiting to upload
-  // into this take, which would otherwise come back as a row that 404s.
-  return Astro.redirect(`/takes?stash=1&deleted=${id}`);
+  return Astro.redirect(afterDelete);
 }
 
 const item = await getStashItem(appDeps.db, id, principal.memberId);
@@ -51,10 +62,17 @@ const title = stashName(
   { songId: item.take.songId, songTitle: item.song?.title, label: item.take.label },
   { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong },
 );
+// Cancelling puts the member back where they were, which is the page that
+// carried the delete: the named `returnTo`, or — when nothing named one — the
+// page this GET came from, which with no script is the recording's own. The
+// recording still exists at that point, so its page is a safe last resort.
+const cancelHref =
+  returnTo ??
+  safeRedirectPath(Astro.request.headers.get("referer"), appDeps.config.appOrigin, `/stash/${id}`);
 ---
 
 <Layout title={t.stash.delete}>
-  <ConfirmActionPage bannerTitle={t.stash.deleteTitle(title)} cta={t.stash.deleteCta} cancelHref={`/stash/${id}`} cancelLabel={t.stash.cancel}>
+  <ConfirmActionPage bannerTitle={t.stash.deleteTitle(title)} cta={t.stash.deleteCta} cancelHref={cancelHref} cancelLabel={t.stash.cancel}>
     {t.stash.deleteBody}
   </ConfirmActionPage>
 </Layout>

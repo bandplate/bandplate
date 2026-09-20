@@ -4,26 +4,30 @@
 // where the row's link goes when there is no script to open it with, and where
 // a bookmark or a link from anywhere else lands.
 //
-// So the two say the same things in the same order — the facts, the one thing
-// to do with the recording, then rename, download, delete — and a change to
-// one is a change to both. They share the logic that matters: what the
-// recording is CALLED (`stash-display.ts`) and what a write does
-// (`applyStashWrite`), which is also where the owner check lives.
+// The two do not say the same things in the same order — they are the SAME
+// COMPONENT. This page renders `StashItemSheet` with `standalone`, which lays
+// it out in the flow instead of as a dialog and drops the Close button a page
+// has nothing to do with. It used to be a second hand-written copy of those
+// hundred lines (the same facts, the same publish form, the same refusals),
+// which is two places to make one change and one place to forget it.
+//
+// What the page adds is what a page needs and a sheet does not: a way back, a
+// heading, and the play control beside it.
 //
 // Publishing and renaming are plain POSTs to this page, like every other M8
 // write; delete is the shared `data-confirm` modal, with `/stash/[id]/delete`
 // as its no-JS page. A published or someone else's take is a 404 here.
-import { formatShortDate, messages } from "@bandplate/i18n";
+import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
-import Field from "@bandplate/ui/components/Field.astro";
-import { stashName, stashNote, stashSongField } from "../../client/stash-display.js";
+import { stashName, stashNote } from "../../client/stash-display.js";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
-import RecordSheet from "../../components/RecordSheet.astro";
+import StashItemSheet from "../../components/StashItemSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { formatDuration } from "../../server/format.js";
 import { applyStashWrite, getStashItem, listRecordableSongs } from "../../server/pages/stash.js";
+import { withQuery } from "../../server/safe-redirect.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -61,10 +65,10 @@ if (Astro.request.method === "POST") {
       formData,
     );
     if (result.kind === "published") {
-      // No `returnTo` field on this page's own inline form, so this is
+      // No `returnTo` field on this page's own sheet, so this is
       // `applyStashWrite`'s default: the take's own page, unchanged from
       // before `returnTo` existed.
-      return Astro.redirect(`${result.returnTo}?published=1`);
+      return Astro.redirect(withQuery(result.returnTo, "published=1"));
     }
     if (result.kind === "renamed") {
       return Astro.redirect(`/stash/${result.takeId}?renamed=1`);
@@ -84,9 +88,9 @@ if (Astro.request.method === "POST") {
             : result.error === "nothing_to_play"
               ? t.stash.stillUploading
               : t.stash.labelTooLong;
-      // Twice: in the field, for the page where the sheet is a plain block,
-      // and in a banner, because with script the sheet is closed again by the
-      // time this page is back.
+      // Twice: in the field, where it was typed, and in a banner, because
+      // with script the rename sheet is closed again by the time this page is
+      // back.
       if (result.error === "label_too_long") {
         renameError = formError;
       }
@@ -99,14 +103,16 @@ if (!item) {
   return new Response("Not found.", { status: 404 });
 }
 const { take, song, event, owner, playableAsset } = item;
+// The shape every stash surface draws — the row, the sheet, this page. Built
+// here rather than fetched a second way, so the page and the list can never
+// disagree about what a recording is.
+const row = { ...take, song, event, playableAssetId: playableAsset?.id };
 const nameParts = { songId: take.songId, songTitle: song?.title, label: take.label };
 const nameWords = { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong };
-// What this recording is called, and what its "Píseň" field says — two
-// different questions once a recording can have no song. See `stash-display`.
+// What this recording is called, and the song, said only where it is not
+// already the title. See `stash-display`.
 const title = stashName(nameParts, nameWords);
-// The song, said only where it is not already the title.
 const note = stashNote(nameParts, nameWords);
-const songField = stashSongField(nameParts, nameWords);
 // The song has to be chosen before it can be added to the band, so the picker
 // is part of the publish form rather than a step before it. Same list the
 // recorder uses; loaded only when there is a choice to make.
@@ -136,90 +142,6 @@ const length = formatDuration(take.durationMs);
       )}
     </div>
 
-    {/* Labelled fields, not a run joined by dots: three different facts. */}
-    <dl class="bp-stash-facts">
-      <div>
-        <dt>{t.stash.fieldSong}</dt>
-        <dd>{songField}</dd>
-      </div>
-      <div>
-        <dt>{t.stash.fieldEvent}</dt>
-        <dd>{t.stash.personalEvent(formatShortDate(locale, event?.heldAt ?? take.recordedAt))}</dd>
-      </div>
-      <div>
-        <dt>{t.stash.fieldBy}</dt>
-        <dd>{owner?.displayName}</dd>
-      </div>
-    </dl>
-
-    {/* No fake affordances, and the NEAREST obstacle first: a recording still
-        on its way from the phone cannot be added whatever the library holds,
-        so that is what the page says. Only once the file has landed is an
-        empty library the thing in the way. */}
-    {!playableAsset ? (
-      <p class="bp-field-hint bp-m0">{t.stash.stillUploading}</p>
-    ) : !take.songId && songChoices.length === 0 ? (
-      <p class="bp-field-hint bp-m0">{t.stash.noSongs}</p>
-    ) : (
-      <div class="bp-stash-publish">
-        <p class="bp-m0">{t.stash.publishNote}</p>
-        <form method="post">
-          <input type="hidden" name="intent" value="publish" />
-          <input type="hidden" name="takeId" value={take.id} />
-          {!take.songId && (
-            <div class="bp-stash-song-pick">
-              <label class="bp-field-label" for="publish-song">{t.stash.chooseSong}</label>
-              <select id="publish-song" name="songId" class="bp-input" required>
-                <option value="">{t.stash.chooseSongPlaceholder}</option>
-                {songChoices.map((choice) => (
-                  <option value={choice.id}>{choice.title}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <button type="submit" class="bp-btn bp-btn-primary">{t.stash.publish}</button>
-        </form>
-      </div>
-    )}
-
-    <div class="bp-stash-secondary">
-      <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="rename-stash">
-        {t.stash.rename}
-      </button>
-      {playableAsset && (
-        <a href={`/api/assets/${playableAsset.id}/download`} class="bp-btn bp-btn-secondary bp-btn-sm">
-          {t.stash.download}
-        </a>
-      )}
-      <a
-        href={`/stash/${take.id}/delete`}
-        class="bp-btn bp-btn-danger bp-btn-sm"
-        data-confirm
-        data-confirm-title={t.stash.deleteTitle(title)}
-        data-confirm-body={t.stash.deleteBody}
-        data-confirm-action={`/stash/${take.id}/delete`}
-        data-confirm-cta={t.stash.deleteCta}
-        data-confirm-redirect={`/takes?stash=1&deleted=${take.id}`}
-      >
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-        </svg>
-        {t.stash.delete}
-      </a>
-    </div>
-
-    <RecordSheet id="rename-stash" eyebrow={t.stash.rename} title={title}>
-      <form method="post" class="bp-sheet-form" novalidate>
-        <input type="hidden" name="intent" value="rename" />
-        <input type="hidden" name="takeId" value={take.id} />
-        <div class="bp-sheet-body">
-          <Field label={t.stash.labelField} name="label" value={take.label ?? ""} maxlength={200} error={renameError} />
-        </div>
-        <div class="bp-sheet-foot">
-          <button type="submit" class="bp-btn bp-btn-primary">{t.stash.renameSave}</button>
-          <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.stash.cancel}</button>
-        </div>
-      </form>
-    </RecordSheet>
+    <StashItemSheet row={row} ownerName={owner?.displayName} songChoices={songChoices} renameError={renameError} standalone />
   </div>
 </AppLayout>

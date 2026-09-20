@@ -45,6 +45,7 @@ import {
 } from "../../server/pages/search.js";
 import { applyStashWrite, getStashView } from "../../server/pages/stash.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
+import { withQuery } from "../../server/safe-redirect.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -77,7 +78,7 @@ if (Astro.request.method === "POST") {
       // `returnTo` defaults to the take's own page — this list's sheet never
       // sends one, so this is unchanged from before `returnTo` existed. See
       // `applyStashWrite`.
-      return Astro.redirect(`${result.returnTo}?published=1`);
+      return Astro.redirect(withQuery(result.returnTo, "published=1"));
     }
     if (result.kind === "renamed") {
       return Astro.redirect(`/takes?stash=1&renamed=${result.takeId}`);

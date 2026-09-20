@@ -5,6 +5,7 @@ import type { Db } from "@bandplate/db";
 import { assetsRepo, eventsRepo, membersRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { z } from "zod";
 import type { SongOption } from "../../client/recorder-logic.js";
+import { safeAppPath } from "../safe-redirect.js";
 import { type DeleteTakeResult, deleteTake } from "./takes.js";
 
 /** How many songs the picker loads. A band's repertoire is tens; this is a ceiling, not a page. */
@@ -266,10 +267,11 @@ export type StashWriteError =
 export type StashWriteResult =
   /**
    * `returnTo` is where the sheet's caller wants the member back — its own
-   * page, not necessarily the stash view. Always set: a hidden `returnTo`
-   * field on the form when the sheet's caller cares (the song page's own
-   * section does), and the take's own page (today's behaviour, unchanged)
-   * when it's absent — the stash view's sheet never sends one.
+   * page, not necessarily the stash view. Always set, and always a path on
+   * this app (`safeAppPath`): a hidden `returnTo` field on the form when the
+   * sheet's caller cares (the song page's own section does), and the take's
+   * own page (today's behaviour, unchanged) when it's absent or refused —
+   * the stash view's sheet never sends one.
    */
   | { kind: "published"; takeId: string; returnTo: string }
   | { kind: "renamed"; takeId: string }
@@ -305,8 +307,12 @@ export async function applyStashWrite(
     const chosen = String(formData.get("songId") ?? "").trim();
     const result = await publishStashTake(db, now, takeId, memberId, chosen === "" ? null : chosen);
     if (result.kind === "ok") {
-      const requestedReturnTo = String(formData.get("returnTo") ?? "").trim();
-      return { kind: "published", takeId, returnTo: requestedReturnTo || `/takes/${takeId}` };
+      // The field came through the browser, so it is checked rather than
+      // trusted: only a path on this app survives `safeAppPath`, and anything
+      // else lands on the take's own page, which is where a sheet that sends
+      // no `returnTo` goes anyway.
+      const returnTo = safeAppPath(formData.get("returnTo")?.toString());
+      return { kind: "published", takeId, returnTo: returnTo ?? `/takes/${takeId}` };
     }
     if (result.kind === "not_found") {
       return { kind: "not_found" };

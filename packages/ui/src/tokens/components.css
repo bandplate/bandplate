@@ -3464,6 +3464,36 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 }
 
+/* The same rendering, made unconditional, for a sheet that IS its page.
+   `/stash/[id]` is one recording and nothing else: there is no row to open a
+   dialog from, so it renders the sheet's own markup in the flow rather than
+   keeping a second hand-written copy of it. Written at the specificity of
+   `.bp-sheet:not([open])` above, and after it, so it wins in both directions.
+   The head goes: the page has a heading of its own. */
+.bp-sheet--inline,
+.bp-sheet--inline:not([open]) {
+  display: flex;
+  flex-direction: column;
+  position: static;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  translate: none;
+  border: 1px solid var(--bp-color-border);
+  border-radius: 0.5rem;
+  box-shadow: none;
+}
+
+.bp-sheet--inline .bp-sheet-head {
+  display: none;
+}
+
+.bp-sheet--inline .bp-sheet-body {
+  overflow-y: visible;
+}
+
 /* A disclosure inside a table cell — the roster's instruments and its row
    actions. Closed it is one line, which is what lets the table stay a table
    you can scan a column of; open it holds a real form. The alternative was a
@@ -9050,36 +9080,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
   font-weight: 600;
 }
 
-.bp-stash-publish {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: flex-start;
-}
-
-/* The publish form's own stack: the song picker (only on a recording that has
-   no song yet) sits above the button, not beside it — on a phone the two do
-   not share a line. */
-.bp-stash-publish form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: flex-start;
-  width: 100%;
-}
-
 .bp-stash-song-pick {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   width: 100%;
   max-width: 22rem;
-}
-
-.bp-stash-secondary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 /* The stash view's way in to the recorder, in the top bar: a round mic in the
@@ -9123,6 +9129,18 @@ html:has(dialog.bp-filter-sheet[open]) body {
    `scripting: none` rule on `.bp-sheet`). */
 .bp-stash-sheets {
   display: contents;
+}
+
+/* With no script a `.bp-sheet` renders as a plain block, which on a list of
+   four recordings meant EIGHT expanded panels (a publish sheet and a rename
+   sheet each) stacked under the rows — the same controls over and over, none
+   of them about the row you are looking at. The recording's own page is
+   already the no-JS surface, and every row's name links to it, so the inline
+   copies simply do not render there. */
+@media (scripting: none) {
+  .bp-stash-sheets {
+    display: none;
+  }
 }
 
 /* The stash line on a song page and on home: the count, and a way in. */

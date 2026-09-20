@@ -24,12 +24,23 @@ export interface Props {
   eyebrow: string;
   title: string;
   subtitle?: string;
+  /**
+   * This sheet IS the page, so it lays out as a block at every width whether
+   * or not there is script — the no-JS rendering above, made unconditional.
+   *
+   * For a page whose whole subject is the one record the sheet is about
+   * (`/stash/[id]`): there is no row to open it from, and a closed `<dialog>`
+   * is `display: none`, so without this the page would be blank for anyone
+   * with script. Its own head is hidden with it: the page carries the
+   * heading, and a sheet head under it would say the same name twice.
+   */
+  inline?: boolean;
 }
 
-const { id, eyebrow, title, subtitle } = Astro.props;
+const { id, eyebrow, title, subtitle, inline = false } = Astro.props;
 ---
 
-<dialog class="bp-sheet" id={`sheet-${id}`} data-sheet aria-label={commonMessages(Astro.locals.locale).editingSheet(title)}>
+<dialog class={inline ? "bp-sheet bp-sheet--inline" : "bp-sheet"} id={`sheet-${id}`} data-sheet aria-label={commonMessages(Astro.locals.locale).editingSheet(title)}>
   <div class="bp-sheet-head">
     {/* The phone's grip. A button with a 44px target and a 4px bar drawn
         inside it — a bare 4px strip is the right shape and an impossible

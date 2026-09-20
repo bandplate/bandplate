@@ -8,9 +8,10 @@
 // (see `RecordSheet.astro`): the member is looking at a list of four ideas
 // from last Tuesday, and picking one should not take the list away. The
 // recording still has a page of its own at `/stash/[id]`, which is where the
-// row's link goes when there is no script to open the sheet with. That page
-// says the same things in the same order; the two share what matters (the
-// name, and the write), and a change to one is a change to both.
+// row's link goes when there is no script to open the sheet with — and that
+// page renders THIS component with `standalone`, so there is one publish
+// form, one set of refusals and one delete in the codebase, not two that have
+// to be kept saying the same thing.
 //
 // Two forms, two sheets. HTML drops a `<form>` inside a `<form>` (see
 // docs/frontend-traps.md), so renaming is not a field tucked into the publish
@@ -46,9 +47,18 @@ export interface Props {
    * here so both writes return to it instead.
    */
   returnTo?: string;
+  /**
+   * This sheet IS the page — `/stash/[id]`, which is one recording and
+   * nothing else.
+   *
+   * It lays out in the flow at every width (`inline`), and it drops the Close
+   * button, which on a page closes nothing. The rename sheet beside it stays
+   * a real dialog: there the button that opens it is right there.
+   */
+  standalone?: boolean;
 }
 
-const { row, ownerName, songChoices, renameError, returnTo } = Astro.props;
+const { row, ownerName, songChoices, renameError, returnTo, standalone = false } = Astro.props;
 const locale = Astro.locals.locale;
 const t = messages(locale);
 const nameParts = { songId: row.songId, songTitle: row.song?.title, label: row.label };
@@ -64,9 +74,19 @@ const subtitle = note ? t.stash.songAndLength(note, length) : length;
 // picker is part of the publish form rather than a step before it.
 const needsSong = !row.songId;
 const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoices.length > 0);
+// Where the delete goes after it has run, with script and without it. With
+// script the dialog follows `data-confirm-redirect`; with none, the confirm
+// PAGE reads `?returnTo=` off its own URL, which is why the same destination
+// rides along on the link. A caller that named one gets it back; the stash
+// view names none and gets its own list, told which recording went so it can
+// drop a local copy still waiting to upload into it.
+const deleteHref = returnTo
+  ? `/stash/${row.id}/delete?returnTo=${encodeURIComponent(returnTo)}`
+  : `/stash/${row.id}/delete`;
+const afterDelete = returnTo ?? `/takes?stash=1&deleted=${row.id}`;
 ---
 
-<RecordSheet id={stashSheetId(row.id)} eyebrow={t.stash.sheetEyebrow} title={title} subtitle={subtitle}>
+<RecordSheet id={stashSheetId(row.id)} eyebrow={t.stash.sheetEyebrow} title={title} subtitle={subtitle} inline={standalone}>
   <form method="post" class="bp-sheet-form">
     <input type="hidden" name="intent" value="publish" />
     <input type="hidden" name="takeId" value={row.id} />
@@ -123,16 +143,14 @@ const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoice
           </a>
         )}
         <a
-          href={`/stash/${row.id}/delete`}
+          href={deleteHref}
           class="bp-btn bp-btn-danger bp-btn-sm"
           data-confirm
           data-confirm-title={t.stash.deleteTitle(title)}
           data-confirm-body={t.stash.deleteBody}
-          data-confirm-action={`/stash/${row.id}/delete`}
+          data-confirm-action={deleteHref}
           data-confirm-cta={t.stash.deleteCta}
-          data-confirm-redirect={returnTo
-            ? `${returnTo}?stash_deleted=${row.id}`
-            : `/takes?stash=1&deleted=${row.id}`}
+          data-confirm-redirect={afterDelete}
         >
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
@@ -143,7 +161,9 @@ const canPublishHere = Boolean(row.playableAssetId) && (!needsSong || songChoice
     </div>
     <div class="bp-sheet-foot">
       {canPublishHere && <button type="submit" class="bp-btn bp-btn-primary">{t.stash.publish}</button>}
-      <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.stash.close}</button>
+      {/* No Close on a page: there is nothing to close, and a button that
+          does nothing is the fake affordance this app does not render. */}
+      {!standalone && <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.stash.close}</button>}
     </div>
   </form>
 </RecordSheet>

@@ -455,7 +455,9 @@ export default function Recorder({
           <h1 class="bp-rec-heading">{t.pickTitle}</h1>
         </div>
         {songs.length === 0 ? (
-          <p class="bp-rec-empty bp-m0">{t.noSongs}</p>
+          // Not "add a song first": the CTA below records without one, and
+          // copy that told the member to go elsewhere would contradict it.
+          <p class="bp-rec-empty bp-m0">{t.noSongsRecordAnyway}</p>
         ) : (
           <>
             <label class="bp-visually-hidden" for="rec-song-search">

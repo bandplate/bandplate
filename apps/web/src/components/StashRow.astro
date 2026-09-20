@@ -25,6 +25,9 @@ const t = messages(locale);
 const nameParts = { songId: row.songId, songTitle: row.song?.title, label: row.label };
 const nameWords = { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong };
 const title = stashName(nameParts, nameWords);
+// The label only says something NEW when it is not already the title. It is
+// also what the now-playing bar's second line gets: on a songless recording
+// the label IS the title, and the bar would otherwise say it twice.
 const note = stashNote(nameParts, nameWords);
 const date = formatShortDate(locale, row.recordedAt);
 ---
@@ -33,7 +36,7 @@ const date = formatShortDate(locale, row.recordedAt);
   <div class="bp-take-row-lead">
     {
       row.playableAssetId ? (
-        <PlayToggleButton takeId={row.id} assetId={row.playableAssetId} title={title} subtitle={row.label ?? date} />
+        <PlayToggleButton takeId={row.id} assetId={row.playableAssetId} title={title} subtitle={note ?? date} />
       ) : (
         <span class="bp-take-plate" aria-hidden="true" />
       )

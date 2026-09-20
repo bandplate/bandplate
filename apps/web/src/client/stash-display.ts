@@ -45,11 +45,6 @@ export function stashName(parts: StashNameParts, words: StashNameWords): string 
 }
 
 /**
- * The "Píseň" field's value: the song, or the app's lone em dash for no value
- * (`EMPTY_VALUE`). Never the label: the label is the recording's name, not its
- * song, and putting it here would answer a question nobody asked.
- */
-/**
  * The label as a SECOND line of information, which it is only when it is not
  * already the row's name. A songless recording is called by its label, and
  * printing it again underneath would say the same thing twice.
@@ -59,6 +54,11 @@ export function stashNote(parts: StashNameParts, words: StashNameWords): string 
   return label && stashName(parts, words) === label ? null : label;
 }
 
+/**
+ * The "Píseň" field's value: the song, or the app's lone em dash for no value
+ * (`EMPTY_VALUE`). Never the label: the label is the recording's name, not its
+ * song, and putting it here would answer a question nobody asked.
+ */
 export function stashSongField(parts: StashNameParts, words: StashNameWords): string {
   if (parts.songTitle) {
     return parts.songTitle;

@@ -150,23 +150,22 @@ export async function publishStashTake(
     return { kind: "nothing_to_play" };
   }
   // Only when the take needs one: a chosen song never overrides a filed one,
-  // so a stale hidden field cannot refile somebody's recording.
-  // Trimmed here rather than only at the form: an empty select and a select
-  // full of spaces both mean "nothing chosen", and only one of them looks it.
+  // so a stale hidden field cannot refile somebody's recording. Trimmed here
+  // rather than only at the form: an empty select and a select full of spaces
+  // both mean "nothing chosen", and only one of them looks it.
   const chosen = take.songId ? null : songId?.trim() || null;
-  if (!take.songId && !chosen) {
-    return { kind: "no_song" };
-  }
-  if (chosen && !(await songsRepo.getById(db, chosen))) {
-    return { kind: "song_not_found" };
-  }
-  // Conditional on owner + private + a song in SQL too; a double press loses
-  // here, and so does a songless take that slipped past the check above.
+  // Owner, private, has-a-song and the song EXISTS are all conditions on the
+  // write itself — `publishFromStash` takes none of them on trust, because
+  // foreign keys are off. So there is nothing to pre-check here, and no
+  // window between a check and the write: the result it returns is the answer.
   const result = await takesRepo.publishFromStash(db, id, memberId, now, chosen);
   if (result === "ok") {
     return { kind: "ok", take };
   }
-  return result === "no_song" ? { kind: "no_song" } : { kind: "not_found" };
+  if (result === "no_song" || result === "song_not_found") {
+    return { kind: result };
+  }
+  return { kind: "not_found" };
 }
 
 const labelSchema = z.string().trim().max(200);

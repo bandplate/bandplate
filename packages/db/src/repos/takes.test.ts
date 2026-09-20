@@ -1854,6 +1854,16 @@ describe("the stash", () => {
     expect((await takes.getById(db, songless.id))?.visibility).toBe("private");
     expect(await takes.countStash(db, "m-1")).toBe(1);
 
+    // A song that is not in the library. Foreign keys are off (to match D1),
+    // so nothing but this check stands between a band-visible take and a
+    // song id that points at nothing.
+    expect(await takes.publishFromStash(db, songless.id, "m-1", 5_500, "no-such-song")).toBe(
+      "song_not_found",
+    );
+    expect((await takes.getById(db, songless.id))?.visibility).toBe("private");
+    expect((await takes.getById(db, songless.id))?.songId).toBeNull();
+    expect(await takes.countStash(db, "m-1")).toBe(1);
+
     expect(await takes.publishFromStash(db, songless.id, "m-1", 6_000, otherSongId)).toBe("ok");
     const published = await takes.getById(db, songless.id);
     expect(published?.songId).toBe(otherSongId);

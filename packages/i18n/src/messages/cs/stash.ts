@@ -33,6 +33,8 @@ export const stash = {
   allSongs: "Všechny písně", // en: All songs
   noSongMatch: "Žádná píseň tomu neodpovídá.", // en: No song matches that.
   noSongs: "V knihovně zatím nejsou žádné písně. Nejdřív nějakou přidej.", // en: The library has no songs yet. Add one first.
+  noSongsRecordAnyway:
+    "V knihovně zatím nejsou žádné písně. Nápad si nahraj i tak a přiřadíš ho, až nějaká bude.", // en: The library has no songs yet. Record the idea anyway …
   recordFor: (title: string): string => `Nahrávat k ${title}`, // en: Record for {title}
   recordWithoutSong: "Nahrávat bez písně", // en: Record without a song
   recordingInto: "Nahrávám do šuplíku", // en: Recording into your stash

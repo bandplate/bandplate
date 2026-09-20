@@ -10,7 +10,7 @@
 import { formatShortDate, messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
-import { stashName, stashSongField } from "../../client/stash-display.js";
+import { stashName, stashNote, stashSongField } from "../../client/stash-display.js";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -101,6 +101,8 @@ const nameWords = { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong 
 // What this recording is called, and what its "Píseň" field says — two
 // different questions once a recording can have no song. See `stash-display`.
 const title = stashName(nameParts, nameWords);
+// The label only says something NEW when it is not already the title.
+const note = stashNote(nameParts, nameWords);
 const songField = stashSongField(nameParts, nameWords);
 // The song has to be chosen before it can be added to the band, so the picker
 // is part of the publish form rather than a step before it. Same list the
@@ -124,11 +126,11 @@ const length = formatDuration(take.durationMs);
       <div>
         <h1 class="bp-hero-title bp-m0">{title}</h1>
         <p class="bp-stash-sub bp-m0">
-          {take.label && song ? t.stash.songAndLength(song.title, length) : length}
+          {note && song ? t.stash.songAndLength(song.title, length) : length}
         </p>
       </div>
       {playableAsset && (
-        <PlayToggleButton takeId={take.id} assetId={playableAsset.id} title={title} subtitle={take.label ?? ""} size="lg" />
+        <PlayToggleButton takeId={take.id} assetId={playableAsset.id} title={title} subtitle={note ?? ""} size="lg" />
       )}
     </div>
 
@@ -148,12 +150,15 @@ const length = formatDuration(take.durationMs);
       </div>
     </dl>
 
-    {/* No fake affordances: with no song on the take and no song in the
-        library, "Přidat k písni" cannot work, so the page says what is in
-        the way instead of drawing a button that would refuse. */}
-    {!take.songId && songChoices.length === 0 ? (
+    {/* No fake affordances, and the NEAREST obstacle first: a recording still
+        on its way from the phone cannot be added whatever the library holds,
+        so that is what the page says. Only once the file has landed is an
+        empty library the thing in the way. */}
+    {!playableAsset ? (
+      <p class="bp-field-hint bp-m0">{t.stash.stillUploading}</p>
+    ) : !take.songId && songChoices.length === 0 ? (
       <p class="bp-field-hint bp-m0">{t.stash.noSongs}</p>
-    ) : playableAsset ? (
+    ) : (
       <div class="bp-stash-publish">
         <p class="bp-m0">{t.stash.publishNote}</p>
         <form method="post">
@@ -172,8 +177,6 @@ const length = formatDuration(take.durationMs);
           <button type="submit" class="bp-btn bp-btn-primary">{t.stash.publish}</button>
         </form>
       </div>
-    ) : (
-      <p class="bp-field-hint bp-m0">{t.stash.stillUploading}</p>
     )}
 
     <div class="bp-stash-secondary">

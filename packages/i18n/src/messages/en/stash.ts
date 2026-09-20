@@ -35,7 +35,15 @@ export const stash = {
   recentSongs: "Recent",
   allSongs: "All songs",
   noSongMatch: "No song matches that.",
+  /** The stash item page: without a song there is nothing to add the recording TO. */
   noSongs: "The library has no songs yet. Add one first.",
+  /**
+   * The recorder's version of the same fact, which is not the same advice:
+   * recording works with no library at all, so telling the member to go add a
+   * song first would contradict the button underneath.
+   */
+  noSongsRecordAnyway:
+    "The library has no songs yet. Record the idea anyway and file it when there is one.",
   recordFor: (title: string): string => `Record for ${title}`,
   /** The CTA when nothing is selected: record now, choose the song later. */
   recordWithoutSong: "Record without a song",

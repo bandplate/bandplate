@@ -962,6 +962,21 @@ export async function countStash(
   return rows[0]?.value ?? 0;
 }
 
+/**
+ * "This song is in the library", as a condition a write can carry rather than
+ * a fact a caller looked up a moment ago. Foreign keys are off (to match D1),
+ * so `song_id` guarantees nothing on its own — see `docs/frontend-traps.md`.
+ */
+function songExistsCondition(songId: string): SQL {
+  return sql`exists (select 1 from ${songs} where ${songs.id} = ${songId})`;
+}
+
+/** The same question on the refusal path, where there is nothing to be atomic with. */
+async function songExists(db: Db, songId: string): Promise<boolean> {
+  const rows = await db.select({ id: songs.id }).from(songs).where(eq(songs.id, songId)).limit(1);
+  return rows.length === 1;
+}
+
 export type PublishFromStashResult =
   | "ok"
   /** Not this member's, not private any more, or gone. A second press lands here. */
@@ -971,7 +986,16 @@ export type PublishFromStashResult =
    * invariant: this is the one write that turns a private take band-visible,
    * so it is the one place a songless take could cross into the band's view.
    */
-  | "no_song";
+  | "no_song"
+  /**
+   * The caller named a song that is not in the library. Checked HERE, not
+   * only by the caller: `PRAGMA foreign_keys` is off to match D1, so the
+   * `song_id` FK is documentation and nothing else would stop this write
+   * from filing a band-visible take under a song that does not exist. The
+   * check is a subquery inside the UPDATE's own WHERE, so a song deleted
+   * between a caller's check and this write loses the race safely.
+   */
+  | "song_not_found";
 
 /**
  * "Přidat k písni": one statement that moves a stash take into the band's view,
@@ -991,8 +1015,8 @@ export type PublishFromStashResult =
  * When no `songId` is given, the WHERE clause insists the take already has
  * one, so nothing songless can become band-visible even under a race.
  *
- * The follow-up read only happens when the write moved nothing, to tell the
- * two refusals apart — there is no partial write to be atomic about by then.
+ * The follow-up reads only happen when the write moved nothing, to tell the
+ * three refusals apart — there is no partial write to be atomic about by then.
  */
 export async function publishFromStash(
   db: Db,
@@ -1006,7 +1030,11 @@ export async function publishFromStash(
     eq(takes.ownerMemberId, memberId),
     eq(takes.visibility, "private"),
   ];
-  if (!songId) {
+  if (songId) {
+    // The FK is not enforced (see the type above), so the UPDATE asks for
+    // itself whether this song exists, in its own WHERE.
+    conditions.push(songExistsCondition(songId));
+  } else {
     conditions.push(isNotNull(takes.songId));
   }
   const rows = await db
@@ -1025,13 +1053,11 @@ export async function publishFromStash(
     return "ok";
   }
   const take = await getById(db, id);
-  if (
-    take &&
-    take.ownerMemberId === memberId &&
-    take.visibility === "private" &&
-    take.songId === null
-  ) {
-    return "no_song";
+  if (!take || take.ownerMemberId !== memberId || take.visibility !== "private") {
+    return "not_found";
   }
-  return "not_found";
+  if (songId && !(await songExists(db, songId))) {
+    return "song_not_found";
+  }
+  return take.songId === null ? "no_song" : "not_found";
 }

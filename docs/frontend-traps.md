@@ -192,6 +192,46 @@ them at the moment of writing — and that is what `deleteInstrument` and
 The same applies to every `ON DELETE cascade` in the schema: it is
 documentation, not behaviour. Delete dependent rows explicitly.
 
+### A drizzle-kit table rebuild silently drops a hand-added index
+
+SQLite cannot alter a column in place, so a change like "make `takes.song_id`
+nullable" makes `drizzle-kit generate` emit the 12-step rebuild: create
+`__new_takes`, copy every row, `DROP TABLE takes`, rename. The rebuild is
+correct — the rows survive — and it ends by recreating the indexes.
+
+It recreates **the indexes drizzle-kit knows about**, which is the ones in the
+snapshot, which is the ones expressible in the schema DSL.
+`takes_push_pending_idx` is not one of them. It is a **partial** index,
+hand-written into `0009_push_notifications.sql`:
+
+```sql
+CREATE INDEX `takes_push_pending_idx` ON `takes` (`event_id`,`published_at`)
+  WHERE `push_batched_at` IS NULL AND `published_at` IS NOT NULL;
+```
+
+`DROP TABLE` takes it with the table, the generator has never heard of it, and
+nothing puts it back. Nothing fails: the migration applies, every test passes,
+and `notificationsRepo.listPendingTakeBatches` quietly goes back to scanning
+the whole table.
+
+**How it was caught.** By reading the generated SQL against `sqlite_master`
+rather than trusting it: `takes` carries **seven** indexes after 0010, and the
+generated file's `CREATE INDEX` lines numbered **six**. `createTestDb()`
+cannot show this — it migrates an EMPTY database in one run, so "the schema
+afterwards" is whatever the last migration built, never "what the previous one
+built and this one lost".
+
+**Rule.** Any migration that rebuilds a table re-adds every raw index by hand,
+and says in its header comment that it had to. The test that pins it is
+`migration-0011-song-optional.test.ts`: it runs 0000→0010 on a POPULATED
+database, snapshots `select name from sqlite_master where tbl_name = 'takes'`,
+runs the rebuild, and asserts the set is **identical** — plus that the partial
+index still carries its `WHERE` clause, since a same-named index over the same
+columns without it is a different index.
+
+The general shape: after a rebuild, compare the whole row set (`select *`
+before and after) and the whole index set, not the one column you changed.
+
 ---
 
 ## "It recorded fine and the player says 0:00"

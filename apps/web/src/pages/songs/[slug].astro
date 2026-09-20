@@ -18,6 +18,8 @@ import Pagination from "@bandplate/ui/components/Pagination.astro";
 import ChartEditor from "../../components/ChartEditor.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
+import StashItemSheet from "../../components/StashItemSheet.astro";
+import StashRow from "../../components/StashRow.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -31,6 +33,7 @@ import {
   getSongDetail,
   updateSong,
 } from "../../server/pages/songs.js";
+import { applyStashWrite } from "../../server/pages/stash.js";
 import { type TakeField, createTake } from "../../server/pages/takes.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 import { songToRows } from "../../server/song-chart-rows.js";
@@ -59,6 +62,9 @@ let editErrorField: SongField | undefined;
 let takeError: string | undefined;
 let takeErrorField: TakeField | undefined;
 let formError: string | undefined;
+// The stash section's own sheet, same as `/takes?stash=1`'s — see below.
+let stashRenameError: string | undefined;
+let stashRenameTakeId: string | undefined;
 
 if (Astro.request.method === "POST") {
   if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
@@ -98,6 +104,44 @@ if (Astro.request.method === "POST") {
         editError = validationMessage(locale, result.error);
         editErrorField = result.field;
       }
+    } else if (formData.get("intent") === "publish" || formData.get("intent") === "rename") {
+      // The song page's own stash section opens the SAME sheet the stash view
+      // does (`StashItemSheet.astro`), and that sheet posts to whatever page
+      // it was opened on — see that component's header comment. `songId` on
+      // the write itself is a no-op here: every row this page can name
+      // already carries this song, so `applyStashWrite` has nothing to file.
+      const result = await applyStashWrite(
+        appDeps.db,
+        appDeps.clock.now(),
+        principal.memberId,
+        formData,
+      );
+      if (result.kind === "published") {
+        return Astro.redirect(`/takes/${result.takeId}?published=1`);
+      }
+      if (result.kind === "renamed") {
+        return Astro.redirect(`/songs/${slug}?stash_renamed=${result.takeId}`);
+      }
+      if (result.kind === "not_found") {
+        return new Response("Not found.", { status: 404 });
+      }
+      if (result.kind === "ignored") {
+        return new Response("Bad request.", { status: 400 });
+      }
+      if (result.kind === "error") {
+        formError =
+          result.error === "no_song"
+            ? t.stash.noSongChosen
+            : result.error === "song_not_found"
+              ? t.stash.songGone
+              : result.error === "nothing_to_play"
+                ? t.stash.stillUploading
+                : t.stash.labelTooLong;
+        if (result.error === "label_too_long") {
+          stashRenameError = formError;
+          stashRenameTakeId = result.takeId;
+        }
+      }
     }
   }
 }
@@ -108,7 +152,24 @@ if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { song, songFavorited, aliases, instrumentNotes, takes, takeTotal, stashCount } = detail;
+const {
+  song,
+  songFavorited,
+  aliases,
+  instrumentNotes,
+  takes,
+  takeTotal,
+  stashRows,
+  stashOwnerName,
+} = detail;
+const hasStash = stashRows.length > 0;
+// `?stash_renamed=` names the recording, the same way `/takes?stash=1`'s
+// `?renamed=` does — see that page. Only shown when it's actually one of
+// THIS song's own stash rows, never a stale id from somewhere else.
+const stashJustRenamed = Astro.url.searchParams.get("stash_renamed");
+const stashRenamedRow = stashJustRenamed
+  ? stashRows.find((row) => row.id === stashJustRenamed)
+  : undefined;
 const pages = pageView({
   url: Astro.url,
   page,
@@ -224,6 +285,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
     )}
     {justCreated && <Banner kind="success">{t.songs.created}</Banner>}
     {justSaved && <Banner kind="success">{t.songs.saved}</Banner>}
+    {stashRenamedRow && <Banner kind="success">{t.stash.renamed}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <div>
@@ -259,18 +321,26 @@ function eventOptionLabel(event: eventsRepo.Event): string {
       {/* The recorder with this song already chosen. A pill, not a button in
           the title row: it is a way to add to the song, beside it, not an
           edit of it. `data-astro-reload` because `/record` runs with no
-          router and no shell player — see that page. */}
-      <div class="bp-pills bp-song-record">
-        <a href={`/record?song=${song.slug}`} class="bp-pill" data-astro-reload>
-          <span class="bp-pill-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="3" width="6" height="12" rx="3" />
-              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-            </svg>
-          </span>
-          {t.stash.recordIdea}
-        </a>
-      </div>
+          router and no shell player — see that page.
+
+          Only up here when there is no stash section to carry it instead: a
+          member with recordings for this song already sees it as that
+          section's own action button (below, in the aside) — same control,
+          one legible place, not two competing "record" affordances on one
+          page. */}
+      {!hasStash && (
+        <div class="bp-pills bp-song-record">
+          <a href={`/record?song=${song.slug}`} class="bp-pill" data-astro-reload>
+            <span class="bp-pill-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="3" width="6" height="12" rx="3" />
+                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+              </svg>
+            </span>
+            {t.stash.recordIdea}
+          </a>
+        </div>
+      )}
 
     </div>
 
@@ -567,13 +637,45 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           )
         }
 
-        {/* Only the owner ever sees this, and only when there is something:
-            `stashCount` is this member's own private takes of this song. */}
-        {stashCount > 0 && (
-          <p class="bp-stash-line bp-m0">
-            {t.stash.inYourStash(stashCount)}
-            <a href="/takes?stash=1">{t.stash.open}</a>
-          </p>
+        {/* This member's own recordings of this song still in their stash —
+            a real section like Takes above, not the one faint line it used
+            to be. `stashRows` is already scoped to this member (owner AND
+            `visibility='private'` — see `takesRepo.listStash`), so this can
+            never show anyone else's, and it renders nothing at all when
+            there isn't one: no lock icon standing in for "nobody else can
+            see this", just an absent section. */}
+        {hasStash && (
+          <section class="bp-song-aside-section">
+            <div class="bp-title-row">
+              <h2 class="bp-section-title bp-m0">{t.stash.inYourStash(stashRows.length)}</h2>
+              <a
+                href={`/record?song=${song.slug}`}
+                class="bp-btn bp-btn-secondary bp-btn-xs"
+                data-astro-reload
+              >
+                {t.stash.recordIdea}
+              </a>
+            </div>
+            <div class="bp-take-list" data-play-queue>
+              {stashRows.map((row) => (
+                <StashRow row={row} />
+              ))}
+            </div>
+            {/* Parked after the row list, same reasoning as `/takes?stash=1`'s
+                own `[data-stash-sheets]`: the list staggers its rows' entry by
+                `nth-child`, and a dialog between two of them would shift every
+                delay after it. */}
+            <div class="bp-stash-sheets" data-stash-sheets>
+              {stashRows.map((row) => (
+                <StashItemSheet
+                  row={row}
+                  ownerName={stashOwnerName}
+                  songChoices={[]}
+                  renameError={row.id === stashRenameTakeId ? stashRenameError : undefined}
+                />
+              ))}
+            </div>
+          </section>
         )}
 
         {instrumentNotes.length > 0 && (

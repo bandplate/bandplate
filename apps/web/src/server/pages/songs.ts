@@ -31,6 +31,7 @@ import {
 // phone it pushed the songs themselves below the fold.
 import { type Locale, formatBytes, messages } from "@bandplate/i18n";
 import { z } from "zod";
+import { type StashRowData, getStashRows } from "./stash.js";
 
 export type SongListItem = songsRepo.SongWithStats;
 
@@ -106,8 +107,18 @@ export interface SongDetail {
   /** ONE PAGE of takes, newest first, plus how many the song has in all. */
   takes: TakeWithContext[];
   takeTotal: number;
-  /** This member's recordings of this song still in their stash — the "Ve tvém šuplíku" line. Never anyone else's. */
+  /** This member's recordings of this song still in their stash. Never anyone else's — see `stashRows`. */
   stashCount: number;
+  /**
+   * This member's own private takes of this song, full rows for the song
+   * page's own stash section (real section, not the old one-line mention).
+   * `takesRepo.listStash`/`countStash` are scoped by owner AND
+   * `visibility='private'` already, so this never carries another member's
+   * recording — see `songs.test.ts`'s "another member sees none" case.
+   */
+  stashRows: StashRowData[];
+  /** This member's own display name — every `stashRows` row is theirs, so it's asked once for the item sheet. */
+  stashOwnerName: string | undefined;
 }
 
 /**
@@ -137,19 +148,25 @@ export async function getSongDetail(
     return undefined;
   }
 
-  const [aliases, instrumentNotes, pagedTakes, songFavorited, stashCount] = await Promise.all([
+  const [aliases, instrumentNotes, pagedTakes, songFavorited, stashRows] = await Promise.all([
     songsRepo.listAliases(db, song.id),
     songsRepo.listInstrumentNotes(db, song.id),
     takesRepo.listBySong(db, song.id, { page: takesPage }),
     favoritesRepo.isFavorited(db, memberId, "song", song.id),
-    takesRepo.countStash(db, memberId, { songId: song.id }),
+    getStashRows(db, memberId, { songId: song.id }),
   ]);
   const takes = pagedTakes.rows;
 
   const takeIds = takes.map((t) => t.id);
   const eventIds = [...new Set(takes.map((t) => t.eventId))];
   const ownerIds = [
-    ...new Set(takes.map((t) => t.ownerMemberId).filter((id): id is string => id !== null)),
+    // `memberId` itself, so `ownerNameById` below also answers the stash
+    // section's "Kdo nahrál" without a second lookup — every `stashRows` row
+    // is this member's own.
+    ...new Set([
+      ...takes.map((t) => t.ownerMemberId).filter((id): id is string => id !== null),
+      memberId,
+    ]),
   ];
   const [instrumentsByTake, events, playableByTakeId, myVoteByTakeId, favoriteTakeIds, owners] =
     await Promise.all([
@@ -169,7 +186,9 @@ export async function getSongDetail(
     aliases,
     instrumentNotes,
     takeTotal: pagedTakes.total,
-    stashCount,
+    stashCount: stashRows.length,
+    stashRows,
+    stashOwnerName: ownerNameById.get(memberId),
     takes: takes.map((take) => ({
       ...take,
       instruments: instrumentsByTake.get(take.id) ?? [],

@@ -4808,20 +4808,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Home (Task 6/8) — favorites, recent events with their takes, and       */
-/* "needs your vote". The vote/favorite controls themselves (Task 8) are   */
-/* defined once, in the take-row/vote-toggle/favorite-toggle blocks below, */
-/* and reused everywhere they appear — this section adds no interactive-   */
-/* control CSS of its own, only the event-group spacing the layout needs.  */
-/* ---------------------------------------------------------------------- */
-
-.bp-home-event-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-/* ---------------------------------------------------------------------- */
 /* Take detail (Task 6) — no player yet (increment 4); see the page's own  */
 /* header comment for where that goes. `--bp-color-muted` for the link     */
 /* underline here is the same >=3:1-in-both-themes token every other link  */
@@ -6875,9 +6861,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
     flex: 1;
   }
 
+  /* Wide enough for both pills on one line in Czech, the longer language:
+     at 20rem "Otevřít šuplík" and "Nahrát nápad" wrapped onto two rows. */
   .bp-progress > .bp-stash-card {
     flex: none;
-    width: 20rem;
+    width: 21.5rem;
     margin-left: auto;
   }
 }
@@ -7252,6 +7240,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
   width: 2.5rem;
   pointer-events: none;
   z-index: 3;
+  /* Off unless the row's scroll timeline drives it. A row that does not
+     overflow has an INACTIVE timeline, the animation then has no effect at
+     all, and without this base value both fades drew at full strength over
+     a row with nothing to scroll: the first plate's caption came out washed
+     away. The `@supports not` block below still turns the trailing one on
+     where there are no timelines. */
+  opacity: 0;
 }
 
 .bp-pinned-rail-wrap::before {
@@ -7428,19 +7423,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 .bp-ledger-footer {
   padding-top: 1rem;
-}
-
-/* Past `lg` the two sections sit side by side: the shelf you reach for on the
-   left, what just happened on the right. */
-@media (min-width: 64rem) {
-  .bp-home {
-    display: grid;
-    /* 31.5rem: at 21rem a venue-and-title event name broke onto two lines
-       and the row lost its one-line rhythm. */
-    grid-template-columns: minmax(0, 1fr) minmax(0, 31.5rem);
-    gap: 0 2.875rem;
-    align-items: start;
-  }
 }
 
 /* Kind filter — toggleable pills, every kind on by default. It was a

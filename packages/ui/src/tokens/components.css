@@ -1005,8 +1005,21 @@ a.bp-btn {
      while a song row starts with its title flush against the fill's edge.
      The inset is what the eye reads, so it is set for the tightest case. */
   --bp-row-gutter: 0.875rem;
-  padding-inline: var(--bp-row-gutter);
+  /* The fill bleeds by the gutter; the content sits a little further in on
+     the left, so a row's first glyph has room to breathe — and the fill
+     never reaches past the phone's own 20px page edge. */
+  padding-inline: 1.25rem var(--bp-row-gutter);
   margin-inline: calc(var(--bp-row-gutter) * -1);
+}
+
+/* A row that ends in the favourite star: the star's 44px tap box already
+   carries ~15px of air around a 16px glyph, so the row's own padding on that
+   side would double it. Trimmed so the star sits as far from the right edge
+   as the title does from the left. */
+.bp-song-row:has(> .bp-favorite-toggle-form:last-child),
+.bp-ledger-row:has(> .bp-favorite-toggle-form:last-child),
+.bp-take-row:has(.bp-take-favorite-mark) {
+  padding-inline-end: 0.375rem;
 }
 
 /* No rules between rows. A list is rounded rows on the bare ground, a few
@@ -9396,6 +9409,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
    on source order alone. */
 .bp-pill--record:hover {
   background: color-mix(in srgb, var(--bp-color-danger) 34%, transparent);
+}
+
+/* A stash row has no star, so the take row's 36px star column is empty and
+   the right edge read three times the left. The column closes, and the
+   column gap before it is what is left of the inset, trimmed to match. */
+.bp-take-row.bp-stash-row {
+  grid-template-columns: auto minmax(0, 1fr) auto 0;
+  padding-inline-end: 0.5rem;
 }
 
 /* The chip sits at the head of line two, so the title keeps the whole of

@@ -349,19 +349,11 @@ function assetLabel(asset: assetsRepo.Asset): string {
           title everywhere except a song page (which is already showing it). */}
       <div class="bp-title-row">
       <h1 class="bp-hero-title bp-m0 bp-titled-heading">
-        {/* The transition name stays on the SONG alone. It morphs from a take
-            row, whose text is the song's title — carrying the label into it
-            would morph between two different strings. */}
-        {/* Adjacent on purpose, with no whitespace between the tags: a
-            newline here becomes a text node, and the colon would float away
-            from the song's name as "Čoudy : take 1". */}
-        {/* One line, cut with an ellipsis, so the star beside it never
-            drops to a line of its own. The cut lands at the end, on the
-            label, before the song's name. `title` shows the whole of it on
+        {/* The song's name alone; the take's label is the line under the
+            row. One line, cut with an ellipsis, so the star beside it never
+            drops to a line of its own. `title` shows the whole name on
             hover; the heading's text is whole for anything that reads it. */}
-        <span class="bp-hero-title-text" title={heroTitle}><span>{song ? song.title : "Take"}</span>{
-          song && noteText && <span class="bp-hero-title-note">: {noteText}</span>
-        }</span>
+        <span class="bp-hero-title-text" title={song ? song.title : heroTitle}>{song ? song.title : heroTitle}</span>
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
             targetType="take"
@@ -382,6 +374,13 @@ function assetLabel(asset: assetsRepo.Asset): string {
           </button>
         </div>
       </div>
+      {/* The take's own label, "new arrangement attempt", on its own line
+          under the song's name: what tells two takes of one song apart,
+          said the way the phone header says it. It trailed the name in the
+          heading as ": …" in the same slab face, where a long one made the
+          heading run out of room. On a phone the header carries it, so this
+          copy is out of sight there but still read. */}
+      {song && noteText && <p class="bp-take-hero-label bp-m0 bp-titled-facts">{noteText}</p>}
 
       {/* Whose it is, as the personal event's own hero says it: a labelled
           field, because "osobní nahrávky" in the lede does not name anyone. */}

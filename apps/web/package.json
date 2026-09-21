@@ -10,7 +10,8 @@
     "start": "node dist/start.mjs",
     "typecheck": "astro check",
     "test": "vitest run",
-    "notify:tick": "tsx scripts/notify-tick.ts"
+    "notify:tick": "tsx scripts/notify-tick.ts",
+    "migrate:remote": "tsx scripts/migrate-remote.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "12.6.10",

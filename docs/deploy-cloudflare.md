@@ -226,7 +226,8 @@ member reopens `/me` and it re-subscribes under the current key.
 ## 4. Migrate — before every deploy, unconditionally
 
 ```
-pnpm exec wrangler d1 migrations apply DB --remote
+cd apps/web
+pnpm migrate:remote
 ```
 
 Run this as its own explicit step **before** `pnpm exec wrangler deploy`, every
@@ -238,12 +239,71 @@ request against an unmigrated D1 database just gets a bare 500 from a
 query against a schema-less table, with nothing in the response and
 nothing obviously wrong about the deploy that produced it.
 
+### Migrations
+
+**Always run `pnpm migrate:remote`. Never run `wrangler d1 migrations apply
+DB --remote` directly.** The raw command is exactly what deleted ~2,000 rows
+on 2026-09-20: a Drizzle table-rebuild migration (create `__new_takes`, copy
+every row across, `DROP TABLE takes`, rename `__new_takes` back) applied
+cleanly, and D1 cascaded the `DROP TABLE` into every child table that
+referenced `takes` — votes, assets, everything. **`PRAGMA
+foreign_keys=OFF`, set immediately before the drop, does not stop this on
+D1.** That pragma is a SQLite-only safety net; D1 does not honor it for its
+own cascade behavior.
+
+`pnpm migrate:remote` (`apps/web/scripts/migrate-remote.ts`) wraps the raw
+apply with two things it doesn't have on its own:
+
+1. **A guard.** Before touching the database, it reads every pending
+   migration file and refuses to proceed if any of them contains a `DROP
+   TABLE`, an `ALTER TABLE ... RENAME TO`, an identifier starting `__new_`
+   (Drizzle's rebuild-and-swap idiom), or a `PRAGMA foreign_keys`
+   statement. It prints each offending line and exits without applying
+   anything. See `@bandplate/db/migration-guard` (`findUnsafeStatements`).
+2. **A backup.** If the guard passes, it exports the whole remote database
+   with `wrangler d1 export DB --remote` to
+   `.data/backups/d1-<ISO timestamp>.sql` before applying anything, and
+   aborts if the export fails or comes back empty. `.data/` is gitignored,
+   so this backup stays local — copy it somewhere durable if you want it
+   to survive longer than your machine.
+
+**Schema changes against this database are additive only:** `ADD COLUMN`,
+new tables, new indexes. That covers everything this app has needed so
+far. If a change genuinely cannot be additive (SQLite can't alter a column
+in place, so narrowing a type or dropping `NOT NULL` needs the rebuild
+idiom above), it needs a deliberate, reviewed exception, not an unattended
+`pnpm migrate:remote` run. Talk it through, write the migration by hand
+with every hand-added index restored (see
+[`frontend-traps.md`](frontend-traps.md)'s "A drizzle-kit table rebuild
+silently drops a hand-added index"), and add its file name to
+`UNSAFE_BASELINE` in `packages/db/src/migration-guard.ts` only once it has
+actually been reviewed and applied, never ahead of that, and never as a
+way to get the guard out of your way.
+
+**Run `pnpm migrate:remote --dry-run` first** if you want to see what the
+guard says without touching anything: it lists pending migrations, runs
+the guard, and stops.
+
+#### Restoring from a backup
+
+If a migration needs to be rolled back, or applied cleanly on top of a
+restore, replay the export file against the remote database:
+
+```
+pnpm exec wrangler d1 execute DB --remote --file=.data/backups/d1-<timestamp>.sql
+```
+
+A large export can be too big for one `execute` call. If it fails on size,
+split the file into chunks along its statement boundaries (each
+`CREATE TABLE`/`INSERT` block is self-contained) and run each chunk as its
+own `--file=` call, in order.
+
 ## 5. Build and deploy
 
 ```
 cd apps/web
 BANDPLATE_ADAPTER=cloudflare pnpm exec astro build   # → dist/_worker.js/
-pnpm exec wrangler d1 migrations apply DB --remote             # step 4, repeated — don't skip on redeploys
+pnpm migrate:remote                                  # step 4, repeated — don't skip on redeploys
 pnpm exec wrangler deploy
 ```
 

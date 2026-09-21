@@ -265,3 +265,43 @@ upload panel) keeps the problem.
 `takesRepo.isVisibleTo`. A new route or loader that resolves a take by id and
 skips that call leaks somebody's stash, and nothing else will fail. Grep for
 `takesRepo.getById(` in the change and check each one.
+
+---
+
+## "Every page got slow, or the dev server died mid-session"
+
+### A barrel import loads the whole icon set on every SSR request
+
+`import { Calendar } from "@lucide/astro"` type-checks, works, and is the
+obvious way to write it. It is also a barrel: importing anything from
+`@lucide/astro`'s root pulls in all ~1,600 icon modules, and under SSR that
+happens again on every request, not once at build time — about 1.5s added
+per page load in dev, and the same cost baked into the server bundle in
+production. Nothing errors. The page just gets slow, and "slow" doesn't
+point at an import statement.
+
+Import each icon from its own path instead, which pulls in only that icon:
+
+```ts
+import Calendar from "@lucide/astro/icons/calendar";
+```
+
+Same rule for `lucide-preact` in island components — see `NavIcon.astro` and
+`Recorder.tsx` for the pattern across both.
+
+### A dependency Vite discovers late re-optimizes mid-session and kills every island
+
+Vite's dependency pre-bundling runs once at startup, against whatever it can
+see from the entry points at that moment. A dependency that's only reached
+from inside a Preact island (rather than anything imported at the top level)
+can go undiscovered until the first request that actually renders that
+island — and when Vite finds it then, it re-optimizes and restarts its
+dep-serving mid-session. Every island already on the page fails at once with
+`504 Outdated Optimize Dep`, because the module graph they were served
+against no longer matches what the server now has.
+
+List the dependency in `optimizeDeps.include` in `astro.config.mjs` so it's
+found up front instead of discovered late (see the `lucide-preact` entry
+there, added for exactly this). If you hit the 504 before that fix lands,
+`pnpm exec astro dev --force` clears the stale cache and recovers — no code
+change needed, just the flag.

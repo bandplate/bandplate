@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./testing": "./src/testing/create-test-db.ts"
+    "./testing": "./src/testing/create-test-db.ts",
+    "./migration-guard": "./src/migration-guard.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

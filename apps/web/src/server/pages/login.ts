@@ -32,7 +32,7 @@ export interface LoginPostDeps {
   /**
    * Workers profile only — see `requestLogin`'s `deferMailSend` doc
    * comment in `@bandplate/core`. The caller (`login/index.astro`) builds
-   * this per-request from `Astro.locals.runtime.ctx.waitUntil`, which is
+   * this per-request from `Astro.locals.cfContext.waitUntil`, which is
    * only available under the Cloudflare adapter. Left unset on the
    * Node/container profile.
    */

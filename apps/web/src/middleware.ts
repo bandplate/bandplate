@@ -20,7 +20,7 @@ import { defineMiddleware } from "astro:middleware";
 // by it) — see the task-4 handoff's "do not disturb" list.
 import { describeError, logError } from "@bandplate/core";
 import { type Locale, negotiateLocale } from "@bandplate/i18n";
-import { getAppDeps, getAuthDeps, getWebConfig, initWorkersRuntime } from "./server/app.js";
+import { getAppDeps, getAuthDeps, getWebConfig } from "./server/app.js";
 import { readLocaleCookie, SESSION_COOKIE_NAME, setLocaleCookie } from "./server/cookies.js";
 import { isSameOrigin } from "./server/csrf.js";
 import { guardAdminPath, guardMemberPath, normalizePathname } from "./server/guard.js";
@@ -79,17 +79,6 @@ function isApiRoute(pathname: string): boolean {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  // Workers profile only: `context.locals.runtime` is set by
-  // `@astrojs/cloudflare`'s own middleware, which runs before this one.
-  // `initWorkersRuntime` is a no-op after its first call (see
-  // `server/app.ts`'s doc comment) — this runs on every request, but only
-  // the first one in a given isolate actually builds anything. The Node
-  // adapter never sets `locals.runtime`, so this branch never runs there
-  // and `getAuthDeps`/`getAppDeps` fall through to the unchanged
-  // Node/libSQL runtime exactly as before.
-  if (context.locals.runtime) {
-    initWorkersRuntime(context.locals.runtime.env);
-  }
   const [authDeps, appDeps, webConfig] = await Promise.all([
     getAuthDeps(),
     getAppDeps(),

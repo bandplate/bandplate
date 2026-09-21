@@ -25,15 +25,16 @@ export const ALL: APIRoute = async ({ request, locals }) => {
   }
 
   const app = await getApiApp();
-  // Workers profile only: forwarding `env`/`ctx` (from
-  // `locals.runtime`, set by `@astrojs/cloudflare`) is what makes Hono
+  // Workers profile only: forwarding the `ExecutionContext`
+  // (`locals.cfContext`, set by `@astrojs/cloudflare`) is what makes Hono
   // populate `c.executionCtx` inside the mounted app — required for
   // `POST /auth/login`'s `c.executionCtx.waitUntil(...)` (see
-  // `AuthRouteDeps.enableDeferredMailSend` in `@bandplate/api`). Under the
-  // Node adapter `locals.runtime` is `undefined`, so `app.fetch` is
+  // `AuthRouteDeps.enableDeferredMailSend` in `@bandplate/api`). No `env`:
+  // the API never reads `c.env`, its dependencies are injected. Under the
+  // Node adapter `locals.cfContext` is `undefined`, so `app.fetch` is
   // called with just the request, exactly as before.
-  if (locals.runtime) {
-    return app.fetch(new Request(url, init), locals.runtime.env, locals.runtime.ctx);
+  if (locals.cfContext) {
+    return app.fetch(new Request(url, init), undefined, locals.cfContext);
   }
   return app.fetch(new Request(url, init));
 };

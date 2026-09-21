@@ -2,10 +2,9 @@
 // `app.ts` (the Node/container composition root), not a branch inside it
 // — `app.ts` reaches `@bandplate/mail/smtp` via a dynamic `import()` that
 // Vite/Rollup still traces into the module graph for chunking purposes
-// even though it's runtime-unreachable on Workers (the Workers profile
-// always calls `initWorkersRuntime`, which never touches that branch),
-// which put a whole extra chunk of nodemailer (and its `node:dns`,
-// `node:net`, `node:tls`, ... imports) into the built `_worker.js` output.
+// even though it's runtime-unreachable on Workers (this profile never
+// takes that branch), which put a whole extra chunk of nodemailer (and its
+// `node:dns`, `node:net`, `node:tls`, ... imports) into the built Worker.
 // Physically separating the two composition roots is what keeps that
 // entirely out of the Workers bundle: `astro.config.mjs` aliases
 // `server/app.js` to THIS file only when `BANDPLATE_ADAPTER=cloudflare`, so
@@ -16,6 +15,8 @@
 // `astro.config.mjs`'s comment on the alias for why a plain Vite config
 // (as Vitest uses) never applies it, so the Node/`vitest run` path is
 // completely unaffected by this file's existence.
+
+import { env } from "cloudflare:workers";
 import { type AppDeps, createApp } from "@bandplate/api";
 import {
   type AuthDeps,
@@ -58,7 +59,7 @@ let runtimePromise: Promise<Runtime> | undefined;
  * inline, closing the login-timing side channel properly rather than
  * relying solely on the (still-applied) floor. The Astro-native `/login`
  * page wires its own equivalent per-request in `login/index.astro`, since
- * Astro pages get `Astro.locals.runtime.ctx` directly rather than through
+ * Astro pages get `Astro.locals.cfContext` directly rather than through
  * a Hono `Context`.
  */
 async function buildWorkersRuntime(env: CloudflareEnv): Promise<Runtime> {
@@ -118,28 +119,18 @@ async function buildWorkersRuntime(env: CloudflareEnv): Promise<Runtime> {
 }
 
 /**
- * Memoized once per isolate. `initWorkersRuntime` (called from
- * `middleware.ts`, which runs before every route including the `/api/*`
- * mount) must win the race to populate this — it's a no-op once
- * `runtimePromise` is already set, so the first request into a fresh
- * isolate builds the runtime and every request after that (same isolate,
- * same binding set — bindings don't change request-to-request) reuses it.
+ * Memoized once per isolate. `env` is `cloudflare:workers`'s module-level
+ * binding object (the replacement, since `@astrojs/cloudflare` 13, for the
+ * per-request `locals.runtime.env`): the same bindings for every request and
+ * every cron trigger in the isolate, so whichever arrives first builds the
+ * runtime and everything after reuses it. A `ConfigError` from invalid vars
+ * rejects this promise and every caller sees it, same as before.
  */
 function getRuntime(): Promise<Runtime> {
   if (!runtimePromise) {
-    throw new Error(
-      "getRuntime() called before initWorkersRuntime() — middleware.ts must call " +
-        "initWorkersRuntime(locals.runtime.env) before any getAppDeps/getAuthDeps/getApiApp call.",
-    );
-  }
-  return runtimePromise;
-}
-
-/** Call once per request, before any `getAppDeps`/`getAuthDeps`/`getApiApp`. No-op after the first call. */
-export function initWorkersRuntime(env: CloudflareEnv): void {
-  if (!runtimePromise) {
     runtimePromise = buildWorkersRuntime(env);
   }
+  return runtimePromise;
 }
 
 /** The shared Hono app — used by the `/api/*` catch-all route. */

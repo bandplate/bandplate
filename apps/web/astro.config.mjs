@@ -1,4 +1,3 @@
-import { writeFile } from "node:fs/promises";
 import cloudflare from "@astrojs/cloudflare";
 import node from "@astrojs/node";
 import preact from "@astrojs/preact";
@@ -33,62 +32,57 @@ if (typeof process.loadEnvFile === "function") {
 
 // Adapter selected per build via `BANDPLATE_ADAPTER` — `node` (default,
 // what the user runs today: `astro build && node dist/start.mjs`) or
-// `cloudflare` (increment 7's Workers profile: `astro build` produces a
-// Worker script under `dist/_worker.js/`, deployed with `wrangler deploy`
-// — see `docs/deploy-cloudflare.md`). Nothing else in this file branches
-// on it: the Node profile's own config (`security.checkOrigin: false` and
-// why, below) is unchanged either way.
+// `cloudflare` (increment 7's Workers profile: `astro build` produces the
+// Worker under `dist/server/` and its static assets under `dist/client/`,
+// deployed with `wrangler deploy` — see `docs/deploy-cloudflare.md`). The
+// Node profile's own config (`security.checkOrigin: false` and why, below)
+// is unchanged either way.
 //
-// `imageService: "compile"` avoids pulling in Sharp (a native binary,
-// unusable inside a Worker) for the Cloudflare build; this app serves no
-// remote/optimized images through Astro's image pipeline, so the
-// compile-time-only service is a strict downgrade in capability we don't
-// use, not a behavior change.
+// `imageService: "compile"` keeps Sharp (a native binary, unusable inside a
+// Worker) out of the Worker bundle and needs no binding: images are
+// transformed at build time only and served as-is at runtime. The adapter's
+// default since 13, `cloudflare-binding`, would instead add an `IMAGES`
+// binding that `wrangler deploy` provisions in the deployer's account. This
+// app serves no optimized images through Astro's image pipeline, so neither
+// choice changes what a member sees.
 const adapterKind = process.env.BANDPLATE_ADAPTER === "cloudflare" ? "cloudflare" : "node";
 const adapter =
   adapterKind === "cloudflare"
     ? cloudflare({
         imageService: "compile",
-        platformProxy: { enabled: true },
-        // Custom entry (`src/worker.ts`) instead of the adapter's stock
-        // one, so the built Worker also exports a `scheduled` handler for
-        // `wrangler.toml`'s `[triggers] crons` (the notification tick,
-        // every 10 minutes — see `worker.ts`'s own doc comment and
-        // `docs/deploy-cloudflare.md`). It reproduces the stock `fetch`
-        // handler verbatim, so ordinary request handling is unchanged.
-        workerEntryPoint: { path: "./src/worker.ts" },
+        // No entry-point option here any more: since `@astrojs/cloudflare`
+        // 13 the Worker's entry is `wrangler.toml`'s `main`, which for this
+        // app must be `./src/worker.ts` (the stock `fetch` plus a
+        // `scheduled` handler for `[triggers] crons`; see that file's own
+        // comment and `wrangler.toml.example`).
       })
     : node({ mode: "standalone" });
 
 export default defineConfig({
   output: "server",
   devToolbar: { enabled: false },
+  // Sign-in sessions are ours (the `bp_session` cookie, resolved in
+  // `middleware.ts` against the `sessions` table); nothing reads
+  // `Astro.session`. Left on, Astro wires a session driver anyway: the Node
+  // adapter a filesystem one, and the Cloudflare adapter a `SESSION` KV
+  // binding that `wrangler deploy` would auto-provision in the deployer's
+  // account. Off means neither exists and no session code is bundled.
+  session: false,
   adapter,
-  integrations: [
-    preact({ compat: true }),
-    // CRITICAL: without this, the entire server bundle (`dist/_worker.js/`
-    // — auth logic, SQL, CSRF handling, admin handlers) uploads as PUBLIC
-    // STATIC ASSETS on every Workers deploy, served *before* the Worker
-    // itself gets a chance to run. Astro's Cloudflare adapter emits
-    // `dist/_routes.json` (Pages-mode routing metadata) but no
-    // `.assetsignore`, and `wrangler`'s asset-upload ignore list is
-    // hard-coded to `.assetsignore`/`_redirects`/`_headers` only — so
-    // `_worker.js/**` and `_routes.json` get uploaded and served as plain
-    // files unless something tells Wrangler not to. This writes that file
-    // as part of the build itself so it can't be forgotten by a
-    // self-deployer. Verified: `GET /_worker.js/index.js` and
-    // `GET /_routes.json` both 404 under `wrangler dev --local` with this
-    // in place (previously both returned 200 with real source/JSON), and
-    // the app still serves every route correctly.
-    adapterKind === "cloudflare" && {
-      name: "bandplate-cloudflare-assetsignore",
-      hooks: {
-        "astro:build:done": async ({ dir }) => {
-          await writeFile(new URL(".assetsignore", dir), "_worker.js\n_routes.json\n");
-        },
-      },
-    },
-  ].filter(Boolean),
+  // No `.assetsignore` hook any more. Up to `@astrojs/cloudflare` 12 the
+  // server bundle was built INTO the assets directory (`dist/_worker.js/`,
+  // plus `dist/_routes.json`), and without an ignore file `wrangler deploy`
+  // uploaded auth logic, SQL and admin handlers as public static files; a
+  // build hook wrote `.assetsignore` to stop that. Since 13 the Cloudflare
+  // Vite plugin builds the Worker into `dist/server/` and the assets into
+  // `dist/client/`, the only directory the generated
+  // `dist/server/wrangler.json` points `assets.directory` at, and writes its
+  // own `dist/client/.assetsignore` (`wrangler.json`, `.dev.vars`). Our old
+  // hook would now overwrite that file with names that no longer exist.
+  // Verified under `wrangler dev --local` on the 14.3.2 build: `/login` 200,
+  // `/_worker.js/index.js`, `/_routes.json`, `/entry.mjs` and
+  // `/wrangler.json` all 404.
+  integrations: [preact({ compat: true })],
   vite: {
     plugins: [
       tailwindcss(),
@@ -126,11 +120,15 @@ export default defineConfig({
   // Astro's built-in Origin/CSRF guard (`security.checkOrigin`, on by
   // default since Astro 5) compares `request.headers.get("origin")`
   // against `url.origin`. Under the standalone Node adapter used here,
-  // `url.origin` resolves to `http://localhost` regardless of the `Host`
-  // header the request actually arrived on — so in the *built* server
+  // `url.origin` does not follow the `Host`/`X-Forwarded-*` headers the
+  // request arrived with (Astro only trusts those for hosts listed in
+  // `security.allowedDomains`) — so in the *built* server behind a proxy
   // every real form POST (`Origin: https://bandplate.example`, say) gets
   // rejected with a 403 before it ever reaches a page. This does not
-  // reproduce under `astro dev`, which resolves `url.origin` correctly.
+  // reproduce under `astro dev`. Re-verified on Astro 7.3.3 with the check
+  // switched on: a POST with `Host: bandplate.example`, `X-Forwarded-Proto:
+  // https` and the matching `Origin` got "Cross-site POST form submissions
+  // are forbidden" (403).
   //
   // We disable Astro's check and rely instead on our own
   // `server/csrf.ts#isSameOrigin`, which compares the `Origin` header

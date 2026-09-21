@@ -1,7 +1,6 @@
 /// <reference path="../.astro/types.d.ts" />
 import type { MemberPrincipal } from "@bandplate/core";
 import type { Locale } from "@bandplate/i18n";
-import type { CloudflareEnv } from "./server/config.worker.js";
 
 declare global {
   namespace App {
@@ -18,18 +17,14 @@ declare global {
        */
       locale: Locale;
       /**
-       * Set by `@astrojs/cloudflare`'s own middleware — present only
-       * under the Cloudflare adapter (`BANDPLATE_ADAPTER=cloudflare`, see
-       * `astro.config.mjs`), `undefined` under the Node adapter. `env` is
-       * this Worker's bindings/secrets (see `CloudflareEnv`); `ctx` is the
-       * real `ExecutionContext` (`ctx.waitUntil`, used to take the
-       * login-link mail send out of the request path — see
-       * `pages/login/index.astro`).
+       * Set by `@astrojs/cloudflare`'s request handler, present only under
+       * the Cloudflare adapter (`BANDPLATE_ADAPTER=cloudflare`, see
+       * `astro.config.mjs`), `undefined` under the Node adapter. The real
+       * `ExecutionContext`: `waitUntil` takes the login-link mail send out of
+       * the request path (see `pages/login/index.astro`). Bindings are not
+       * here any more; `app.workers.ts` reads them from `cloudflare:workers`.
        */
-      runtime?: {
-        env: CloudflareEnv;
-        ctx: import("@cloudflare/workers-types").ExecutionContext;
-      };
+      cfContext?: import("@cloudflare/workers-types").ExecutionContext;
     }
   }
 }

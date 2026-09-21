@@ -202,16 +202,6 @@ function getRuntime(): Promise<Runtime> {
   return runtimePromise;
 }
 
-/**
- * No-op on the Node profile — present only so `middleware.ts` (which is
- * shared source between both profiles) has something to call
- * unconditionally without an adapter-specific branch of its own. Real
- * implementation lives in `app.workers.ts`; `middleware.ts` never reaches
- * this branch in practice, since `context.locals.runtime` is `undefined`
- * under the Node adapter.
- */
-export function initWorkersRuntime(_env: unknown): void {}
-
 /** The shared Hono app — used by the `/api/*` catch-all route. */
 export async function getApiApp(): Promise<ApiApp> {
   return (await getRuntime()).app;

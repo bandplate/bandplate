@@ -1,9 +1,10 @@
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "@bandplate/i18n";
 // Workers-profile configuration — the counterpart to `config.ts` (which
 // reads `process.env`, the Node/container profile's only source of
-// truth). Under `@astrojs/cloudflare`, bindings and secrets arrive per
-// request as `context.locals.runtime.env` — there is no `process.env`
-// bag with bindings on it — so this validates that object shape instead.
+// truth). Under `@astrojs/cloudflare`, bindings and secrets arrive as
+// `cloudflare:workers`'s `env` object (read in `app.workers.ts`); there is
+// no `process.env` bag with bindings on it, so this validates that object
+// shape instead.
 // Both parse into the exact same `RuntimeConfig` (imported, not
 // redeclared) that `server/app.ts`'s composition root already consumes,
 // so nothing downstream (the composition root, `AppDeps`, every repo/
@@ -159,9 +160,9 @@ function formatZodError(error: z.ZodError): string {
 }
 
 /**
- * Parses `env` (from `context.locals.runtime.env`) into a
- * `WorkersRuntimeConfig`. Not memoized here — `server/app.ts`'s
- * `initWorkersRuntime` is what memoizes the built runtime, once per
+ * Parses `env` (`cloudflare:workers`'s bindings) into a
+ * `WorkersRuntimeConfig`. Not memoized here: `app.workers.ts`'s
+ * `getRuntime` is what memoizes the built runtime, once per
  * isolate (env bindings are stable for the life of a deployment, so
  * re-validating on every cold start of the same isolate would be
  * redundant but never wrong; this function itself stays a pure parse).

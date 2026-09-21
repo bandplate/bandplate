@@ -5,7 +5,7 @@
 // file's header comment for the technique. This is the actual Hono app
 // wired into `apps/web`'s Workers composition root
 // (`server/app.workers.ts`), so it's exactly the module graph a Workers
-// deploy's `_worker.js` bundle depends on.
+// deploy's Worker bundle depends on.
 //
 // Like `@bandplate/core`, `@bandplate/api` has no existing Node-only sibling
 // module to use as this technique's "sanity check" half (grep confirms

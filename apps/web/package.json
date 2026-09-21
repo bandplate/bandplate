@@ -15,9 +15,9 @@
     "ship": "tsx scripts/deploy.ts"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "12.6.10",
-    "@astrojs/node": "^9.0.0",
-    "@astrojs/preact": "^4.0.1",
+    "@astrojs/cloudflare": "14.3.2",
+    "@astrojs/node": "^11.1.6",
+    "@astrojs/preact": "^6.0.5",
     "@bandplate/api": "workspace:*",
     "@bandplate/core": "workspace:*",
     "@bandplate/db": "workspace:*",
@@ -29,8 +29,8 @@
     "@libsql/client": "0.14.0",
     "@lucide/astro": "1.47.0",
     "@nanostores/preact": "^1.0.0",
-    "@tailwindcss/vite": "^4.0.0",
-    "astro": "^5.1.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.3",
     "fix-webm-duration": "1.0.6",
     "lucide-preact": "1.47.0",
     "nanostores": "^1.0.1",
@@ -39,12 +39,12 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.4",
+    "@astrojs/check": "^0.9.10",
     "@cloudflare/workers-types": "^5.20260921.1",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.28.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
-    "wrangler": "4.135.0"
+    "wrangler": "4.136.0"
   }
 }

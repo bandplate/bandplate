@@ -1,16 +1,20 @@
 # Deploy config for the Cloudflare Workers profile (increment 7). Build
-# first with `BANDPLATE_ADAPTER=cloudflare astro build` (produces
-# `dist/_worker.js/`), then `wrangler deploy` (or `wrangler dev` for local
-# verification). See `docs/deploy-cloudflare.md` for the full walkthrough —
+# first with `BANDPLATE_ADAPTER=cloudflare astro build` (the Worker goes to
+# `dist/server/`, static assets to `dist/client/`), then `wrangler deploy`
+# (or `wrangler dev` for local verification). See `docs/deploy-cloudflare.md` for the full walkthrough —
 # what a self-deployer creates, which secrets to set, and how migrations
 # run.
 name = "bandplate"
-main = "dist/_worker.js/index.js"
+# The Worker's entry: the adapter's stock `fetch` plus the `scheduled`
+# handler the cron below calls. Leave this out and the build falls back to
+# the stock entry, the site still works, and the cron silently does nothing.
+main = "./src/worker.ts"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
 
+# No `directory`: the build decides where assets go (`dist/client/`) and
+# writes it into the config `wrangler deploy` actually reads.
 [assets]
-directory = "dist"
 binding = "ASSETS"
 
 # Workers Logs: turns on the dashboard's Logs tab, which is where every
@@ -24,8 +28,8 @@ enabled = true
 head_sampling_rate = 1
 
 # Runs the notification tick every 10 minutes — the `scheduled` handler
-# `src/worker.ts` exports alongside the normal `fetch` one (wired in via
-# `workerEntryPoint` in `astro.config.mjs`). Cron Triggers run in UTC; the
+# `src/worker.ts` exports alongside the normal `fetch` one (wired in by
+# `main` above). Cron Triggers run in UTC; the
 # reminder logic itself (weekly-slot gating, quiet periods, ...) reasons in
 # `Europe/Prague` — see `docs/deploy-cloudflare.md`'s "Scheduled tick"
 # section. Not conditional on push being configured: the handler no-ops

@@ -1,7 +1,7 @@
 // The Workers `scheduled` handler's actual body — split out of `worker.ts`
 // so nothing under `src/server/` (the tree `vitest` walks via
 // `src/**/*.test.ts`, see `apps/web/vitest.config.ts`) drags in
-// `worker.ts`'s `cloudflare:workers`/`@astrojs/cloudflare/handler` imports.
+// `worker.ts`'s `@astrojs/cloudflare/handler` import.
 // This file itself imports nothing Workers-specific — only `../server/app.js`
 // (see below) — so it's safe for anything to import, but nothing under
 // test currently does; it's wired up only from `worker.ts`'s `scheduled`
@@ -25,24 +25,22 @@ import { describeError, logError, runNotificationTick } from "@bandplate/core";
 /** Mirrors `wrangler.toml`'s `[triggers] crons` — keep the two in step. */
 const CRON_PATTERN = "*/10 * * * *";
 
-import { getNotificationDeps, initWorkersRuntime } from "../server/app.js";
-import type { CloudflareEnv } from "./config.worker.js";
+import { getNotificationDeps } from "../server/app.js";
 
 /**
  * Called from `worker.ts`'s `scheduled` export, itself wrapped in
  * `ctx.waitUntil` there so the platform keeps the isolate alive until this
- * resolves. `initWorkersRuntime` is the same no-op-after-first-call as
- * `middleware.ts`'s use of it — Workers MAY reuse an isolate across a fetch
- * and a later cron trigger, so this could be a no-op finding the runtime
- * already built; that idempotency is exactly why it's safe to call here
- * unconditionally either way, fresh isolate or reused one.
+ * resolves. No `env` argument: `app.workers.ts` reads the bindings from
+ * `cloudflare:workers` itself and memoizes the runtime per isolate, so a
+ * cron trigger in an isolate that already served a fetch reuses what that
+ * fetch built, and a fresh isolate builds it here.
  *
  * `getNotificationDeps()` returns `undefined` when push isn't configured
  * (no VAPID vars set — see `config.worker.ts`) — every cron trigger runs
  * regardless of whether push is on, so this is the "nothing to do" case,
  * not an error.
  *
- * `initWorkersRuntime`/`getNotificationDeps` live inside the `try` along
+ * `getNotificationDeps` lives inside the `try` along
  * with the tick itself: `getRuntime()` can throw `ConfigError` (invalid
  * env), and letting that escape uncaught would reject the `waitUntil`
  * promise unhandled instead of logging a `[scheduled]` line like every
@@ -52,9 +50,8 @@ import type { CloudflareEnv } from "./config.worker.js";
  * the `try`/`catch` stays a deliberate second line of defense around it too,
  * not dead code for a promise that can't reject.
  */
-export async function runScheduledTick(env: CloudflareEnv): Promise<void> {
+export async function runScheduledTick(): Promise<void> {
   try {
-    initWorkersRuntime(env);
     const deps = await getNotificationDeps();
     if (!deps) {
       return;

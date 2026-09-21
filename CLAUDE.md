@@ -99,10 +99,20 @@ this, with the glossary and the plural rules, is in
 exit 0.** There is no error baseline to match any more; a lint error is a
 lint error.
 
-Two exclusions in `biome.json` are load-bearing, and neither is a licence to
-add more. `packages/ui/src/tokens/components.css` is skipped because Biome
-1.9's CSS parser rejects `@starting-style` and `@-moz-document url-prefix()`
-— both correct, both deliberate — and one unparseable file used to abort the
-whole run, which is how 16 phantom "errors" hid two real ones. `design-canvas`
-is skipped because it is design scratch, not app source. Revisit the CSS one
-when Biome's CSS support catches up.
+One exclusion in `biome.json` is load-bearing, and it is not a licence to add
+more. `design-canvas` is skipped because it is design scratch, not app
+source.
+
+Biome 2's CSS parser (`css.parser.tailwindDirectives: true` handles
+`@theme`/`@custom-variant`) parses `@starting-style` and
+`@-moz-document url-prefix()` cleanly, so `packages/ui/src/tokens/*.css` —
+`components.css` included — is fully linted and formatted now; the file-wide
+exclusion that used to cover it under Biome 1.9 is gone. Three rules stay off
+for `components.css` specifically, via a rule-scoped override rather than a
+blanket one: `noDescendingSpecificity` (the file is organized by component
+section, not by cascade order — enforcing ascending specificity would mean
+reshuffling ~9,500 lines for no behavior change), `noDuplicateProperties`
+(the repeated `min-height: 100vh` / `100dvh` pairs are a deliberate
+older-browser fallback, not a mistake), and `noImportantStyles` (the
+`prefers-reduced-motion` block's `!important` is what makes the override
+win regardless of what else targets the same element).

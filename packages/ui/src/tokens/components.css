@@ -168,7 +168,10 @@
   cursor: pointer;
   background: transparent;
   color: var(--bp-color-fg);
-  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease,
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease,
     box-shadow 0.12s ease;
 }
 
@@ -488,7 +491,9 @@ a.bp-btn {
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .bp-checkbox-item input[type="checkbox"]::after {
@@ -1172,7 +1177,8 @@ a.bp-btn {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: repeating-radial-gradient(
+  background:
+    repeating-radial-gradient(
       circle at 86% 0%,
       color-mix(in srgb, var(--bp-color-accent) 5%, transparent) 0 1px,
       transparent 1px 7px
@@ -1257,8 +1263,9 @@ a.bp-btn {
   padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
   padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
   padding-bottom: calc(
-    1.25rem + var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
-      var(--bp-player-height)
+    1.25rem +
+    var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
+    var(--bp-player-height)
   );
   box-sizing: border-box;
 }
@@ -1272,7 +1279,8 @@ a.bp-btn {
    markup, so this holds from first paint, before any script runs. */
 .bp-shell:has(.bp-player[hidden]) .bp-shell-main:not(.bp-shell-main-bare) {
   padding-bottom: calc(
-    1.25rem + var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px)))
+    1.25rem +
+    var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px)))
   );
 }
 
@@ -1953,7 +1961,6 @@ a.bp-btn {
   outline-offset: 2px;
 }
 
-
 .bp-now-playing-list {
   list-style: none;
   margin: 0;
@@ -2572,7 +2579,8 @@ a.bp-btn {
   /* A row of actions whose only member moved up into the header: an event
      with nothing to play, a take the band has already ruled on. Nothing is
      left to show, so the row goes rather than leaving its margins behind. */
-  .bp-shell--titled :is(.bp-event-hero-actions, .bp-take-hero-actions):not(:has(> :not(.bp-titled-action))) {
+  .bp-shell--titled
+  :is(.bp-event-hero-actions, .bp-take-hero-actions):not(:has(> :not(.bp-titled-action))) {
     display: none;
   }
 
@@ -2982,7 +2990,6 @@ a.bp-btn {
   margin-bottom: 0.75rem;
 }
 
-
 /* "Not published yet" — the strip on a take that exists but nobody can find.
    A dashed edge rather than a filled banner: this is not news that just
    happened (which is what `.bp-banner` is for, and why it announces itself to
@@ -3293,7 +3300,6 @@ a.bp-btn {
   flex-direction: column;
   gap: 0.875rem;
 }
-
 
 /* The overview's three counts. Tiles, not `.bp-card`s: a number under a
    label is the thinnest content on the site, and a bordered filled panel
@@ -3942,11 +3948,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
      sets of concentric rings a few pixels apart interfere, and the disc's own
      grooves are the set that means something. Its centre follows the plate's,
      so the light comes from the record rather than from a corner. */
-  background: radial-gradient(
+  background:
+    radial-gradient(
       70% 150% at var(--bp-auth-glow-x, 76%) var(--bp-auth-glow-y, 130%),
       var(--bp-groove),
       transparent 70%
-    ), var(--bp-lacquer);
+    ),
+    var(--bp-lacquer);
   color: var(--bp-bone);
 }
 
@@ -3982,11 +3990,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-auth-plate-disc {
   width: 15.625rem;
   height: 15.625rem;
-  background: repeating-radial-gradient(
+  background:
+    repeating-radial-gradient(
       circle at 50% 50%,
       color-mix(in srgb, var(--bp-bone) 7%, transparent) 0 1px,
       transparent 1px 6px
-    ), var(--bp-plate-vinyl);
+    ),
+    var(--bp-plate-vinyl);
 }
 
 .bp-auth-plate-label {
@@ -4032,7 +4042,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
   display: flex;
   align-items: flex-start;
   padding: 1.875rem 1.625rem 3rem;
-  background: repeating-radial-gradient(
+  background:
+    repeating-radial-gradient(
       circle at 86% 0%,
       color-mix(in srgb, var(--bp-color-accent) 5%, transparent) 0 1px,
       transparent 1px 7px
@@ -4041,7 +4052,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
       120% 34% at 86% 0%,
       color-mix(in srgb, var(--bp-color-accent) 10%, transparent),
       transparent 62%
-    ), var(--bp-color-bg);
+    ),
+    var(--bp-color-bg);
 }
 
 .bp-auth-col {
@@ -4383,7 +4395,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
      than a guessed constant. */
   scroll-margin-bottom: calc(
     var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
-      var(--bp-player-height)
+    var(--bp-player-height)
   );
 }
 
@@ -4863,7 +4875,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   letter-spacing: 0.02em;
 }
 
-
 /* ---------------------------------------------------------------------- */
 /* Song / event hero — Coda Caption spent on exactly one thing per page:   */
 /* the song's title, or the event's date. Everything else on the page      */
@@ -5073,7 +5084,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* underline here is the same >=3:1-in-both-themes token every other link  */
 /* underline in this file uses (4.65:1 / 6.93:1 — see dubplate.css).          */
 /* ---------------------------------------------------------------------- */
-
 
 /* Take detail, direction T3 — labelled strips off one edge, divided by rules.
    The definition list this replaces (`.bp-take-detail-meta`, now gone) put the
@@ -6140,9 +6150,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 1.5rem;
 }
 
-
-
-
 .bp-mixer {
   display: flex;
   flex-direction: column;
@@ -6228,8 +6235,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
     top: 0;
     bottom: 0;
     left: calc(
-      var(--bp-mixer-lane-left) + var(--bp-mix-progress, 0) *
-        (100% - var(--bp-mixer-lane-left))
+      var(--bp-mixer-lane-left) +
+      var(--bp-mix-progress, 0) *
+      (100% - var(--bp-mixer-lane-left))
     );
     width: 2px;
     margin-left: -1px;
@@ -6673,7 +6681,10 @@ html:has(dialog.bp-filter-sheet[open]) body {
      track. A plain percentage puts the seam ahead of the dot at the left
      end and behind it at the right, and dead on only in the middle. */
   --bp-fader-fill: calc(
-    var(--bp-fader-pos) * (100% - var(--bp-fader-thumb)) + var(--bp-fader-thumb) / 2
+    var(--bp-fader-pos) *
+    (100% - var(--bp-fader-thumb)) +
+    var(--bp-fader-thumb) /
+    2
   );
 }
 
@@ -7219,13 +7230,16 @@ html:has(dialog.bp-filter-sheet[open]) body {
   width: var(--bp-plate-size);
   height: var(--bp-plate-size);
   border-radius: 50%;
-  background: repeating-radial-gradient(
+  background:
+    repeating-radial-gradient(
       circle at 50% 50%,
       color-mix(in srgb, var(--bp-color-fg) 7%, transparent) 0 1px,
       transparent 1px 4px
-    ), var(--bp-plate-vinyl);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 10%, transparent), 0 6px 18px
-    rgb(0 0 0 / 0.45);
+    ),
+    var(--bp-plate-vinyl);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 10%, transparent),
+    0 6px 18px rgb(0 0 0 / 0.45);
 }
 
 .bp-plate-label {
@@ -7378,14 +7392,17 @@ html:has(dialog.bp-filter-sheet[open]) body {
    Focus gets the same treatment plus the system's ring, so a keyboard reaches
    it too. */
 .bp-plate-disc {
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .bp-plate:hover .bp-plate-disc,
 .bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
   transform: translateY(-3px);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent), 0 12px 26px
-    rgb(0 0 0 / 0.5);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent),
+    0 12px 26px rgb(0 0 0 / 0.5);
 }
 
 .bp-plate:hover .bp-plate-play,
@@ -7394,7 +7411,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 .bp-plate-play {
-  transition: transform 0.18s ease, filter 0.15s ease;
+  transition:
+    transform 0.18s ease,
+    filter 0.15s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7799,13 +7818,16 @@ html:has(dialog.bp-filter-sheet[open]) body {
   height: 96px;
   flex: none;
   border-radius: 50%;
-  background: repeating-radial-gradient(
+  background:
+    repeating-radial-gradient(
       circle at 50% 50%,
       color-mix(in srgb, var(--bp-color-fg) 7%, transparent) 0 1px,
       transparent 1px 4px
-    ), var(--bp-plate-vinyl);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 10%, transparent), 0 6px 18px
-    rgb(0 0 0 / 0.45);
+    ),
+    var(--bp-plate-vinyl);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 10%, transparent),
+    0 6px 18px rgb(0 0 0 / 0.45);
 }
 
 @media (min-width: 40rem) {
@@ -8074,7 +8096,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 .bp-theme-tile:focus-visible .bp-theme-tile-preview {
-  box-shadow: 0 0 0 2px var(--bp-color-bg), 0 0 0 4px var(--bp-color-fg);
+  box-shadow:
+    0 0 0 2px var(--bp-color-bg),
+    0 0 0 4px var(--bp-color-fg);
 }
 
 .bp-theme-tile-tick {
@@ -9010,7 +9034,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
   min-height: 100dvh;
   max-width: 32rem;
   margin-inline: auto;
-  padding-block: calc(0.75rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px));
+  padding-block: calc(0.75rem + env(safe-area-inset-top, 0px))
+    calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
 .bp-rec-head {
@@ -9447,7 +9472,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   font-variant-numeric: tabular-nums;
   opacity: 0.75;
 }
-
 
 /* The stash view has no filter panel, so past `lg` its results take the
    whole width rather than sitting beside an empty 20rem column. */

@@ -34,17 +34,28 @@
   },
   "overrides": [
     {
-      "includes": ["**/packages/ui/src/tokens/components.css"],
-      "linter": { "enabled": false },
-      "formatter": { "enabled": false }
-    },
-    {
       "includes": ["**/*.astro"],
       "linter": {
         "rules": {
           "correctness": {
             "noUnusedVariables": "off",
             "noUnusedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/packages/ui/src/tokens/components.css"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDescendingSpecificity": "off"
+          },
+          "suspicious": {
+            "noDuplicateProperties": "off"
+          },
+          "complexity": {
+            "noImportantStyles": "off"
           }
         }
       }

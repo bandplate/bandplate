@@ -386,7 +386,9 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       // thing (rendered by `AppLayout.astro`), not per-take — its presence
       // here is expected on every member-facing page, not evidence specific
       // to this take.
-      expect(body).toContain("bp-play-toggle");
+      // The take page's play control is the labelled pill (`bp-play-pill`),
+      // not the row's disc; the data contract is what the player reads.
+      expect(body).toContain("bp-play-pill");
       expect(body).toContain('data-role="toggle"');
       expect(body).toMatch(/data-audio-source[^>]*data-take-id="[^"]*"[^>]*data-asset-id="[^"]*"/);
       // And NO per-stem solo drawer. It used to render one chip per ready
@@ -420,8 +422,8 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
         headers: { cookie: sessionCookie },
       });
       const body = await res.text();
-      // Absent entirely, not present-and-disabled: no `bp-play-toggle`
-      // markup and no `data-audio-source` referencing this take's id
+      // Absent entirely, not present-and-disabled: no `bp-play-pill` (or row
+      // `bp-play-toggle`) markup and no `data-audio-source` referencing this take's id
       // anywhere on the page (the persistent player's own always-present
       // `<audio>` element is fine — see the previous test's comment — but
       // nothing should point AT this take). `data-take-id` alone is no
@@ -431,6 +433,7 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       // with no playable asset still has plenty of `data-take-id`
       // attributes on its own detail page; the play-control-specific
       // `data-audio-source` pairing is the real signal.
+      expect(body).not.toContain("bp-play-pill");
       expect(body).not.toContain("bp-play-toggle");
       expect(body).not.toMatch(
         new RegExp(`data-audio-source[^>]*data-take-id="${takeWithNoAssetsId}"`),

@@ -2105,8 +2105,7 @@ a.bp-btn {
    It was a 48px circle of its own, which made one action look like two
    different controls on a single screen. */
 .bp-play-toggle,
-.bp-player-play,
-.bp-mixer-open {
+.bp-player-play {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2129,14 +2128,12 @@ a.bp-btn {
    it can be smaller than the 44px touch target; `--bp-play-disc` is the only
    thing the large variant has to change. */
 .bp-play-toggle,
-.bp-player-play,
-.bp-mixer-open {
+.bp-player-play {
   position: relative;
 }
 
 .bp-play-toggle::before,
-.bp-player-play::before,
-.bp-mixer-open::before {
+.bp-player-play::before {
   content: "";
   position: absolute;
   width: var(--bp-play-disc, 34px);
@@ -2159,15 +2156,12 @@ a.bp-btn {
 .bp-play-toggle:hover::before,
 .bp-play-toggle:focus-visible::before,
 .bp-player-play:hover::before,
-.bp-player-play:focus-visible::before,
-.bp-take-play-link:hover .bp-mixer-open::before,
-.bp-take-play-link:focus-visible .bp-mixer-open::before {
+.bp-player-play:focus-visible::before {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
 }
 
 .bp-play-toggle svg,
-.bp-player-play svg,
-.bp-mixer-open svg {
+.bp-player-play svg {
   position: relative;
 }
 
@@ -2216,71 +2210,34 @@ a.bp-btn {
   display: inline;
 }
 
-/* The take-detail page's play section — the big play control plus (when
-   the take has stems) the Solo drawer underneath it. */
-/* The play control and the way into the mixer, on ONE line. They are the two
-   ways to hear this take, so they read as a pair; stacked, the second one sat
-   alone under the first and read as a footnote to it. Wraps rather than
-   squeezes — on a phone the mixer button drops to its own line at full
-   height. */
+/* The take page's two ways to hear it: play this take, open the mixer. Both
+   are the pill "Přehrát vše" is (`.bp-btn-play-all`: an accent disc inside a
+   secondary button), side by side at the gap every row of controls on this
+   page uses, wrapping on a phone rather than squeezing. They were two 56px
+   discs each with a title and a sub-line, a second button language on one
+   page. */
 .bp-take-play-section {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  /* A wider column gap than row gap, deliberately. Each of these is a disc
-     plus two lines of text, so at the page's usual 1rem the second disc
-     crowded the first one's caption and the four elements read as one run
-     rather than as two choices. */
-  gap: 0.875rem 2rem;
-}
-
-/* The disc alone said nothing about what pressing it would do — on a strip
-   labelled only "Listen" it was one gold circle in an empty band. It names the
-   source and its length, which is also what the player bar will show once it
-   starts, so the two agree. */
-.bp-take-play-lead {
-  display: flex;
-  align-items: center;
   gap: 0.875rem;
 }
 
-/* The way into the mixer, given the same shape as the play control it sits
-   beside: a filled accent disc, a title, and a sub-line naming the source.
-   They are the two ways to hear this take, and a pill beside a disc made one
-   of them look like a footnote to the other.
-
-   It borrows the disc by adding `.bp-mixer-open` to the shared rules above
-   rather than by wearing `.bp-play-toggle` — that class is what a route test
-   reads as "this take HAS a play control", and a link that opens another page
-   must not answer that question. */
-.bp-take-play-link {
-  /* No underline, on hover either: the disc answers a hover with the same
-     halo the play control uses, and a second signal on the words would make
-     two controls that sit side by side behave differently. */
-  text-decoration: none;
-  color: inherit;
+/* The play pill's icon swap: the same three rules `.bp-play-toggle` and the
+   plate badge carry, since it wears neither class. The player writes
+   `aria-pressed`; this is only what that looks like. The pause glyph drops
+   the 2px nudge that centres a triangle optically. */
+.bp-play-pill .bp-play-icon-pause {
+  display: none;
 }
 
-.bp-take-play-lead-text {
-  min-width: 0;
+.bp-play-pill[aria-pressed="true"] .bp-play-icon-play {
+  display: none;
 }
 
-.bp-take-play-title {
-  font-size: var(--text-ui, 0.9375rem);
-  font-weight: 600;
-  color: var(--bp-color-fg);
-  margin: 0;
-}
-
-.bp-take-play-sub {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 0.5rem;
-  margin: 0.125rem 0 0;
-  font-size: var(--text-note, 0.71875rem);
-  color: var(--bp-color-muted);
-  font-variant-numeric: tabular-nums;
+.bp-play-pill[aria-pressed="true"] .bp-play-icon-pause {
+  display: inline;
+  margin-inline-start: 0;
 }
 
 /* The stems ("Solo") drawer — a row of source-select chips, "Full mix"

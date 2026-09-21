@@ -21,24 +21,52 @@ export interface Props {
   /** Event/date context or the take's own label. */
   subtitle?: string;
   size?: "sm" | "lg";
+  /**
+   * Given, the control is a labelled pill ("▶ Přehrát tuhle nahrávku"), the
+   * shape "Přehrát vše" has: a small accent disc inside a secondary button.
+   * Same `data-*` contract either way, which is all the player reads.
+   */
+  label?: string;
 }
 
-const { takeId, assetId, title, subtitle = "", size = "sm" } = Astro.props;
+const { takeId, assetId, title, subtitle = "", size = "sm", label } = Astro.props;
+const dataAttrs = {
+  "data-audio-source": true,
+  "data-take-id": takeId,
+  "data-asset-id": assetId,
+  "data-title": title,
+  "data-subtitle": subtitle,
+  "data-source-kind": "master",
+  "data-role": "toggle",
+};
+const ariaLabel = playerMessages(Astro.locals.locale).play(title);
 ---
 
-<button
-  type="button"
-  class={`bp-play-toggle ${size === "lg" ? "bp-play-toggle-lg" : ""}`}
-  data-audio-source
-  data-take-id={takeId}
-  data-asset-id={assetId}
-  data-title={title}
-  data-subtitle={subtitle}
-  data-source-kind="master"
-  data-role="toggle"
-  aria-pressed="false"
-  aria-label={playerMessages(Astro.locals.locale).play(title)}
->
-  <Play size={size === "lg" ? "28" : "18"} class="bp-play-icon-play" aria-hidden="true" fill="currentColor" />
-  <Pause size={size === "lg" ? "28" : "18"} class="bp-play-icon-pause" aria-hidden="true" fill="currentColor" />
-</button>
+{
+  label ? (
+    <button
+      type="button"
+      class="bp-btn bp-btn-secondary bp-btn-sm bp-btn-play-all bp-play-pill"
+      {...dataAttrs}
+      aria-pressed="false"
+      aria-label={ariaLabel}
+    >
+      <span class="bp-btn-play-disc" aria-hidden="true">
+        <Play size={13} class="bp-play-icon-play" fill="currentColor" />
+        <Pause size={13} class="bp-play-icon-pause" fill="currentColor" />
+      </span>
+      {label}
+    </button>
+  ) : (
+    <button
+      type="button"
+      class={`bp-play-toggle ${size === "lg" ? "bp-play-toggle-lg" : ""}`}
+      {...dataAttrs}
+      aria-pressed="false"
+      aria-label={ariaLabel}
+    >
+      <Play size={size === "lg" ? "28" : "18"} class="bp-play-icon-play" aria-hidden="true" fill="currentColor" />
+      <Pause size={size === "lg" ? "28" : "18"} class="bp-play-icon-pause" aria-hidden="true" fill="currentColor" />
+    </button>
+  )
+}

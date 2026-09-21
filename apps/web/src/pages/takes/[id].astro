@@ -606,61 +606,35 @@ function assetLabel(asset: assetsRepo.Asset): string {
       playableMaster && (
         <section class="bp-take-strip">
           <h2 class="bp-strip-label">{t.takes.listenHeading}</h2>
+          {/* The two ways to hear this take, as the pill "Přehrát vše" is on
+              an event: an accent disc inside a secondary button, the words
+              beside it. They were two big gold discs with a title and a
+              sub-line each, a second button language on one page. */}
           <div class="bp-take-play-section">
-            <div class="bp-take-play-lead">
-              <PlayToggleButton
-                takeId={take.id}
-                assetId={playableMaster.id}
-                title={heroTitle}
-                subtitle={heroSubtitle}
-                size="lg"
-              />
-              <div class="bp-take-play-lead-text">
-                <p class="bp-take-play-title">{t.takes.playThisTake}</p>
-                {/* Names the SOURCE, not the length. The duration lives one strip
-                    down in "This take", where it is still there for a take that
-                    has no playable asset and so renders no play control at all —
-                    saying it in both places put the same number on screen twice. */}
-                <p class="bp-take-play-sub">
-                  <span>{playableMaster.tier === "lossless" ? t.takes.losslessMaster : t.takes.masterMix}</span>
-                </p>
-              </div>
-            </div>
+            <PlayToggleButton
+              takeId={take.id}
+              assetId={playableMaster.id}
+              title={heroTitle}
+              subtitle={heroSubtitle}
+              label={t.takes.playThisTake}
+            />
             {playableStems.length >= MIN_MIXER_STEMS && (
-              /* Beside the play control, not under it: this is the other way
-                 to listen to this take, so it belongs on that line. The
-                 per-stem "Solo" chips that used to sit here are gone — the
-                 play button already plays the master, which was the drawer's
-                 first chip, and a stem on its own is still in the player's
-                 Hraje sheet, which switches to it without leaving the page.
-
-                 `data-astro-reload` is load-bearing, not a preference. The
+              /* `data-astro-reload` is load-bearing, not a preference. The
                  shell player is `transition:persist`, so a view transition
                  would carry a PLAYING `<audio>` into a page that builds its
                  own audio graph — two engines, one pair of ears. A real
-                 document load cannot. The cost is that this link gets no
-                 shared-element transition; that is the price of the
-                 invariant, and it is not a bug to fix. */
+                 document load cannot. */
               <a
                 href={`/takes/${take.id}/mix`}
-                class="bp-take-play-lead bp-take-play-link"
+                class="bp-btn bp-btn-secondary bp-btn-sm bp-btn-play-all"
                 data-astro-reload
               >
-                {/* The same disc the play control wears — see the stylesheet
-                    for why it is borrowed by selector rather than by class. */}
-                <span class="bp-mixer-open bp-play-toggle-lg" aria-hidden="true">
-                  {/* Faders. Not a second triangle: this does not start
-                      anything, it opens the place where you decide what
-                      plays. */}
-                  <SlidersVertical size={26} />
+                {/* Faders, not a second triangle: this does not start
+                    anything, it opens the place where you decide what plays. */}
+                <span class="bp-btn-play-disc" aria-hidden="true">
+                  <SlidersVertical size={15} />
                 </span>
-                <span class="bp-take-play-lead-text">
-                  <p class="bp-take-play-title bp-m0">{t.player.openInMixer}</p>
-                  {/* Names the SOURCE, exactly as "master mix" does beside the
-                      play control — which is the one thing that separates the
-                      two ways of hearing this take. */}
-                  <p class="bp-take-play-sub bp-m0">{t.mixer.stemCount(playableStems.length)}</p>
-                </span>
+                {t.player.openInMixer}
               </a>
             )}
           </div>

@@ -1,6 +1,8 @@
+import { mixerMessages } from "@bandplate/i18n";
 import { describe, expect, it } from "vitest";
 import {
   clampFader,
+  failureText,
   initialMixerState,
   MAX_FADER,
   type MixerState,
@@ -171,5 +173,22 @@ describe("initialMixerState", () => {
   it("the master is audible the moment you unmute it", () => {
     const s = initialMixerState([{ assetId: "master", kind: "master", mine: false }]);
     expect(trackGains(setMuted(s, "master", false).tracks).get("master")).toBe(1);
+  });
+});
+
+describe("failureText", () => {
+  const t = mixerMessages("en");
+  const labels = ["Drums", "Bass"];
+
+  it("says the mixer could not start at all", () => {
+    expect(failureText(t, labels, { kind: "cant-start" })).toBe(t.cantStart);
+  });
+
+  it("names the track that would not load", () => {
+    expect(failureText(t, labels, { kind: "track", index: 1 })).toBe("Bass wouldn't load.");
+  });
+
+  it("still says something for an index it has no label for", () => {
+    expect(failureText(t, labels, { kind: "track", index: 9 })).toBe(t.trackFailed(""));
   });
 });

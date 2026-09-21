@@ -201,3 +201,38 @@ export function loopFractions(
     end: Math.max(0, Math.min(1, region.endS / durationS)),
   };
 }
+
+/**
+ * How far one arrow key moves a handle. Left/Down go back, Right/Up forward,
+ * Shift takes four steps. Zero for any other key, which the handle then
+ * leaves alone so the page still scrolls and tabs.
+ */
+export function loopKeyDelta(key: string, shift: boolean): number {
+  const step = shift ? LOOP_NUDGE_S * 4 : LOOP_NUDGE_S;
+  if (key === "ArrowLeft" || key === "ArrowDown") {
+    return -step;
+  }
+  if (key === "ArrowRight" || key === "ArrowUp") {
+    return step;
+  }
+  return 0;
+}
+
+/** How far a pointer must travel on the loop bar before it counts as a drag rather than a tap. */
+export const DRAG_SLOP_PX = 4;
+
+/**
+ * Whether a press on the loop bar begins a gesture: any touch or pen, and a
+ * mouse's primary button only. A right click is a context menu, not a loop.
+ */
+export function startsLoopGesture(button: number, pointerType: string): boolean {
+  return button === 0 || pointerType !== "mouse";
+}
+
+/**
+ * Whether a press has become a drag. Without the threshold a stray tap drops
+ * a region in and playback starts jumping for no reason the member can see.
+ */
+export function isLoopDrag(fromX: number, x: number): boolean {
+  return Math.abs(x - fromX) >= DRAG_SLOP_PX;
+}

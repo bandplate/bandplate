@@ -23,17 +23,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { currentLocale } from "../client/locale.js";
 import {
   canLoop,
-  LOOP_NUDGE_S,
+  isLoopDrag,
   type LoopEdge,
   type LoopRegion,
   loopFractions,
+  loopKeyDelta,
   makeLoop,
   nudgeLoopEdge,
   setLoopEdge,
+  startsLoopGesture,
 } from "../client/mixer-loop.js";
 import { type LanePeaks, mixerLaneBars } from "../client/mixer-peaks.js";
 import { timelineTicks } from "../client/mixer-ticks.js";
 import {
+  failureText,
   initialMixerState,
   MAX_FADER,
   type MixerState,
@@ -45,7 +48,7 @@ import {
 } from "../client/mixer-tracks.js";
 import { parsePeaksBody } from "../client/player-store.js";
 import { barCountForWidth, formatClock, fractionAt, playedFraction } from "../client/timeline.js";
-import { type MixerFailure, useMixerEngine } from "../client/use-mixer-engine.js";
+import { useMixerEngine } from "../client/use-mixer-engine.js";
 
 export interface MixerTrackProps {
   assetId: string;
@@ -66,26 +69,8 @@ export interface MixerProps {
 
 /** One bar per this many CSS pixels, matching the player's waveform. */
 const BAR_PITCH_PX = 3;
-/** How far a pointer must travel on the loop bar before it counts as a drag rather than a tap. */
-const DRAG_SLOP_PX = 4;
 const MIN_BARS = 40;
 const MAX_BARS = 600;
-
-/**
- * The engine reports WHY it stopped; the words are chosen here, in the
- * reader's language. Same division this app keeps everywhere between a
- * decision and the sentence for it.
- */
-function failureText(
-  t: ReturnType<typeof mixerMessages>,
-  tracks: MixerTrackProps[],
-  failure: MixerFailure,
-): string {
-  if (failure.kind === "cant-start") {
-    return t.cantStart;
-  }
-  return t.trackFailed(tracks[failure.index]?.label ?? "");
-}
 
 export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: MixerProps) {
   const t = mixerMessages(currentLocale(locale));
@@ -247,7 +232,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
         // A press that never travels is a press, not a drag. Without the
         // threshold a stray tap drops a 1.5-second region in and playback
         // starts jumping for no reason the member can see.
-        dragging = dragging || Math.abs(e.clientX - fromX) >= DRAG_SLOP_PX;
+        dragging = dragging || isLoopDrag(fromX, e.clientX);
         const to = dragging ? timeAtX(e.clientX) : null;
         if (to !== null) {
           setLoop(makeLoop(fixedS, to, duration));
@@ -277,13 +262,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
    */
   const onHandleKey = useCallback(
     (event: KeyboardEvent, edge: LoopEdge) => {
-      const step = event.shiftKey ? LOOP_NUDGE_S * 4 : LOOP_NUDGE_S;
-      const delta =
-        event.key === "ArrowLeft" || event.key === "ArrowDown"
-          ? -step
-          : event.key === "ArrowRight" || event.key === "ArrowUp"
-            ? step
-            : 0;
+      const delta = loopKeyDelta(event.key, event.shiftKey);
       if (delta === 0) {
         return;
       }
@@ -305,7 +284,13 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       {/* `<output>`, not a `<p role="status">`: it IS the element for a
           result the page computed, and it carries the live region for free. */}
       {failure && (
-        <output class="bp-mixer-note bp-mixer-failure">{failureText(t, tracks, failure)}</output>
+        <output class="bp-mixer-note bp-mixer-failure">
+          {failureText(
+            t,
+            tracks.map((track) => track.label),
+            failure,
+          )}
+        </output>
       )}
 
       <div class="bp-mixer-lanes" ref={lanesRef} style={`--bp-mix-progress: ${progress}`}>
@@ -455,7 +440,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             class="bp-mixer-loopbar"
             ref={loopBarRef}
             onPointerDown={(event) => {
-              if (event.button !== 0 && event.pointerType === "mouse") {
+              if (!startsLoopGesture(event.button, event.pointerType)) {
                 return;
               }
               const at = timeAtX(event.clientX);

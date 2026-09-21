@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   canLoop,
+  DRAG_SLOP_PX,
+  isLoopDrag,
   LOOP_NUDGE_S,
   loopEngagedFrom,
   loopFractions,
+  loopKeyDelta,
   loopWrapTarget,
   MIN_LOOP_S,
   makeLoop,
   nudgeLoopEdge,
   setLoopEdge,
+  startsLoopGesture,
 } from "./mixer-loop.js";
 
 const TAKE = 400;
@@ -172,5 +176,41 @@ describe("loopFractions", () => {
   it("has nowhere to draw before the duration is known", () => {
     expect(loopFractions({ startS: 100, endS: 200 }, 0)).toBeNull();
     expect(loopFractions(null, TAKE)).toBeNull();
+  });
+});
+
+describe("loopKeyDelta", () => {
+  it("moves a handle back on Left/Down and forward on Right/Up", () => {
+    expect(loopKeyDelta("ArrowLeft", false)).toBe(-LOOP_NUDGE_S);
+    expect(loopKeyDelta("ArrowDown", false)).toBe(-LOOP_NUDGE_S);
+    expect(loopKeyDelta("ArrowRight", false)).toBe(LOOP_NUDGE_S);
+    expect(loopKeyDelta("ArrowUp", false)).toBe(LOOP_NUDGE_S);
+  });
+
+  it("takes four steps with Shift", () => {
+    expect(loopKeyDelta("ArrowRight", true)).toBe(LOOP_NUDGE_S * 4);
+    expect(loopKeyDelta("ArrowLeft", true)).toBe(-LOOP_NUDGE_S * 4);
+  });
+
+  it("leaves every other key alone, so the page still scrolls and tabs", () => {
+    expect(loopKeyDelta("Tab", false)).toBe(0);
+    expect(loopKeyDelta("PageDown", true)).toBe(0);
+  });
+});
+
+describe("loopGesture", () => {
+  it("starts on a primary press, a touch or a pen, and not on a right or middle click", () => {
+    expect(startsLoopGesture(0, "mouse")).toBe(true);
+    expect(startsLoopGesture(2, "mouse")).toBe(false);
+    expect(startsLoopGesture(1, "mouse")).toBe(false);
+    expect(startsLoopGesture(0, "touch")).toBe(true);
+    expect(startsLoopGesture(-1, "pen")).toBe(true);
+  });
+
+  it("counts as a drag only once the pointer has travelled", () => {
+    // A stray tap must not drop a 1.5-second region in.
+    expect(isLoopDrag(100, 103)).toBe(false);
+    expect(isLoopDrag(100, 100 + DRAG_SLOP_PX)).toBe(true);
+    expect(isLoopDrag(100, 100 - DRAG_SLOP_PX)).toBe(true);
   });
 });

@@ -6,6 +6,9 @@
 // calls that carry the decision out. There is no DOM test environment in this
 // repo, so logic that stays in the `.tsx` is logic nothing can check.
 
+import type { mixerMessages } from "@bandplate/i18n";
+import type { MixerFailure } from "./use-mixer-engine.js";
+
 /** One track's controls. Serialisable on purpose — see the note at the bottom. */
 export interface TrackControl {
   assetId: string;
@@ -171,4 +174,20 @@ export function initialMixerState(
     muteMine: false,
     presetMuted: [],
   };
+}
+
+/**
+ * The sentence for why the mixer stopped. The engine reports the reason
+ * (`MixerFailure`); the words are chosen here, in the reader's language, the
+ * same division this app keeps everywhere between a decision and its copy.
+ */
+export function failureText(
+  t: ReturnType<typeof mixerMessages>,
+  labels: readonly string[],
+  failure: MixerFailure,
+): string {
+  if (failure.kind === "cant-start") {
+    return t.cantStart;
+  }
+  return t.trackFailed(labels[failure.index] ?? "");
 }

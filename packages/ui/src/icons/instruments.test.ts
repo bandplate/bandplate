@@ -1,13 +1,11 @@
 // The de-duplication rule behind `InstrumentSet.astro`.
 //
-// The component is `.astro` and renders in a template, so what is testable —
-// and what actually carries the decision — is `instrumentMark`: two
+// The component is `.astro` and renders in a template, so what is testable,
+// and what actually carries the decision, is `instrumentMark`: two
 // instruments collapse into one glyph exactly when this matches.
-//
-// It lives in `@bandplate/ui`, which has no test runner of its own; this is
-// the nearest suite to the only component that calls it.
-import { instrumentInitials, instrumentMark } from "@bandplate/ui/icons/instruments.js";
+
 import { describe, expect, it } from "vitest";
+import { instrumentInitials, instrumentMark } from "./instruments.js";
 
 describe("instrumentInitials", () => {
   it("takes the first letter of each of the first two words", () => {

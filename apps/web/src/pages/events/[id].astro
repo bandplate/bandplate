@@ -259,7 +259,7 @@ const [allSongs, allInstruments] = await Promise.all([
           />
         </span>
       </h1>
-      {event.title && <p class="bp-event-hero-title bp-m0 bp-titled-facts">{event.title}</p>}
+      {event.title && <p class="bp-hero-label bp-m0 bp-titled-facts">{event.title}</p>}
       {isPersonal && owner && (
         <p class="bp-event-hero-title bp-m0">{t.events.recordedByLabel}: {owner.displayName}</p>
       )}

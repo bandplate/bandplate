@@ -38,6 +38,8 @@ export const player = {
   closeSheet: "Close",
   close: "Stop and close the player",
   seek: "Seek",
+  /** The seek control's spoken value: position against length, both `m:ss`. */
+  seekValue: ({ at, length }: { at: string; length: string }): string => `${at} of ${length}`,
   /**
    * The way into the mixer, from the bar and from a take's own page.
    *

@@ -73,6 +73,7 @@ import {
   queueItemOf,
   readSourceControl,
   remoteTransport,
+  seekValueText,
   showsMixer,
   stemCount,
 } from "../client/player-view.js";
@@ -866,7 +867,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             value={playhead}
             disabled={duration <= 0}
             aria-label={t.seek}
-            aria-valuetext={`${formatClock(playhead)} of ${formatClock(duration)}`}
+            aria-valuetext={seekValueText(playhead, duration, t)}
             onInput={(event) => {
               const audio = audioRef.current;
               const next = Number((event.currentTarget as HTMLInputElement).value);

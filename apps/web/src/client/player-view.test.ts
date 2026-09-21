@@ -10,6 +10,7 @@ import {
   queueableItem,
   readSourceControl,
   remoteTransport,
+  seekValueText,
   showsMixer,
 } from "./player-view.js";
 
@@ -224,5 +225,14 @@ describe("remoteTransport", () => {
     expect(remoteTransport(master, queueOf(3, 0))).toEqual({ previous: true, next: true });
     expect(remoteTransport(master, queueOf(3, 2))).toEqual({ previous: true, next: false });
     expect(remoteTransport(master, null)).toEqual({ previous: true, next: false });
+  });
+});
+
+describe("seekValueText", () => {
+  it("reads the position against the length, in the page's language", () => {
+    expect(seekValueText(42.7, 190, playerMessages("en"))).toBe("0:42 of 3:10");
+    // It used to be an English template literal in Player.tsx, so a Czech
+    // screen reader heard "0:42 of 3:10" on every step of the scrub.
+    expect(seekValueText(42.7, 190, playerMessages("cs"))).toBe("0:42 z 3:10");
   });
 });

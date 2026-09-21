@@ -34,5 +34,7 @@ export const player = {
   closeSheet: "Zavřít", // en: Close
   close: "Zastavit a zavřít přehrávač", // en: Stop and close the player
   seek: "Přetočit", // en: Seek
+  // en: `${at} of ${length}`
+  seekValue: ({ at, length }: { at: string; length: string }): string => `${at} z ${length}`,
   openInMixer: "Otevřít v mixéru", // en: Open in mixer
 } satisfies typeof enPlayer;

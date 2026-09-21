@@ -18,6 +18,7 @@ import {
   queuePosition,
 } from "./player-queue.js";
 import type { PlayerSource, PlayerTrack } from "./player-store.js";
+import { formatClock } from "./timeline.js";
 
 type PlayerWords = ReturnType<typeof playerMessages>;
 
@@ -154,4 +155,9 @@ export function remoteTransport(
   queue: PlayQueue | null,
 ): { previous: boolean; next: boolean } {
   return { previous: track !== null, next: track !== null && hasNext(queue) };
+}
+
+/** The seek range's `aria-valuetext`: "0:42 of 3:10", in the page's language. */
+export function seekValueText(playhead: number, duration: number, t: PlayerWords): string {
+  return t.seekValue({ at: formatClock(playhead), length: formatClock(duration) });
 }

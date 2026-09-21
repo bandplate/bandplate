@@ -188,6 +188,7 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "player.pause": [{ label: "t", args: ["Čoudy"] }],
   "player.position": [{ label: "p", args: [{ current: 3, total: 10 }] }],
   "player.openNowPlaying": [{ label: "t", args: ["Čoudy"] }],
+  "player.seekValue": [{ label: "p", args: [{ at: "0:42", length: "3:10" }] }],
   "takes.count": [
     { label: "one", args: [1] },
     { label: "few", args: [3] },

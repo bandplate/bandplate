@@ -135,13 +135,29 @@ export default function Recorder({
   // RECORDING, and reusing it here would have to mean something else.
   const [confirmLeave, setConfirmLeave] = useState(false);
   const leaveDialogRef = useRef<HTMLDialogElement>(null);
+  const discardDialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = discardDialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (state.phase === "confirm-discard" && !dialog.open) {
+      dialog.showModal();
+    } else if (state.phase !== "confirm-discard" && dialog.open) {
+      dialog.close();
+    }
+  }, [state.phase]);
   useEffect(() => {
     const dialog = leaveDialogRef.current;
     if (confirmLeave && dialog && !dialog.open) {
       dialog.showModal();
     }
   }, [confirmLeave]);
-  const [leaving, setLeaving] = useState(false);
+  // Set the moment the member answers "throw it away": the page is about to
+  // go, and the browser's own "leave page?" must not ask the same question a
+  // second time. A ref, because it has to be true before the next render —
+  // navigation starts in the same tick as the click.
+  const leavingRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -345,11 +361,17 @@ export default function Recorder({
     recorderRef.current?.stop();
   }, [state.startedAt]);
 
+  // "Zahodit" mid-take means the member is done here: the recording goes and
+  // so does the recorder, back to where they came from. It used to reset to
+  // a fresh stage, which read as "discard and record again" — a question
+  // nobody had asked.
   const discard = useCallback(() => {
     discardRef.current = true;
+    leavingRef.current = true;
     recorderRef.current?.stop();
     dispatch({ type: "discard" });
-  }, []);
+    window.location.assign(closeHref);
+  }, [closeHref]);
 
   const redo = useCallback(() => {
     if (reviewUrl) {
@@ -421,20 +443,18 @@ export default function Recorder({
 
   // Leaving with an unsaved recording asks first.
   useEffect(() => {
-    // `leaving` is the member answering that exact question already: the
-    // close on the review screen asked, they chose to throw the recording
-    // away, and a second browser prompt on the way out would ask it twice.
-    const unsaved =
-      !leaving && (recording || state.phase === "review" || state.phase === "finishing");
+    const unsaved = recording || state.phase === "review" || state.phase === "finishing";
     if (!unsaved) {
       return;
     }
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
+      if (!leavingRef.current) {
+        event.preventDefault();
+      }
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [recording, state.phase, leaving]);
+  }, [recording, state.phase]);
 
   useEffect(() => () => releaseInput(), [releaseInput]);
   useEffect(
@@ -693,7 +713,13 @@ export default function Recorder({
             >
               {t.keepIt}
             </button>
-            <a class="bp-btn bp-btn-danger" href={closeHref} onClick={() => setLeaving(true)}>
+            <a
+              class="bp-btn bp-btn-danger"
+              href={closeHref}
+              onClick={() => {
+                leavingRef.current = true;
+              }}
+            >
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
@@ -798,34 +824,44 @@ export default function Recorder({
           )}
         </div>
         <p class="bp-rec-hint bp-m0">{t.levelHint}</p>
-        {state.phase === "confirm-discard" && (
-          <div class="bp-rec-confirm" role="alertdialog" aria-label={t.discardQuestion}>
-            <p class="bp-m0">{t.discardQuestion}</p>
-            <div class="bp-rec-actions">
-              <button
-                type="button"
-                class="bp-btn bp-btn-secondary"
-                onClick={() => dispatch({ type: "keep-going" })}
+        {/* The same modal the review screen's close uses: a question about
+            leaving covers the page. Escape keeps recording. */}
+        <dialog
+          ref={discardDialogRef}
+          class="bp-dialog"
+          aria-modal="true"
+          aria-labelledby="rec-discard-title"
+          onCancel={(event) => {
+            event.preventDefault();
+            dispatch({ type: "keep-going" });
+          }}
+        >
+          <h2 id="rec-discard-title">{t.discardQuestion}</h2>
+          <p>{t.discardLeaveBody}</p>
+          <div class="bp-dialog-actions">
+            <button
+              type="button"
+              class="bp-btn bp-btn-secondary"
+              onClick={() => dispatch({ type: "keep-going" })}
+            >
+              {t.keepRecording}
+            </button>
+            <button type="button" class="bp-btn bp-btn-danger" onClick={discard}>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
               >
-                {t.keepRecording}
-              </button>
-              <button type="button" class="bp-btn bp-btn-danger" onClick={discard}>
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-                </svg>
-                {t.discard}
-              </button>
-            </div>
+                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+              </svg>
+              {t.discard}
+            </button>
           </div>
-        )}
+        </dialog>
         {state.phase === "finishing" && <p class="bp-field-hint bp-m0">{t.finishing}</p>}
         {state.phase === "error" && state.error && (
           <p class="bp-field-error bp-m0" role="alert">

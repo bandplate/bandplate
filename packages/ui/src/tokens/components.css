@@ -9012,13 +9012,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   max-width: 22rem;
 }
 
-.bp-rec-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: center;
-}
-
 .bp-rec-actions {
   display: flex;
   flex-wrap: wrap;

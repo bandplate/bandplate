@@ -44,3 +44,83 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: deploy-production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      # CLOUDFLARE_API_TOKEN is the gate for a fork/repo that hasn't set up
+      # the production secrets yet: every later step is conditioned on this
+      # output, so the job prints one clear line and exits 0 rather than
+      # failing on a missing secret.
+      - name: Check secrets configured
+        id: secrets
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy skipped: secrets not configured"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.secrets.outputs.configured == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: steps.secrets.outputs.configured == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+
+      # See the build job's own comment on this step — same corepack/keyid
+      # issue, same fix, same ordering requirement (after setup-node).
+      - name: Enable corepack
+        if: steps.secrets.outputs.configured == 'true'
+        run: |
+          npm install -g corepack@latest
+          corepack enable
+
+      - name: Prepare pnpm via corepack
+        if: steps.secrets.outputs.configured == 'true'
+        run: corepack prepare pnpm@10.33.0 --activate
+
+      - name: Install dependencies
+        if: steps.secrets.outputs.configured == 'true'
+        run: pnpm install --frozen-lockfile
+
+      # wrangler.toml is gitignored (apps/web/wrangler.toml.example is the
+      # tracked template) — every deployer, including CI, supplies their
+      # own. The WRANGLER_TOML secret must hold the owner's full file, the
+      # [observability] block included (see docs/deploy-cloudflare.md).
+      - name: Write wrangler.toml
+        if: steps.secrets.outputs.configured == 'true'
+        working-directory: apps/web
+        run: printf '%s' "$WRANGLER_TOML" > wrangler.toml
+        env:
+          WRANGLER_TOML: ${{ secrets.WRANGLER_TOML }}
+
+      # Same check `pnpm ship` runs locally (apps/web/scripts's
+      # check-remote-migrations.ts, shared code) — CI never applies
+      # migrations itself, only refuses to deploy if any are pending.
+      - name: Check pending migrations
+        if: steps.secrets.outputs.configured == 'true'
+        working-directory: apps/web
+        run: pnpm exec tsx scripts/check-remote-migrations.ts
+
+      - name: Build
+        if: steps.secrets.outputs.configured == 'true'
+        working-directory: apps/web
+        run: pnpm exec astro build
+        env:
+          BANDPLATE_ADAPTER: cloudflare
+
+      - name: Deploy
+        if: steps.secrets.outputs.configured == 'true'
+        working-directory: apps/web
+        run: pnpm exec wrangler deploy

@@ -11,7 +11,8 @@
     "typecheck": "astro check",
     "test": "vitest run",
     "notify:tick": "tsx scripts/notify-tick.ts",
-    "migrate:remote": "tsx scripts/migrate-remote.ts"
+    "migrate:remote": "tsx scripts/migrate-remote.ts",
+    "ship": "tsx scripts/deploy.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "12.6.10",

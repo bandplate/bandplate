@@ -300,6 +300,33 @@ own `--file=` call, in order.
 
 ## 5. Build and deploy
 
+**Use `pnpm ship` (from the repo root) rather than running these by hand.**
+It runs the whole gate below itself — dirty tree, unpushed HEAD, pending
+migrations — and stops on the first thing that fails, in
+`set -euo pipefail` style (every subprocess's exit code is checked; nothing
+is swallowed):
+
+```
+pnpm ship
+```
+
+In order: refuses if the working tree is dirty; refuses if `HEAD` isn't
+pushed to `origin/main`; refuses if `wrangler d1 migrations list DB
+--remote` reports anything pending (run `pnpm migrate:remote` first — this
+script never applies migrations itself); then `BANDPLATE_ADAPTER=cloudflare
+pnpm exec astro build` and `pnpm exec wrangler deploy`, both from
+`apps/web`. The source is `apps/web/scripts/deploy.ts`, run via `tsx`,
+mirroring `migrate-remote.ts`'s style — the decidable parts (is the tree
+clean, is HEAD pushed, what to do about a pending-migrations list) live in
+the pure, node-tested `apps/web/scripts/deploy-guard.ts`.
+
+(`pnpm deploy` is a built-in pnpm command — a root script literally named
+`deploy` would be shadowed by it and never run, which is why this one is
+named `ship`.)
+
+Equivalent by hand, if you need to skip straight to build/deploy for some
+reason (not recommended — you lose every guard above):
+
 ```
 cd apps/web
 BANDPLATE_ADAPTER=cloudflare pnpm exec astro build   # → dist/_worker.js/
@@ -311,6 +338,47 @@ pnpm exec wrangler deploy
 — omit it and `astro build` produces the unchanged Node profile
 (`dist/start.mjs`) instead. Nothing else in `astro.config.mjs` branches
 on it.
+
+## 6. Gated deploys from CI
+
+Every push to `main` that passes the existing `build` job (typecheck,
+lint, test, build) also runs a `deploy` job in `.github/workflows/ci.yml`,
+gated with `concurrency: deploy-production` so two deploys can never race.
+It runs the same pending-migrations check as `pnpm ship`
+(`apps/web/scripts/check-remote-migrations.ts` — the same code, not a
+second parse of `wrangler`'s output) and **fails the job if anything is
+pending**; CI never applies migrations itself, only `pnpm migrate:remote`
+run by hand does that.
+
+The job needs three repository secrets:
+
+- **`CLOUDFLARE_API_TOKEN`** — scoped to `Workers Scripts:Edit`,
+  `D1:Edit`, and `Account Settings:Read`. That's enough to build and
+  deploy the Worker and to list/read D1 migration state; it is
+  deliberately not scoped to apply migrations or write secrets — those
+  stay a human's job (`pnpm migrate:remote`, `wrangler secret put`).
+- **`CLOUDFLARE_ACCOUNT_ID`** — your Cloudflare account id (same value
+  wrangler already needs locally).
+- **`WRANGLER_TOML`** — the deploying account's complete
+  `apps/web/wrangler.toml` (the file itself is gitignored — see "Before
+  anything" above), written to disk as-is (`printf '%s' "$WRANGLER_TOML" >
+  apps/web/wrangler.toml`) before the migrations check and build run. It
+  must be the **whole** file, including the `[observability]` block
+  (`enabled = true`, `head_sampling_rate = ...`) — a `WRANGLER_TOML` secret
+  copied from an older local file that predates that block will deploy
+  successfully but silently ship without Workers Logs/observability
+  configured.
+
+If `CLOUDFLARE_API_TOKEN` is unset (a fork, or a repo that hasn't been set
+up for production deploys yet), the job's first step prints `deploy
+skipped: secrets not configured` and every later step is skipped via an
+`if:` on that step's output — the job still exits 0, and the `build` job
+it depends on is completely unaffected.
+
+**Migrations are still never automatic**, in CI or locally: the sanctioned
+way to apply one to the real database is `pnpm migrate:remote`
+(`apps/web/scripts/migrate-remote.ts`), run by hand, before the deploy that
+needs it — see "Migrate — before every deploy, unconditionally" above.
 
 ## Scheduled tick
 

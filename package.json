@@ -13,6 +13,7 @@
     "test": "pnpm -r --if-present run test",
     "typecheck": "pnpm -r --if-present run typecheck",
     "lint": "biome check .",
+    "ship": "pnpm --filter @bandplate/web run ship",
     "format": "biome format --write ."
   },
   "devDependencies": {

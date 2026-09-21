@@ -143,12 +143,14 @@ const stashCard = stash
                 {stand.queue.length > 0 && (
                   <button
                     type="button"
-                    class="bp-pill bp-pill--action bp-stand-play"
+                    class="bp-btn bp-btn-secondary bp-btn-sm bp-btn-play-all bp-stand-play"
                     data-play-queue-start="home-new-takes"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M7 4.5v15l13-7.5z" />
-                    </svg>
+                    {/* The event page's own "Přehrát vše": one play-all
+                        control across the app, the gold disc carrying it. */}
+                    <span class="bp-btn-play-disc" aria-hidden="true">
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l10-5.5-10-5.5z" /></svg>
+                    </span>
                     {t.events.playAll}
                   </button>
                 )}

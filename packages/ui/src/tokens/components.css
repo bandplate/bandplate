@@ -6795,16 +6795,17 @@ html:has(dialog.bp-filter-sheet[open]) body {
    (same specificity, earlier in this file) by specificity rather than by
    source order. Gold on the dark card is the page's primary action; the
    second is a quiet tint of the card's own ink. */
+/* The event page's play-all button, as is — gold disc and all — retinted
+   for the card: a secondary button's fill is a wash of the page's ink, which
+   on this dark card is no fill at all. It takes the vote pill's tone, so the
+   two read as a pair and the disc is the one gold thing. */
 .bp-stand .bp-stand-play {
-  padding-inline: 1.125rem;
-  background: var(--bp-color-accent-gold);
-  color: var(--bp-lacquer);
-  font-weight: 700;
+  background: color-mix(in srgb, var(--bp-stand-fg) 12%, transparent);
+  color: var(--bp-stand-fg);
 }
 
 .bp-stand .bp-stand-play:hover {
-  background: var(--bp-color-accent-gold);
-  filter: brightness(1.08);
+  background: color-mix(in srgb, var(--bp-stand-fg) 20%, transparent);
 }
 
 .bp-stand .bp-stand-vote {

@@ -34,6 +34,8 @@
 // element's submissions alone; `VoteFavorite.tsx`'s listener is registered
 // directly on `document`, independent of ClientRouter, so it still runs.
 import { votingMessages } from "@bandplate/i18n";
+import ThumbsDown from "@lucide/astro/icons/thumbs-down";
+import ThumbsUp from "@lucide/astro/icons/thumbs-up";
 
 export interface Props {
   takeId: string;
@@ -50,18 +52,23 @@ const { takeId, keeperVotes, totalVotes, ratingScore, myVote, size = "sm" } = As
 const locale = Astro.locals.locale;
 const t = votingMessages(locale);
 const tallyText = t.tally({ keeperVotes, totalVotes, ratingScore });
+// A thumb beside each answer, so the pair reads as yes and no before either
+// word is read. The word stays the button's name; the glyph is decoration.
+const glyphSize = size === "lg" ? 16 : 14;
 ---
 
 <div class={`bp-vote-toggle ${size === "lg" ? "bp-vote-toggle-lg" : ""}`} role="group" aria-label={t.groupLabel}>
   <form method="post" action={`/takes/${takeId}/vote`} class="bp-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
     <input type="hidden" name="keeper" value="true" />
     <button type="submit" class="bp-vote-btn bp-vote-btn-keeper" aria-pressed={myVote === true ? "true" : "false"}>
+      <ThumbsUp size={glyphSize} aria-hidden="true" />
       {t.keeper}
     </button>
   </form>
   <form method="post" action={`/takes/${takeId}/vote`} class="bp-vote-toggle-form" data-vote-form data-take-id={takeId} data-astro-reload>
     <input type="hidden" name="keeper" value="false" />
     <button type="submit" class="bp-vote-btn bp-vote-btn-not-keeper" aria-pressed={myVote === false ? "true" : "false"}>
+      <ThumbsDown size={glyphSize} aria-hidden="true" />
       {t.notKeeper}
     </button>
   </form>

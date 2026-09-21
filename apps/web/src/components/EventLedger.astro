@@ -13,6 +13,7 @@
 // `/events` and in the gallery — and the last label rule that lived in three
 // places drifted in two of them.
 import { formatMonthShort, messages } from "@bandplate/i18n";
+import { ArrowRight } from "@lucide/astro";
 import { eventName } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
 
@@ -98,20 +99,7 @@ const rows = events.map((event) => {
       <div class="bp-ledger-footer">
         <a href={footerHref} class="bp-btn bp-btn-quiet bp-btn-sm">
           {footerLabel}
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M5 12h13" />
-            <path d="M13 6l6 6-6 6" />
-          </svg>
+          <ArrowRight size={14} aria-hidden="true" />
         </a>
       </div>
     )

@@ -44,6 +44,7 @@ import {
 } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
+import { Check } from "@lucide/astro";
 import { THEMES, isThemeChoice } from "../../client/theme.js";
 import InstallHint from "../../components/InstallHint.tsx";
 import InstrumentSet from "../../components/InstrumentSet.astro";
@@ -261,9 +262,7 @@ const initials = member.displayName
                 ))}
               </span>
               <span class="bp-theme-tile-tick" aria-hidden="true">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M5 12.5l4.5 4.5L19 7.5" />
-                </svg>
+                <Check size={12} stroke-width={3.2} />
               </span>
               <span class="bp-theme-tile-label">{themeLabels[option]}</span>
             </button>

@@ -53,6 +53,9 @@ importers:
       '@libsql/client':
         specifier: 0.14.0
         version: 0.14.0
+      '@lucide/astro':
+        specifier: 1.47.0
+        version: 1.47.0(astro@5.18.2(@types/node@26.4.1)(aws4fetch@1.0.20)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.63.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.0))
       '@nanostores/preact':
         specifier: ^1.0.0
         version: 1.1.0(nanostores@1.5.3)(preact@10.29.8)
@@ -65,6 +68,9 @@ importers:
       fix-webm-duration:
         specifier: 1.0.6
         version: 1.0.6
+      lucide-preact:
+        specifier: 1.47.0
+        version: 1.47.0(preact@10.29.8)
       nanostores:
         specifier: ^1.0.1
         version: 1.5.3
@@ -273,6 +279,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@lucide/astro':
+        specifier: 1.47.0
+        version: 1.47.0(astro@5.18.2(@types/node@26.4.1)(aws4fetch@1.0.20)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.63.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.0))
       tailwindcss:
         specifier: ^4.0.0
         version: 4.3.3
@@ -2311,6 +2320,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@lucide/astro@1.47.0':
+    resolution: {integrity: sha512-jpqLn/6Mbt1LhGHrgAXv64Wiqi+8cd80LD09Z/QqnXHfoC0z5Y+RSty/SjWw+sohYww3MGtkppf3OvQ28uxCrQ==}
+    peerDependencies:
+      astro: ^4 || ^5 || ^6 || ^7
+
   '@nanostores/preact@1.1.0':
     resolution: {integrity: sha512-oiu9z85AiZlBTKJ8YsfAs8TALpDij70LmmKuRkeF22rS9zUBhVtYDWXEvV1qUUStNNwSFdhTMkwzOYL/IsA+UA==}
     engines: {node: ^20.0.0 || >=22.0.0}
@@ -3584,6 +3598,11 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lucide-preact@1.47.0:
+    resolution: {integrity: sha512-ihver2SariDZA1n/JESxDEe5uhQ+K8YL6wiozAOLreJxoQn+aEeEpJ9rO03+I76crhS2YefiE6sM8dUmgJh7/w==}
+    peerDependencies:
+      preact: ^10.27.2
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -6063,6 +6082,10 @@ snapshots:
   '@libsql/win32-x64-msvc@0.4.7':
     optional: true
 
+  '@lucide/astro@1.47.0(astro@5.18.2(@types/node@26.4.1)(aws4fetch@1.0.20)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.63.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.0))':
+    dependencies:
+      astro: 5.18.2(@types/node@26.4.1)(aws4fetch@1.0.20)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.63.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.0)
+
   '@nanostores/preact@1.1.0(nanostores@1.5.3)(preact@10.29.8)':
     dependencies:
       nanostores: 1.5.3
@@ -7441,6 +7464,10 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  lucide-preact@1.47.0(preact@10.29.8):
+    dependencies:
+      preact: 10.29.8(preact-render-to-string@6.7.0)
 
   magic-string@0.30.21:
     dependencies:

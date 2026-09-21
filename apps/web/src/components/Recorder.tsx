@@ -9,6 +9,7 @@
 // it whenever there is signal. A member in a tunnel loses nothing.
 import { type Locale, stashMessages } from "@bandplate/i18n";
 import fixWebmDuration from "fix-webm-duration";
+import { Pause, Play, Trash, X } from "lucide-preact";
 import { useCallback, useEffect, useReducer, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import {
@@ -91,20 +92,7 @@ async function requestPersistentStorage(): Promise<void> {
 }
 
 function CloseIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.2"
-      stroke-linecap="round"
-    >
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
+  return <X size={20} aria-hidden="true" strokeWidth={2.2} />;
 }
 
 /* The record mark: a red dot, not a mic. A mic says "audio"; this button
@@ -624,26 +612,8 @@ export default function Recorder({
               aria-label={playing ? t.reviewPause : t.reviewPlay}
               onClick={togglePlay}
             >
-              <svg
-                class="bp-rec-play-icon"
-                aria-hidden="true"
-                width="24"
-                height="24"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
-                <path d="M4 2.5v11l10-5.5-10-5.5z" />
-              </svg>
-              <svg
-                class="bp-rec-pause-icon"
-                aria-hidden="true"
-                width="24"
-                height="24"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
-                <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
-              </svg>
+              <Play size={24} class="bp-rec-play-icon" aria-hidden="true" fill="currentColor" />
+              <Pause size={24} class="bp-rec-pause-icon" aria-hidden="true" fill="currentColor" />
             </button>
           )}
           {bars && (
@@ -720,17 +690,7 @@ export default function Recorder({
                 leavingRef.current = true;
               }}
             >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-              </svg>
+              <Trash aria-hidden="true" />
               {t.discard}
             </a>
           </div>
@@ -847,17 +807,7 @@ export default function Recorder({
               {t.keepRecording}
             </button>
             <button type="button" class="bp-btn bp-btn-danger" onClick={discard}>
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-              </svg>
+              <Trash aria-hidden="true" />
               {t.discard}
             </button>
           </div>

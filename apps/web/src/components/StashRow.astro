@@ -18,6 +18,7 @@
 // Astro and Preact cannot share a component, so the markup is written twice;
 // the classes are the same, so the styling lives once. Change one, change both.
 import { formatShortDate, messages } from "@bandplate/i18n";
+import { CloudOff } from "@lucide/astro";
 import { stashName, stashNote } from "../client/stash-display.js";
 import { stashSheetId } from "../client/stash-sheet-ids.js";
 import { formatDuration } from "../server/format.js";
@@ -62,9 +63,7 @@ const date = formatShortDate(locale, row.recordedAt);
       {
         !row.playableAssetId && (
           <span class="bp-badge bp-stash-chip">
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m2 2 20 20M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.31-.19M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07" />
-            </svg>
+            <CloudOff aria-hidden="true" />
             {t.stash.chipWaiting}
           </span>
         )

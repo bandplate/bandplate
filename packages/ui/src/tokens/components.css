@@ -540,15 +540,12 @@ a.bp-btn {
 /* A drawn mark in a tinted disc, not a typed character. The disc is what
    separates it from the sentence — without one, an 18px glyph beside 15px text
    reads as the first word. */
+/* Lucide's circled glyphs carry their own ring, so no disc behind them. */
 .bp-banner-icon {
   flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-pill, 999px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--bp-color-fg) 14%, transparent);
 }
 
 /* The measure. A banner is prose, and prose past ~62 characters per line is

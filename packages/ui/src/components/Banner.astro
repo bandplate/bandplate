@@ -1,4 +1,5 @@
 ---
+import { CircleAlert, CircleCheck, Info } from "@lucide/astro";
 // Banner primitive — success/error/info callout. Text always inherits
 // `--bp-color-fg` (set by `.bp-banner`, never an accent color); the accent
 // only tints the background wash. See components.css's file header for the
@@ -32,27 +33,13 @@ const hasAction = Astro.slots.has("action");
 <div class={`bp-banner bp-banner-${kind}`} role={role}>
   <span class="bp-banner-icon" aria-hidden="true">
     {
-      kind === "success" && (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 12.5l5.5 5.5L20 6" />
-        </svg>
-      )
+      kind === "success" && <CircleCheck size={20} />
     }
     {
-      kind === "error" && (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-          <path d="M12 4.5v10" />
-          <path d="M12 19.5h.01" />
-        </svg>
-      )
+      kind === "error" && <CircleAlert size={20} />
     }
     {
-      kind === "info" && (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-          <path d="M12 10v9.5" />
-          <path d="M12 4.5h.01" />
-        </svg>
-      )
+      kind === "info" && <Info size={20} />
     }
   </span>
   <div class="bp-banner-say">

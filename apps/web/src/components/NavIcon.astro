@@ -1,10 +1,30 @@
 ---
-// Tiny line icons for AppLayout's nav (sidebar + tab bar) — plain geometry,
-// `currentColor` stroke so it always matches the surrounding text color
-// (never a decorative accent, never JetBrains Mono standing in for an
-// icon — that would be exactly the "mono as decoration on an ordinary
-// label" the brief rules out). Lives here rather than packages/ui because
-// it is specific to this one shell, not a primitive other pages compose.
+// AppLayout's nav icons (sidebar + tab bar), from Lucide like every other
+// icon in the app, at a lighter 1.75 stroke so a row of them does not shout
+// over the labels beside them. Lives here rather than packages/ui because it
+// is specific to this one shell, not a primitive other pages compose.
+//
+// The choices that are not obvious:
+//   - takes: a cassette, not a plate. The plate is what a take BECOMES once
+//     the band keeps it; the cassette is the take before the verdict.
+//   - admin: faders, not a cog. Admin is where the band's own vocabulary is
+//     set, and a cog would read as "settings", which this section is not.
+//   - instruments: a list of music, because the page is a vocabulary; no
+//     single instrument can stand for the whole of it.
+//   - tokens: a key, because a service token is handed OUT.
+import {
+  Calendar,
+  CassetteTape,
+  House,
+  KeyRound,
+  LayoutGrid,
+  ListMusic,
+  Music,
+  SlidersVertical,
+  User,
+  Users,
+} from "@lucide/astro";
+
 export interface Props {
   name:
     | "home"
@@ -13,150 +33,26 @@ export interface Props {
     | "takes"
     | "admin"
     | "me"
-    // The admin section's own four, drawn in the same geometry as the rest
-    // of the nav rather than borrowed from a different icon set.
     | "overview"
     | "members"
     | "instruments"
     | "tokens";
 }
 
-const { name } = Astro.props;
+const ICONS = {
+  home: House,
+  songs: Music,
+  events: Calendar,
+  takes: CassetteTape,
+  admin: SlidersVertical,
+  me: User,
+  overview: LayoutGrid,
+  members: Users,
+  instruments: ListMusic,
+  tokens: KeyRound,
+} as const;
+
+const Icon = ICONS[Astro.props.name];
 ---
 
-{
-  /* A house, not a plate or a star. The page holds the member's pins and the
-     recent events, and no one drawing groups them — "the page you start on" is
-     what the tab means, and the house is the one glyph that says it without
-     claiming to be about records. */
-  name === "home" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-5.5H9V20H5a1 1 0 0 1-1-1z" />
-      </g>
-    </svg>
-  )
-}
-{
-  name === "songs" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="7" cy="18" r="2.5" />
-        <circle cx="16" cy="16" r="2.5" />
-        <path d="M9.5 18V6.5L18.5 5v9.5" />
-      </g>
-    </svg>
-  )
-}
-{
-  name === "events" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="4" y="5.5" width="16" height="14.5" rx="2" />
-        <path d="M4 10h16M8 3.5v3.5M16 3.5v3.5" />
-      </g>
-    </svg>
-  )
-}
-{
-  /* A cassette, not a plate. The plate is what a take BECOMES once the band
-     keeps it — home draws one, `/me` draws one, and the record sheet draws
-     one — so spending it on the tab that lists every take, kept or not, said
-     the wrong thing twice over. A cassette is the take before the verdict:
-     the thing you rewind and play again.
-
-     Drawn at the same 1.75 stroke as its neighbours, so the reels have to be
-     generous (r 2.6, not the r 1.5 a cassette really has) or the holes close
-     up at 20px. The bottom lip is what makes it a cassette rather than a box
-     with two dots — it is the detail to keep if this ever needs simplifying. */
-  name === "takes" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2.75" y="5.5" width="18.5" height="13" rx="2.25" />
-        <circle cx="8.6" cy="11.25" r="2.6" />
-        <circle cx="15.4" cy="11.25" r="2.6" />
-        <path d="M7.25 18.5l1.6-2.6h6.3l1.6 2.6" />
-      </g>
-    </svg>
-  )
-}
-{
-  /* Faders, not a cog. Admin here is where the band's own vocabulary is set —
-     the roster, the instrument list, the tokens — and a mixing desk is what
-     that looks like in a room full of musicians. A cog would also read as
-     "settings", which is the one thing this section is not. */
-  name === "admin" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6 3v6M6 15v6M12 3v10M12 19v2M18 3v2M18 11v10" />
-        <path d="M3.5 12h5M9.5 16h5M15.5 8h5" />
-      </g>
-    </svg>
-  )
-}
-{
-  name === "me" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="8.5" r="3.25" />
-        <path d="M5 20c0-3.6 3.13-6 7-6s7 2.4 7 6" />
-      </g>
-    </svg>
-  )
-}
-{
-  /* Tiles, because that is literally what the overview is: three counts in
-     three boxes. A house or a gauge would promise a dashboard this page has
-     no intention of being. */
-  name === "overview" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5" />
-        <rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5" />
-        <rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5" />
-        <rect x="13" y="13" width="7.5" height="7.5" rx="1.5" />
-      </g>
-    </svg>
-  )
-}
-{
-  /* The `me` figure, twice — the roster is the people this app is for, and
-     the second one behind says "more than you" without a crowd of heads
-     turning to mud at 20px. */
-  name === "members" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="9.5" cy="8.5" r="3.25" />
-        <path d="M3.5 19.5c0-3.2 2.7-5.4 6-5.4s6 2.2 6 5.4" />
-        <path d="M16 5.6a3.25 3.25 0 0 1 0 5.8M17.5 14.5c1.9.6 3.2 2.4 3.2 5" />
-      </g>
-    </svg>
-  )
-}
-{
-  /* A tuning fork. The instrument list is a VOCABULARY — the words the band
-     uses for what it plays — and no single instrument can stand for the
-     whole of it without telling a horn player the list is about guitars. */
-  name === "instruments" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8.5 3v7a3.5 3.5 0 0 0 7 0V3" />
-        <path d="M12 13.5v7.5" />
-      </g>
-    </svg>
-  )
-}
-{
-  /* A key, not a shield or a lock. A service token is a credential you HAND
-     to something — the Reaper bridge today — and a key is the one shape that
-     says "this is given out" rather than "this is kept shut". */
-  name === "tokens" && (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="8.25" cy="8.25" r="4.25" />
-        <path d="M11.4 11.4L20.5 20.5" />
-        <path d="M16 16l-2.2 2.2M18.6 18.6l-2.2 2.2" />
-      </g>
-    </svg>
-  )
-}
+<Icon size={20} stroke-width={1.75} aria-hidden="true" focusable="false" />

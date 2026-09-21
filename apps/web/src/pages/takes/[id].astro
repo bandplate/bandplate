@@ -41,6 +41,7 @@ import {
 } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import { ArrowRight, Download, SlidersVertical, Trash } from "@lucide/astro";
 import AssetUploader from "../../components/AssetUploader.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import InstrumentSet from "../../components/InstrumentSet.astro";
@@ -427,19 +428,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
             <a href={`/songs/${song.slug}`} class="bp-take-way">
               <span class="bp-take-way-kind">{t.takes.songHeading}</span>
               <span class="bp-take-way-name">{song.title}</span>
-              <svg
-            class="bp-take-way-arrow"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M5 12h13" />
-            <path d="M13 6l6 6-6 6" />
-          </svg>
+              <ArrowRight class="bp-take-way-arrow" aria-hidden="true" />
             </a>
           )
         }
@@ -450,19 +439,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
               {/* An untitled event has no name to print, so its DATE names it —
                   which is exactly what the event ledger shows for one too. */}
               <span class="bp-take-way-name">{eventName || formatShortDate(locale, event.heldAt)}</span>
-              <svg
-            class="bp-take-way-arrow"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M5 12h13" />
-            <path d="M13 6l6 6-6 6" />
-          </svg>
+              <ArrowRight class="bp-take-way-arrow" aria-hidden="true" />
             </a>
           )
         }
@@ -629,18 +606,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                   {/* Faders. Not a second triangle: this does not start
                       anything, it opens the place where you decide what
                       plays. */}
-                  <svg
-                    width="26"
-                    height="26"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  >
-                    <path d="M6 3v6M6 15v6M12 3v10M12 19v2M18 3v2M18 11v10" />
-                    <path d="M3 12h6M9 16h6M15 8h6" />
-                  </svg>
+                  <SlidersVertical size={26} />
                 </span>
                 <span class="bp-take-play-lead-text">
                   <p class="bp-take-play-title bp-m0">{t.player.openInMixer}</p>
@@ -731,11 +697,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                       data-astro-reload
                       aria-label={t.takes.downloadAsset({ label: assetLabel(asset), format: asset.format, size: formatBytes(locale, asset.bytes) })}
                     >
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M12 3v12" />
-                        <path d="M7 11l5 5 5-5" />
-                        <path d="M4 20h16" />
-                      </svg>
+                      <Download size={18} aria-hidden="true" stroke-width={1.8} />
                     </a>
                   ) : (
                     <span class="bp-asset-row-download-empty" aria-hidden="true" />
@@ -760,11 +722,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
                       data-confirm-cta={t.takes.deleteFile}
                       aria-label={t.takes.deleteAsset(assetLabel(asset))}
                     >
-                      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M4 7h16" />
-                        <path d="M9 7V4h6v3" />
-                        <path d="M6 7l1 13h10l1-13" />
-                      </svg>
+                      <Trash size={17} aria-hidden="true" stroke-width={1.8} />
                     </a>
                   )}
                 </li>

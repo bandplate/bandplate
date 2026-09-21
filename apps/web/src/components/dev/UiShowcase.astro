@@ -12,6 +12,7 @@ import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 // renders.
 import Banner from "@bandplate/ui/components/Banner.astro";
 import { TRACK_COLORS } from "@bandplate/ui/tokens/track-colors.js";
+import { ChevronUp, Pause, SkipBack, SkipForward, Trash, X } from "@lucide/astro";
 import EventLedger from "../EventLedger.astro";
 import PinnedPlate from "../PinnedPlate.astro";
 import TakeRow from "../TakeRow.astro";
@@ -297,17 +298,7 @@ const scale = [
       <button type="button" class="bp-btn bp-btn-primary">Send me a link</button>
       <button type="button" class="bp-btn bp-btn-secondary">Cancel</button>
       <button type="button" class="bp-btn bp-btn-danger">
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-        </svg>
+        <Trash aria-hidden="true" />
         Delete take
       </button>
       {/* Beside Delete on purpose: both are red, and the whole argument in
@@ -499,34 +490,13 @@ const scale = [
       <div class="bp-player-row">
         <div class="bp-player-transport">
           <button type="button" class="bp-player-skip" aria-label="Previous take">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path
-                d="M6.5 5.5v13"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                stroke-linecap="round"
-              />
-              <path d="M18.5 5.8v12.4L9.5 12z" fill="currentColor" />
-            </svg>
+            <SkipBack size={20} aria-hidden="true" fill="currentColor" />
           </button>
           <button type="button" class="bp-player-play" aria-pressed="true" aria-label="Pause Píseň o cestách">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-              <rect x="7" y="5" width="3.6" height="14" rx="1.2" />
-              <rect x="13.4" y="5" width="3.6" height="14" rx="1.2" />
-            </svg>
+            <Pause size={18} aria-hidden="true" fill="currentColor" />
           </button>
           <button type="button" class="bp-player-skip" aria-label="Next take">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path
-                d="M17.5 5.5v13"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                stroke-linecap="round"
-              />
-              <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
-            </svg>
+            <SkipForward size={20} aria-hidden="true" fill="currentColor" />
           </button>
         </div>
 
@@ -539,33 +509,13 @@ const scale = [
         >
           <span class="bp-player-title-line">
             <span class="bp-player-title">Píseň o cestách</span>
-            <svg class="bp-player-meta-caret" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
-              <path
-                d="M6 15l6-6 6 6"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+            <ChevronUp size={13} class="bp-player-meta-caret" aria-hidden="true" />
           </span>
           <span class="bp-player-subtitle">take 3 · Bass · 3 of 10</span>
         </button>
 
         <button type="button" class="bp-player-close" aria-label="Stop and close the player">
-          <svg
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-            aria-hidden="true"
-          >
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
+          <X size={16} aria-hidden="true" stroke-width={2.2} />
         </button>
       </div>
     </div>

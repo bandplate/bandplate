@@ -42,6 +42,7 @@ const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
 function rowName(row: { label: string }, index: number, locale?: Locale): string {
   return row.label || ti(locale).chartUnnamedSection(index + 1);
 }
+import { ArrowDown, ArrowUp } from "lucide-preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   type EditorRow,
@@ -79,21 +80,7 @@ function hasContent(row: EditorRow): boolean {
 }
 
 function ArrowIcon({ up }: { up: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      {up ? <path d="M12 19V5M6 11l6-6 6 6" /> : <path d="M12 5v14M6 13l6 6 6-6" />}
-    </svg>
-  );
+  return up ? <ArrowUp size={16} aria-hidden="true" /> : <ArrowDown size={16} aria-hidden="true" />;
 }
 
 export default function ChartEditor({

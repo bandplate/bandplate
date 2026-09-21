@@ -1,5 +1,6 @@
 ---
 import { playerMessages } from "@bandplate/i18n";
+import { Pause, Play } from "@lucide/astro";
 // The play/pause affordance — shared markup for `TakeRow.astro`'s leading
 // slot and the take-detail hero, so both stay wired to the persistent
 // player (`Player.tsx`) the exact same way rather than two copies of the
@@ -37,24 +38,6 @@ const { takeId, assetId, title, subtitle = "", size = "sm" } = Astro.props;
   aria-pressed="false"
   aria-label={playerMessages(Astro.locals.locale).play(title)}
 >
-  <svg
-    class="bp-play-icon-play"
-    aria-hidden="true"
-    width={size === "lg" ? "28" : "18"}
-    height={size === "lg" ? "28" : "18"}
-    viewBox="0 0 16 16"
-    fill="currentColor"
-  >
-    <path d="M4 2.5v11l10-5.5-10-5.5z" />
-  </svg>
-  <svg
-    class="bp-play-icon-pause"
-    aria-hidden="true"
-    width={size === "lg" ? "28" : "18"}
-    height={size === "lg" ? "28" : "18"}
-    viewBox="0 0 16 16"
-    fill="currentColor"
-  >
-    <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
-  </svg>
+  <Play size={size === "lg" ? "28" : "18"} class="bp-play-icon-play" aria-hidden="true" fill="currentColor" />
+  <Pause size={size === "lg" ? "28" : "18"} class="bp-play-icon-pause" aria-hidden="true" fill="currentColor" />
 </button>

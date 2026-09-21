@@ -16,6 +16,7 @@ import { currentLocale } from "../client/locale.js";
 
 /** Read at call time, never captured: this island is `transition:persist`. */
 const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
+import { TriangleAlert } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 
 interface ConfirmState {
@@ -324,19 +325,7 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
                 /* Colour cannot be the only marker: solid danger against solid
                    accent measures 1.03:1 in the light theme. Same icon and
                    same reason as `ConfirmActionPage`'s. */
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M12 4.5v9" />
-                  <path d="M12 18h.01" />
-                  <path d="M10.3 3.2 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
-                </svg>
+                <TriangleAlert aria-hidden="true" />
               )}
               {pending ? ti().confirmWorking : state.cta}
             </button>

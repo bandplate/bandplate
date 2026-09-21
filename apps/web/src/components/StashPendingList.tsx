@@ -34,6 +34,7 @@ import {
   stashMessages,
 } from "@bandplate/i18n";
 import { useStore } from "@nanostores/preact";
+import { CloudOff, Pause, Play, Trash } from "lucide-preact";
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
@@ -138,26 +139,8 @@ function PlayToggle({
       aria-pressed="false"
       aria-label={label}
     >
-      <svg
-        class="bp-play-icon-play"
-        aria-hidden="true"
-        width="18"
-        height="18"
-        viewBox="0 0 16 16"
-        fill="currentColor"
-      >
-        <path d="M4 2.5v11l10-5.5-10-5.5z" />
-      </svg>
-      <svg
-        class="bp-play-icon-pause"
-        aria-hidden="true"
-        width="18"
-        height="18"
-        viewBox="0 0 16 16"
-        fill="currentColor"
-      >
-        <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
-      </svg>
+      <Play size={18} class="bp-play-icon-play" aria-hidden="true" fill="currentColor" />
+      <Pause size={18} class="bp-play-icon-pause" aria-hidden="true" fill="currentColor" />
     </button>
   );
 }
@@ -380,17 +363,7 @@ export default function StashPendingList({
               onClick={() => void confirmDiscard()}
               disabled={busy}
             >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d={TRASH_PATH} />
-              </svg>
+              <Trash aria-hidden="true" />
               {t.discard}
             </button>
           </div>
@@ -473,19 +446,7 @@ export default function StashPendingList({
                           : "bp-badge bp-stash-chip"
                       }
                     >
-                      {row.status === "waiting" && (
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <path d="m2 2 20 20M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.31-.19M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07" />
-                        </svg>
-                      )}
+                      {row.status === "waiting" && <CloudOff aria-hidden="true" />}
                       {chip(row)}
                     </span>
                   )}
@@ -516,17 +477,7 @@ export default function StashPendingList({
                     class="bp-btn bp-btn-danger bp-btn-sm"
                     onClick={() => setDiscarding(row)}
                   >
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d={TRASH_PATH} />
-                    </svg>
+                    <Trash aria-hidden="true" />
                     {t.discard}
                   </button>
                 </div>

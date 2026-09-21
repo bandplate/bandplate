@@ -11,6 +11,7 @@
 // holding a (time-limited, single-use) credential.
 import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
+import { CircleAlert } from "@lucide/astro";
 import AuthState from "../../components/AuthState.astro";
 import AuthLayout from "../../layouts/AuthLayout.astro";
 import { getAppDeps, getAuthDeps } from "../../server/app.js";
@@ -87,10 +88,7 @@ const initials = displayName
     </>
   ) : (
     <AuthState tone="alert" title={t.auth.spentTitle}>
-      <svg slot="icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="8.5" />
-        <path d="M12 7.5V13M12 16.2v.2" />
-      </svg>
+      <CircleAlert size={26} slot="icon" />
       {/* One screen for both cases. The server deliberately cannot tell an
           expired link from an already-used one without leaking which, and the
           member's next move is the same either way — so the way out is the

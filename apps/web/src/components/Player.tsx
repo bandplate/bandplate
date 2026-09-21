@@ -32,6 +32,7 @@ import { type Locale, playerMessages } from "@bandplate/i18n";
 // pressed/playing state from `syncButtons()` below, right after hydration
 // and again after every navigation.
 import { useStore } from "@nanostores/preact";
+import { ChevronUp, Pause, Play, SkipBack, SkipForward, X } from "lucide-preact";
 import { Fragment } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
@@ -802,16 +803,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             onClick={goPrevious}
             aria-label={t.previous}
           >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path
-                d="M6.5 5.5v13"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                stroke-linecap="round"
-              />
-              <path d="M18.5 5.8v12.4L9.5 12z" fill="currentColor" />
-            </svg>
+            <SkipBack size={20} aria-hidden="true" fill="currentColor" />
           </button>
           {/* Its own class, sharing the take row's rules rather than its
               NAME — `.bp-play-toggle` means "this take's play control", and a
@@ -828,26 +820,9 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             onClick={togglePlayback}
           >
             {playing ? (
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <rect x="7" y="5" width="3.6" height="14" rx="1.2" />
-                <rect x="13.4" y="5" width="3.6" height="14" rx="1.2" />
-              </svg>
+              <Pause size={18} aria-hidden="true" fill="currentColor" />
             ) : (
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M8 5.2v13.6L19 12z" />
-              </svg>
+              <Play size={18} aria-hidden="true" fill="currentColor" />
             )}
           </button>
           {/* Always there, disabled on the last take: the transport keeps its
@@ -860,16 +835,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             onClick={goNext}
             aria-label={t.next}
           >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path
-                d="M17.5 5.5v13"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                stroke-linecap="round"
-              />
-              <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
-            </svg>
+            <SkipForward size={20} aria-hidden="true" fill="currentColor" />
           </button>
         </div>
 
@@ -888,22 +854,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           >
             <span class="bp-player-title-line">
               <span class="bp-player-title">{track?.title ?? ""}</span>
-              <svg
-                class="bp-player-meta-caret"
-                viewBox="0 0 24 24"
-                width="13"
-                height="13"
-                aria-hidden="true"
-              >
-                <path
-                  d="M6 15l6-6 6 6"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
+              <ChevronUp size={13} class="bp-player-meta-caret" aria-hidden="true" />
             </span>
             <span class="bp-player-subtitle">{subtitleLine}</span>
           </button>
@@ -935,18 +886,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             playQueue.set(null);
           }}
         >
-          <svg
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-            aria-hidden="true"
-          >
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
+          <X size={16} aria-hidden="true" strokeWidth={2.2} />
         </button>
       </div>
 

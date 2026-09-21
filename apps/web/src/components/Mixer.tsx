@@ -18,6 +18,7 @@
 // this repo can run.
 import { type Locale, mixerMessages } from "@bandplate/i18n";
 import { trackColorVar } from "@bandplate/ui/tokens/track-colors.js";
+import { ArrowLeftFromLine, ArrowRightFromLine, Pause, Play, UserX, X } from "lucide-preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import {
@@ -348,26 +349,8 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
               disabled={busy}
               onClick={playing ? engine.pause : engine.play}
             >
-              <svg
-                class="bp-play-icon-play"
-                aria-hidden="true"
-                width="18"
-                height="18"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
-                <path d="M4 2.5v11l10-5.5-10-5.5z" />
-              </svg>
-              <svg
-                class="bp-play-icon-pause"
-                aria-hidden="true"
-                width="18"
-                height="18"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
-                <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" />
-              </svg>
+              <Play size={18} class="bp-play-icon-play" aria-hidden="true" fill="currentColor" />
+              <Pause size={18} class="bp-play-icon-pause" aria-hidden="true" fill="currentColor" />
             </button>
             <span class="bp-mixer-clock">
               {clock(position)}
@@ -387,21 +370,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                 title={mix.muteMine ? t.unmuteMine : t.muteMine}
                 onClick={() => setMix(toggleMuteMine)}
               >
-                <svg
-                  aria-hidden="true"
-                  width="17"
-                  height="17"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <circle cx="12" cy="8" r="3.4" />
-                  <path d="M5 20c0-3.6 3.1-5.6 7-5.6c1.2 0 2.3.2 3.2.5" />
-                  <path d="M17 15l5 5M22 15l-5 5" />
-                </svg>
+                <UserX size={17} aria-hidden="true" strokeWidth={2.2} />
               </button>
             )}
           </span>
@@ -463,15 +432,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                 disabled={!loopable}
                 onClick={() => setLoop((r) => setLoopEdge(r, "start", position, duration))}
               >
-                <svg
-                  aria-hidden="true"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path d="M3 2h2v12H3zM7 4.5l6 3.5-6 3.5z" />
-                </svg>
+                <ArrowRightFromLine size={15} aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -481,15 +442,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                 disabled={!loopable}
                 onClick={() => setLoop((r) => setLoopEdge(r, "end", position, duration))}
               >
-                <svg
-                  aria-hidden="true"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path d="M11 2h2v12h-2zM9 4.5l-6 3.5 6 3.5z" />
-                </svg>
+                <ArrowLeftFromLine size={15} aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -499,18 +452,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                 disabled={!loop}
                 onClick={() => setLoop(null)}
               >
-                <svg
-                  aria-hidden="true"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                >
-                  <path d="M4 4l8 8M12 4l-8 8" />
-                </svg>
+                <X size={15} aria-hidden="true" />
               </button>
             </span>
             {loop && (

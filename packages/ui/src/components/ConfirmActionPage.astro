@@ -1,4 +1,5 @@
 ---
+import { TriangleAlert } from "@lucide/astro";
 // Shared no-JS confirm-page body — the part of a confirm page that never
 // actually differs between actions: a `Banner` that names the object and
 // states the consequence, plus a plain `<form method="post">` with a submit
@@ -77,19 +78,7 @@ const wrapperProps = inShell
              `.bp-btn-danger > svg` has always reserved this space. It was
              empty: every OTHER danger button in the app carries its icon, and
              this one, the last stop before something is destroyed, did not. */
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 4.5v9" />
-            <path d="M12 18h.01" />
-            <path d="M10.3 3.2 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
-          </svg>
+          <TriangleAlert aria-hidden="true" />
         )
       }
       {cta}

@@ -14,6 +14,7 @@ import { formatLongDate, messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
+import { Play } from "@lucide/astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import TakeRow from "../../components/TakeRow.astro";
@@ -255,7 +256,7 @@ const [allSongs, allInstruments] = await Promise.all([
             data-play-queue-start="event-takes"
           >
             <span class="bp-btn-play-disc" aria-hidden="true">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l10-5.5-10-5.5z" /></svg>
+              <Play size={13} fill="currentColor" />
             </span>
             {t.events.playAll}
           </button>

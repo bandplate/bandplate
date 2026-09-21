@@ -27,6 +27,7 @@ import { currentLocale } from "../client/locale.js";
 
 /** Read at call time — see `client/locale.ts`. */
 const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
+import { Plus } from "lucide-preact";
 import {
   type AssetKind,
   type UploadEvent,
@@ -370,18 +371,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments, loca
           class="bp-btn bp-btn-secondary bp-btn-xs"
           onClick={() => inputRef.current?.click()}
         >
-          <svg
-            viewBox="0 0 24 24"
-            width="15"
-            height="15"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            aria-hidden="true"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <Plus size={15} aria-hidden="true" />
           {ti(locale).uploadAddFiles}
         </button>
         <input

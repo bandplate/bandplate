@@ -28,6 +28,7 @@
 //     appear only once on this page (the plates are the only take links), so
 //     no `view-transition-name` is ever assigned twice.
 import { formatDayMonth, formatDuration, formatShortDate, messages } from "@bandplate/i18n";
+import { Inbox, Play } from "@lucide/astro";
 import { stashName } from "../client/stash-display.js";
 import EventLedger from "../components/EventLedger.astro";
 import PinnedPlate from "../components/PinnedPlate.astro";
@@ -151,7 +152,7 @@ const stashCard = stash
                     {/* The event page's own "Přehrát vše": one play-all
                         control across the app, the gold disc carrying it. */}
                     <span class="bp-btn-play-disc" aria-hidden="true">
-                      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l10-5.5-10-5.5z" /></svg>
+                      <Play size={13} fill="currentColor" />
                     </span>
                     {t.events.playAll}
                   </button>
@@ -219,21 +220,7 @@ const stashCard = stash
             {stashCard && (
               <div class="bp-stash-card">
                 <h3 class="bp-stash-card-title">
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="16"
-                    height="16"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M4 5h16v6H4z" />
-                    <path d="M4 13h16v6H4z" />
-                    <path d="M10 8h4M10 16h4" />
-                  </svg>
+                  <Inbox size={16} aria-hidden="true" />
                   <span>
                     {t.stash.pill}{" "}<span class="bp-title-count">({stashCard.count})</span>
                   </span>
@@ -244,21 +231,7 @@ const stashCard = stash
                 </div>
                 <div class="bp-pills">
                   <a href="/takes?stash=1" class="bp-pill bp-pill--action">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 5h16v6H4z" />
-                      <path d="M4 13h16v6H4z" />
-                      <path d="M10 8h4M10 16h4" />
-                    </svg>
+                    <Inbox size={16} aria-hidden="true" />
                     {t.stash.openStash}
                   </a>
                   <a

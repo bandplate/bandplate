@@ -17,6 +17,7 @@ import { formatShortDate, messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
+import { Plus, Search } from "@lucide/astro";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -161,9 +162,7 @@ function archivedHref(): string {
         {t.songs.title}{" "}<span class="bp-title-count">({songCount})</span>
       </h1>
       <button type="button" class="bp-btn bp-btn-primary bp-btn-sm" data-sheet-open="add-song">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
+        <Plus size={16} aria-hidden="true" />
         {t.songs.addSong}
       </button>
     </div>
@@ -232,10 +231,7 @@ function archivedHref(): string {
     >
       <label class="bp-visually-hidden" for="song-search">{t.songs.searchLabel}</label>
       <span class="bp-songs-search-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-4-4" />
-        </svg>
+        <Search size={17} />
       </span>
       <input
         class="bp-songs-search-input"

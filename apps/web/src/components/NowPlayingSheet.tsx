@@ -13,6 +13,7 @@
 // included, which is why the sheet carries its own transport as a foot row
 // rather than leaving the bar's underneath.
 import type { playerMessages } from "@bandplate/i18n";
+import { ChevronDown, Pause, Play, SkipBack, SkipForward, SlidersVertical } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { PlayQueue } from "../client/player-queue.js";
 import { AUDIO_SOURCE_ATTR, type PlayerSource, type PlayerTrack } from "../client/player-store.js";
@@ -131,16 +132,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
             <span class="bp-now-playing-sub">{track.subtitle}</span>
           </div>
           <button type="button" class="bp-player-skip" aria-label={t.closeSheet} onClick={onClose}>
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path
-                d="M6 9l6 6 6-6"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+            <ChevronDown size={20} aria-hidden="true" />
           </button>
         </div>
 
@@ -183,19 +175,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
               // PLAYING `<audio>` into the page that builds its own audio graph
               // — two engines, one pair of ears. A real document load cannot.
               <a href={`/takes/${track.takeId}/mix`} class="bp-now-playing-mixer" data-astro-reload>
-                <svg
-                  viewBox="0 0 24 24"
-                  width="18"
-                  height="18"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  aria-hidden="true"
-                >
-                  <path d="M6 3v6M6 15v6M12 3v10M12 19v2M18 3v2M18 11v10" />
-                  <path d="M3 12h6M9 16h6M15 8h6" />
-                </svg>
+                <SlidersVertical size={18} aria-hidden="true" />
                 {t.openInMixer}
               </a>
             )}
@@ -266,16 +246,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
             onClick={onPrevious}
             aria-label={t.previous}
           >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path
-                d="M6.5 5.5v13"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                stroke-linecap="round"
-              />
-              <path d="M18.5 5.8v12.4L9.5 12z" fill="currentColor" />
-            </svg>
+            <SkipBack size={20} aria-hidden="true" fill="currentColor" />
           </button>
           <button
             type="button"
@@ -285,26 +256,9 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
             onClick={onToggle}
           >
             {playing ? (
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <rect x="7" y="5" width="3.6" height="14" rx="1.2" />
-                <rect x="13.4" y="5" width="3.6" height="14" rx="1.2" />
-              </svg>
+              <Pause size={18} aria-hidden="true" fill="currentColor" />
             ) : (
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M8 5.2v13.6L19 12z" />
-              </svg>
+              <Play size={18} aria-hidden="true" fill="currentColor" />
             )}
           </button>
           <button
@@ -315,16 +269,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
             onClick={onNext}
             aria-label={t.next}
           >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path
-                d="M17.5 5.5v13"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                stroke-linecap="round"
-              />
-              <path d="M5.5 5.8v12.4l9-6.2z" fill="currentColor" />
-            </svg>
+            <SkipForward size={20} aria-hidden="true" fill="currentColor" />
           </button>
         </div>
       </div>

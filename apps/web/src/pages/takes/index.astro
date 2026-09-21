@@ -27,6 +27,7 @@ import { instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
+import { Inbox, ListFilter, X } from "@lucide/astro";
 import StashItemSheet from "../../components/StashItemSheet.astro";
 import StashPendingList from "../../components/StashPendingList.tsx";
 import StashRow from "../../components/StashRow.astro";
@@ -204,40 +205,12 @@ if (!viewingStash && pages.redirectTo) {
       >
         {viewingStash ? (
           <>
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 5h16v6H4z" />
-              <path d="M4 13h16v6H4z" />
-              <path d="M10 8h4M10 16h4" />
-            </svg>
+            <Inbox size={16} aria-hidden="true" />
             <span class="bp-record-word">{t.stash.pillClose}</span>
           </>
         ) : (
           <>
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 5h16v6H4z" />
-              <path d="M4 13h16v6H4z" />
-              <path d="M10 8h4M10 16h4" />
-            </svg>
+            <Inbox size={16} aria-hidden="true" />
             {t.stash.pill}
           </>
         )}
@@ -259,18 +232,7 @@ if (!viewingStash && pages.redirectTo) {
       ) : (
         <>
           <button type="button" class="bp-filter-trigger" data-filter-open>
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              aria-hidden="true"
-            >
-              <path d="M3 6h18M7 12h10M11 18h2" />
-            </svg>
+            <ListFilter size={16} aria-hidden="true" />
             {t.takes.filters}
             {activeFilterCount > 0 && <span class="bp-badge bp-badge-keeper">{activeFilterCount}</span>}
           </button>
@@ -284,9 +246,7 @@ if (!viewingStash && pages.redirectTo) {
                   buttons do not fit one row at 375px, and the cross beside a
                   filter count is read as "clear these" without them. The
                   words remain the link's accessible name at every width. */}
-              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <X size={16} aria-hidden="true" />
               <span class="bp-takes-bar-clear-label">{t.takes.clear}</span>
             </a>
           )}

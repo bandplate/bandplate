@@ -1,4 +1,5 @@
 ---
+import { ChevronLeft, ChevronRight } from "@lucide/astro";
 // The control under every listing that can grow.
 //
 // It is built from `.bp-pill`, which already carried an
@@ -102,19 +103,7 @@ const { pageCount, prevHref, nextHref, items, labels } = Astro.props;
       <div class="bp-pagination-row">
         {prevHref ? (
           <a class="bp-pill bp-pagination-step" href={prevHref} rel="prev">
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M15 5l-7 7 7 7" />
-            </svg>
+            <ChevronLeft size={16} aria-hidden="true" stroke-width={2.2} />
             <span class="bp-pagination-step-word">{labels.previous}</span>
           </a>
         ) : (
@@ -123,18 +112,7 @@ const { pageCount, prevHref, nextHref, items, labels } = Astro.props;
              is already moving toward one. `aria-hidden` because "unavailable
              previous page" is noise a screen reader does not need. */
           <span class="bp-pill bp-pagination-step bp-pagination-step--off" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M15 5l-7 7 7 7" />
-            </svg>
+            <ChevronLeft size={16} stroke-width={2.2} />
             <span class="bp-pagination-step-word">{labels.previous}</span>
           </span>
         )}
@@ -171,35 +149,12 @@ const { pageCount, prevHref, nextHref, items, labels } = Astro.props;
         {nextHref ? (
           <a class="bp-pill bp-pagination-step" href={nextHref} rel="next">
             <span class="bp-pagination-step-word">{labels.next}</span>
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight size={16} aria-hidden="true" stroke-width={2.2} />
           </a>
         ) : (
           <span class="bp-pill bp-pagination-step bp-pagination-step--off" aria-hidden="true">
             <span class="bp-pagination-step-word">{labels.next}</span>
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight size={16} stroke-width={2.2} />
           </span>
         )}
       </div>

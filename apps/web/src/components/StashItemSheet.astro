@@ -23,6 +23,7 @@
 // owner check is on the write itself (`applyStashWrite`), never on the route.
 import { formatShortDate, messages } from "@bandplate/i18n";
 import Field from "@bandplate/ui/components/Field.astro";
+import { Download } from "@lucide/astro";
 import type { SongOption } from "../client/recorder-logic.js";
 import { stashName, stashNote, stashSongField } from "../client/stash-display.js";
 import { stashRenameSheetId, stashSheetId } from "../client/stash-sheet-ids.js";
@@ -140,11 +141,7 @@ const afterDelete = returnTo ?? `/takes?stash=1&deleted=${row.id}`;
         {row.playableAssetId && (
           <a href={`/api/assets/${row.playableAssetId}/download`} class="bp-btn bp-btn-secondary bp-btn-sm">
             {/* The same glyph the take page's download wears. */}
-            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 3v12" />
-              <path d="M7 11l5 5 5-5" />
-              <path d="M4 20h16" />
-            </svg>
+            <Download size={16} aria-hidden="true" />
             {t.stash.download}
           </a>
         )}

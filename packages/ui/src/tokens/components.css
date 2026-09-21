@@ -9336,8 +9336,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
    longer language here), and between the two a phone held sideways wrapped
    the title and both captions onto two lines each. */
 @media (max-width: 40rem) {
-  .bp-takes-bar .bp-record-word,
-  .bp-takes-bar .bp-pill--stash-close .bp-record-word {
+  .bp-takes-bar .bp-pill--record .bp-record-word {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -9347,22 +9346,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
     white-space: nowrap;
   }
 
-  .bp-takes-bar .bp-record-word-short {
+  /* Only the record pill shortens. "Zavřít šuplík" keeps its words: since
+     the page's title moved up into the phone header, this row has the width
+     for them, and a bare cross was the vaguer of the two. */
+  .bp-takes-bar .bp-pill--record .bp-record-word-short {
     display: inline;
-  }
-
-  /* The cross is a glyph, not a word: it needs the button's own width to stay
-     square and thumb-sized once its label is gone. The drawer mark and the
-     count go with the words — three marks on one 44px button is a cluster,
-     and the count is on the page behind it either way. */
-  .bp-takes-bar .bp-pill--stash-close {
-    min-width: 44px;
-    justify-content: center;
-  }
-
-  .bp-takes-bar .bp-pill--stash-close svg,
-  .bp-takes-bar .bp-pill--stash-close .bp-pill-count {
-    display: none;
   }
 
   .bp-takes-bar-clear {

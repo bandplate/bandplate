@@ -168,7 +168,8 @@
   cursor: pointer;
   background: transparent;
   color: var(--bp-color-fg);
-  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -195,8 +196,13 @@
   background: var(--bp-color-accent);
   color: var(--bp-color-on-accent);
 }
+/* Hover rings the fill rather than darkening it, as the play discs do. A
+   darkened accent read as a second, muddier gold beside the real one (a
+   pressed Držák vote under a hovered "Označit jako držák"), and a colour
+   shift that reads darker in one theme reads lighter in the other; a halo
+   in the foreground wash moves the same way in both. */
 .bp-btn-primary:hover:not([disabled]) {
-  background: color-mix(in srgb, var(--bp-color-accent) 85%, black);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
 }
 
 /* Secondary and danger used to have NO resting-state rules at all — only
@@ -226,8 +232,9 @@
   background: var(--bp-color-danger);
   color: var(--bp-color-on-accent);
 }
+/* The same halo as primary, for the same reason: one red, not two. */
 .bp-btn-danger:hover:not([disabled]) {
-  background: color-mix(in srgb, var(--bp-color-danger) 85%, black);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
 }
 
 /* Solid danger against solid accent measures 1.03:1 in the LIGHT theme —
@@ -5559,13 +5566,15 @@ html:has(dialog.bp-filter-sheet[open]) body {
    between them, which at the page's full width made two slabs half a screen
    wide each; a decision reads as two buttons, not as a band. A floor of 7rem
    keeps the pair level and each an easy target on a phone. */
+/* `.bp-btn-sm`'s metrics exactly (height, padding, type), content-width, so
+   the vote pair is the same button as every other action on the take page.
+   It was 48px, then 44px with wider padding and a 7rem floor, which still
+   read as a chunkier third kind of button beside the ruling and the play
+   pill. */
 .bp-vote-toggle-lg .bp-vote-btn {
   flex: none;
-  min-width: 7rem;
-  /* `.bp-btn-sm`'s metrics, so the vote pair is the same 44px as every other
-     action on the take page. It was 48px, a third size in one column. */
   min-height: 44px;
-  padding: 0.375rem 1.25rem;
+  padding: 0.375rem 0.875rem;
   font-size: 0.875rem;
 }
 

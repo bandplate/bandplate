@@ -113,6 +113,11 @@ export const takes = {
   losslessNo: "No lossless master available yet.",
 
   noAssets: "No assets uploaded for this take yet.",
+  /** The column heads of a take's file table. */
+  fileColumn: "File",
+  formatColumn: "Format",
+  tierColumn: "Quality",
+  sizeColumn: "Size",
   deleteFile: "Delete file",
   /** The download and delete controls on one asset row, which have no visible text. */
   downloadAsset: ({

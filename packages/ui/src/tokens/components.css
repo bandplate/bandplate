@@ -786,8 +786,12 @@ a.bp-btn {
   gap: 0.5rem;
 }
 
+/* `.bp-table--no-stack` keeps a table a table on a phone: for one whose
+   columns fit at 375px once its desktop-only ones step out (a take's
+   files: name, format, two icons), and which reads worse as stacked
+   label/value blocks. */
 @media (max-width: 640px) {
-  .bp-table thead {
+  .bp-table:not(.bp-table--no-stack) thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -796,10 +800,10 @@ a.bp-btn {
     white-space: nowrap;
   }
 
-  .bp-table,
-  .bp-table tbody,
-  .bp-table tr,
-  .bp-table td {
+  .bp-table:not(.bp-table--no-stack),
+  .bp-table:not(.bp-table--no-stack) tbody,
+  .bp-table:not(.bp-table--no-stack) tr,
+  .bp-table:not(.bp-table--no-stack) td {
     display: block;
     width: 100%;
   }
@@ -809,7 +813,7 @@ a.bp-btn {
      product, and it is the same argument that took the panels off the add
      forms. The heads drop and the row stacks (A1), with each cell carrying
      its own label. */
-  .bp-table tr {
+  .bp-table:not(.bp-table--no-stack) tr {
     border: none;
     border-bottom: 1px solid var(--bp-color-border);
     border-radius: 0;
@@ -817,7 +821,7 @@ a.bp-btn {
     padding: 0.75rem 0;
   }
 
-  .bp-table td {
+  .bp-table:not(.bp-table--no-stack) td {
     border-bottom: none;
     padding: 0.1875rem 0;
     display: flex;
@@ -830,11 +834,11 @@ a.bp-btn {
   /* A cell with nothing in it — a member who is active, an instrument that
      is not archived — would otherwise render as a label with a blank beside
      it, which is a row that says nothing. */
-  .bp-table td:empty {
+  .bp-table:not(.bp-table--no-stack) td:empty {
     display: none;
   }
 
-  .bp-table td::before {
+  .bp-table:not(.bp-table--no-stack) td::before {
     content: attr(data-label);
     font-family: var(--bp-font-body);
     font-size: 0.6875rem;
@@ -850,7 +854,7 @@ a.bp-btn {
      label of its own — "NAME  Filip" as the first of six labelled pairs made
      the record look like a form rather than a thing. Everything under it is
      an attribute and keeps its label. */
-  .bp-table td:has(> .bp-table-name) {
+  .bp-table:not(.bp-table--no-stack) td:has(> .bp-table-name) {
     justify-content: flex-start;
     text-align: left;
     font-family: var(--bp-font-display);
@@ -859,21 +863,21 @@ a.bp-btn {
     padding-bottom: 0.375rem;
   }
 
-  .bp-table td:has(> .bp-table-name)::before {
+  .bp-table:not(.bp-table--no-stack) td:has(> .bp-table-name)::before {
     display: none;
   }
 
   /* The instruments table's icon cell: a glyph needs no "ICON" label read
      out beside it, and it sits directly above the name it belongs to. */
-  .bp-table td:has(> .bp-instrument) {
+  .bp-table:not(.bp-table--no-stack) td:has(> .bp-instrument) {
     justify-content: flex-start;
   }
 
-  .bp-table td:has(> .bp-instrument)::before {
+  .bp-table:not(.bp-table--no-stack) td:has(> .bp-instrument)::before {
     display: none;
   }
 
-  .bp-table .bp-table-actions {
+  .bp-table:not(.bp-table--no-stack) .bp-table-actions {
     justify-content: flex-end;
   }
 }
@@ -5281,71 +5285,54 @@ html:has(dialog.bp-filter-sheet[open]) body {
   font-variant-numeric: tabular-nums;
 }
 
-.bp-asset-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.bp-asset-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem 1rem;
-  min-height: 44px;
-  padding: 0.75rem 0.25rem;
-}
-
+/* A take's files: `.bp-table` with its column heads, so "mp3", "lossy" and
+   "4,0 MB" each sit under what they are. It used to be a list with a run of
+   those values per row, which a reader had to decode. */
 .bp-asset-row-label {
   font-weight: 600;
 }
 
-/* F2 (review round 1): used to be one string joined with " · " —
-   `format · tier · size[ · status]`, the exact "middle-dot meta string"
-   the brief's own forbidden-tells list names. Each value is now its own
-   inline item with a vertical-rule border between items instead of a text
-   glyph — the same information, laid out like the badge/tag rows already
-   used elsewhere in this file rather than a generated-design cliché. */
-.bp-asset-row-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+.bp-asset-status {
+  margin-left: 0.5rem;
+}
+
+/* A size is a number this app formatted, not a string anyone transcribes:
+   Chivo with tabular figures, not the mono face the format and tier wear. */
+.bp-asset-size {
+  font-variant-numeric: tabular-nums;
   color: var(--bp-color-muted);
-  font-size: 0.8125rem;
 }
 
-.bp-asset-row-meta-item {
-  padding-inline: 0.5rem;
+.bp-asset-table .bp-mono {
+  color: var(--bp-color-muted);
 }
 
-.bp-asset-row-meta-item:first-child {
-  padding-inline-start: 0;
-}
-
-.bp-asset-row-meta-item + .bp-asset-row-meta-item {
-  border-inline-start: 1px solid var(--bp-color-border);
-}
-
-/* The tier and the size are desktop detail. On a phone this row is a file
-   name and three machine strings fighting for one line, and the name is what
-   anyone is actually looking for — `mp3` alone answers "what is this", while
-   whether it is lossy and how many kilobytes it runs to are questions asked
-   with a download in mind, on a machine you would download it to.
- *
- * CSS decides it, not `matchMedia`: one DOM at every width, no hydration
- * mismatch, no flash — the same convention `.bp-mixer-grid` follows. Hiding
- * an item leaves the separators correct because the rule that draws them
- * sits on the FOLLOWING item, so the first visible one never carries a
- * leading rule. */
-.bp-asset-row-meta-detail {
+/* The tier and the size are desktop detail, column head and cell alike. On a
+   phone the name is what anyone is looking for, and `mp3` alone answers
+   "what is this"; whether it is lossy and how big are questions asked with a
+   download in mind, on a machine you would download it to. CSS decides it,
+   not `matchMedia`: one DOM at every width. */
+.bp-asset-col-detail {
   display: none;
 }
 
 @media (min-width: 40rem) {
-  .bp-asset-row-meta-detail {
-    display: revert;
+  .bp-asset-col-detail {
+    display: table-cell;
   }
+}
+
+/* The row's two icons, flush right in the last column. The cell's own
+   padding is the table's; the 44px targets set the row's height. */
+.bp-asset-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.bp-asset-actions-inner {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
 }
 
 /* The download. An icon and a 44px target rather than a labelled button: there
@@ -5359,7 +5346,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   width: 44px;
   height: 44px;
   flex: none;
-  margin-inline-start: auto;
   border-radius: 50%;
   color: var(--bp-color-muted);
 }
@@ -5376,7 +5362,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   width: 44px;
   height: 44px;
   flex: none;
-  margin-inline-start: auto;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -5915,13 +5900,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* The event's notes on the card the take's facts and the home page's Šuplík
    use: 6% fill, 1rem radius, the same padding, and the same small label
    over its content ("Poznámky"). Ink, not muted: muted text never sits on a
-   fill. The measure moves to the card so the text inside keeps its line
-   length and the card does not stretch past it. */
+   fill. Full width, like the take's facts card: capped at 62ch it stopped
+   short of everything else on the page. */
 .bp-event-hero-notes {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  max-width: 62ch;
   padding: 1.125rem 1.25rem;
   border-radius: 1rem;
   background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);

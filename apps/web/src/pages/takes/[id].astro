@@ -711,69 +711,83 @@ function assetLabel(asset: assetsRepo.Asset): string {
             <p class="bp-field-hint bp-m0">
               {hasLossless ? t.takes.losslessYes : t.takes.losslessNo}
             </p>
-            <ul class="bp-asset-list">
-              {displayableAssets.map((asset) => (
-                <li class="bp-asset-row">
-                  <span class="bp-asset-row-label">{assetLabel(asset)}</span>
-                  <span class="bp-asset-row-meta bp-mono">
-                    <span class="bp-asset-row-meta-item">{asset.format}</span>
-                    {/* Dropped on a phone — see the stylesheet. The status
-                        below is NOT: a file that is still uploading or has
-                        failed has to say so at every width. */}
-                    <span class="bp-asset-row-meta-item bp-asset-row-meta-detail">{asset.tier}</span>
-                    <span class="bp-asset-row-meta-item bp-asset-row-meta-detail">
-                      {formatBytes(locale, asset.bytes)}
-                    </span>
-                    {asset.status !== "ready" && (
-                      <span class="bp-asset-row-meta-item">{asset.status}</span>
-                    )}
-                  </span>
-                  {/* A plain link, not a fetch: the endpoint 302s to a presigned
-                      URL carrying `Content-Disposition: attachment`, so the browser's
-                      own download manager takes it from there — resumable, visible in
-                      Downloads, and working identically on iOS Safari, where a
-                      JS-driven blob download does not. Absent for an asset that is
-                      not ready, for the same reason the play control is: no
-                      affordance for a file that isn't there yet. */}
-                  {asset.status === "ready" ? (
-                    <a
-                      class="bp-asset-row-download"
-                      href={`/api/assets/${asset.id}/download`}
-                      download
-                      data-astro-reload
-                      aria-label={t.takes.downloadAsset({ label: assetLabel(asset), format: asset.format, size: formatBytes(locale, asset.bytes) })}
-                    >
-                      <Download size={18} aria-hidden="true" stroke-width={1.8} />
-                    </a>
-                  ) : (
-                    <span class="bp-asset-row-download-empty" aria-hidden="true" />
-                  )}
-                  {/* A plain confirm page, not a JSON call — uploading is the
-                      one thing here that needs script, so destroying must not. */}
-                  {canDelete && (
-                    <a
-                      class="bp-asset-row-delete"
-                      href={`/admin/assets/${asset.id}/delete`}
-                      data-confirm
-                      data-confirm-title={t.takes.deleteAssetConfirmTitle(
-                        assetLabel(asset).toLowerCase(),
-                      )}
-                      data-confirm-body={deleteAssetConsequence(
-                        assetLabel(asset).toLowerCase(),
-                        asset,
-                        isLastPlayableAsset(asset),
-                        locale,
-                      )}
-                      data-confirm-action={`/admin/assets/${asset.id}/delete`}
-                      data-confirm-cta={t.takes.deleteFile}
-                      aria-label={t.takes.deleteAsset(assetLabel(asset))}
-                    >
-                      <Trash size={17} aria-hidden="true" stroke-width={1.8} />
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
+            {/* A table with its column heads, not a list of rows with a run of
+                values each: "mp3", "lossy" and "4,0 MB" meant nothing until
+                the reader worked out which was which. Quality and size step
+                out on a phone, as they did from the run. */}
+            <table class="bp-table bp-table--no-stack bp-asset-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t.takes.fileColumn}</th>
+                  <th scope="col">{t.takes.formatColumn}</th>
+                  <th scope="col" class="bp-asset-col-detail">{t.takes.tierColumn}</th>
+                  <th scope="col" class="bp-asset-col-detail">{t.takes.sizeColumn}</th>
+                  <th scope="col"><span class="bp-visually-hidden">{t.admin.colActions}</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayableAssets.map((asset) => (
+                  <tr>
+                    <td>
+                      <span class="bp-asset-row-label">{assetLabel(asset)}</span>
+                      {/* A file still uploading or failed says so at every
+                          width, beside its name. */}
+                      {asset.status !== "ready" && <span class="bp-kind bp-asset-status">{asset.status}</span>}
+                    </td>
+                    <td class="bp-mono">{asset.format}</td>
+                    <td class="bp-mono bp-asset-col-detail">{asset.tier}</td>
+                    <td class="bp-asset-col-detail bp-asset-size">{formatBytes(locale, asset.bytes)}</td>
+                    <td class="bp-asset-actions">
+                      <div class="bp-asset-actions-inner">
+                        {/* A plain link, not a fetch: the endpoint 302s to a presigned
+                            URL carrying `Content-Disposition: attachment`, so the browser's
+                            own download manager takes it from there — resumable, visible in
+                            Downloads, and working identically on iOS Safari, where a
+                            JS-driven blob download does not. Absent for an asset that is
+                            not ready, for the same reason the play control is: no
+                            affordance for a file that isn't there yet. */}
+                        {asset.status === "ready" ? (
+                          <a
+                            class="bp-asset-row-download"
+                            href={`/api/assets/${asset.id}/download`}
+                            download
+                            data-astro-reload
+                            aria-label={t.takes.downloadAsset({ label: assetLabel(asset), format: asset.format, size: formatBytes(locale, asset.bytes) })}
+                          >
+                            <Download size={18} aria-hidden="true" stroke-width={1.8} />
+                          </a>
+                        ) : (
+                          <span class="bp-asset-row-download-empty" aria-hidden="true" />
+                        )}
+                        {/* A plain confirm page, not a JSON call — uploading is the
+                            one thing here that needs script, so destroying must not. */}
+                        {canDelete && (
+                          <a
+                            class="bp-asset-row-delete"
+                            href={`/admin/assets/${asset.id}/delete`}
+                            data-confirm
+                            data-confirm-title={t.takes.deleteAssetConfirmTitle(
+                              assetLabel(asset).toLowerCase(),
+                            )}
+                            data-confirm-body={deleteAssetConsequence(
+                              assetLabel(asset).toLowerCase(),
+                              asset,
+                              isLastPlayableAsset(asset),
+                              locale,
+                            )}
+                            data-confirm-action={`/admin/assets/${asset.id}/delete`}
+                            data-confirm-cta={t.takes.deleteFile}
+                            aria-label={t.takes.deleteAsset(assetLabel(asset))}
+                          >
+                            <Trash size={17} aria-hidden="true" stroke-width={1.8} />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )
       }

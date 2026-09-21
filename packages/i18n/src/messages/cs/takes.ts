@@ -134,6 +134,10 @@ export const takes = {
   losslessNo: "Bezztrátový master zatím není.", // en: No lossless master available yet.
 
   noAssets: "K téhle nahrávce zatím nejsou žádné soubory.", // en: No assets uploaded for this take yet.
+  fileColumn: "Soubor", // en: File
+  formatColumn: "Formát", // en: Format
+  tierColumn: "Kvalita", // en: Quality
+  sizeColumn: "Velikost", // en: Size
   deleteFile: "Smazat soubor", // en: Delete file
   // en: `Download ${label} (${format}, ${size})`
   downloadAsset: ({

@@ -251,7 +251,7 @@ if (!viewingStash && pages.redirectTo) {
       ) : (
         <>
           <button type="button" class="bp-filter-trigger" data-filter-open>
-            <ListFilter size={16} aria-hidden="true" />
+            <ListFilter size={14} aria-hidden="true" />
             {t.takes.filters}
             {activeFilterCount > 0 && <span class="bp-badge bp-badge-keeper">{activeFilterCount}</span>}
           </button>
@@ -260,12 +260,12 @@ if (!viewingStash && pages.redirectTo) {
               Clear beside its confirm, so a second one up here would be the
               duplicate we just removed from the sheet's header. */}
           {filtersApplied && (
-            <a href="/takes" class="bp-btn bp-btn-secondary bp-btn-sm bp-takes-bar-clear">
+            <a href="/takes" class="bp-btn bp-btn-secondary bp-btn-xs bp-takes-bar-clear">
               {/* On a phone the words go and the cross stays: three captioned
                   buttons do not fit one row at 375px, and the cross beside a
                   filter count is read as "clear these" without them. The
                   words remain the link's accessible name at every width. */}
-              <X size={16} aria-hidden="true" />
+              <X size={14} aria-hidden="true" />
               <span class="bp-takes-bar-clear-label">{t.takes.clear}</span>
             </a>
           )}

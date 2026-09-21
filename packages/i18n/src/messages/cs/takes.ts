@@ -30,7 +30,7 @@ export const takes = {
 
   filters: "Filtry", // en: Filters
   filtersClose: "Zavřít filtry", // en: Close filters
-  clear: "Zrušit filtry", // en: Clear
+  clear: "Zrušit filtry", // en: Clear filters
   showTakes: "Zobrazit nahrávky", // en: Show takes
 
   songLabel: "Skladba", // en: Song

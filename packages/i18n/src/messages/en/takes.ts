@@ -10,7 +10,7 @@ export const takes = {
 
   filters: "Filters",
   filtersClose: "Close filters",
-  clear: "Clear",
+  clear: "Clear filters",
   showTakes: "Show takes",
 
   songLabel: "Song",

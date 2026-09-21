@@ -9410,11 +9410,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
   opacity: 0.75;
 }
 
-/* A pill in the phone header line: the size `.bp-btn-xs` draws at, so it
-   sits level with the page's name instead of towering over it, and the same
-   6px reach so the touch target stays 44px. Alone at that end of the line,
-   so the reach overlaps nothing. */
-.bp-pill--header {
+/* The small pill: the size `.bp-btn-xs` draws at, with the same 6px reach
+   so the touch target stays 44px. The phone header's pill, and every pill
+   in the Takes bar, so the bar's controls are one height beside Filtry and
+   its clear. Anything sharing a row with one needs a gap of at least
+   0.875rem, or the reaches overlap. */
+.bp-pill--xs {
   position: relative;
   min-height: 32px;
   padding: 0.25rem 0.75rem;
@@ -9422,7 +9423,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   font-size: 0.8125rem;
 }
 
-.bp-pill--header::after {
+.bp-pill--xs::after {
   content: "";
   position: absolute;
   inset: -6px;
@@ -9708,24 +9709,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
      for them, and a bare cross was the vaguer of the two. */
   .bp-takes-bar .bp-pill--record .bp-record-word-short {
     display: inline;
-  }
-
-  /* Words gone, the cross is a 32px disc: `.bp-btn-xs` already gives it
-     the height and the 6px reach. */
-  .bp-takes-bar-clear {
-    min-width: 32px;
-    padding: 0;
-    justify-content: center;
-  }
-
-  .bp-takes-bar-clear-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 
 }

@@ -27,6 +27,17 @@ import {
   shouldDrawWaveform,
   waveformBars,
 } from "../client/recorder-logic.js";
+import {
+  canChangeSong,
+  durationAtStop,
+  hasUnsavedRecording,
+  isCapturing,
+  micErrorFromName,
+  openConfirm,
+  skipSongPressed,
+  stageClose,
+  stageRing,
+} from "../client/recorder-stage.js";
 import { putPending } from "../client/stash-db.js";
 import { newPendingItem } from "../client/stash-sync-logic.js";
 import { fractionAt, playedFraction, scrollFades } from "../client/timeline.js";
@@ -46,17 +57,6 @@ interface Props {
 
 const WAVE_BARS = 64;
 const STASH_HREF = "/takes?stash=1";
-
-function micError(err: unknown): RecorderError {
-  const name = err instanceof DOMException ? err.name : "";
-  if (name === "NotAllowedError" || name === "SecurityError") {
-    return "denied";
-  }
-  if (name === "NotFoundError" || name === "OverconstrainedError") {
-    return "no-mic";
-  }
-  return "unsupported";
-}
 
 async function decodeBars(blob: Blob): Promise<number[] | null> {
   let context: AudioContext | null = null;
@@ -130,18 +130,19 @@ export default function Recorder({
     if (!dialog) {
       return;
     }
-    if (state.phase === "confirm-discard" && !dialog.open) {
+    const asking = openConfirm(state.phase, confirmLeave) === "discard";
+    if (asking && !dialog.open) {
       dialog.showModal();
-    } else if (state.phase !== "confirm-discard" && dialog.open) {
+    } else if (!asking && dialog.open) {
       dialog.close();
     }
-  }, [state.phase]);
+  }, [state.phase, confirmLeave]);
   useEffect(() => {
     const dialog = leaveDialogRef.current;
-    if (confirmLeave && dialog && !dialog.open) {
+    if (openConfirm(state.phase, confirmLeave) === "leave" && dialog && !dialog.open) {
       dialog.showModal();
     }
-  }, [confirmLeave]);
+  }, [state.phase, confirmLeave]);
   // Set the moment the member answers "throw it away": the page is about to
   // go, and the browser's own "leave page?" must not ask the same question a
   // second time. A ref, because it has to be true before the next render —
@@ -193,7 +194,7 @@ export default function Recorder({
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const song = songs.find((s) => s.id === state.songId);
-  const recording = state.phase === "recording" || state.phase === "confirm-discard";
+  const recording = isCapturing(state.phase);
 
   const releaseInput = useCallback(() => {
     if (meterRef.current) {
@@ -264,7 +265,7 @@ export default function Recorder({
     const now = performance.now();
     dispatch({ type: "stop", now });
     if (durationRef.current === 0) {
-      durationRef.current = Math.max(0, now - startedAtRef.current);
+      durationRef.current = durationAtStop(startedAtRef.current, now);
     }
     let blob = raw;
     if (needsDurationFix(mime)) {
@@ -303,7 +304,10 @@ export default function Recorder({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       });
     } catch (err) {
-      dispatch({ type: "failed", error: micError(err) });
+      dispatch({
+        type: "failed",
+        error: micErrorFromName(err instanceof DOMException ? err.name : ""),
+      });
       return;
     }
     streamRef.current = stream;
@@ -341,7 +345,7 @@ export default function Recorder({
 
   const stop = useCallback(() => {
     const now = performance.now();
-    durationRef.current = state.startedAt === null ? 0 : Math.max(0, now - state.startedAt);
+    durationRef.current = durationAtStop(state.startedAt, now);
     dispatch({ type: "stop", now });
     recorderRef.current?.stop();
   }, [state.startedAt]);
@@ -428,8 +432,7 @@ export default function Recorder({
 
   // Leaving with an unsaved recording asks first.
   useEffect(() => {
-    const unsaved = recording || state.phase === "review" || state.phase === "finishing";
-    if (!unsaved) {
+    if (!hasUnsavedRecording(state.phase)) {
       return;
     }
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -439,7 +442,7 @@ export default function Recorder({
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [recording, state.phase]);
+  }, [state.phase]);
 
   useEffect(() => () => releaseInput(), [releaseInput]);
   useEffect(
@@ -521,7 +524,7 @@ export default function Recorder({
               <button
                 type="button"
                 class="bp-btn bp-btn-secondary bp-btn-sm bp-rec-skip-song"
-                aria-pressed={state.songChosen && state.songId === null ? "true" : "false"}
+                aria-pressed={skipSongPressed(state) ? "true" : "false"}
                 onClick={() => dispatch({ type: "select", songId: null })}
               >
                 {t.noSongYet}
@@ -718,10 +721,12 @@ export default function Recorder({
   }
 
   // --- the stage: armed, starting, recording, finishing, error -------------------
+  const close = stageClose(state.phase);
+  const ring = stageRing(state.phase);
   return (
     <div class="bp-rec bp-rec--stage">
       <div class="bp-rec-head">
-        {state.phase === "recording" ? (
+        {close === "cancel" ? (
           <button
             type="button"
             class="bp-rec-close"
@@ -730,7 +735,7 @@ export default function Recorder({
           >
             <CloseIcon />
           </button>
-        ) : state.phase === "armed" || state.phase === "starting" || state.phase === "error" ? (
+        ) : close === "leave" ? (
           // `starting` too: a permission prompt nobody answers must not trap
           // the member on a page with no way out.
           <a href={closeHref} class="bp-rec-close" aria-label={t.close}>
@@ -759,11 +764,11 @@ export default function Recorder({
             <circle class="bp-rec-meter-track" cx="130" cy="130" r="124" pathLength={100} />
             <circle class="bp-rec-meter-arc" cx="130" cy="130" r="124" pathLength={100} />
           </svg>
-          {recording ? (
+          {ring === "stop" ? (
             <button type="button" class="bp-rec-stop" aria-label={t.stop} onClick={stop}>
               <span class="bp-rec-stop-square" aria-hidden="true" />
             </button>
-          ) : state.phase === "armed" || state.phase === "error" ? (
+          ) : ring === "start" ? (
             <button
               type="button"
               class="bp-rec-stop bp-rec-stop--start"
@@ -811,7 +816,11 @@ export default function Recorder({
             {errorText[state.error]}
           </p>
         )}
-        {state.phase === "armed" && songs.length > 1 && !preselectedSongId && (
+        {canChangeSong({
+          phase: state.phase,
+          songCount: songs.length,
+          songOnLink: Boolean(preselectedSongId),
+        }) && (
           <button
             type="button"
             class="bp-btn bp-btn-secondary bp-btn-sm"

@@ -6713,12 +6713,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
   min-width: 0;
 }
 
-/* A section heading with a hairline under it. The rule is what marks where
-   one question ends and the next begins; no number and no tagline. */
+/* A plain section heading, like every other page's: no rule under it (the
+   app dropped its hairlines), no number, no tagline. The section gap is what
+   marks where one question ends and the next begins. */
 .bp-home-heading {
   margin: 0;
-  padding-bottom: 0.625rem;
-  border-bottom: 1px solid var(--bp-color-border);
 }
 
 /* --- 1. Na pultu ----------------------------------------------------- */

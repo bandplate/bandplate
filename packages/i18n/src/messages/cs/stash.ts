@@ -111,6 +111,7 @@ export const stash = {
   labelTooLong: "Popisek je moc dlouhý. Vejde se 200 znaků.", // en: That label is too long. 200 characters fit.
   download: "Stáhnout", // en: Download
   delete: "Smazat", // en: Delete
+  deleteForGood: "Smazat tuhle nahrávku natrvalo", // en: Delete this recording for good
   deleteTitle: (title: string): string => `Smazat nahrávku: ${title}?`, // en: Delete this recording: {title}?
   deleteBody: "Zmizí natrvalo i se souborem. Nikdo jiný ji neviděl.", // en: It's gone for good, file included. …
   deleteCta: "Smazat nahrávku", // en: Delete recording

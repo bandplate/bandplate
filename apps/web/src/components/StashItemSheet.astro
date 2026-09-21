@@ -133,7 +133,7 @@ const afterDelete = returnTo ?? `/takes?stash=1&deleted=${row.id}`;
         </>
       )}
 
-      <div class="bp-sheet-extras">
+      <div class="bp-stash-item-actions">
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open={stashRenameSheetId(row.id)}>
           {t.stash.rename}
         </button>
@@ -142,9 +142,16 @@ const afterDelete = returnTo ?? `/takes?stash=1&deleted=${row.id}`;
             {t.stash.download}
           </a>
         )}
+      </div>
+      {/* The app's danger pattern, the same as a song's sheet: not a button
+          beside Rename and Download but a text link under the rule, apart
+          from them, so the one action that cannot be undone never reads as
+          one more of the everyday ones. The solid plate belongs to the
+          confirm dialog it opens. */}
+      <div class="bp-sheet-extras">
         <a
           href={deleteHref}
-          class="bp-btn bp-btn-danger bp-btn-sm"
+          class="bp-sheet-danger"
           data-confirm
           data-confirm-title={t.stash.deleteTitle(title)}
           data-confirm-body={t.stash.deleteBody}
@@ -152,10 +159,7 @@ const afterDelete = returnTo ?? `/takes?stash=1&deleted=${row.id}`;
           data-confirm-cta={t.stash.deleteCta}
           data-confirm-redirect={afterDelete}
         >
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-          </svg>
-          {t.stash.delete}
+          {t.stash.deleteForGood}
         </a>
       </div>
     </div>

@@ -3386,6 +3386,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
   cursor: pointer;
 }
 
+/* A stash recording's everyday actions, above the rule its danger link sits
+   under. */
+.bp-stash-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .bp-sheet-danger:hover {
   text-decoration: underline;
 }

@@ -131,6 +131,8 @@ export const stash = {
   labelTooLong: "That label is too long. 200 characters fit.",
   download: "Download",
   delete: "Delete",
+  /** The sheet's danger link, in the shape a song's sheet uses. */
+  deleteForGood: "Delete this recording for good",
   deleteTitle: (title: string): string => `Delete this recording: ${title}?`,
   deleteBody: "It's gone for good, file included. Nobody else ever saw it.",
   deleteCta: "Delete recording",

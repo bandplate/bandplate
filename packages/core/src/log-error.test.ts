@@ -19,6 +19,52 @@ describe("buildErrorLogRecord", () => {
     });
   });
 
+  it("redacts the sign-in token off an Astro /login/:token route", () => {
+    const record = buildErrorLogRecord({
+      kind: "page",
+      message: "boom",
+      route: "/login/eyJhbGciOiJIUzI1NiJ9.super-secret-token",
+    });
+    expect(record.route).toBe("/login/:token");
+  });
+
+  it("redacts the sign-in token off an API /auth/login/:token route", () => {
+    const record = buildErrorLogRecord({
+      kind: "api",
+      message: "boom",
+      route: "/auth/login/super-secret-token",
+    });
+    expect(record.route).toBe("/auth/login/:token");
+  });
+
+  it("drops the query string from route entirely", () => {
+    const record = buildErrorLogRecord({
+      kind: "api",
+      message: "boom",
+      route: "/songs/my-song?token=super-secret-token&utm=1",
+    });
+    expect(record.route).toBe("/songs/my-song");
+  });
+
+  it("redacts the token AND drops the query string when a route has both", () => {
+    const record = buildErrorLogRecord({
+      kind: "page",
+      message: "boom",
+      route: "/login/super-secret-token?redirect=/me",
+    });
+    expect(record.route).toBe("/login/:token");
+  });
+
+  it("leaves a route with no login segment and no query string unchanged", () => {
+    const record = buildErrorLogRecord({ kind: "page", message: "boom", route: "/takes/1" });
+    expect(record.route).toBe("/takes/1");
+  });
+
+  it("leaves a bare /login (no token segment) unchanged", () => {
+    const record = buildErrorLogRecord({ kind: "page", message: "boom", route: "/login" });
+    expect(record.route).toBe("/login");
+  });
+
   it("keeps cron when given", () => {
     expect(
       buildErrorLogRecord({ kind: "scheduled-tick", message: "boom", cron: "*/10 * * * *" }),

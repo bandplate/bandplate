@@ -21,10 +21,29 @@
 const STACK_MAX_BYTES = 2048;
 const TRUNCATION_SUFFIX = "\n…[truncated]";
 
+/**
+ * The only route in this app that carries a secret in its own path: the
+ * single-use sign-in link, both as the Astro page (`/login/[token].astro`
+ * → `/login/<token>`) and as the API route it POSTs to
+ * (`/auth/login/:token` → `/auth/login/<token>`, forwarded without an
+ * `/api` prefix — see `pages/api/[...path].ts`). Every other dynamic
+ * segment in this app (`/songs/[slug]`, `/takes/[id]`, `/admin/tokens/:id`,
+ * ...) names a resource by an opaque id or slug, not a bearer credential —
+ * grepped for `token`/`invite`/`unsubscribe`-style route params across
+ * `apps/web/src/pages` and `packages/api/src/routes` to confirm this is the
+ * only one.
+ */
+const TOKEN_SEGMENT = "login";
+const REDACTED_TOKEN = ":token";
+
 export interface LogErrorInput {
   /** What kind of failure this is, e.g. "page", "api", "scheduled-tick". */
   kind: string;
-  /** Request path, for a page/API failure. */
+  /**
+   * Request path, for a page/API failure. Sanitized before it reaches the
+   * output record — see `sanitizeRoute` — so pass the raw
+   * `context.url.pathname`/`c.req.path` and don't pre-scrub it yourself.
+   */
   route?: string;
   /** Cron pattern, for a scheduled-tick failure (mirrors `wrangler.toml`'s `[triggers] crons`). */
   cron?: string;
@@ -46,6 +65,26 @@ export interface ErrorLogRecord {
   cron?: string;
   message: string;
   stack?: string;
+}
+
+/**
+ * Strips anything a `route` could leak a secret through before it's ever
+ * allowed into `ErrorLogRecord`: the query string (dropped entirely — a
+ * bootstrap token, a redirect target, anything) and, path-segment-wise,
+ * whatever immediately follows a `login` segment (the sign-in token itself,
+ * for both the Astro page and the API route — see `TOKEN_SEGMENT`'s doc
+ * comment). Applied unconditionally inside `buildErrorLogRecord`, not
+ * something a caller opts into, so no call site can get this wrong.
+ */
+function sanitizeRoute(route: string): string {
+  const pathOnly = route.split("?")[0] ?? route;
+  const segments = pathOnly.split("/");
+  for (let i = 0; i < segments.length - 1; i++) {
+    if (segments[i] === TOKEN_SEGMENT) {
+      segments[i + 1] = REDACTED_TOKEN;
+    }
+  }
+  return segments.join("/");
 }
 
 function truncateStack(stack: string): string {
@@ -74,7 +113,7 @@ export function buildErrorLogRecord(input: LogErrorInput): ErrorLogRecord {
     message: input.message,
   };
   if (typeof input.route === "string") {
-    record.route = input.route;
+    record.route = sanitizeRoute(input.route);
   }
   if (typeof input.cron === "string") {
     record.cron = input.cron;

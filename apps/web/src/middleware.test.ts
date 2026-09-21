@@ -393,4 +393,19 @@ describe("middleware onRequest — which language the request renders in", () =>
     });
     errorSpy.mockRestore();
   });
+
+  it("a thrown Response (Astro's own redirect/rewrite short-circuit) passes through unlogged", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue(member());
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const thrownResponse = new Response(null, { status: 302, headers: { Location: "/elsewhere" } });
+    const throwingNext = vi.fn(async () => {
+      throw thrownResponse;
+    });
+    const context = makeContext("/takes/123", { cookieValue: "session-token" });
+
+    await expect(rawOnRequest(context, throwingNext)).rejects.toBe(thrownResponse);
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
 });

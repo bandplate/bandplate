@@ -168,10 +168,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // does not turn it into a Response itself, so Astro's own dev/production
   // error handling still runs exactly as before; only what reaches the
   // console differs.
+  //
+  // A thrown `Response` is not a failure: Astro's own `Astro.redirect`/
+  // `Astro.rewrite` and a page's own control flow can throw one as a
+  // legitimate way to short-circuit rendering, not an error worth an
+  // operator's attention. Rethrown untouched, before it's ever treated as
+  // an `err` to log.
   let response: Response;
   try {
     response = await next();
   } catch (err) {
+    if (err instanceof Response) {
+      throw err;
+    }
     const { message, stack } = describeError(err);
     logError({ kind: "page", route: context.url.pathname, message, stack });
     throw err;

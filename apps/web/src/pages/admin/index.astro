@@ -25,7 +25,7 @@ const activeInstruments = instruments.filter((i) => i.archivedAt === null);
 const activeTokens = tokens.filter((t) => t.revokedAt === null);
 ---
 
-<AppLayout title={ta.title} principal={principal} current="admin" adminSection="overview">
+<AppLayout title={ta.title} headerTitle={ta.title} principal={principal} current="admin" adminSection="overview">
   <div class="bp-stack">
     <AdminHeader title={ta.title} current="overview" />
 

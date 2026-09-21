@@ -118,7 +118,7 @@ const justInvited = Astro.url.searchParams.get("invited") === "1";
 const mailFailed = Astro.url.searchParams.get("nomail") === "1";
 ---
 
-<AppLayout title={ta.membersTitle} principal={principal} current="admin" adminSection="members">
+<AppLayout title={ta.membersTitle} headerTitle={ta.members} principal={principal} current="admin" adminSection="members">
   <div class="bp-stack">
     <AdminHeader title={ta.members} current="members" />
 

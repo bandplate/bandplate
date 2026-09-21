@@ -139,7 +139,7 @@ const justMerged = Astro.url.searchParams.get("merged") === "1";
 const deleteBlocked = Astro.url.searchParams.get("in_use") === "1";
 ---
 
-<AppLayout title={ta.instrumentsTitle} principal={principal} current="admin" adminSection="instruments">
+<AppLayout title={ta.instrumentsTitle} headerTitle={ta.colInstruments} principal={principal} current="admin" adminSection="instruments">
   <div class="bp-stack">
     <AdminHeader title={ta.colInstruments} current="instruments" />
 

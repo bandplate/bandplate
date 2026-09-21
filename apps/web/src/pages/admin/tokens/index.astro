@@ -65,7 +65,7 @@ const justUpdated = Astro.url.searchParams.get("updated") === "1";
 const justRevoked = Astro.url.searchParams.get("revoked") === "1";
 ---
 
-<AppLayout title={ta.tokensTitle} principal={principal} current="admin" adminSection="tokens">
+<AppLayout title={ta.tokensTitle} headerTitle={ta.tokens} principal={principal} current="admin" adminSection="tokens">
   <div class="bp-stack">
     <AdminHeader title={ta.tokens} current="tokens" />
 

@@ -1,8 +1,10 @@
+import { readFile } from "node:fs/promises";
 import cloudflare from "@astrojs/cloudflare";
 import node from "@astrojs/node";
 import preact from "@astrojs/preact";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
+import { checkCronWiring, cronsOf } from "./scripts/cron-wiring.ts";
 
 // Load `.env` into `process.env`, not just `import.meta.env`.
 //
@@ -45,6 +47,9 @@ if (typeof process.loadEnvFile === "function") {
 // binding that `wrangler deploy` provisions in the deployer's account. This
 // app serves no optimized images through Astro's image pipeline, so neither
 // choice changes what a member sees.
+/** `dist/server/`, captured in `astro:config:done` for the cron-wiring check. */
+let serverDir;
+
 const adapterKind = process.env.BANDPLATE_ADAPTER === "cloudflare" ? "cloudflare" : "node";
 const adapter =
   adapterKind === "cloudflare"
@@ -84,7 +89,30 @@ export default defineConfig({
   // `/_routes.json`, `/entry.mjs` and `/wrangler.json` are not assets at all
   // and fall through to the app, whose member guard redirects them to
   // `/login` (302).
-  integrations: [preact({ compat: true })],
+  integrations: [
+    preact({ compat: true }),
+    // Fails the Cloudflare build when `wrangler.toml` declares a cron but the
+    // built Worker has no `scheduled` handler, which is what a missing
+    // `main` gives you, silently. See `scripts/cron-wiring.ts` for the decision and why.
+    adapterKind === "cloudflare" && {
+      name: "bandplate-cron-wiring",
+      hooks: {
+        "astro:config:done": ({ config }) => {
+          serverDir = config.build.server;
+        },
+        "astro:build:done": async () => {
+          const wranglerJson = JSON.parse(
+            await readFile(new URL("wrangler.json", serverDir), "utf-8"),
+          );
+          const entrySource = await readFile(new URL("entry.mjs", serverDir), "utf-8");
+          const result = checkCronWiring({ crons: cronsOf(wranglerJson), entrySource });
+          if (!result.ok) {
+            throw new Error(result.reason);
+          }
+        },
+      },
+    },
+  ].filter(Boolean),
   vite: {
     plugins: [
       tailwindcss(),

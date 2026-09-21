@@ -2387,6 +2387,14 @@ a.bp-btn {
   font-variant-numeric: tabular-nums;
 }
 
+/* A take's own label, opening its facts line: "new arrangement, Dezerter,
+   17. září 2026". Ink and heavier, because it names which take this is and
+   the rest only says where it came from. */
+.bp-shell-subtitle-lead {
+  color: var(--bp-color-fg);
+  font-weight: 600;
+}
+
 /* A detail page's star, right after its name rather than pushed to the far
    edge: it is a mark on the thing named, the same place the hero heading
    keeps it. The name gives way first when the row runs out. The negative

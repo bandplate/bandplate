@@ -21,7 +21,7 @@ import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import { eventLabel } from "../../server/format.js";
+import { eventLabel, factsLine } from "../../server/format.js";
 import {
   EVENT_TAKES_PER_PAGE,
   type EventField,
@@ -160,7 +160,7 @@ const [allSongs, allInstruments] = await Promise.all([
   title={event.title ?? kindTitle}
   description={shareDescription}
   headerTitle={formatLongDate(locale, event.heldAt)}
-  headerSubtitle={[kindLabel, event.title, event.venue].filter(Boolean).join(", ")}
+  headerSubtitle={factsLine([kindLabel, event.title, event.venue], locale)}
   principal={principal}
   current="events"
 >

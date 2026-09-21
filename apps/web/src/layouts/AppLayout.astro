@@ -46,8 +46,6 @@ export interface Props {
   headerTitle?: string;
   /** A count shown after `headerTitle`, in the muted tone: "Skladby (8)". */
   headerCount?: number;
-  /** The muted tail of a take's name: the ": take 1" in "Dezertér: take 1". */
-  headerNote?: string;
   /**
    * A detail page's facts, one small line under the name: "Dmi, 76 bpm",
    * "Zkouška, Dezerter". The page's own copy is `.bp-titled-facts`, hidden
@@ -55,6 +53,14 @@ export interface Props {
    * describe instead of in pieces below the header.
    */
   headerSubtitle?: string;
+  /**
+   * What opens the facts line, in the ink colour: a take's own label, "take 1"
+   * or "new arrangement". It is what tells two takes of one song apart, so it
+   * is never the part that gets cut. It sat after the name as "Dezertér: take
+   * 1" until a long label wrapped the header onto two lines of title and
+   * shoved the star to the far edge.
+   */
+  headerSubtitleLead?: string;
   principal: MemberPrincipal;
   current: NavKey;
   // Which admin section is open, when `current` is "admin". The sidebar lists
@@ -99,8 +105,8 @@ const {
   description,
   headerTitle,
   headerCount,
-  headerNote,
   headerSubtitle,
+  headerSubtitleLead,
   principal,
   current,
   adminSection,
@@ -184,7 +190,6 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
                       the page's own, which a screen reader already reaches. */}
                   <p class="bp-shell-title bp-m0" aria-hidden="true">
                     {headerTitle}
-                    {headerNote && <span class="bp-hero-title-note">: {headerNote}</span>}
                     {headerCount !== undefined && <span class="bp-title-count"> ({headerCount})</span>}
                   </p>
                   {/* A real control, so outside the aria-hidden picture. The
@@ -200,8 +205,13 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
                 </div>
                 {/* A picture too: the page's own copy of these facts is
                     marked `.bp-titled-facts` and read in its place. */}
-                {headerSubtitle && (
-                  <p class="bp-shell-subtitle bp-m0" aria-hidden="true">{headerSubtitle}</p>
+                {(headerSubtitle || headerSubtitleLead) && (
+                  <p class="bp-shell-subtitle bp-m0" aria-hidden="true">
+                    {/* One line, no breaks between the parts: a newline in
+                        here is a text node, and ", " would grow a space in
+                        front of it. */}
+                    {headerSubtitleLead && <span class="bp-shell-subtitle-lead">{headerSubtitleLead}</span>}{headerSubtitleLead && headerSubtitle && ", "}{headerSubtitle}
+                  </p>
                 )}
               </div>
             </>

@@ -24,7 +24,7 @@ import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import { eventLabel, formatShortDate } from "../../server/format.js";
+import { eventLabel, factsLine, formatShortDate } from "../../server/format.js";
 import {
   SONG_TAKES_PER_PAGE,
   type SongField,
@@ -266,7 +266,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
   title={song.title}
   description={shareDescription}
   headerTitle={song.title}
-  headerSubtitle={metaParts.length > 0 ? metaParts.join(", ") : undefined}
+  headerSubtitle={factsLine(metaParts, locale)}
   principal={principal}
   current="songs"
 >

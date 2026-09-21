@@ -100,6 +100,29 @@ export function takeNote(label: string | null | undefined, kindLabel: string): s
   return label.trim().toLowerCase() === kindLabel.toLowerCase() ? null : label;
 }
 
+/**
+ * The facts under a detail page's name in the phone header: "Dmi, 76 bpm",
+ * "Zkouška, Dezerter". A list, so commas and no verbs, and never the `·`
+ * separator (docs/design-foundation.md). Blank parts drop out rather than
+ * leaving ", ," behind.
+ *
+ * Capitalised at the start of a line because the catalog's kind words are
+ * lowercase, to read right mid-sentence. `lineStart: false` is for a line
+ * that begins with something else — a take's own label, which is the band's
+ * text and is shown exactly as typed.
+ */
+export function factsLine(
+  parts: readonly (string | null | undefined)[],
+  locale: Locale,
+  { lineStart = true }: { lineStart?: boolean } = {},
+): string {
+  const line = parts.filter((part): part is string => Boolean(part?.trim())).join(", ");
+  if (!lineStart || line === "") {
+    return line;
+  }
+  return line.charAt(0).toLocaleUpperCase(locale) + line.slice(1);
+}
+
 /** Byte count as a human `MB`/`KB`/`B` figure — `/takes/[id]`'s asset list. */
 export function formatBytes(bytes: number): string {
   return i18nFormatBytes(DEFAULT_LOCALE, bytes);

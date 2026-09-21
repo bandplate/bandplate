@@ -54,7 +54,7 @@ import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import { eventLabel, formatDuration, takeNote } from "../../server/format.js";
+import { eventLabel, factsLine, formatDuration, takeNote } from "../../server/format.js";
 import { MIN_MIXER_STEMS } from "../../server/pages/mix.js";
 import {
   type TakeField,
@@ -202,6 +202,21 @@ const heroSubtitle = event
   ? `${kindLabel} — ${formatLongDate(locale, event.heldAt)}`
   : formatLongDate(locale, take.recordedAt);
 
+// The phone header's line under the song's name. The label leads it rather
+// than trailing the name: it is what tells two takes of one song apart, and
+// after the name a long one wrapped the title and was cut anyway. The rest is
+// the lede's facts as a list, the way the song and event headers say theirs.
+// With no song the title is already the date, so the date is not said twice.
+const headerLead = song && noteText ? noteText : undefined;
+const headerFacts = factsLine(
+  [
+    event ? eventName || kindLabel : null,
+    song ? formatLongDate(locale, event ? event.heldAt : take.recordedAt) : null,
+  ],
+  locale,
+  { lineStart: !headerLead },
+);
+
 // The link preview's sentence is the page's own lede. A second one written
 // for the card is a second one to keep true.
 
@@ -257,9 +272,9 @@ function assetLabel(asset: assetsRepo.Asset): string {
 <AppLayout
   title={song ? t.takes.pageTitle(heroTitle) : t.takes.pageTitleUnknown}
   description={heroLede}
-  headerTitle={song ? song.title : "Take"}
-  headerNote={song && noteText ? noteText : undefined}
-  headerSubtitle={heroLede}
+  headerTitle={song ? song.title : heroTitle}
+  headerSubtitleLead={headerLead}
+  headerSubtitle={headerFacts}
   principal={principal}
   current="home"
 >

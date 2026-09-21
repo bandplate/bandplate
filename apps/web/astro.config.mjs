@@ -80,8 +80,10 @@ export default defineConfig({
   // own `dist/client/.assetsignore` (`wrangler.json`, `.dev.vars`). Our old
   // hook would now overwrite that file with names that no longer exist.
   // Verified under `wrangler dev --local` on the 14.3.2 build: `/login` 200,
-  // `/_worker.js/index.js`, `/_routes.json`, `/entry.mjs` and
-  // `/wrangler.json` all 404.
+  // `/favicon.svg` 200 from assets, while `/_worker.js/index.js`,
+  // `/_routes.json`, `/entry.mjs` and `/wrangler.json` are not assets at all
+  // and fall through to the app, whose member guard redirects them to
+  // `/login` (302).
   integrations: [preact({ compat: true })],
   vite: {
     plugins: [

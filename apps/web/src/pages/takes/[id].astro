@@ -390,40 +390,11 @@ function assetLabel(asset: assetsRepo.Asset): string {
           />
         </span>
       </h1>
-        {/* Direction B from the canvas. The band's ruling and Edit sit
-            together at the top right, at the weights the old Admin strip gave
-            them — moving them must not quietly demote the decision. The pair
-            only renders while the take is undecided, so most pages show Edit
-            alone, exactly as they do for everyone who is not an admin. */}
+        {/* Edit, beside the heading past `lg`. On a phone it is up in the
+            header line and this copy is hidden, which empties the row. The
+            band's ruling used to share it; it has its own strip below the
+            ways out now. */}
         <div class="bp-take-hero-actions">
-          {canDecide && (
-            <>
-              <a
-                href={`/admin/takes/${take.id}/keeper`}
-                class="bp-btn bp-btn-primary bp-btn-sm"
-                data-confirm
-                data-confirm-title={`Promote ${heroTitle} to keeper?`}
-                data-confirm-body={t.takes.keeperBody}
-                data-confirm-action={`/admin/takes/${take.id}/keeper`}
-                data-confirm-cta={t.takes.keeperCta}
-                data-confirm-tone="neutral"
-              >
-                {t.takes.keeperCta}
-              </a>
-              <a
-                href={`/admin/takes/${take.id}/keeper?reject=1`}
-                class="bp-btn bp-btn-danger bp-btn-sm"
-                data-confirm
-                data-confirm-title={`Reject ${heroTitle}?`}
-                data-confirm-body={t.takes.rejectBody}
-                data-confirm-action={`/admin/takes/${take.id}/keeper?reject=1`}
-                data-confirm-cta={t.takes.rejectCta}
-                data-confirm-tone="neutral"
-              >
-                {t.takes.rejectCta}
-              </a>
-            </>
-          )}
           <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm bp-titled-action" data-sheet-open="edit-take">
             {t.takes.edit}
           </button>
@@ -510,6 +481,43 @@ function assetLabel(asset: assetsRepo.Asset): string {
           )
         }
       </div>
+
+      {/* The band's ruling, under a heading like every other part of the
+          page, after the ways out: deciding a take is an admin's job, not
+          the first thing every member meets. Keeper keeps the accent fill
+          and Reject the danger one, the weights they always had. Only while
+          the take is undecided. */}
+      {canDecide && (
+        <section class="bp-take-strip">
+          <h2 class="bp-strip-label">{t.shell.nav.admin}</h2>
+          <div class="bp-take-ruling">
+            <a
+              href={`/admin/takes/${take.id}/keeper`}
+              class="bp-btn bp-btn-primary bp-btn-sm"
+              data-confirm
+              data-confirm-title={`Promote ${heroTitle} to keeper?`}
+              data-confirm-body={t.takes.keeperBody}
+              data-confirm-action={`/admin/takes/${take.id}/keeper`}
+              data-confirm-cta={t.takes.keeperCta}
+              data-confirm-tone="neutral"
+            >
+              {t.takes.keeperCta}
+            </a>
+            <a
+              href={`/admin/takes/${take.id}/keeper?reject=1`}
+              class="bp-btn bp-btn-danger bp-btn-sm"
+              data-confirm
+              data-confirm-title={`Reject ${heroTitle}?`}
+              data-confirm-body={t.takes.rejectBody}
+              data-confirm-action={`/admin/takes/${take.id}/keeper?reject=1`}
+              data-confirm-cta={t.takes.rejectCta}
+              data-confirm-tone="neutral"
+            >
+              {t.takes.rejectCta}
+            </a>
+          </div>
+        </section>
+      )}
 
     </div>
 

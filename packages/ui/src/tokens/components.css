@@ -5029,14 +5029,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
   padding-bottom: 1.25rem;
 }
 
-/* The band's ruling and Edit, at the top right of the take. Direction B: the
-   decision keeps the weights it had in the Admin strip it replaced — moving a
-   control must not quietly demote it — so Keeper is the accent fill and
-   Reject the danger one, with Edit's tint beside them.
-
-   Below the breakpoint the row wraps and they drop under the heading: three
-   44px pills and a 36px slab title do not share 375px, and shrinking the
-   controls would put them under the touch floor. */
+/* Edit, at the top right of the take past `lg`; on a phone it is in the
+   header line instead. The band's ruling has its own strip,
+   `.bp-take-ruling`, under the ways out. */
 .bp-take-hero-actions {
   display: flex;
   align-items: center;
@@ -5081,6 +5076,16 @@ html:has(dialog.bp-filter-sheet[open]) body {
   flex-basis: max-content;
 }
 
+/* The band's ruling, in the Admin strip. Keeper keeps the accent fill and
+   Reject the danger one, the weights they had when they sat by the heading:
+   moving a decision must not quietly demote it. */
+.bp-take-ruling {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.875rem;
+}
+
 /* Small variants once the row has dropped under the heading. Three full pills
    across a phone is a band of colour heavier than the take's own name.
  *
@@ -5093,7 +5098,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
  * not styling. The four metrics below are a deliberate copy of
  * `.bp-btn-xs`'s and have to stay in step with it. */
 @media (max-width: 39.999rem) {
-  .bp-take-hero-actions .bp-btn {
+  .bp-take-hero-actions .bp-btn,
+  .bp-take-ruling .bp-btn {
     position: relative;
     min-height: 32px;
     min-width: 0;
@@ -5101,7 +5107,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
     font-size: 0.8125rem;
   }
 
-  .bp-take-hero-actions .bp-btn::after {
+  .bp-take-hero-actions .bp-btn::after,
+  .bp-take-ruling .bp-btn::after {
     content: "";
     position: absolute;
     inset: -6px;

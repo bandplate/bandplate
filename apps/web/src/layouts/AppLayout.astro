@@ -224,6 +224,15 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
         </header>
       )
     }
+    {/* A second row joined under the header, phone only: a detail page's
+        measurable facts (a take's length, line-up and ruling). A picture of
+        the page's own copy, which is `.bp-titled-facts` and read in its place,
+        so this one is hidden from assistive tech. */}
+    {chrome && headerTitle && Astro.slots.has("header-panel") && (
+      <div class="bp-shell-subbar" aria-hidden="true">
+        <slot name="header-panel" />
+      </div>
+    )}
     <div class="bp-shell-body">
       {chrome && (
       <nav class="bp-sidebar" aria-label={t.shell.navLabel}>

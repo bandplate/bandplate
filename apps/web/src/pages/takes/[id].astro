@@ -278,6 +278,17 @@ function assetLabel(asset: assetsRepo.Asset): string {
   principal={principal}
   current="home"
 >
+  <Fragment slot="header-panel">
+    <span class="bp-shell-subbar-time">{formatDuration(take.durationMs)}</span>
+    <InstrumentSet instruments={instruments} />
+    {
+      (take.state === "keeper" || take.state === "rejected") && (
+        <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
+          {TAKE_STATE_LABEL[take.state]}
+        </span>
+      )
+    }
+  </Fragment>
   <FavoriteToggle
     slot="header-actions"
     targetType="take"
@@ -404,7 +415,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
           the instrument set on either side: the set carries a tinted pad, which
           is what holds it together as one object, and a rule beside a thing that
           is already bounded reads as a stray mark. */}
-      <p class="bp-take-detail-facts bp-m0">
+      <p class="bp-take-detail-facts bp-m0 bp-titled-facts">
         <span>{formatDuration(take.durationMs)}</span>
         <InstrumentSet instruments={instruments} />
         {/* The band's call. A settled state is one word and needs no gloss.

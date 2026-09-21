@@ -16,7 +16,7 @@ every command below is run through pnpm **from that directory**:
 
 ```
 cd apps/web
-pnpm exec wrangler --version     # 4.41.0
+pnpm exec wrangler --version     # 4.136.0
 pnpm exec wrangler login         # once, to authenticate
 ```
 
@@ -329,15 +329,22 @@ reason (not recommended — you lose every guard above):
 
 ```
 cd apps/web
-BANDPLATE_ADAPTER=cloudflare pnpm exec astro build   # → dist/_worker.js/
+BANDPLATE_ADAPTER=cloudflare pnpm exec astro build   # → dist/server/ + dist/client/
 pnpm migrate:remote                                  # step 4, repeated — don't skip on redeploys
 pnpm exec wrangler deploy
 ```
 
 `BANDPLATE_ADAPTER=cloudflare` is the only thing that switches the build
 — omit it and `astro build` produces the unchanged Node profile
-(`dist/start.mjs`) instead. Nothing else in `astro.config.mjs` branches
-on it.
+(`dist/start.mjs`) instead.
+
+The build also writes `.wrangler/deploy/config.json`, which points every
+later `wrangler` command in `apps/web` (`deploy`, `dev`, `d1 migrations`)
+at the generated `dist/server/wrangler.json` instead of your
+`wrangler.toml`. That generated file is your `wrangler.toml` with the
+entry and assets paths filled in by the build, so nothing you configured is
+lost, but it only changes when you rebuild: edit `wrangler.toml`, then
+build again before deploying.
 
 ## 6. Gated deploys from CI
 
@@ -369,6 +376,16 @@ The job needs three repository secrets:
   successfully but silently ship without Workers Logs/observability
   configured.
 
+  **Upgrading a `WRANGLER_TOML` (or local `wrangler.toml`) from before the
+  Astro 7 upgrade:** two lines change, both already in
+  `wrangler.toml.example`. `main` becomes `"./src/worker.ts"` (it was
+  `"dist/_worker.js/index.js"`), and `[assets]` loses its
+  `directory = "dist"` line, keeping only `binding = "ASSETS"`. The build
+  fails on the old `main`, since that file no longer exists. Leave `main`
+  out entirely and the build succeeds with the adapter's stock entry,
+  which has no `scheduled` handler: the site works and the notification
+  cron silently does nothing.
+
 If `CLOUDFLARE_API_TOKEN` is unset (a fork, or a repo that hasn't been set
 up for production deploys yet), the job's first step prints `deploy
 skipped: secrets not configured` and every later step is skipped via an
@@ -385,8 +402,8 @@ needs it — see "Migrate — before every deploy, unconditionally" above.
 `wrangler.toml.example` ships `[triggers] crons = ["*/10 * * * *"]`, which
 runs the notification tick every 10 minutes — matching
 `NOTIFICATION_TICK_INTERVAL_MS` on the Node profile. The Worker's `scheduled` handler
-(`src/worker.ts`, alongside the normal `fetch` one — wired in via
-`workerEntryPoint` in `astro.config.mjs`) calls
+(`src/worker.ts`, alongside the normal `fetch` one — wired in by
+`main = "./src/worker.ts"` in `wrangler.toml`) calls
 `src/server/scheduled.ts#runScheduledTick`, which builds the Workers
 runtime, asks `getNotificationDeps()` for the push-sender/DB/clock bundle,
 and — if push is configured at all — calls `@bandplate/core`'s
@@ -447,17 +464,21 @@ matching `BANDPLATE_VAPID_PUBLIC_KEY`/`BANDPLATE_VAPID_SUBJECT` in your local
 step 2). Leave all three out and push notifications stay off, same as a real
 deploy: nothing else here changes.
 
-To fire the scheduled tick without waiting for the cron itself, run
-`wrangler dev` with `--test-scheduled` (this opens an extra local-only
-route that simulates a cron trigger; it changes nothing about the deploy
-config) and hit it with `curl`:
+To fire the scheduled tick without waiting for the cron itself, hit the
+local-only route `wrangler dev` serves for exactly that (it changes
+nothing about the deploy config):
 
 ```
-pnpm exec wrangler dev --test-scheduled
-curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"
+pnpm exec wrangler dev
+curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=*/10+*+*+*+*"
 ```
 
-The `curl` should return `200`, and the `wrangler dev` terminal logs the
+(The older `--test-scheduled` flag and its `/__scheduled` route do nothing
+for this build: wrangler injects that route while bundling, and the Worker
+now arrives already bundled by the Astro build. The request falls through
+to the app, which redirects it to `/login`.)
+
+The `curl` should return `200` with the body `ok`, and the `wrangler dev` terminal logs the
 same `[scheduled] notification tick: sent=...` line a real cron
 invocation would produce (or nothing at all beyond that, if push isn't
 configured in your local `.dev.vars`/`wrangler.toml` — see above). Normal

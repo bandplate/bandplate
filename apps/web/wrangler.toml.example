@@ -1,9 +1,9 @@
 # Deploy config for the Cloudflare Workers profile (increment 7). Build
 # first with `BANDPLATE_ADAPTER=cloudflare astro build` (the Worker goes to
 # `dist/server/`, static assets to `dist/client/`), then `wrangler deploy`
-# (or `wrangler dev` for local verification). See `docs/deploy-cloudflare.md` for the full walkthrough —
-# what a self-deployer creates, which secrets to set, and how migrations
-# run.
+# (or `wrangler dev` for local verification). See
+# `docs/deploy-cloudflare.md` for the full walkthrough — what a
+# self-deployer creates, which secrets to set, and how migrations run.
 name = "bandplate"
 # The Worker's entry: the adapter's stock `fetch` plus the `scheduled`
 # handler the cron below calls. Leave this out and the build falls back to

@@ -329,7 +329,7 @@ reason (not recommended — you lose every guard above):
 
 ```
 cd apps/web
-BANDPLATE_ADAPTER=cloudflare pnpm exec astro build   # → dist/server/ + dist/client/
+BANDPLATE_ADAPTER=cloudflare pnpm exec astro build   # → dist/{server,client}/
 pnpm migrate:remote                                  # step 4, repeated — don't skip on redeploys
 pnpm exec wrangler deploy
 ```
@@ -345,6 +345,16 @@ at the generated `dist/server/wrangler.json` instead of your
 entry and assets paths filled in by the build, so nothing you configured is
 lost, but it only changes when you rebuild: edit `wrangler.toml`, then
 build again before deploying.
+
+So run `wrangler deploy` only after a Cloudflare build in the same
+checkout. That generated config is what keeps `dist/server/` out of the
+public assets; without it wrangler reads `wrangler.toml` directly, and an
+old one that still says `[assets] directory = "dist"` would upload the
+whole server bundle as static files.
+
+The same build also fails, on purpose, when `wrangler.toml` declares a
+cron but the built Worker has no `scheduled` handler (a missing `main`
+does exactly that, silently): see `apps/web/scripts/cron-wiring.ts`.
 
 ## 6. Gated deploys from CI
 
@@ -478,9 +488,10 @@ for this build: wrangler injects that route while bundling, and the Worker
 now arrives already bundled by the Astro build. The request falls through
 to the app, which redirects it to `/login`.)
 
-The `curl` should return `200` with the body `ok`, and the `wrangler dev` terminal logs the
-same `[scheduled] notification tick: sent=...` line a real cron
-invocation would produce (or nothing at all beyond that, if push isn't
+The `curl` should return `200` with the body `ok`, and the
+`wrangler dev` terminal logs the same
+`[scheduled] notification tick: sent=...` line a real cron invocation
+would produce (or nothing at all beyond that, if push isn't
 configured in your local `.dev.vars`/`wrangler.toml` — see above). Normal
 `fetch` handling is unaffected either way; `curl -I
 http://localhost:8787/login` still serves the sign-in page.

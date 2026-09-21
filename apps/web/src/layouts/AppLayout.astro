@@ -37,10 +37,24 @@ export interface Props {
    * page's own `.bp-page-title` stays in the document (it is still the h1)
    * but steps out of sight, so the page's buttons get a row of their own.
    * Past `lg` the header is gone and nothing changes.
+   *
+   * A detail page (a song, an event, a take) does the same, with its hero
+   * heading marked `.bp-titled-heading` instead of `.bp-page-title`, its
+   * favorite star passed as the `header-actions` slot so the star stays
+   * beside the name it belongs to, and its facts as `headerSubtitle`.
    */
   headerTitle?: string;
   /** A count shown after `headerTitle`, in the muted tone: "Skladby (8)". */
   headerCount?: number;
+  /** The muted tail of a take's name: the ": take 1" in "Dezertér: take 1". */
+  headerNote?: string;
+  /**
+   * A detail page's facts, one small line under the name: "Dmi, 76 bpm",
+   * "Zkouška, Dezerter". The page's own copy is `.bp-titled-facts`, hidden
+   * on a phone the way the h1 is, so the facts sit with the name they
+   * describe instead of in pieces below the header.
+   */
+  headerSubtitle?: string;
   principal: MemberPrincipal;
   current: NavKey;
   // Which admin section is open, when `current` is "admin". The sidebar lists
@@ -85,6 +99,8 @@ const {
   description,
   headerTitle,
   headerCount,
+  headerNote,
+  headerSubtitle,
   principal,
   current,
   adminSection,
@@ -162,12 +178,32 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
               <a href="/" class="bp-shell-wordmark" aria-label="bandplate">
                 <Logo size={24} id="header" class="bp-shell-mark" />
               </a>
-              {/* A picture of the h1, not a second one: the heading is the
-                  page's own, which a screen reader already reaches. */}
-              <p class="bp-shell-title bp-m0" aria-hidden="true">
-                {headerTitle}
-                {headerCount !== undefined && <span class="bp-title-count"> ({headerCount})</span>}
-              </p>
+              <div class="bp-shell-titles">
+                <div class="bp-shell-title-line">
+                  {/* A picture of the h1, not a second one: the heading is
+                      the page's own, which a screen reader already reaches. */}
+                  <p class="bp-shell-title bp-m0" aria-hidden="true">
+                    {headerTitle}
+                    {headerNote && <span class="bp-hero-title-note">: {headerNote}</span>}
+                    {headerCount !== undefined && <span class="bp-title-count"> ({headerCount})</span>}
+                  </p>
+                  {/* A real control, so outside the aria-hidden picture. The
+                      page's own copy of it is out of the tree on a phone
+                      (display: none), so there is exactly one star to reach.
+                      On the name's line, not after the block: under a wider
+                      subtitle it would drift away from the name it marks. */}
+                  {Astro.slots.has("header-actions") && (
+                    <div class="bp-shell-header-actions">
+                      <slot name="header-actions" />
+                    </div>
+                  )}
+                </div>
+                {/* A picture too: the page's own copy of these facts is
+                    marked `.bp-titled-facts` and read in its place. */}
+                {headerSubtitle && (
+                  <p class="bp-shell-subtitle bp-m0" aria-hidden="true">{headerSubtitle}</p>
+                )}
+              </div>
             </>
           ) : (
             <a href="/" class="bp-shell-wordmark">

@@ -257,9 +257,20 @@ function assetLabel(asset: assetsRepo.Asset): string {
 <AppLayout
   title={song ? t.takes.pageTitle(heroTitle) : t.takes.pageTitleUnknown}
   description={heroLede}
+  headerTitle={song ? song.title : "Take"}
+  headerNote={song && noteText ? noteText : undefined}
+  headerSubtitle={heroLede}
   principal={principal}
   current="home"
 >
+  <FavoriteToggle
+    slot="header-actions"
+    targetType="take"
+    targetId={take.id}
+    favorited={favorited}
+    label={song ? song.title : t.takes.thisTake}
+    size="lg"
+  />
   {/* Direction T3 from the design canvas: labelled STRIPS hanging off one
       edge, divided by rules, no cards. It is the same grammar the song page
       uses, which is the whole argument for it — a member moving between the
@@ -307,7 +318,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
           now the two match, since a take row's own link text is the song's
           title everywhere except a song page (which is already showing it). */}
       <div class="bp-title-row">
-      <h1 class="bp-hero-title bp-m0">
+      <h1 class="bp-hero-title bp-m0 bp-titled-heading">
         {/* The transition name stays on the SONG alone. It morphs from a take
             row, whose text is the song's title — carrying the label into it
             would morph between two different strings. */}
@@ -367,7 +378,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
         </div>
       </div>
 
-      <p class="bp-take-detail-lede bp-m0">{heroLede}</p>
+      <p class="bp-take-detail-lede bp-m0 bp-titled-facts">{heroLede}</p>
       {/* Whose it is, as the personal event's own hero says it: a labelled
           field, because "osobní nahrávky" in the lede does not name anyone. */}
       {isPersonal && ownerName && (

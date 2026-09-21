@@ -265,9 +265,19 @@ function eventOptionLabel(event: eventsRepo.Event): string {
 <AppLayout
   title={song.title}
   description={shareDescription}
+  headerTitle={song.title}
+  headerSubtitle={metaParts.length > 0 ? metaParts.join(", ") : undefined}
   principal={principal}
   current="songs"
 >
+  <FavoriteToggle
+    slot="header-actions"
+    targetType="song"
+    targetId={song.id}
+    favorited={songFavorited}
+    label={song.title}
+    size="lg"
+  />
   <div class="bp-stack">
     {/* An archived song still renders at its own URL rather than 404ing —
         every take of it links here, and a working link that answers "not
@@ -299,9 +309,9 @@ function eventOptionLabel(event: eventsRepo.Event): string {
     {stashRenamedRow && <Banner kind="success">{t.stash.renamed}</Banner>}
     {formError && <Banner kind="error">{formError}</Banner>}
 
-    <div>
+    <div class="bp-song-hero">
       <div class="bp-title-row">
-      <h1 class="bp-hero-title">
+      <h1 class="bp-hero-title bp-titled-heading">
         {song.title}
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
@@ -327,7 +337,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
       string anyone transcribes — the mono face is reserved for pasted chord
       charts and machine strings (docs/design-foundation.md). Tabular figures
       are what a row of numbers actually needed. */}
-      {metaParts.length > 0 && <p class="bp-song-hero-meta bp-m0">{metaParts.join(", ")}</p>}
+      {metaParts.length > 0 && <p class="bp-song-hero-meta bp-m0 bp-titled-facts">{metaParts.join(", ")}</p>}
 
       {/* The recorder with this song already chosen. A pill, not a button in
           the title row: it is a way to add to the song, beside it, not an

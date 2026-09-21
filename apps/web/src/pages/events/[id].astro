@@ -159,9 +159,19 @@ const [allSongs, allInstruments] = await Promise.all([
 <AppLayout
   title={event.title ?? kindTitle}
   description={shareDescription}
+  headerTitle={formatLongDate(locale, event.heldAt)}
+  headerSubtitle={[kindLabel, event.title, event.venue].filter(Boolean).join(", ")}
   principal={principal}
   current="events"
 >
+  <FavoriteToggle
+    slot="header-actions"
+    targetType="event"
+    targetId={event.id}
+    favorited={eventFavorited}
+    label={eventLabel(event) || `this ${kindLabel}`}
+    size="lg"
+  />
   <div class="bp-stack">
     {isArchived && (
       <Banner kind="info" title={t.events.archivedBanner}>
@@ -224,7 +234,7 @@ const [allSongs, allInstruments] = await Promise.all([
     {formError && <Banner kind="error">{formError}</Banner>}
 
     <header class="bp-event-hero">
-      <div class="bp-event-hero-line">
+      <div class="bp-event-hero-line bp-titled-facts">
         <span class="bp-kind">{kindLabel}</span>
         {/* Not .bp-mono — that's for technical data (chord progressions,
         timestamps, durations), not a human title, and its word-break:
@@ -232,7 +242,7 @@ const [allSongs, allInstruments] = await Promise.all([
         boundaries to break at. */}
         {event.venue && <span class="bp-event-hero-venue">{event.venue}</span>}
       </div>
-      <h1 class="bp-hero-date">
+      <h1 class="bp-hero-date bp-titled-heading">
         {formatLongDate(locale, event.heldAt)}
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
@@ -244,7 +254,7 @@ const [allSongs, allInstruments] = await Promise.all([
           />
         </span>
       </h1>
-      {event.title && <p class="bp-event-hero-title bp-m0">{event.title}</p>}
+      {event.title && <p class="bp-event-hero-title bp-m0 bp-titled-facts">{event.title}</p>}
       {isPersonal && owner && (
         <p class="bp-event-hero-title bp-m0">{t.events.recordedByLabel}: {owner.displayName}</p>
       )}

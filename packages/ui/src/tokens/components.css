@@ -2344,18 +2344,71 @@ a.bp-btn {
   font-weight: 500;
 }
 
+/* Two lines before it gives up, not one. A list page's name is one short
+   word, but a song's is whatever the band called it, and on a detail page
+   this is the only place the name is visible on a phone: an ellipsis after
+   one line would cut it off on its own page. */
 .bp-shell-title {
+  display: -webkit-box;
   min-width: 0;
   overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-family: var(--bp-font-display);
   font-weight: 700;
   font-size: 1.5rem;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
+}
+
+/* The name, and on a detail page the facts under it. A column so the facts
+   line up under the name rather than under the mark. */
+.bp-shell-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bp-shell-title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+/* The facts under a detail page's name: "Dmi, 76 bpm", "Zkouška, Dezerter".
+   Body face at meta size and muted, the same voice the hero gave them, so
+   they read as a note on the name rather than a second title. */
+.bp-shell-subtitle {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A detail page's star, right after its name rather than pushed to the far
+   edge: it is a mark on the thing named, the same place the hero heading
+   keeps it. The name gives way first when the row runs out. The negative
+   block margin keeps its 44px touch box from making the name's line taller
+   than the name, which would push the facts line away from it. */
+.bp-shell-header-actions {
+  display: inline-flex;
+  flex: none;
+  margin-block: -0.625rem;
+  margin-left: -0.5rem;
 }
 
 @media (max-width: 1023.98px) {
+  /* The hero's own star is display: none, not merely clipped with its
+     heading: a visually hidden heading is still read, and a control inside it
+     would be a second, invisible, focusable copy of the header's star. */
+  .bp-shell--titled .bp-titled-heading .bp-take-favorite-mark {
+    display: none;
+  }
+
+  .bp-shell--titled .bp-titled-heading,
+  .bp-shell--titled .bp-titled-facts,
   .bp-shell--titled .bp-page-title {
     position: absolute;
     width: 1px;
@@ -3279,7 +3332,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   font-size: var(--text-note, 0.8125rem);
   color: var(--bp-color-muted);
   margin-top: 0.1875rem;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* The X is the desktop dismissal; on a phone the grip and a tap outside do
@@ -9563,4 +9616,31 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 .bp-song-record {
   margin-top: 0.75rem;
+}
+
+/* On a phone the song's name and its key and tempo are up in the header,
+   and what was its title row is only Edit. A row of one button above a row
+   of one pill reads as two leftovers, so Edit joins the record pill in one
+   row of things to do. */
+@media (max-width: 1023.98px) {
+  .bp-shell--titled .bp-song-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 0.5rem;
+  }
+
+  .bp-shell--titled .bp-song-hero > * {
+    flex-basis: 100%;
+  }
+
+  /* No margin of their own: it spaced them from the key and tempo, which
+     are up in the header now. The row gap spaces them from the stub hint
+     when there is one, and from nothing when there is not. */
+  .bp-shell--titled .bp-song-hero > .bp-title-row,
+  .bp-shell--titled .bp-song-hero > .bp-song-record {
+    flex-basis: auto;
+    order: 1;
+    margin-top: 0;
+  }
 }

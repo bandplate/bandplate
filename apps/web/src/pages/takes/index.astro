@@ -169,7 +169,7 @@ if (!viewingStash && pages.redirectTo) {
 const countLabel = t.takes.count(total);
 ---
 
-<AppLayout title={t.takes.title} principal={principal} current="takes">
+<AppLayout title={t.takes.title} headerTitle={viewingStash ? t.stash.pill : t.takes.title} principal={principal} current="takes">
   <div class={viewingStash ? "bp-takes bp-takes--stash" : "bp-takes"}>
     <div class="bp-takes-bar">
       <h1 class="bp-page-title bp-m0 bp-takes-bar-title">

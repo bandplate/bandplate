@@ -29,6 +29,16 @@ export interface Props {
    * safe to do on a private archive.
    */
   description?: string;
+  /**
+   * The page's own name, for the phone's header row. A list page (Songs,
+   * Events, Takes) spends that row on the product name and then a whole
+   * second row on its own title beside two buttons, which is where they
+   * overflowed. Given one, the phone header shows the mark and this, and the
+   * page's own `.bp-page-title` stays in the document (it is still the h1)
+   * but steps out of sight, so the page's buttons get a row of their own.
+   * Past `lg` the header is gone and nothing changes.
+   */
+  headerTitle?: string;
   principal: MemberPrincipal;
   current: NavKey;
   // Which admin section is open, when `current` is "admin". The sidebar lists
@@ -71,6 +81,7 @@ export interface Props {
 const {
   title,
   description,
+  headerTitle,
   principal,
   current,
   adminSection,
@@ -138,14 +149,26 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
     aria-hidden="true"
     transition:persist="route-progress"
   ></div>
-  <div class="bp-shell" data-member-id={principal.memberId}>
+  <div class={headerTitle ? "bp-shell bp-shell--titled" : "bp-shell"} data-member-id={principal.memberId}>
     {
       chrome && (
         <header class="bp-shell-header">
-          <a href="/" class="bp-shell-wordmark">
-            <Logo size={24} id="header" class="bp-shell-mark" />
-            bandplate
-          </a>
+          {headerTitle ? (
+            <>
+              {/* The mark alone still goes home, so it has to say so. */}
+              <a href="/" class="bp-shell-wordmark" aria-label="bandplate">
+                <Logo size={24} id="header" class="bp-shell-mark" />
+              </a>
+              {/* A picture of the h1, not a second one: the heading is the
+                  page's own, which a screen reader already reaches. */}
+              <p class="bp-shell-title bp-m0" aria-hidden="true">{headerTitle}</p>
+            </>
+          ) : (
+            <a href="/" class="bp-shell-wordmark">
+              <Logo size={24} id="header" class="bp-shell-mark" />
+              bandplate
+            </a>
+          )}
         </header>
       )
     }

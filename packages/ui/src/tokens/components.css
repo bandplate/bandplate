@@ -5897,10 +5897,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 /* The event's notes on the card the take's facts and the home page's Šuplík
-   use: 6% fill, 1rem radius, the same padding. Ink, not muted: muted text
-   never sits on a fill. The measure moves to the card so the text inside
-   keeps its line length and the card does not stretch past it. */
+   use: 6% fill, 1rem radius, the same padding, and the same small label
+   over its content ("Poznámky"). Ink, not muted: muted text never sits on a
+   fill. The measure moves to the card so the text inside keeps its line
+   length and the card does not stretch past it. */
 .bp-event-hero-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   max-width: 62ch;
   padding: 1.125rem 1.25rem;
   border-radius: 1rem;

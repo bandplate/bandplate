@@ -266,7 +266,12 @@ const [allSongs, allInstruments] = await Promise.all([
       {/* The band's own words about the day, before anything to press: on a
           phone the date and kind are up in the header, so this is the first
           thing the page says. A card, the same one the take's facts sit on. */}
-      {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
+      {event.notes && (
+        <div class="bp-event-hero-notes">
+          <span class="bp-take-panel-label">{t.events.notesLabel}</span>
+          <p class="bp-m0">{event.notes}</p>
+        </div>
+      )}
       <div class="bp-event-hero-actions">
         {hasPlayable && (
           <button

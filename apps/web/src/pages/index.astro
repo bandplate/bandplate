@@ -121,7 +121,9 @@ const stashCard = stash
     {
       stand && (
         <section class="bp-home-section" aria-labelledby="home-stand-heading">
-          <h2 id="home-stand-heading" class="bp-section-title bp-home-heading">
+          {/* The card says what it is ("Nové od tvé poslední návštěvy"), so
+              the heading is for the page outline only, not for the eye. */}
+          <h2 id="home-stand-heading" class="bp-visually-hidden">
             {t.home.onTheStand}
           </h2>
           <div class="bp-stand">

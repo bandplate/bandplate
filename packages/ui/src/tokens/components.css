@@ -7517,18 +7517,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 }
 
-.bp-pill-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 0.875rem;
-  height: 0.875rem;
-  flex: none;
-}
-
-.bp-pill[aria-pressed="false"] .bp-pill-mark {
-  opacity: 0.35;
-}
-
 /* ---------------------------------------------------------------------- */
 /* /me — a member's profile, built on the record plate.                   */
 /* ---------------------------------------------------------------------- */

@@ -7,8 +7,6 @@ import { messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
-import Check from "@lucide/astro/icons/check";
-import Circle from "@lucide/astro/icons/circle";
 import Plus from "@lucide/astro/icons/plus";
 import EventLedger from "../../components/EventLedger.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
@@ -206,13 +204,6 @@ function archivedHref(): string {
           const on = selected.includes(option.value);
           return (
             <a href={toggleHref(option.value)} class="bp-pill" aria-pressed={on ? "true" : "false"}>
-              <span class="bp-pill-mark" aria-hidden="true">
-                {on ? (
-                  <Check stroke-width={3.2} />
-                ) : (
-                  <Circle stroke-width={2.4} />
-                )}
-              </span>
               {option.label}
             </a>
           );

@@ -821,11 +821,12 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       expect(body).toContain("bp-profile-figure-none");
     });
 
-    it("declines the take count rather than bolting an s on", async () => {
+    it("counts the takes in the Czech title, never the English one", async () => {
       const body = await (await fetch(`${ORIGIN}/takes`, { headers: signedIn() })).text();
-      // 1 nahrávka · 2–4 nahrávky · 5+ nahrávek — whichever the seed produces,
-      // it must be one of those and never the English form.
-      expect(body).toMatch(/\d+ nahráv(ka|ky|ek)/);
+      // The count moved out of a sentence ("4 nahrávky") into the title
+      // ("Nahrávky (4)"), so there is no noun to decline any more; what can
+      // still go wrong is the English page title or an English count leaking.
+      expect(body).toMatch(/Nahrávky\s*<span class="bp-title-count">\(\d+\)<\/span>/);
       expect(body).not.toMatch(/\d+ takes?\b/);
     });
   });

@@ -999,7 +999,12 @@ a.bp-btn {
 .bp-song-row,
 .bp-take-row,
 .bp-ledger-row {
-  --bp-row-gutter: 0.625rem;
+  /* 14px, the same for every row type. At 10px the rows were equal in the
+     box model and unequal to the eye: a take row starts with a round plate
+     and an event row with a centred date, both carrying air of their own,
+     while a song row starts with its title flush against the fill's edge.
+     The inset is what the eye reads, so it is set for the tightest case. */
+  --bp-row-gutter: 0.875rem;
   padding-inline: var(--bp-row-gutter);
   margin-inline: calc(var(--bp-row-gutter) * -1);
 }

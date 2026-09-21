@@ -164,6 +164,11 @@ const [allSongs, allInstruments] = await Promise.all([
   principal={principal}
   current="events"
 >
+  {!isPersonal && (
+    <button slot="header-end" type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="edit-event">
+      {t.events.edit}
+    </button>
+  )}
   <FavoriteToggle
     slot="header-actions"
     targetType="event"
@@ -272,7 +277,7 @@ const [allSongs, allInstruments] = await Promise.all([
           </button>
         )}
         {!isPersonal && (
-          <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-event">
+          <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm bp-titled-action" data-sheet-open="edit-event">
             {t.events.edit}
           </button>
         )}

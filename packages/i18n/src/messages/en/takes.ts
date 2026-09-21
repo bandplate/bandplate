@@ -82,6 +82,11 @@ export const takes = {
   listenHeading: "Listen",
   yourVoteHeading: "Your vote",
   instrumentsHeading: "Instruments",
+  /** The labels over the facts panel under a take's phone header. */
+  panelEventLabel: "Event",
+  lengthLabel: "Length",
+  /** The band's ruling on the take: keeper or rejected. */
+  verdictLabel: "Verdict",
   songHeading: "Song",
 
   playThisTake: "Play this take",

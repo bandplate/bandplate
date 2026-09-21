@@ -202,20 +202,15 @@ const heroSubtitle = event
   ? `${kindLabel} — ${formatLongDate(locale, event.heldAt)}`
   : formatLongDate(locale, take.recordedAt);
 
-// The phone header's line under the song's name. The label leads it rather
-// than trailing the name: it is what tells two takes of one song apart, and
-// after the name a long one wrapped the title and was cut anyway. The rest is
-// the lede's facts as a list, the way the song and event headers say theirs.
-// With no song the title is already the date, so the date is not said twice.
+// The phone header's line under the song's name: the take's own label and
+// nothing else. It is what tells two takes of one song apart; where and when
+// it was played are facts, and they have labelled places in the panel below.
 const headerLead = song && noteText ? noteText : undefined;
-const headerFacts = factsLine(
-  [
-    event ? eventName || kindLabel : null,
-    song ? formatLongDate(locale, event ? event.heldAt : take.recordedAt) : null,
-  ],
-  locale,
-  { lineStart: !headerLead },
-);
+// The panel's event cell. The catalog's kind words are lowercase, and here
+// one can stand alone as a value ("Zkouška").
+const panelEvent = event ? factsLine([eventName || kindLabel], locale) : null;
+const panelDate = formatLongDate(locale, event ? event.heldAt : take.recordedAt);
+const ruled = take.state === "keeper" || take.state === "rejected";
 
 // The link preview's sentence is the page's own lede. A second one written
 // for the card is a second one to keep true.
@@ -274,21 +269,52 @@ function assetLabel(asset: assetsRepo.Asset): string {
   description={heroLede}
   headerTitle={song ? song.title : heroTitle}
   headerSubtitleLead={headerLead}
-  headerSubtitle={headerFacts}
   principal={principal}
   current="home"
 >
-  <Fragment slot="header-panel">
-    <span class="bp-shell-subbar-time">{formatDuration(take.durationMs)}</span>
-    <InstrumentSet instruments={instruments} />
-    {
-      (take.state === "keeper" || take.state === "rejected") && (
-        <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-          {TAKE_STATE_LABEL[take.state]}
-        </span>
-      )
-    }
-  </Fragment>
+  {/* Phone only: the take's measurable facts, each under its own label, on a
+      panel joined under the header. The hero's own run of them is
+      `.bp-titled-facts` and is what assistive tech reads. */}
+  <div slot="header-panel" class="bp-take-panel">
+    {panelEvent && (
+      <div class="bp-take-panel-cell">
+        <span class="bp-take-panel-label">{t.takes.panelEventLabel}</span>
+        <span class="bp-take-panel-event">{panelEvent}</span>
+      </div>
+    )}
+    <div class="bp-take-panel-row">
+      <div class="bp-take-panel-cell">
+        <span class="bp-take-panel-label">{t.takes.recordedLabel}</span>
+        <span class="bp-take-panel-value">{panelDate}</span>
+      </div>
+      <div class="bp-take-panel-cell">
+        <span class="bp-take-panel-label">{t.takes.lengthLabel}</span>
+        <span class="bp-take-panel-value">{formatDuration(take.durationMs)}</span>
+      </div>
+      {ruled && (
+        <div class="bp-take-panel-cell">
+          <span class="bp-take-panel-label">{t.takes.verdictLabel}</span>
+          <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
+            {TAKE_STATE_LABEL[take.state]}
+          </span>
+        </div>
+      )}
+    </div>
+    {instruments.length > 0 && (
+      <div class="bp-take-panel-cell">
+        <span class="bp-take-panel-label">{t.takes.instrumentsHeading}</span>
+        <InstrumentSet instruments={instruments} />
+      </div>
+    )}
+  </div>
+  <button
+    slot="header-end"
+    type="button"
+    class="bp-btn bp-btn-secondary bp-btn-xs"
+    data-sheet-open="edit-take"
+  >
+    {t.takes.edit}
+  </button>
   <FavoriteToggle
     slot="header-actions"
     targetType="take"
@@ -398,7 +424,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
               </a>
             </>
           )}
-          <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-take">
+          <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm bp-titled-action" data-sheet-open="edit-take">
             {t.takes.edit}
           </button>
         </div>

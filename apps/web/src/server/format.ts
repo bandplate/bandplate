@@ -106,18 +106,13 @@ export function takeNote(label: string | null | undefined, kindLabel: string): s
  * separator (docs/design-foundation.md). Blank parts drop out rather than
  * leaving ", ," behind.
  *
- * Capitalised at the start of a line because the catalog's kind words are
- * lowercase, to read right mid-sentence. `lineStart: false` is for a line
- * that begins with something else — a take's own label, which is the band's
- * text and is shown exactly as typed.
+ * Capitalised at the start, because the catalog's kind words are lowercase
+ * to read right mid-sentence, and a line of facts (or a lone value: a take
+ * panel's "Zkouška") must not open on one.
  */
-export function factsLine(
-  parts: readonly (string | null | undefined)[],
-  locale: Locale,
-  { lineStart = true }: { lineStart?: boolean } = {},
-): string {
+export function factsLine(parts: readonly (string | null | undefined)[], locale: Locale): string {
   const line = parts.filter((part): part is string => Boolean(part?.trim())).join(", ");
-  if (!lineStart || line === "") {
+  if (line === "") {
     return line;
   }
   return line.charAt(0).toLocaleUpperCase(locale) + line.slice(1);

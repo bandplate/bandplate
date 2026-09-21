@@ -29,10 +29,4 @@ describe("factsLine", () => {
     expect(factsLine(["živě", "17. září 2026"], "cs")).toBe("Živě, 17. září 2026");
     expect(factsLine(["rehearsal"], "en")).toBe("Rehearsal");
   });
-
-  it("stays lowercase when it continues a line something else began", () => {
-    expect(factsLine(["zkouška", "13. září 2026"], "cs", { lineStart: false })).toBe(
-      "zkouška, 13. září 2026",
-    );
-  });
 });

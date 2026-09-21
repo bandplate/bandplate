@@ -106,6 +106,9 @@ export const takes = {
   listenHeading: "Poslech", // en: Listen
   yourVoteHeading: "Tvůj hlas", // en: Your vote
   instrumentsHeading: "Nástroje", // en: Instruments
+  panelEventLabel: "Akce", // en: Event
+  lengthLabel: "Délka", // en: Length
+  verdictLabel: "Verdikt", // en: Verdict
   songHeading: "Skladba", // en: Song
 
   playThisTake: "Přehrát tuhle nahrávku", // en: Play this take

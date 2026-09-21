@@ -270,6 +270,9 @@ function eventOptionLabel(event: eventsRepo.Event): string {
   principal={principal}
   current="songs"
 >
+  <button slot="header-end" type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="edit-song">
+    {t.songs.edit}
+  </button>
   <FavoriteToggle
     slot="header-actions"
     targetType="song"
@@ -323,7 +326,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           />
         </span>
       </h1>
-        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm" data-sheet-open="edit-song">
+        <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm bp-titled-action" data-sheet-open="edit-song">
           {t.songs.edit}
         </button>
       </div>

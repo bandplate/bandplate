@@ -60,6 +60,12 @@ import {
   playQueue,
   sourcesUrl,
 } from "../client/player-store.js";
+import {
+  barCountForWidth,
+  finiteDuration,
+  formatClock,
+  playedFraction,
+} from "../client/timeline.js";
 import { NowPlayingSheet } from "./NowPlayingSheet.tsx";
 
 /**
@@ -91,25 +97,6 @@ const MAX_WAVEFORM_BARS = 1000;
  */
 function playerText(fallback?: Locale) {
   return playerMessages(currentLocale(fallback));
-}
-
-/**
- * mm:ss. Chivo's tabular figures (see `.bp-player-time`) keep it from shifting
- * as it ticks.
- *
- * NOT `@bandplate/i18n`'s `formatDuration`, despite looking like it. This is a
- * live clock reading `audio.currentTime`, so it FLOORS — rounding would show
- * 1:00 from 0:59.5 onward, half a second before the minute. The shared one
- * rounds, because it renders a stored `durationMs` where the nearest second is
- * the honest answer. Both are digits and colons in every language, so neither
- * takes a locale.
- */
-function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) {
-    return "0:00";
-  }
-  const whole = Math.floor(seconds);
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
 }
 
 interface SourceButtonData {
@@ -387,9 +374,9 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       }
     };
     const onTime = () => setPlayhead(audio.currentTime);
-    const onDuration = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+    const onDuration = () => setDuration(finiteDuration(audio.duration));
     const onLoadedMetadata = () => {
-      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+      setDuration(finiteDuration(audio.duration));
       if (pendingSeekRef.current !== null) {
         audio.currentTime = pendingSeekRef.current;
         pendingSeekRef.current = null;
@@ -736,12 +723,14 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       return;
     }
     const measure = (width: number) => {
-      if (width <= 0) {
-        return;
+      const count = barCountForWidth(width, {
+        pitch: BAR_PITCH_PX,
+        min: MIN_WAVEFORM_BARS,
+        max: MAX_WAVEFORM_BARS,
+      });
+      if (count !== null) {
+        setBarCount(count);
       }
-      setBarCount(
-        Math.max(MIN_WAVEFORM_BARS, Math.min(MAX_WAVEFORM_BARS, Math.round(width / BAR_PITCH_PX))),
-      );
     };
     measure(el.getBoundingClientRect().width);
     const observer = new ResizeObserver((entries) => {
@@ -757,7 +746,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     () => (peaks ? downsamplePeaks(peaks, Math.max(1, Math.min(barCount, peaks.length))) : []),
     [peaks, barCount],
   );
-  const progress = duration > 0 ? playhead / duration : 0;
+  const progress = playedFraction(playhead, duration);
 
   // The queue's own position — "3 of 10" — distinct from `playhead`, the
   // scrub position in seconds, which is why that state was renamed above.
@@ -889,7 +878,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       </div>
 
       <div class="bp-player-scrub">
-        <span class="bp-player-time">{formatTime(playhead)}</span>
+        <span class="bp-player-time">{formatClock(playhead)}</span>
         {/* The seek control is a REAL `<input type="range">`, sized over the
             drawing and visually transparent. That is what keeps everything
             the native `<audio controls>` used to give for free — keyboard
@@ -925,7 +914,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             value={playhead}
             disabled={duration <= 0}
             aria-label={t.seek}
-            aria-valuetext={`${formatTime(playhead)} of ${formatTime(duration)}`}
+            aria-valuetext={`${formatClock(playhead)} of ${formatClock(duration)}`}
             onInput={(event) => {
               const audio = audioRef.current;
               const next = Number((event.currentTarget as HTMLInputElement).value);
@@ -936,7 +925,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
             }}
           />
         </span>
-        <span class="bp-player-time">{formatTime(duration)}</span>
+        <span class="bp-player-time">{formatClock(duration)}</span>
       </div>
 
       {/* The title button's sheet — sources, the mixer link, the running

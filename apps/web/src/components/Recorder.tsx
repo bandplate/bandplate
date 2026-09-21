@@ -29,6 +29,7 @@ import {
 } from "../client/recorder-logic.js";
 import { putPending } from "../client/stash-db.js";
 import { newPendingItem } from "../client/stash-sync-logic.js";
+import { fractionAt, playedFraction, scrollFades } from "../client/timeline.js";
 
 interface Props {
   locale: Locale;
@@ -161,10 +162,7 @@ export default function Recorder({
     if (!list) {
       return;
     }
-    setSongsMore({
-      above: list.scrollTop > 1,
-      below: list.scrollTop + list.clientHeight < list.scrollHeight - 1,
-    });
+    setSongsMore(scrollFades(list));
   }, []);
   useEffect(() => {
     const list = songListRef.current;
@@ -471,9 +469,10 @@ export default function Recorder({
     if (!audio || !target || !Number.isFinite(audio.duration)) {
       return;
     }
-    const box = target.getBoundingClientRect();
-    audio.currentTime =
-      Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)) * audio.duration;
+    const fraction = fractionAt(event.clientX, target.getBoundingClientRect());
+    if (fraction !== null) {
+      audio.currentTime = fraction * audio.duration;
+    }
   }, []);
 
   const errorText: Record<RecorderError, string> = {
@@ -637,11 +636,7 @@ export default function Recorder({
               onEnded={() => setPlaying(false)}
               onTimeUpdate={(event) => {
                 const audio = event.currentTarget as HTMLAudioElement;
-                setProgress(
-                  Number.isFinite(audio.duration) && audio.duration > 0
-                    ? audio.currentTime / audio.duration
-                    : 0,
-                );
+                setProgress(playedFraction(audio.currentTime, audio.duration));
               }}
             />
           )}

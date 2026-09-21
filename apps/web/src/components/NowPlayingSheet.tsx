@@ -17,6 +17,7 @@ import { ChevronDown, Pause, Play, SkipBack, SkipForward, SlidersVertical } from
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { PlayQueue } from "../client/player-queue.js";
 import { AUDIO_SOURCE_ATTR, type PlayerSource, type PlayerTrack } from "../client/player-store.js";
+import { scrollFades } from "../client/timeline.js";
 
 export interface NowPlayingSheetProps {
   open: boolean;
@@ -81,10 +82,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
   }, [open, queueIndex, queueLength]);
 
   function updateMore(list: HTMLElement) {
-    setMore({
-      above: list.scrollTop > 1,
-      below: list.scrollTop + list.clientHeight < list.scrollHeight - 1,
-    });
+    setMore(scrollFades(list));
   }
 
   const position =

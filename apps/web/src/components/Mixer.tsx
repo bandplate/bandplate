@@ -43,6 +43,7 @@ import {
   toggleMuteMine,
   trackGains,
 } from "../client/mixer-tracks.js";
+import { barCountForWidth, formatClock, fractionAt, playedFraction } from "../client/timeline.js";
 import { type MixerFailure, useMixerEngine } from "../client/use-mixer-engine.js";
 
 export interface MixerTrackProps {
@@ -68,15 +69,6 @@ const BAR_PITCH_PX = 3;
 const DRAG_SLOP_PX = 4;
 const MIN_BARS = 40;
 const MAX_BARS = 600;
-
-/** mm:ss. Floored, because it is a running clock and rounding it up shows a second that has not happened. */
-function clock(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) {
-    return "0:00";
-  }
-  const total = Math.floor(seconds);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
-}
 
 /**
  * The engine reports WHY it stopped; the words are chosen here, in the
@@ -184,8 +176,9 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
     }
     const observer = new ResizeObserver(() => {
       const width = el.getBoundingClientRect().width;
-      if (width > 0) {
-        setBars(Math.max(MIN_BARS, Math.min(MAX_BARS, Math.round(width / BAR_PITCH_PX))));
+      const count = barCountForWidth(width, { pitch: BAR_PITCH_PX, min: MIN_BARS, max: MAX_BARS });
+      if (count !== null) {
+        setBars(count);
       }
     });
     observer.observe(el);
@@ -196,7 +189,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
   // single custom property. Seven lanes each re-rendering at the transport's
   // rate is not the design — and the value is a fraction so the lanes can
   // position it without knowing their own width.
-  const progress = duration > 0 ? Math.min(1, position / duration) : 0;
+  const progress = Math.min(1, playedFraction(position, duration));
   const ticks = timelineTicks(duration);
 
   const scrubTo = useCallback(
@@ -221,11 +214,8 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
       if (!bar || duration <= 0) {
         return null;
       }
-      const box = bar.getBoundingClientRect();
-      if (box.width <= 0) {
-        return null;
-      }
-      return Math.max(0, Math.min(1, (clientX - box.left) / box.width)) * duration;
+      const fraction = fractionAt(clientX, bar.getBoundingClientRect());
+      return fraction === null ? null : fraction * duration;
     },
     [duration],
   );
@@ -353,8 +343,8 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
               <Pause size={18} class="bp-play-icon-pause" aria-hidden="true" fill="currentColor" />
             </button>
             <span class="bp-mixer-clock">
-              {clock(position)}
-              {duration > 0 && <span class="bp-mixer-duration">/ {clock(duration)}</span>}
+              {formatClock(position)}
+              {duration > 0 && <span class="bp-mixer-duration">/ {formatClock(duration)}</span>}
             </span>
             {canMuteMine && (
               /* Icon-only, because the gutter is 184px and the sentence does
@@ -405,7 +395,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
               value={progress}
               disabled={duration <= 0}
               aria-label={t.seek}
-              aria-valuetext={clock(position)}
+              aria-valuetext={formatClock(position)}
               onChange={(event) => scrubTo(Number((event.target as HTMLInputElement).value))}
             />
           </div>
@@ -457,7 +447,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
             </span>
             {loop && (
               <span class="bp-mixer-loop-times">
-                {clock(loop.startS)}–{clock(loop.endS)}
+                {formatClock(loop.startS)}–{formatClock(loop.endS)}
               </span>
             )}
           </span>
@@ -482,7 +472,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                 <span
                   class="bp-mixer-loop-band"
                   aria-hidden="true"
-                  title={t.loopRegion(clock(loop.startS), clock(loop.endS))}
+                  title={t.loopRegion(formatClock(loop.startS), formatClock(loop.endS))}
                   style={`--bp-loop-a: ${band.start}; --bp-loop-b: ${band.end}`}
                 />
                 {/* Hand-rolled, and this is the one place in the app where
@@ -498,7 +488,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                   aria-valuemin={0}
                   aria-valuemax={duration}
                   aria-valuenow={loop.startS}
-                  aria-valuetext={clock(loop.startS)}
+                  aria-valuetext={formatClock(loop.startS)}
                   style={`--bp-loop-at: ${band.start}`}
                   onPointerDown={(event) => {
                     event.stopPropagation();
@@ -514,7 +504,7 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                   aria-valuemin={0}
                   aria-valuemax={duration}
                   aria-valuenow={loop.endS}
-                  aria-valuetext={clock(loop.endS)}
+                  aria-valuetext={formatClock(loop.endS)}
                   style={`--bp-loop-at: ${band.end}`}
                   onPointerDown={(event) => {
                     event.stopPropagation();
@@ -634,9 +624,12 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                   class="bp-mixer-wave"
                   aria-hidden="true"
                   onClick={(event) => {
-                    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
-                    if (box.width > 0) {
-                      scrubTo(Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)));
+                    const fraction = fractionAt(
+                      event.clientX,
+                      (event.currentTarget as HTMLElement).getBoundingClientRect(),
+                    );
+                    if (fraction !== null) {
+                      scrubTo(fraction);
                     }
                   }}
                 >

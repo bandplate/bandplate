@@ -173,6 +173,23 @@ if (!viewingStash && pages.redirectTo) {
 
 <AppLayout title={t.takes.title} headerTitle={viewingStash ? t.stash.pill : t.takes.title}
   headerCount={viewingStash ? stashCount : total} principal={principal} current="takes">
+  {/* The stash pill again, up in the phone header line at the small size.
+      The bar's own copy below is hidden on a phone (`.bp-titled-action`), so
+      there is one to reach at every width. */}
+  <a
+    slot="header-end"
+    href={viewingStash ? "/takes" : "/takes?stash=1"}
+    class={
+      viewingStash
+        ? "bp-pill bp-pill--action bp-pill--header bp-pill--stash-close"
+        : "bp-pill bp-pill--action bp-pill--header"
+    }
+    aria-pressed={viewingStash ? "true" : "false"}
+  >
+    <Inbox size={14} aria-hidden="true" />
+    {viewingStash ? <span class="bp-record-word">{t.stash.pillClose}</span> : t.stash.pill}
+    {!viewingStash && stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
+  </a>
   <div class={viewingStash ? "bp-takes bp-takes--stash" : "bp-takes"}>
     <div class="bp-takes-bar">
       <h1 class="bp-page-title bp-m0 bp-takes-bar-title">
@@ -200,8 +217,8 @@ if (!viewingStash && pages.redirectTo) {
         href={viewingStash ? "/takes" : "/takes?stash=1"}
         class={
           viewingStash
-            ? "bp-pill bp-pill--action bp-pill--stash-close"
-            : "bp-pill bp-pill--action"
+            ? "bp-pill bp-pill--action bp-pill--stash-close bp-titled-action"
+            : "bp-pill bp-pill--action bp-titled-action"
         }
         aria-pressed={viewingStash ? "true" : "false"}
       >

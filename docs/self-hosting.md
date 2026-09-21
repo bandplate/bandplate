@@ -8,7 +8,7 @@ in the [README](../README.md).
 Two deployment profiles build from the same source tree, selected per build
 by `BANDPLATE_ADAPTER`:
 
-- **Node** (default) — `astro build && node dist/start.mjs`, anywhere Node 20
+- **Node** (default) — `astro build && node dist/start.mjs`, anywhere Node 22
   runs. SQLite via libSQL, any S3-compatible bucket.
 - **Cloudflare Workers** — `BANDPLATE_ADAPTER=cloudflare astro build`, then
   `wrangler deploy`. D1 for the database, R2 for audio. See
@@ -16,7 +16,7 @@ by `BANDPLATE_ADAPTER`:
 
 ## Toolchain
 
-- Node 20.18.1 (see `.nvmrc`)
+- Node 22.23.2 (see `.nvmrc`)
 - pnpm 10.33.0, managed via corepack (`"packageManager"` in `package.json`)
 
 ```sh

@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@bandplate/storage": "workspace:*",
-    "@cloudflare/workers-types": "^5.20260907.1",
+    "@cloudflare/workers-types": "^5.20260921.1",
     "drizzle-kit": "0.31.11",
     "esbuild": "^0.24.0",
     "tsx": "^4.19.2",

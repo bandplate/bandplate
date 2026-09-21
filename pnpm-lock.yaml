@@ -88,8 +88,8 @@ importers:
         specifier: ^0.9.4
         version: 0.9.10(prettier@3.9.6)(typescript@5.9.3)
       '@cloudflare/workers-types':
-        specifier: ^5.20260907.1
-        version: 5.20260907.1
+        specifier: ^5.20260921.1
+        version: 5.20260921.1
       esbuild:
         specifier: ^0.24.0
         version: 0.24.2
@@ -104,7 +104,7 @@ importers:
         version: 2.1.9(@types/node@26.4.1)(lightningcss@1.32.0)
       wrangler:
         specifier: 4.135.0
-        version: 4.135.0(@cloudflare/workers-types@5.20260907.1)(@types/node@26.4.1)
+        version: 4.135.0(@cloudflare/workers-types@5.20260921.1)(@types/node@26.4.1)
 
   packages/api:
     dependencies:
@@ -141,7 +141,7 @@ importers:
         version: 2.1.9(@types/node@26.4.1)(lightningcss@1.32.0)
       wrangler:
         specifier: 4.135.0
-        version: 4.135.0(@cloudflare/workers-types@5.20260907.1)(@types/node@26.4.1)
+        version: 4.135.0(@cloudflare/workers-types@5.20260921.1)(@types/node@26.4.1)
 
   packages/core:
     dependencies:
@@ -178,14 +178,14 @@ importers:
         version: 0.14.0
       drizzle-orm:
         specifier: 0.45.3
-        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.14.0)(gel@2.2.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260921.1)(@libsql/client@0.14.0)(gel@2.2.0)
     devDependencies:
       '@bandplate/storage':
         specifier: workspace:*
         version: link:../storage
       '@cloudflare/workers-types':
-        specifier: ^5.20260907.1
-        version: 5.20260907.1
+        specifier: ^5.20260921.1
+        version: 5.20260921.1
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
@@ -649,8 +649,8 @@ packages:
   '@cloudflare/workers-types@4.20260702.1':
     resolution: {integrity: sha512-mOhf5TUEB1m2vPrxtqoIGfz0fUC9xyxRDx5gWHy5s+OCo6dcV+g7wI1R7gYCMFohhqF/2y2xeKVwMwCJjfn/WA==}
 
-  '@cloudflare/workers-types@5.20260907.1':
-    resolution: {integrity: sha512-HYI7eFb/MOcNzvbUW7ZwHVZL5YFXb4r6yHN3vx8gJCqde7yhn3bhuPKiQPw90UtGWWp7uOI+Que3kf8Svjn5cw==}
+  '@cloudflare/workers-types@5.20260921.1':
+    resolution: {integrity: sha512-uXGGKlxIrXx9/I33MIdq1hUv+yVTKCBLIJiQ9PthEgLrqePEELYYRC75I0Qw6JUa3cYtoJI8y6ewyLYHPkIP7g==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -5402,7 +5402,7 @@ snapshots:
 
   '@cloudflare/workers-types@4.20260702.1': {}
 
-  '@cloudflare/workers-types@5.20260907.1': {}
+  '@cloudflare/workers-types@5.20260921.1': {}
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
@@ -7240,9 +7240,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.13
 
-  drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.14.0)(gel@2.2.0):
+  drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260921.1)(@libsql/client@0.14.0)(gel@2.2.0):
     optionalDependencies:
-      '@cloudflare/workers-types': 5.20260907.1
+      '@cloudflare/workers-types': 5.20260921.1
       '@libsql/client': 0.14.0
       gel: 2.2.0
 
@@ -9155,7 +9155,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20260918.1
       '@cloudflare/workerd-windows-64': 1.20260918.1
 
-  wrangler@4.135.0(@cloudflare/workers-types@5.20260907.1)(@types/node@26.4.1):
+  wrangler@4.135.0(@cloudflare/workers-types@5.20260921.1)(@types/node@26.4.1):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260918.1)
@@ -9166,7 +9166,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20260918.1
     optionalDependencies:
-      '@cloudflare/workers-types': 5.20260907.1
+      '@cloudflare/workers-types': 5.20260921.1
       fsevents: 2.3.3
     transitivePeerDependencies:
       - '@types/node'

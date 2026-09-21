@@ -434,7 +434,35 @@ describe("getHomeData", () => {
       const { onTheStand } = await getHomeData(db, memberId, NOW);
       expect(onTheStand?.event.id).toBe(newest.id);
       expect(onTheStand?.takes).toHaveLength(3);
+      expect(onTheStand?.takeCount).toBe(3);
       expect(onTheStand?.unvotedCount).toBe(2);
+    });
+
+    it("counts every new take, past the queue's list ceiling", async () => {
+      // The queue is a capped LIST; the line's number is a COUNT. At 501 the
+      // two part ways, and the line must not claim 500 beside 501 unvoted.
+      const event = await bandEvent(NOW - 2 * DAY);
+      for (let i = 0; i < 501; i++) {
+        await publishedTake(event.id, NOW - DAY + i);
+      }
+      const { onTheStand } = await getHomeData(db, memberId, NOW);
+      expect(onTheStand?.takes).toHaveLength(500);
+      expect(onTheStand?.takeCount).toBe(501);
+      expect(onTheStand?.unvotedCount).toBe(501);
+    });
+
+    it("freezes a first visit's 14-day baseline, so a reload does not drop a take", async () => {
+      // Published 14 days and 10 minutes before the first load: inside the
+      // window then. If the baseline were recomputed per load it would slide
+      // forward 20 minutes on the reload and push this take out of it.
+      const event = await bandEvent(NOW - 20 * DAY);
+      await publishedTake(event.id, NOW - 14 * DAY + 10 * 60 * 1000);
+      expect((await getHomeData(db, memberId, NOW)).onTheStand?.event.id).toBe(event.id);
+      expect((await getHomeData(db, memberId, NOW + 20 * 60 * 1000)).onTheStand?.event.id).toBe(
+        event.id,
+      );
+      const stored = await membersRepo.getById(db, memberId);
+      expect(stored?.homeLastVisitAt).toBe(NOW - 14 * DAY);
     });
 
     it("stays up while home keeps being loaded, and goes after 30 quiet minutes", async () => {

@@ -157,7 +157,9 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "home.unnamedEventTitle": [{ label: "parts", args: [{ kind: "Zkouška", date: "13. září" }] }],
   "home.newTakesLine": [
     { label: "voted", args: [{ takes: "3 nahrávky", unvoted: 0 }] },
+    { label: "one", args: [{ takes: "3 nahrávky", unvoted: 1 }] },
     { label: "unvoted", args: [{ takes: "3 nahrávky", unvoted: 2 }] },
+    { label: "many", args: [{ takes: "12 nahrávek", unvoted: 7 }] },
   ],
   "home.voteCount": [{ label: "n", args: [2] }],
   "home.stashLatestWhen": [{ label: "parts", args: [{ date: "21. 9. 2026", length: "0:47" }] }],

@@ -1035,6 +1035,23 @@ export async function listPublishedSinceInEvent(
 }
 
 /**
+ * How many takes `listPublishedSinceInEvent` would list, uncapped: the card's
+ * "N nahrávek", which must never disagree with the unvoted count beside it.
+ */
+export async function countPublishedSinceInEvent(
+  db: Db,
+  eventId: string,
+  since: number,
+): Promise<number> {
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(takes)
+    .innerJoin(events, eq(events.id, takes.eventId))
+    .where(and(eq(takes.eventId, eventId), ...publishedSinceConditions(since)));
+  return rows[0]?.value ?? 0;
+}
+
+/**
  * Of those same takes, how many this member is being asked to judge and has
  * not: the rule `listUnvotedByMember` applies (published, votable, no vote of
  * theirs). Scoped by the event and the moment rather than by a list of take

@@ -25,7 +25,7 @@ describe("decideHomeVisit", () => {
     const joined = NOW - 3 * DAY;
     expect(
       decideHomeVisit({ lastSeenAt: null, lastVisitAt: null, memberCreatedAt: joined }, NOW),
-    ).toEqual({ startsNewVisit: true, lastSeenAt: NOW, lastVisitAt: null, since: joined });
+    ).toEqual({ startsNewVisit: true, lastSeenAt: NOW, lastVisitAt: joined, since: joined });
   });
 
   it("a first-ever load by a long-standing member looks back 14 days, not to their joining", () => {
@@ -67,14 +67,34 @@ describe("decideHomeVisit", () => {
     }
   });
 
-  it("a first visit kept alive by reloads keeps its first-visit floor", () => {
+  it("a first visit freezes its 14-day baseline, so reloads do not slide it forward", () => {
+    // A long-standing member: the baseline is "14 days before the first load",
+    // not "14 days before whichever load this is".
+    const decisions = loads(
+      { lastSeenAt: null, lastVisitAt: null, memberCreatedAt: NOW - 400 * DAY },
+      [NOW, NOW + 25 * MINUTE, NOW + 50 * MINUTE, NOW + 75 * MINUTE],
+    );
+    const frozen = NOW - FIRST_VISIT_WINDOW_MS;
+    expect(decisions.map((d) => d.since)).toEqual([frozen, frozen, frozen, frozen]);
+    // Stored, not recomputed: it is what the first load writes back.
+    expect(decisions[0]?.lastVisitAt).toBe(frozen);
+  });
+
+  it("a first visit by a new member freezes their joining as the baseline", () => {
     const joined = NOW - 3 * DAY;
     const decisions = loads({ lastSeenAt: null, lastVisitAt: null, memberCreatedAt: joined }, [
       NOW,
       NOW + 25 * MINUTE,
-      NOW + 50 * MINUTE,
     ]);
-    expect(decisions.map((d) => d.since)).toEqual([joined, joined, joined]);
+    expect(decisions.map((d) => d.since)).toEqual([joined, joined]);
+  });
+
+  it("the visit after the first measures from the first one's last load", () => {
+    const decisions = loads(
+      { lastSeenAt: null, lastVisitAt: null, memberCreatedAt: NOW - 400 * DAY },
+      [NOW, NOW + 10 * MINUTE, NOW + 3 * 60 * MINUTE],
+    );
+    expect(decisions[2]).toMatchObject({ startsNewVisit: true, since: NOW + 10 * MINUTE });
   });
 
   it("exactly 30 minutes of quiet is still the same visit", () => {

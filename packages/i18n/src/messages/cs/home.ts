@@ -11,8 +11,9 @@
 // │ WORTH CHECKING: `onTheStand` → "Na pultu". Not a translation of "Up     │
 // │ next": the notový pult is where the thing you are about to play sits,  │
 // │ and that is the picture the section is named for.                      │
-// │ `newTakesLine` → "na 2 ještě nemáš hlas". Built so the number never     │
-// │ has to agree with a noun: "na 1", "na 2", "na 5" all read the same.    │
+// │ `newTakesLine` → "u 2 ještě chybí tvůj hlas". Not "na 2 ještě nemáš    │
+// │ hlas", which reads as "you have no vote". The subject is `hlas`, so    │
+// │ the verb stays singular for every N: "u 1", "u 2", "u 5" all agree.    │
 // └────────────────────────────────────────────────────────────────────────┘
 import type { home as enHome } from "../en/home.js";
 
@@ -25,7 +26,7 @@ export const home = {
   unnamedEventTitle: ({ kind, date }: { kind: string; date: string }): string => `${kind} ${date}`,
   // en: `${takes}, ${unvoted} you haven't voted on yet` (or just `${takes}` at 0)
   newTakesLine: ({ takes, unvoted }: { takes: string; unvoted: number }): string =>
-    unvoted > 0 ? `${takes}, na ${unvoted} ještě nemáš hlas` : takes,
+    unvoted > 0 ? `${takes}, u ${unvoted} ještě chybí tvůj hlas` : takes,
   voteCount: (count: number): string => `Hlasovat (${count})`, // en: Vote ({count})
 
   inProgress: "Rozpracované", // en: In progress

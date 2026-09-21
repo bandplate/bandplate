@@ -73,7 +73,7 @@ const stand = onTheStand
       id: onTheStand.event.id,
       title: standTitle(onTheStand.event),
       line: t.home.newTakesLine({
-        takes: t.events.takeCount(onTheStand.takes.length),
+        takes: t.events.takeCount(onTheStand.takeCount),
         unvoted: onTheStand.unvotedCount,
       }),
       unvoted: onTheStand.unvotedCount,

@@ -259,8 +259,14 @@ export interface NewTake {
  */
 export interface OnTheStand {
   event: eventsRepo.Event;
-  /** The event's new takes, in recorded order. */
+  /**
+   * The event's new takes, in recorded order: the play-all queue. Capped at
+   * the repo's list ceiling, so never the source of the COUNT; that is
+   * `takeCount`.
+   */
   takes: NewTake[];
+  /** How many new takes the event has, uncapped. */
+  takeCount: number;
   /** Of those, how many this member has not voted on and is asked to. */
   unvotedCount: number;
 }
@@ -273,10 +279,10 @@ export interface StashCard {
 }
 
 /**
- * The lead event and its new takes, or undefined when nothing is new. Three
- * reads rather than one clever one: pick the event, list its new takes, count
- * the unvoted among them. Each stays under D1's parameter cap however many
- * takes arrived.
+ * The lead event and its new takes, or undefined when nothing is new. Plain
+ * reads rather than one clever one: pick the event, then list its new takes,
+ * count them, and count the unvoted among them. Each stays under D1's
+ * parameter cap however many takes arrived.
  */
 async function getOnTheStand(
   db: Db,
@@ -287,9 +293,10 @@ async function getOnTheStand(
   if (!eventId) {
     return undefined;
   }
-  const [event, takes, unvotedCount] = await Promise.all([
+  const [event, takes, takeCount, unvotedCount] = await Promise.all([
     eventsRepo.getById(db, eventId),
     takesRepo.listPublishedSinceInEvent(db, eventId, since),
+    takesRepo.countPublishedSinceInEvent(db, eventId, since),
     takesRepo.countUnvotedPublishedSinceInEvent(db, memberId, eventId, since),
   ]);
   if (!event || takes.length === 0) {
@@ -310,6 +317,7 @@ async function getOnTheStand(
       song: take.songId ? songById.get(take.songId) : undefined,
       playableAssetId: playable.get(take.id)?.id,
     })),
+    takeCount,
     unvotedCount,
   };
 }
@@ -327,10 +335,16 @@ async function getStashCard(db: Db, memberId: string): Promise<StashCard | undef
 }
 
 /**
- * Reads the member's visit columns, decides whether this load starts a new
- * visit, and records the load. Returns the moment "new" is measured from.
+ * Reads the member's visit columns and decides what this load means: the
+ * moment "new" is measured from, and the write that records the load. The
+ * write is handed back rather than awaited here, so it runs alongside the
+ * page's reads instead of in front of them.
  */
-async function trackVisit(db: Db, memberId: string, now: number): Promise<number> {
+async function readVisit(
+  db: Db,
+  memberId: string,
+  now: number,
+): Promise<{ since: number; record: () => Promise<void> }> {
   const member = await membersRepo.getById(db, memberId);
   const decision = decideHomeVisit(
     {
@@ -340,18 +354,30 @@ async function trackVisit(db: Db, memberId: string, now: number): Promise<number
     },
     now,
   );
-  if (member) {
+  const record = async () => {
+    if (!member) {
+      return;
+    }
     // Every load, so a visit lasts as long as home keeps being opened. A lost
     // race (another tab recorded a load in between) leaves the columns as that
     // tab wrote them; this load still measures from what it read, which is the
     // same baseline.
-    await membersRepo.recordHomeLoad(db, memberId, {
-      previousLastSeenAt: member.homeLastSeenAt,
-      lastSeenAt: decision.lastSeenAt,
-      lastVisitAt: decision.lastVisitAt,
-    });
-  }
-  return decision.since;
+    //
+    // A failure is logged and swallowed. Remembering the visit is bookkeeping:
+    // the page already knows its baseline, and home must not 500 because a
+    // write did not land. The cost is that the next load sees the old columns
+    // and may count a visit that was not recorded.
+    try {
+      await membersRepo.recordHomeLoad(db, memberId, {
+        previousLastSeenAt: member.homeLastSeenAt,
+        lastSeenAt: decision.lastSeenAt,
+        lastVisitAt: decision.lastVisitAt,
+      });
+    } catch (err) {
+      console.error("failed to record the home visit", memberId, err);
+    }
+  };
+  return { since: decision.since, record };
 }
 
 export interface HomeData {
@@ -372,12 +398,13 @@ export async function getHomeData(
   memberId: string,
   now: number = Date.now(),
 ): Promise<HomeData> {
-  const since = await trackVisit(db, memberId, now);
+  const visit = await readVisit(db, memberId, now);
   const [onTheStand, pinned, recentEvents, stash] = await Promise.all([
-    getOnTheStand(db, memberId, since),
+    getOnTheStand(db, memberId, visit.since),
     getPinned(db, memberId),
     eventsRepo.listRecentWithTakeCounts(db, { limit: RECENT_EVENTS_LIMIT }),
     getStashCard(db, memberId),
+    visit.record(),
   ]);
   return {
     onTheStand,

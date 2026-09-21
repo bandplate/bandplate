@@ -3,6 +3,7 @@ import { type SQL, and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, sql }
 import type { Db } from "../client.js";
 import { events, takes } from "../schema/sqlite/index.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
+import { bandTakeCondition } from "./take-visibility.js";
 
 export type Event = typeof events.$inferSelect;
 export type EventKind = Event["kind"];
@@ -187,7 +188,7 @@ export interface ListRecentWithTakeCountsOptions {
  * it composes with `listRecentWithTakeCounts`'s own left join and GROUP BY.
  */
 function visibleToBandCondition(): SQL {
-  return sql`(${events.kind} <> 'personal' or exists (select 1 from ${takes} where ${takes.eventId} = ${events.id} and ${takes.visibility} = 'band'))`;
+  return sql`(${events.kind} <> 'personal' or exists (select 1 from ${takes} where ${takes.eventId} = ${events.id} and ${bandTakeCondition()}))`;
 }
 
 /**
@@ -243,7 +244,7 @@ export async function listRecentWithTakeCounts(
     db
       .select({ event: events, takeCount: sql<number>`count(${takes.id})` })
       .from(events)
-      .leftJoin(takes, and(eq(takes.eventId, events.id), eq(takes.visibility, "band")))
+      .leftJoin(takes, and(eq(takes.eventId, events.id), bandTakeCondition()))
       .where(and(...conditions))
       .groupBy(events.id)
       // See `listRecent` for why `id` is here — this is the archive's paged

@@ -33,6 +33,7 @@ import { chunk } from "./chunk.js";
 import type { Instrument } from "./instruments.js";
 import { escapeLikePattern } from "./like-pattern.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
+import { bandTakeCondition, stashTakeCondition } from "./take-visibility.js";
 
 export type Take = typeof takes.$inferSelect;
 export type TakeState = Take["state"];
@@ -45,8 +46,8 @@ type VisibilityFacts = { visibility: TakeVisibility; ownerMemberId: string | nul
  * the stash. A band take is everyone's; a private take is its owner's alone,
  * and a caller that is not a member (a service token, nobody) sees no private
  * take. Every route and loader that resolves a take BY ID asks this; listings
- * never need to, because `bandVisibleCondition` keeps private rows out of
- * their SQL.
+ * never need to, because `take-visibility.ts` decides which rows their SQL
+ * may return.
  */
 export function isVisibleTo(take: VisibilityFacts, memberId: string | undefined): boolean {
   if (take.visibility === "band") {
@@ -62,15 +63,6 @@ export function isVisibleTo(take: VisibilityFacts, memberId: string | undefined)
  */
 export function isVotable(take: VisibilityFacts): boolean {
   return take.visibility === "band" && take.ownerMemberId === null;
-}
-
-/**
- * The floor under every band view: a private take never appears in a listing,
- * a count or a search — not even for its owner, who sees it in the stash views
- * instead (`listStash`). Exported so `songsRepo` composes the same condition.
- */
-export function bandVisibleCondition(): SQL {
-  return eq(takes.visibility, "band");
 }
 
 /**
@@ -402,7 +394,7 @@ export async function listBySong(
     db
       .select()
       .from(takes)
-      .where(and(eq(takes.songId, songId), bandVisibleCondition()))
+      .where(and(eq(takes.songId, songId), bandTakeCondition()))
       .orderBy(...TAKE_LIST_ORDER)
       .limit(limit)
       .offset(offset),
@@ -458,7 +450,7 @@ export async function listByEvent(
     db
       .select()
       .from(takes)
-      .where(and(eq(takes.eventId, eventId), bandVisibleCondition()))
+      .where(and(eq(takes.eventId, eventId), bandTakeCondition()))
       .orderBy(direction, tieBreak)
       .limit(limit)
       .offset(offset),
@@ -491,7 +483,7 @@ export async function listByEvents(
   const rows = await db
     .select()
     .from(takes)
-    .where(and(inArray(takes.eventId, eventIds), bandVisibleCondition()))
+    .where(and(inArray(takes.eventId, eventIds), bandTakeCondition()))
     .orderBy(direction, tieBreak);
 
   for (const row of rows) {
@@ -568,7 +560,7 @@ export async function listByInstruments(db: Db, instrumentIds: string[]): Promis
   return db
     .select()
     .from(takes)
-    .where(and(hasAllInstruments(db, instrumentIds), bandVisibleCondition()))
+    .where(and(hasAllInstruments(db, instrumentIds), bandTakeCondition()))
     .orderBy(desc(takes.recordedAt), desc(takes.id));
 }
 
@@ -723,7 +715,7 @@ export type SearchResult = Paged<Take>;
  * reporting a total that disagrees with the rows under it.
  */
 function searchConditions(db: Db, filters: SearchFilters): SQL[] {
-  const conditions: SQL[] = [bandVisibleCondition()];
+  const conditions: SQL[] = [bandTakeCondition()];
 
   if (filters.instrumentIds && filters.instrumentIds.length > 0) {
     conditions.push(hasAllInstruments(db, filters.instrumentIds));
@@ -802,7 +794,7 @@ export async function countBySong(db: Db, songId: string): Promise<number> {
   const rows = await db
     .select({ value: sql<number>`count(*)` })
     .from(takes)
-    .where(and(eq(takes.songId, songId), bandVisibleCondition()));
+    .where(and(eq(takes.songId, songId), bandTakeCondition()));
   return rows[0]?.value ?? 0;
 }
 
@@ -811,7 +803,7 @@ export async function countByEvent(db: Db, eventId: string): Promise<number> {
   const rows = await db
     .select({ value: sql<number>`count(*)` })
     .from(takes)
-    .where(and(eq(takes.eventId, eventId), bandVisibleCondition()));
+    .where(and(eq(takes.eventId, eventId), bandTakeCondition()));
   return rows[0]?.value ?? 0;
 }
 
@@ -831,7 +823,7 @@ export async function countBySongs(db: Db, songIds: string[]): Promise<Map<strin
   const rows = await db
     .select({ songId: takes.songId, value: sql<number>`count(*)` })
     .from(takes)
-    .where(and(inArray(takes.songId, songIds), bandVisibleCondition()))
+    .where(and(inArray(takes.songId, songIds), bandTakeCondition()))
     .groupBy(takes.songId);
   for (const row of rows) {
     // `songId` is nullable since 0010, but `inArray` already excluded NULL —
@@ -852,7 +844,7 @@ export async function countByEvents(db: Db, eventIds: string[]): Promise<Map<str
   const rows = await db
     .select({ eventId: takes.eventId, value: sql<number>`count(*)` })
     .from(takes)
-    .where(and(inArray(takes.eventId, eventIds), bandVisibleCondition()))
+    .where(and(inArray(takes.eventId, eventIds), bandTakeCondition()))
     .groupBy(takes.eventId);
   for (const row of rows) {
     result.set(row.eventId, row.value);
@@ -928,7 +920,7 @@ export interface StashOptions {
 }
 
 function stashConditions(memberId: string, options: StashOptions): SQL[] {
-  const conditions: SQL[] = [eq(takes.ownerMemberId, memberId), eq(takes.visibility, "private")];
+  const conditions: SQL[] = [stashTakeCondition(memberId)];
   if (options.songId) {
     conditions.push(eq(takes.songId, options.songId));
   }
@@ -991,7 +983,7 @@ export async function latestStash(db: Db, memberId: string): Promise<Take | unde
  */
 function publishedSinceConditions(since: number): SQL[] {
   return [
-    bandVisibleCondition(),
+    bandTakeCondition(),
     inArray(takes.state, ["published", "keeper"]),
     gt(takes.publishedAt, since),
     ne(events.kind, "personal"),
@@ -1147,11 +1139,7 @@ export async function publishFromStash(
   now: number,
   songId?: string | null,
 ): Promise<PublishFromStashResult> {
-  const conditions = [
-    eq(takes.id, id),
-    eq(takes.ownerMemberId, memberId),
-    eq(takes.visibility, "private"),
-  ];
+  const conditions = [eq(takes.id, id), stashTakeCondition(memberId)];
   if (songId) {
     // The FK is not enforced (see the type above), so the UPDATE asks for
     // itself whether this song exists, in its own WHERE.

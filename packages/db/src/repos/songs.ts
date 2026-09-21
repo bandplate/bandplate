@@ -12,6 +12,7 @@ import {
 } from "../schema/sqlite/index.js";
 import { escapeLikePattern } from "./like-pattern.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
+import { bandTakeCondition } from "./take-visibility.js";
 import * as takesRepo from "./takes.js";
 
 export type Song = typeof songs.$inferSelect;
@@ -295,12 +296,7 @@ function songConditions(db: Db, options: ListWithStatsOptions): SQL[] {
         db
           .select({ songId: takes.songId })
           .from(takes)
-          .where(
-            and(
-              takesRepo.hasAllInstruments(db, options.instrumentIds),
-              takesRepo.bandVisibleCondition(),
-            ),
-          ),
+          .where(and(takesRepo.hasAllInstruments(db, options.instrumentIds), bandTakeCondition())),
       ),
     );
   }
@@ -368,7 +364,7 @@ export async function listWithStats(
         lastPlayedAt: sql<number | null>`max(${takes.recordedAt})`,
       })
       .from(songs)
-      .leftJoin(takes, and(eq(takes.songId, songs.id), eq(takes.visibility, "band")))
+      .leftJoin(takes, and(eq(takes.songId, songs.id), bandTakeCondition()))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .groupBy(songs.id)
       .orderBy(...orderBy)

@@ -9,7 +9,9 @@
 // checked, nothing swallowed. In order:
 //
 //   1. Refuse if the working tree is dirty (`git status --porcelain`).
-//   2. Refuse if HEAD isn't pushed to `origin/main` (`git rev-parse`).
+//   2. Refuse if HEAD isn't pushed to `origin/main` (`git fetch origin
+//      main` first, so a stale local ref can never let this pass, then
+//      `git rev-parse`).
 //   3. Refuse if there are pending remote migrations — CI runs the exact
 //      same check (`check-remote-migrations.ts`), so there's one place
 //      this decision is made, not two.
@@ -33,7 +35,8 @@ const HELP_TEXT = `Usage: pnpm ship
 Deploys bandplate to production. In order:
 
   1. Refuse if the working tree is dirty.
-  2. Refuse if HEAD is not pushed to origin/main.
+  2. Refuse if HEAD is not pushed to origin/main (fetches origin/main
+     first, so a stale local ref can't let this pass).
   3. Refuse if any remote migration is pending — run \`pnpm migrate:remote\`
      first (this script never applies migrations itself).
   4. Build (BANDPLATE_ADAPTER=cloudflare astro build).
@@ -77,14 +80,23 @@ function main(): void {
   }
   console.log("ship: working tree is clean.");
 
-  // (2) HEAD pushed to origin/main.
+  // (2) HEAD pushed to origin/main. Fetch first — comparing against a
+  // stale local origin/main ref could let this gate pass on a HEAD that
+  // isn't actually on the remote, which is the wrong direction to be
+  // wrong in for a safety gate.
+  const fetchResult = runGit(["fetch", "origin", "main", "--quiet"]);
+  if (fetchResult.status !== 0) {
+    fail(
+      "`git fetch origin main` failed — see output above. Refusing to deploy against a stale origin/main.",
+    );
+  }
   const headResult = runGit(["rev-parse", "HEAD"]);
   if (headResult.status !== 0) {
     fail("`git rev-parse HEAD` failed — see output above.");
   }
   const originResult = runGit(["rev-parse", "origin/main"]);
   if (originResult.status !== 0) {
-    fail("`git rev-parse origin/main` failed — fetch first (git fetch origin main), or push HEAD.");
+    fail("`git rev-parse origin/main` failed — see output above.");
   }
   if (!isHeadPushed(headResult.stdout, originResult.stdout)) {
     fail("HEAD is not pushed to origin/main — push before deploying.");

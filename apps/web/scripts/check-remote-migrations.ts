@@ -16,9 +16,17 @@ import { parsePendingMigrations } from "@bandplate/db/migration-guard";
 import { pendingMigrationsGuardMessage } from "./deploy-guard.js";
 
 export function checkRemoteMigrations(): void {
-  const result = spawnSync("wrangler", ["d1", "migrations", "list", "DB", "--remote"], {
-    encoding: "utf8",
-  });
+  // `pnpm exec wrangler`, not bare `wrangler` on PATH — same as every
+  // other wrangler call site in this repo (deploy.ts, docs/deploy-cloudflare.md).
+  // wrangler is a devDependency of apps/web, not a global install; nothing
+  // guarantees a bare `wrangler` on PATH resolves to it.
+  const result = spawnSync(
+    "pnpm",
+    ["exec", "wrangler", "d1", "migrations", "list", "DB", "--remote"],
+    {
+      encoding: "utf8",
+    },
+  );
   if (result.stdout) {
     process.stdout.write(result.stdout);
   }

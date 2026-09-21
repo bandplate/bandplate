@@ -281,7 +281,14 @@ const countLabel = t.takes.count(total);
               duplicate we just removed from the sheet's header. */}
           {filtersApplied && (
             <a href="/takes" class="bp-btn bp-btn-secondary bp-btn-sm bp-takes-bar-clear">
-              {t.takes.clear}
+              {/* On a phone the words go and the cross stays: three captioned
+                  buttons do not fit one row at 375px, and the cross beside a
+                  filter count is read as "clear these" without them. The
+                  words remain the link's accessible name at every width. */}
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+              <span class="bp-takes-bar-clear-label">{t.takes.clear}</span>
             </a>
           )}
         </>

@@ -9365,6 +9365,22 @@ html:has(dialog.bp-filter-sheet[open]) body {
     display: none;
   }
 
+  .bp-takes-bar-clear {
+    min-width: 44px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  .bp-takes-bar-clear-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   /* The title's own long/short pair: not the takes bar's pills, so it takes
      the swap on its own terms. */
   .bp-takes-bar-title .bp-record-word {

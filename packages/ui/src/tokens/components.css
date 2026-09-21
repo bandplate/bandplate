@@ -1151,6 +1151,11 @@ a.bp-btn {
   padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
   padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
   border-bottom: 1px solid var(--bp-color-border);
+  /* The home card's brown, let partly through: the header reads as a band
+     across the top rather than text standing on the page. The surface token,
+     not `--bp-stand`, because the light theme's stand is a dark card and
+     the header's ink would vanish on it. In dark the two are the same brown. */
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
 }
 
 .bp-shell-wordmark {

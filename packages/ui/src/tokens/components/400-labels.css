@@ -1,0 +1,141 @@
+/* ---------------------------------------------------------------------- */
+/* Two labels used across the app, defined once here.                     */
+/* ---------------------------------------------------------------------- */
+
+/* An eyebrow: a caps label above a block. The type scale's own `eyebrow`
+   step, made a class because four screens were re-declaring the same five
+   properties inline. */
+/* Small caps labels — this eyebrow, `.bp-kind`, table headers, the ledger
+   month, strip and chart labels — are Chivo 600 with modest tracking. They
+   were 900 at 10–11px with wide tracking, and at that size in the muted tone
+   the black strokes closed the letters up; 600 is a weight already loaded,
+   its counters stay open, and a pixel more size pays for the lighter stroke.
+   Settled 2026-09-21 on the "Eyebrow Weight" canvas (option A). */
+.bp-eyebrow {
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-eyebrow, 0.75rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+}
+
+/* A KIND — "rehearsal", "live", "take", "song". It used to be a pill, and a
+   pill is a thing you can press. A kind is not: it is a label on a fact, the
+   same as the venue line it sits under in the ledger, so it takes that voice
+   instead. It also stops competing with the verdict badge beside it in a take
+   row, which IS a decision and keeps its pill. Tighter tracking than
+   `.bp-eyebrow` because it appears inline next to running text rather than
+   alone above a block. */
+/* Merge: a target picker and its button on one line, inside the sheet's
+   destructive block. */
+.bp-merge-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.bp-merge-form .bp-select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* What a merge destroys, on its confirm page. A list, not a sentence: each
+   line is a different song losing a different thing, and running them
+   together is how someone approves one without reading the others. */
+.bp-merge-losses {
+  margin: 0.5rem 0 0;
+  padding-left: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Every slug that resolves to one instrument, in the admin table's slug
+   column. Wraps rather than truncates: an instrument that has collected four
+   aliases is exactly the one whose row you are reading them off. */
+.bp-slug-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+}
+
+/* The canonical slug leads at full weight. The aliases sit behind it, dimmed
+   and preceded by a hairline dot, because only ONE of them is the name and a
+   row of equals would say the opposite. */
+.bp-slug-alias {
+  color: color-mix(in srgb, var(--bp-color-muted) 65%, transparent);
+}
+
+.bp-slug-alias::before {
+  content: "·";
+  margin-right: 0.375rem;
+}
+
+/* The alias list inside an instrument's sheet. Slugs are machine strings, so
+   they take the mono face the asset rows already use for a format and a tier
+   — this project's rule is that mono means "a computer reads this", and a
+   slug is exactly that. */
+.bp-alias-list {
+  list-style: none;
+  margin: 0 0 0.625rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bp-alias-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  padding: 0.25rem 0;
+}
+
+.bp-alias-remove {
+  flex: none;
+  display: inline-flex;
+}
+
+.bp-alias-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bp-alias-add .bp-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* An unfinished instrument, the one status on this table that asks for
+   something. Archived is a resting state and stays in the muted ink `.bp-kind`
+   gives every other badge; this one takes the accent, because a row nobody
+   finishes is a row the mixer paints grey and the filters label with a slug. */
+.bp-kind-stub {
+  color: var(--bp-color-accent);
+}
+
+.bp-kind {
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+  white-space: nowrap;
+}
+
+/* A quiet pill — the fill every other borderless control uses, no accent. For
+   a "go see the rest" action that must not outrank what it sits under. */
+.bp-btn-quiet {
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+}
+
+.bp-btn-quiet:hover:not([disabled]) {
+  background: var(--bp-fill-raised);
+}

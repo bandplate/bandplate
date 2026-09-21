@@ -1,0 +1,700 @@
+/* ---------------------------------------------------------------------- */
+/* The mixer — /takes/:id/mix                                             */
+/* ---------------------------------------------------------------------- */
+
+.bp-mixer-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bp-mixer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Every control on the ruler's line, in the gutter cell: play, the preset,
+   and the clock hard against the axis it reads. A transport row of its own sat
+   on no edge that anything else shared and read as page furniture rather than
+   as this tool's controls. */
+.bp-mixer-controls-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Icon-only: the gutter is 11.5rem and the sentence does not fit beside a
+   transport. Its accessible name and its tooltip carry the words. */
+.bp-mixer-preset {
+  /* The gutter's right edge, away from the transport: play and the clock are
+     one thing you operate constantly, and this is a setting for the session.
+     Putting them side by side made the icon look like a second transport
+     button. */
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: none;
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+  cursor: pointer;
+}
+
+.bp-mixer-preset.is-active {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+}
+
+.bp-mixer-preset:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* The lane stack. `position: relative` so ONE playhead can be drawn across
+   all of it, rather than one per lane that would then have to be kept in
+   step. */
+.bp-mixer-lanes {
+  /* The control gutter, declared ONCE. The ruler, the grid and every lane all
+     have to agree on it, and three copies of a number is three chances to
+     disagree. */
+  --bp-mixer-gutter: 11.5rem;
+  --bp-mixer-gap: 1rem;
+  /* Where the waveform column starts. Read by BOTH the time grid and the
+     playhead: they have to agree, and two copies of this sum is two chances
+     not to. */
+  --bp-mixer-lane-left: calc(var(--bp-mixer-gutter) + var(--bp-mixer-gap));
+  position: relative;
+}
+
+/* Gold, and the only element on this page that moves continuously — the same
+   role it has in the player. Driven by a single custom property written on
+   the stack, so moving it costs one style write per frame regardless of how
+   many lanes there are. */
+/* Gold, and the only element on this page that moves continuously.
+   It belongs to the WAVEFORM COLUMN, not to the whole stack — offset past the
+   gutter and scaled to what is left, or it draws across the track names and
+   reads as a border on the wrong thing. Not drawn below the breakpoint at
+   all: there is no waveform there for it to cross, and the ruler's own fill
+   carries the position. */
+.bp-mixer-playhead {
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-playhead {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(
+      var(--bp-mixer-lane-left) +
+      var(--bp-mix-progress, 0) *
+      (100% - var(--bp-mixer-lane-left))
+    );
+    width: 2px;
+    margin-left: -1px;
+    background: var(--bp-color-accent-gold);
+    /* Above the lanes' own drawing, below the scrub that takes the pointer. */
+    z-index: 1;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-mixer-playhead {
+    transition: none;
+  }
+}
+
+/* The ruler: the clock, the time axis, and the scrub's OWN row.
+   Laying the scrub over the whole lane stack is the obvious construction and
+   it makes every mute, solo and fader underneath unclickable — they stay
+   visible and focusable, so nothing looks wrong until you press one. */
+.bp-mixer-ruler {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: end;
+  /* The row gap is not decoration. On a phone the clock and the axis stack,
+     and a tick's label is drawn ABOVE its rail — with no gap the labels land
+     on top of the clock. Past the breakpoint they are separate columns and
+     the gap goes away. */
+  gap: 1.125rem var(--bp-mixer-gap);
+  padding-bottom: 0.375rem;
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-ruler {
+    grid-template-columns: var(--bp-mixer-gutter) minmax(0, 1fr);
+    gap: 0 var(--bp-mixer-gap);
+  }
+}
+
+/* The clock sits in the gutter cell above the track names, not in the page
+   header: it reads the axis beside it, so that is the line it belongs on. */
+.bp-mixer-clock {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-family: var(--font-display, "Zilla Slab", Georgia, serif);
+  font-weight: 600;
+  font-size: 1.375rem;
+  line-height: 1;
+  color: var(--bp-color-fg);
+  /* Equal-width digits, so a ticking clock does not shove the axis beside it. */
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-mixer-duration {
+  font-family: var(--bp-font-body);
+  font-weight: 400;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-mixer-axis {
+  position: relative;
+  display: flex;
+  /* The rail sits at the BOTTOM of the row and the labels are drawn above it,
+     so the band each occupies is reserved rather than incidental — a centred
+     rail leaves the numbers to land wherever their own height puts them, and
+     the progress fill then strikes straight through them. */
+  align-items: flex-end;
+  height: 30px;
+  padding-bottom: 4px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.bp-mixer-ruler-rail {
+  display: block;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+  overflow: hidden;
+}
+
+.bp-mixer-ruler-fill {
+  display: block;
+  height: 100%;
+  width: calc(var(--bp-mix-progress, 0) * 100%);
+  background: var(--bp-color-accent-gold);
+}
+
+/* A tick's number, placed at its own fraction of the take. The first and last
+   pull back inside the frame so neither overhangs the column. */
+.bp-mixer-tick {
+  position: absolute;
+  /* Clear of the rail by its own height plus air, measured from the rail's
+     band rather than from the row. */
+  bottom: 12px;
+  transform: translateX(-50%);
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.bp-mixer-tick:first-of-type {
+  transform: translateX(0);
+}
+
+.bp-mixer-tick:last-of-type {
+  transform: translateX(-100%);
+}
+
+/* Transparent over the axis ALONE — see the comment above `.bp-player-track`
+   for why the drawing is never the thing you click. Full 44px of target
+   despite the 30px row, hanging over it. */
+.bp-mixer-scrub {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  margin: -22px 0 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.bp-mixer-axis:has(.bp-mixer-scrub:focus-visible) {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* The loop bar: its own strip between the ruler and the lanes, in the SAME
+   two columns as everything else on this page.
+
+   It cannot live on the axis. The scrub input covers that row edge to edge to
+   take the pointer, so a drag across it moves the playhead — which is why a
+   DAW gives its cycle a separate ruler rather than sharing the timeline's. */
+.bp-mixer-loop {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 0.5rem var(--bp-mixer-gap);
+  padding-bottom: 0.5rem;
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-loop {
+    grid-template-columns: var(--bp-mixer-gutter) minmax(0, 1fr);
+    gap: 0 var(--bp-mixer-gap);
+  }
+}
+
+.bp-mixer-loop-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* The two marks and the clear, as one segmented control — the same shape the
+   lanes' M and S make, and reusing `.bp-mixer-btn` outright so the seam, the
+   sizes and the 44px phone target cannot drift apart from theirs. */
+.bp-mixer-loop-buttons {
+  display: flex;
+  flex: none;
+  border-radius: var(--radius-sm, 3px);
+  overflow: hidden;
+}
+
+.bp-mixer-btn:disabled {
+  color: var(--bp-color-muted);
+  cursor: default;
+}
+
+.bp-mixer-loop-times {
+  min-width: 0;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bp-mixer-loopbar {
+  position: relative;
+  height: 18px;
+  min-width: 0;
+  border-radius: var(--radius-sm, 3px);
+  /* Quiet while empty: somewhere you COULD drag, not a control asking to be
+     used. It fills in once there is a region to show. */
+  background: color-mix(in srgb, var(--bp-fill-subtle) 55%, transparent);
+  cursor: crosshair;
+  /* Or a horizontal drag on a phone scrolls the page instead of marking a
+     passage, and the loop loses the very gesture it was promised at this
+     width. */
+  touch-action: none;
+}
+
+/* The region. Green, deliberately NOT the accent: in the dark theme the
+   accent IS gold, and gold is the playhead — a gold band with a gold line
+   travelling through it hides the one thing that has to stay legible. */
+.bp-mixer-loop-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--bp-loop-a, 0) * 100%);
+  width: calc((var(--bp-loop-b, 0) - var(--bp-loop-a, 0)) * 100%);
+  border-radius: var(--radius-sm, 3px);
+  background: color-mix(in srgb, var(--bp-color-accent-alt) 40%, transparent);
+  pointer-events: none;
+}
+
+.bp-mixer-loop-handle {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: calc(var(--bp-loop-at, 0) * 100%);
+  width: 10px;
+  margin-left: -5px;
+  border-radius: 2px;
+  background: var(--bp-color-accent-alt);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+/* The target a thumb needs, without a 44px block of paint on an 18px strip. */
+.bp-mixer-loop-handle::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--bp-touch-min, 44px);
+  height: var(--bp-touch-min, 44px);
+  transform: translate(-50%, -50%);
+}
+
+.bp-mixer-loop-handle:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+.bp-mixer-loop-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 0.5rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* The time grid: one overlay across every lane, BEHIND them, so a played
+   portion of a waveform covers its line and an unplayed one shows it through.
+   Phones have no per-lane waveform to rule, so it does not draw there. */
+.bp-mixer-grid {
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-grid {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--bp-mixer-lane-left);
+    right: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+}
+
+.bp-mixer-gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  /* Half the app's hairline: enough to count by, quiet enough to ignore. */
+  background: color-mix(in srgb, var(--bp-color-border) 50%, transparent);
+}
+
+/* Whole minutes take the full hairline the rest of the app rules with. */
+.bp-mixer-gridline.is-major {
+  background: var(--bp-color-border);
+}
+
+.bp-mixer-tracks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--bp-color-border);
+}
+
+/* One lane per track, and the SAME shape at every width: name and M/S on the
+   first line, the fader under them, the waveform beside. The breakpoint only
+   decides whether the waveform is there, rather than switching between two
+   layouts that then have to be kept in step. */
+.bp-mixer-track {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4375rem 0.625rem;
+  padding: 0.4375rem 0;
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-track {
+    grid-template-columns: var(--bp-mixer-gutter) minmax(0, 1fr);
+    gap: 0 var(--bp-mixer-gap);
+    align-items: center;
+  }
+}
+
+/* The two-line control block. On a phone it IS the lane; past the breakpoint
+   it becomes the lane's first column. */
+.bp-mixer-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name btns"
+    "fader fader";
+  align-items: center;
+  gap: 0.4375rem 0.625rem;
+  min-width: 0;
+}
+
+.bp-mixer-track-name {
+  grid-area: name;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-family: var(--font-display, "Zilla Slab", Georgia, serif);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  line-height: 1.15;
+  color: var(--bp-color-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A muted track's NAME goes quiet as well as its button filling — state is
+   never carried by one channel alone. */
+.bp-mixer-track.is-muted .bp-mixer-track-name {
+  color: var(--bp-color-muted);
+}
+
+/* M and S as one segmented control: two halves sharing a seam, not two tiles
+   with a gap between them. The same two decisions in far less gutter, and
+   they read as a pair rather than as two unrelated buttons. */
+.bp-mixer-track-buttons {
+  grid-area: btns;
+  display: flex;
+  flex: none;
+  border-radius: var(--radius-sm, 3px);
+  overflow: hidden;
+}
+
+.bp-mixer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* A phone keeps the full 44px square. Height is the axis a thumb needs, and
+     the phone has the width to spend that the desktop gutter does not. */
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 900;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+/* The seam is the ground showing through, not a border — a border would add
+   to the box and shift the pair by a pixel. */
+.bp-mixer-btn + .bp-mixer-btn {
+  box-shadow: inset 1px 0 0 var(--bp-color-bg);
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-btn {
+    width: 26px;
+    height: 25px;
+    font-size: 0.6875rem;
+    letter-spacing: 0.02em;
+  }
+}
+
+/* Engaged carries a fill and the theme's on-accent text, never hue alone —
+   these two sit beside each other and must not differ by colour only. */
+.bp-mixer-btn.is-active {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+}
+
+.bp-mixer-btn:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+  /* Above its neighbour, or the seam clips the ring. */
+  position: relative;
+  z-index: 1;
+}
+
+/* The fader. A real `<input type="range">` — see `.bp-player-track`'s comment
+   for why this project never hand-rolls the interaction — but unlike the
+   player's seek it is not laid over a drawing, so the native track is styled
+   directly and the thumb is visible. */
+.bp-mixer-fader {
+  grid-area: fader;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  background: transparent;
+  cursor: pointer;
+
+  /* Thumb diameter, named once: the thumb, the fill's travel and the
+     vertical centring all have to agree, and three magic numbers that must
+     stay equal is how the fill drifted off the thumb in the first place. */
+  --bp-fader-thumb: 16px;
+  --bp-fader-rail: 5px;
+  /* Set by the island from the live value; unity if the markup renders
+     without script, which is what the fader shows at rest anyway. */
+  --bp-fader-pos: 0.714;
+  /* A thumb's CENTRE travels from half a thumb in to half a thumb short of
+     the end — so the fill is a fraction of (track − thumb), not of the
+     track. A plain percentage puts the seam ahead of the dot at the left
+     end and behind it at the right, and dead on only in the middle. */
+  --bp-fader-fill: calc(
+    var(--bp-fader-pos) *
+    (100% - var(--bp-fader-thumb)) +
+    var(--bp-fader-thumb) /
+    2
+  );
+}
+
+.bp-mixer-fader::-webkit-slider-runnable-track {
+  height: var(--bp-fader-rail);
+  border-radius: 999px;
+  /* The instrument's own colour. This is the ONLY place a lane's colour
+     appears in the controls — a chip beside the name would say it twice. */
+  background: linear-gradient(
+    to right,
+    var(--bp-swatch, var(--bp-track-none)) 0,
+    var(--bp-swatch, var(--bp-track-none)) var(--bp-fader-fill),
+    var(--bp-fill-subtle) var(--bp-fader-fill)
+  );
+}
+
+/* Firefox fills the rail itself, from the real value — no custom property
+   needed, and no thumb-width correction either, because it grows the
+   progress box rather than painting a gradient across the track. */
+.bp-mixer-fader::-moz-range-track {
+  height: var(--bp-fader-rail);
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+}
+
+.bp-mixer-fader::-moz-range-progress {
+  height: var(--bp-fader-rail);
+  border-radius: 999px;
+  background: var(--bp-swatch, var(--bp-track-none));
+}
+
+.bp-mixer-fader::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--bp-fader-thumb);
+  height: var(--bp-fader-thumb);
+  /* Centred on the rail: half the difference, pulled up. */
+  margin-top: calc((var(--bp-fader-rail) - var(--bp-fader-thumb)) / 2);
+  border-radius: 50%;
+  background: var(--bp-color-fg);
+}
+
+.bp-mixer-fader::-moz-range-thumb {
+  width: var(--bp-fader-thumb);
+  height: var(--bp-fader-thumb);
+  border: none;
+  border-radius: 50%;
+  background: var(--bp-color-fg);
+}
+
+.bp-mixer-fader:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* The lane's own shape. Hidden on a phone — seven thumbnails of a waveform
+   are not a timeline, they are noise, and the clock carries the position
+   instead. CSS decides this, not `matchMedia`: one DOM at every width, no
+   hydration mismatch, no flash. */
+.bp-mixer-wave {
+  display: none;
+  align-items: center;
+  gap: 1px;
+  height: 56px;
+  min-width: 0;
+  /* Above the time grid, below the playhead. */
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 40rem) {
+  .bp-mixer-wave {
+    display: flex;
+    /* It seeks when clicked, so it has to say so. */
+    cursor: pointer;
+  }
+}
+
+/* While the waveforms are still arriving. Full lane height so the stack does
+   not resize when they land — a timeline that jumps once per load is worse
+   than one that waits. */
+.bp-mixer-wave-skeleton {
+  flex: 1 1 auto;
+  height: 100%;
+  border-radius: var(--radius-sm, 3px);
+}
+
+/* "Lining the tracks up" / "buffering" — beside the disc, not inside it. */
+/* Over the waveform column, centred, while the tracks load or buffer. Not in
+   the gutter: an 11.5rem cell already holding a transport and a clock has no
+   room for a sentence, and it sat on top of both. */
+.bp-mixer-status {
+  position: absolute;
+  top: 0;
+  left: var(--bp-mixer-lane-left);
+  right: 0;
+  z-index: 2;
+  padding-top: 0.5rem;
+  text-align: center;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  pointer-events: none;
+}
+
+/* No waveform column below the breakpoint, so it simply sits above the list. */
+@media (max-width: 39.999rem) {
+  .bp-mixer-status {
+    position: static;
+    left: auto;
+    right: auto;
+    display: block;
+    text-align: left;
+    padding-top: 0;
+    padding-bottom: 0.375rem;
+  }
+}
+
+.bp-mixer-bar {
+  flex: 1 1 0;
+  min-width: 1px;
+  border-radius: 1px;
+  background: var(--bp-swatch, var(--bp-track-none));
+}
+
+/* A muted lane dims rather than disappears — you still need to see where the
+   part you silenced actually plays. */
+.bp-mixer-track.is-muted .bp-mixer-bar,
+.bp-mixer-track.is-muted .bp-mixer-rail {
+  opacity: 0.26;
+}
+
+/* What a lane with no waveform draws. Deliberately the SAME height as the
+   bars: a source whose peaks the bridge never uploaded is a normal state, not
+   a broken one, and a stack that changes height where one is missing looks
+   like a bug in the lane above it. */
+.bp-mixer-rail {
+  flex: 1 1 auto;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+}
+
+/* Attribution. CC BY 3.0 requires visible credit/* Attribution. CC BY 3.0 requires visible credit wherever the work is used,
+   and this app is self-deployed — the obligation follows every deployment, so
+   it lives in the product rather than only in the repo. See
+   `packages/ui/src/icons/instruments.ts`. */
+.bp-credit {
+  margin: 2rem 0 0;
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-credit a {
+  color: var(--bp-color-accent);
+}

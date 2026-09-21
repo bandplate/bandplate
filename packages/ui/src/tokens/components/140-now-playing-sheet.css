@@ -1,0 +1,376 @@
+/* ---------------------------------------------------------------------- */
+/* The Hraje sheet — `NowPlayingSheet.tsx`. A native `<dialog>` opened with */
+/* `showModal()`: source, mixer link, running order, and its own foot     */
+/* transport (the bar behind it goes inert the moment it opens).           */
+/* ---------------------------------------------------------------------- */
+
+/* Dimmer over the page, including the bar — `showModal()` paints this as the
+   dialog's own `::backdrop`, not a sibling element (see `.bp-dialog`'s own
+   comment on why that matters: a class with nothing in the markup wearing it
+   is dead CSS). Reads the page background rather than a flat black so it
+   sits right in both themes without a separate dark-mode override. */
+.bp-now-playing::backdrop {
+  background: color-mix(in srgb, var(--bp-color-bg) 72%, transparent);
+}
+
+/* No `display` here: author CSS beats the UA's own
+   `dialog:not([open]) { display: none }`, so a `display: flex` on this rule
+   draws the CLOSED sheet over the page at all times (the same trap
+   `.bp-sheet[open]` documents below). The layout goes on `[open]`. Every
+   other declaration here only matters while the dialog is shown.
+
+   No padding and no gap on the dialog either: a click on the dialog element
+   itself is how the sheet recognises its backdrop (NowPlayingSheet.tsx), and
+   padding or a flex gap on it would be dialog-element surface too. Both live
+   on `.bp-now-playing-body`, which fills the dialog. */
+.bp-now-playing {
+  position: fixed;
+  /* Pinned to the bottom on a phone: `margin: auto 0 0` centers nothing
+     horizontally and pushes the dialog to the bottom edge instead of the
+     UA's default centered placement. */
+  margin: auto 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: calc(100dvh - 4rem);
+  box-sizing: border-box;
+  border: none;
+  border-top: 1px solid var(--bp-color-border);
+  border-radius: 18px 18px 0 0;
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
+  padding: 0;
+  overflow: hidden;
+}
+
+.bp-now-playing[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.bp-now-playing-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0.75rem 20px calc(1rem + env(safe-area-inset-bottom, 0px));
+  /* The last resort on a short screen with many sources: the whole sheet
+     scrolls rather than anything overlapping. */
+  overflow-y: auto;
+}
+
+/* The grab handle — a purely decorative affordance (this sheet has no
+   drag-to-dismiss gesture; Escape, the backdrop and the close button all
+   do the job), so it is drawn, not a button, and carries no label. On the
+   body, not the dialog, for the backdrop-click reason above. */
+.bp-now-playing-body::before {
+  content: "";
+  align-self: center;
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bp-color-border);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bp-now-playing[open] {
+    animation: bp-now-playing-in var(--duration-enter, 220ms) var(--ease-bp, ease-out);
+  }
+}
+
+@keyframes bp-now-playing-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.bp-now-playing-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.bp-now-playing-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.bp-now-playing-title {
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-size: 24px;
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
+
+.bp-now-playing-sub {
+  color: var(--bp-color-muted);
+  font-size: 0.875rem;
+}
+
+/* The close button reuses `.bp-player-skip`'s 44px box rather than its own
+   rule — same reason the bar's play button borrows a shared class: one
+   selector, so the two touch targets cannot drift apart. */
+
+/* Sections keep their natural height: the sheet was a flex column letting
+   them shrink, so a long running order squeezed the source pills until the
+   order's heading sat on top of them. The one part that scrolls is the order
+   list itself, capped below. */
+.bp-now-playing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  flex: none;
+}
+
+.bp-now-playing-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The source choices are quiet sm buttons, the 44px target a sheet on a
+   phone needs. */
+.bp-now-playing-sources .bp-btn {
+  padding-inline: 1rem;
+  white-space: nowrap;
+}
+
+.bp-now-playing-mixer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-ui, 0.9375rem);
+  text-decoration: none;
+}
+
+.bp-now-playing-mixer:hover {
+  background: var(--bp-fill-raised);
+}
+
+.bp-now-playing-mixer:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+.bp-now-playing-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  /* Three takes and the rest scroll. A row measures 55.5px at the default
+     size (its two lines of text, not its 50px floor), so 3.5rem each, in rem
+     so a larger system font still shows three. */
+  max-height: calc(3 * 3.5rem + 2 * 0.125rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* More takes past the three in view fade out at that edge, top or bottom,
+   which says "keep scrolling" without a control that would have to be
+   pressed. Set from the list's own scroll position (NowPlayingSheet.tsx), so
+   each fade is gone once that end is reached. */
+.bp-now-playing-list,
+.bp-rec-scroll {
+  --bp-fade-top: 0px;
+  --bp-fade-bottom: 0px;
+}
+
+.bp-now-playing-list.has-more-above,
+.bp-rec-scroll.has-more-above {
+  --bp-fade-top: 2.5rem;
+}
+
+.bp-now-playing-list.has-more-below,
+.bp-rec-scroll.has-more-below {
+  --bp-fade-bottom: 2.5rem;
+}
+
+.bp-now-playing-list.has-more-above,
+.bp-now-playing-list.has-more-below,
+.bp-rec-scroll.has-more-above,
+.bp-rec-scroll.has-more-below {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--bp-fade-top),
+    #000 calc(100% - var(--bp-fade-bottom)),
+    transparent
+  );
+}
+
+.bp-now-playing-item {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: none;
+  border-radius: 10px;
+  padding: 0.375rem 0.625rem;
+  background: transparent;
+  color: inherit;
+  font-family: var(--bp-font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bp-now-playing-item:hover {
+  background: var(--bp-fill-subtle);
+}
+
+/* The playing row — same gold-tinted fill and accent title a pressed `.bp-btn-quiet` uses, so the two "this is what's on" markers in the sheet read as one language. */
+.bp-now-playing-item[aria-current="true"] {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 10%, transparent);
+}
+
+.bp-now-playing-item[aria-current="true"] .bp-now-playing-item-title {
+  color: var(--bp-color-accent);
+}
+
+/* Already played: present in the list, quieted rather than hidden — the
+   queue itself never shrinks mid-playback, only what is ahead is dimmed. */
+.bp-now-playing-item[data-played] .bp-now-playing-item-title,
+.bp-now-playing-item[data-played] .bp-now-playing-item-sub {
+  color: var(--bp-color-muted);
+}
+
+.bp-now-playing-num {
+  flex: none;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--bp-color-muted);
+}
+
+.bp-now-playing-item[aria-current="true"] .bp-now-playing-num {
+  color: var(--bp-color-accent);
+}
+
+/* The current take's equaliser moves while it plays and stands still while
+   paused, so the order list says "playing" and not only "this one". Each bar
+   bounces from its own foot, on its own period, so the three never line up
+   into a single pulse. */
+.bp-now-playing-eq rect {
+  transform-box: fill-box;
+  transform-origin: bottom;
+}
+
+.bp-now-playing-eq.is-playing rect {
+  animation: bp-eq 0.9s ease-in-out infinite alternate;
+}
+
+.bp-now-playing-eq.is-playing rect:nth-child(2) {
+  animation-duration: 0.7s;
+  animation-delay: -0.3s;
+}
+
+.bp-now-playing-eq.is-playing rect:nth-child(3) {
+  animation-duration: 1.1s;
+  animation-delay: -0.6s;
+}
+
+@keyframes bp-eq {
+  from {
+    transform: scaleY(0.35);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-now-playing-eq.is-playing rect {
+    animation: none;
+  }
+}
+
+.bp-now-playing-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.bp-now-playing-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-now-playing-item-sub {
+  color: var(--bp-color-muted);
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The sheet's own transport — `showModal()` makes the bar behind it inert,
+   so previous/play-pause/next have to be reachable from inside the top
+   layer too. Same `.bp-player-skip`/`.bp-player-play` classes and handlers
+   as the bar; no second waveform, seeking stays there. */
+.bp-now-playing-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex: none;
+  padding-top: 0.25rem;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 640px) {
+  .bp-now-playing {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: 100%;
+    max-width: 28rem;
+    max-height: min(calc(100dvh - 4rem), 40rem);
+    border: 1px solid var(--bp-color-border);
+    border-radius: 18px;
+  }
+
+  .bp-now-playing-body::before {
+    /* No drag-to-dismiss gesture on a pointer-driven surface: the phone-only
+       affordance would just be a decorative bar nobody asked for. */
+    display: none;
+  }
+}
+
+@media (min-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .bp-now-playing[open] {
+    animation: bp-now-playing-in-desktop var(--duration-enter, 220ms) var(--ease-bp, ease-out);
+  }
+}
+
+@keyframes bp-now-playing-in-desktop {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

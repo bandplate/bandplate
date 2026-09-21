@@ -1,0 +1,160 @@
+/* ---------------------------------------------------------------------- */
+/* Containers — ONE primitive, two densities.                              */
+/* ---------------------------------------------------------------------- */
+/* The gallery used to show "Card" and "Domain rows" as if they were separate
+   components with overlapping jobs. They are one thing at two densities, and
+   which you use is decided by COUNT, not by taste:
+ *
+ *   .bp-card       a panel around a block of content that stands alone — a
+ *                  form section, a summary, a link tile. It carries a surface
+ *                  because nothing around it establishes the grouping.
+ *
+ *   .bp-card-flat  the same container inside a LIST of like things. The list
+ *                  itself is the grouping, so the surface comes off; items
+ *                  are rounded rows a few pixels apart, with no rule between.
+ *
+ * More than two of a thing is a list. Boxes in a list read as boxes, which is
+ * the thing the Label skin was chosen to avoid — an archive of ten events
+ * became ten containers competing with each other instead of one index you
+ * scan down.
+ *
+ * `.bp-song-row` / `.bp-take-row` ARE `.bp-card-flat`; they
+ * are listed in its selector rather than given their own box model, so the two
+ * densities cannot drift apart. Their own rules only add layout. */
+.bp-card {
+  border: 1px solid var(--bp-color-border);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  background: var(--bp-color-surface);
+}
+
+/* ONE box for every row type — songs, events and takes — with two shapes.
+
+   On a phone a row runs the full width of the screen: it bleeds out through
+   the page's gutter and pads its contents back in by exactly that gutter, so
+   the first and last thing in a row sit on the same line as every heading,
+   pill and header button on the page. The fill is the header's translucent
+   brown, and a hairline separates one row from the next. (It used to bleed
+   14px and pad back 20px, which put a row's contents 6px inside everything
+   else's edge.)
+
+   Past `lg` a row is a card: its OUTER edge sits on the page's gutter line,
+   in the same brown, rounded, a few pixels from the next.
+
+   The gutter values are `.bp-shell-main`'s own, so the two cannot disagree. */
+.bp-card-flat,
+.bp-song-row,
+.bp-take-row,
+.bp-ledger-row {
+  --bp-row-pad-start: max(1.25rem, env(safe-area-inset-left, 0px));
+  --bp-row-pad-end: max(1.25rem, env(safe-area-inset-right, 0px));
+  position: relative;
+  margin-inline: calc(var(--bp-row-pad-start) * -1) calc(var(--bp-row-pad-end) * -1);
+  padding-inline: var(--bp-row-pad-start) var(--bp-row-pad-end);
+  /* Tight on the Y axis on purpose: these lists are read by scrolling, and a
+     row that breathes in isolation costs a screenful over twenty of them. The
+     row's own `min-height` (44px) is the floor, so the thumb target survives
+     the smaller padding. */
+  padding-block: 0.5rem;
+  border: none;
+  border-bottom: 1px solid var(--bp-color-border);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
+}
+
+/* The first row of a run also takes the rule above it, so the list is closed
+   at both ends rather than hanging off its last hairline. */
+.bp-card-flat:not(.bp-card-flat + .bp-card-flat),
+.bp-song-row:not(.bp-song-row + .bp-song-row),
+.bp-take-row:not(.bp-take-row + .bp-take-row),
+.bp-ledger-row:not(.bp-ledger-row + .bp-ledger-row) {
+  border-top: 1px solid var(--bp-color-border);
+}
+
+@media (min-width: 1024px) {
+  .bp-card-flat,
+  .bp-song-row,
+  .bp-take-row,
+  .bp-ledger-row {
+    --bp-row-pad-start: 1.25rem;
+    --bp-row-pad-end: 1.25rem;
+    margin-inline: 0;
+    border: none;
+    border-radius: 1rem;
+  }
+
+  .bp-card-flat:not(.bp-card-flat + .bp-card-flat),
+  .bp-song-row:not(.bp-song-row + .bp-song-row),
+  .bp-take-row:not(.bp-take-row + .bp-take-row),
+  .bp-ledger-row:not(.bp-ledger-row + .bp-ledger-row) {
+    border-top: none;
+  }
+
+  .bp-card-flat + .bp-card-flat,
+  .bp-song-row + .bp-song-row,
+  .bp-take-row + .bp-take-row,
+  .bp-ledger-row + .bp-ledger-row {
+    margin-top: 0.5rem;
+  }
+}
+
+/* The drawn marks at a row's two ends touch the gutter lines, not their tap
+   boxes. The favourite star is a 16px glyph centred in a 44px box, so it
+   carries 14px of air plus the glyph's own pixel of margin on each side; the
+   row's end padding gives that 15px back. The take row's play disc (or its
+   plate) is 28px centred in 44px, so its start padding gives back 8px. */
+.bp-song-row:has(> .bp-favorite-toggle-form:last-child),
+.bp-ledger-row:has(> .bp-favorite-toggle-form:last-child),
+.bp-take-row:has(.bp-take-favorite-mark) {
+  padding-inline-end: calc(var(--bp-row-pad-end) - 15px);
+}
+
+.bp-take-row {
+  padding-inline-start: calc(var(--bp-row-pad-start) - 8px);
+  /* The disc (or the plate) is 28px in a 44px box, so the row's first line
+     already carries 8px of air above it that nothing adds below the last:
+     16px over the disc, 10px under the date. 6px more at the bottom evens
+     the two. */
+  padding-bottom: 0.875rem;
+}
+
+/* The whole row is its link: the name's link stretches an overlay across the
+   row, as `.bp-take-label::after` already does, and the star sits above it. */
+.bp-song-row-link::after,
+.bp-ledger-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.bp-song-row > .bp-favorite-toggle-form,
+.bp-ledger-row > .bp-favorite-toggle-form {
+  position: relative;
+  z-index: 1;
+}
+
+/* Under the pointer the fill goes solid: the same brown, no longer let
+   through. One hover for every row type. */
+.bp-card-flat:hover,
+.bp-song-row:hover,
+.bp-take-row:hover,
+.bp-ledger-row:hover {
+  background: var(--bp-color-surface);
+}
+
+/* …and the plate brightens rather than being swallowed, so the anchor stays
+   legible exactly when the row is being pointed at. */
+.bp-take-row:hover .bp-take-plate::before {
+  border-color: var(--bp-color-muted);
+}
+
+.bp-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.bp-mono {
+  font-family: var(--bp-font-mono);
+  word-break: break-all;
+}

@@ -1,0 +1,64 @@
+/* ---------------------------------------------------------------------- */
+/* Persistent player — one instance, rendered by `AppLayout.astro`,        */
+/* `transition:persist`ed across navigation (see `Player.tsx`'s header     */
+/* comment). Sits ABOVE the tab bar on phones (its own fixed element,      */
+/* not part of the tab bar), full-width at the very bottom past `lg`       */
+/* (no tab bar there to stack above). Always in the DOM; only `[hidden]`   */
+/* toggles when nothing is loaded. Its height (`--bp-player-height` on     */
+/* `.bp-shell`, consumed by `.bp-shell-main`'s reserved bottom padding)    */
+/* is kept in sync with `Player.tsx`'s own `ResizeObserver`, not just a    */
+/* number copy-pasted between two rules — see that variable's comment on  */
+/* `.bp-shell` for why. This differs from the "no JS-computed layout"     */
+/* rule elsewhere on this project (which is about WIDTH — the actual      */
+/* cause of a real horizontal-scroll bug here before): this is a CSS      */
+/* custom property carrying a height, applied to a `position: fixed`      */
+/* element that is never part of document flow, so it cannot itself       */
+/* trigger that class of bug.                                             */
+/*                                                                          */
+/* Contrast (WCAG relative luminance, computed for this task — every       */
+/* combination this component actually paints):                           */
+/*   title (--bp-color-fg) on this bar's own surface (--bp-color-surface)  */
+/*     light: #2f0c02 on #fbf8ef -> 16.84:1   dark: #f4efe2 on #3a1206 -> 14.41:1 */
+/*   subtitle (--bp-color-muted) on the same surface                       */
+/*     light: #7c6758 on #fbf8ef -> 5.02:1    dark: #b89c86 on #3a1206 -> 6.41:1  */
+/*   an active/playing toggle's icon (--bp-component-accent-success) on    */
+/*   both the surface above AND the plain page background it also renders  */
+/*   against in TakeRow/take-detail (--bp-color-bg) — NOT the raw fixed    */
+/*   --bp-color-accent-alt, which measures 1.93:1/1.79:1 in dark mode      */
+/*   (see dubplate.css's header comment; this is that exact regression,       */
+/*   avoided by using the theme-aware component token instead):            */
+/*     on bg:      light 8.06:1   dark 5.14:1                              */
+/*     on surface: light 8.71:1   dark 4.76:1                              */
+/* All comfortably clear WCAG AA's 4.5:1 (text) / 3:1 (non-text UI) floor  */
+/* in both themes.                                                         */
+/* ---------------------------------------------------------------------- */
+
+.bp-player {
+  position: fixed;
+  left: 0;
+  right: 0;
+  /* Sits directly on the tab bar. `--bp-tabbar-height` is the bar's MEASURED
+     height, published by `Player.tsx` — the fallback here (56px of
+     `.bp-tabbar-item` plus the bar's own 1px `border-top`) is only true at
+     the browser's default font size, and a raised system font size pushes
+     the real bar taller than that, opening a strip of page between the two.
+     The measured value already carries the bar's own safe-area padding; the
+     fallback has to add it itself. */
+  bottom: var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px)));
+  z-index: 42; /* above the tab bar's 40 */
+  min-height: var(--bp-player-height);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.625rem;
+  padding-block: 0.75rem;
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  background: var(--bp-color-surface);
+  border-top: 1px solid var(--bp-color-border);
+}
+
+.bp-player[hidden] {
+  display: none;
+}

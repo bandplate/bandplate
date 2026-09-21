@@ -1,0 +1,230 @@
+/* ---------------------------------------------------------------------- */
+/* App shell — the member-facing nav (Task 5). A bottom tab bar on phones, */
+/* a persistent sidebar past `lg` (1024px). Two real layouts, not one      */
+/* widened by media query: the sidebar and tab bar are separate elements,  */
+/* each hidden with `display: none` on the breakpoint it doesn't own, so   */
+/* no JS is needed to switch between them and nothing is ever "disabled"   */
+/* — the wrong one for the viewport simply isn't rendered.                 */
+/* ---------------------------------------------------------------------- */
+
+.bp-shell {
+  min-height: 100vh;
+  /* The dynamic unit, as `.bp-auth` does: `100vh` on a phone is the height
+     with the toolbars hidden, so the last row of the page hides under them. */
+  min-height: 100dvh;
+  /* Referenced by `.bp-player` (its own vertical placement) AND
+     `.bp-shell-main` (reserved bottom padding so page content never sits
+     underneath the fixed player bar) — one number, one place, so the two
+     can't drift out of sync.
+     This is a SAFE UPPER-BOUND FALLBACK only, used before JS has measured
+     anything (first paint, or with no JS at all) and while no track has
+     ever loaded (the player bar is `[hidden]`, so it has no real height to
+     measure yet — see its own comment). Once a track loads, `Player.tsx`
+     overwrites this value on this exact element via a `ResizeObserver` on
+     the real rendered `.bp-player`, so the reserved space always matches
+     actual height rather than a number that silently drifts out of sync
+     with it (measured 109px rendered vs. a stale 76px declared here is
+     exactly the bug this self-correction exists to prevent). */
+  --bp-player-height: 7rem;
+
+  position: relative;
+  isolation: isolate;
+}
+
+/* Atmosphere — groove rings anchored off the top-right corner at 7px pitch
+   under a warm accent bloom. Pure CSS, no image, and it survives a brand-token
+   swap because both layers are mixed from `--bp-color-accent`.
+   On a FIXED pseudo-element rather than `background-attachment: fixed` on the
+   shell itself: the rings must not scroll (they read as material, not as
+   pattern), and `background-attachment: fixed` is the one property iOS Safari
+   has never handled reliably. `isolation: isolate` + `z-index: -1` keeps it
+   behind page content without escaping the shell's stacking context. */
+.bp-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    repeating-radial-gradient(
+      circle at 86% 0%,
+      color-mix(in srgb, var(--bp-color-accent) 5%, transparent) 0 1px,
+      transparent 1px 7px
+    ),
+    radial-gradient(
+      120% 34% at 86% 0%,
+      color-mix(in srgb, var(--bp-color-accent) 12%, transparent),
+      transparent 62%
+    );
+  /* Masked back to the corner it is anchored to. Without this the repeating
+     radial is unbounded and tiles the whole viewport — subtle enough on a
+     phone, but at desktop width the 7px pitch turns into a visible moiré
+     across the entire page. The atmosphere is meant to read as material near
+     the corner, not as a pattern everywhere. */
+  -webkit-mask-image: radial-gradient(115% 62% at 86% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(115% 62% at 86% 0%, #000 0%, transparent 72%);
+}
+
+.bp-shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.875rem;
+  /* `viewport-fit=cover` lets the page run under the notch/camera cutout in
+     landscape, so the shell's own edge padding has to grow to clear it
+     instead of staying at the fixed 1.25rem. */
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--bp-color-border);
+  /* The home card's brown, let partly through: the header reads as a band
+     across the top rather than text standing on the page. The surface token,
+     not the fixed sleeve, because in the light theme the sleeve is dark and
+     the header's ink would vanish on it. In dark the two are the same brown. */
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
+}
+
+.bp-shell-wordmark {
+  /* Touch target, not a font-size change — measured at 33px tall before,
+     under the 44px floor (brief §6); the wordmark itself stays the same
+     visual size, just vertically centered in a taller box. */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.375rem;
+  text-decoration: none;
+  color: var(--bp-color-fg);
+}
+
+/* The mark takes the accent rather than the wordmark's ink, so the pair reads
+   as one lockup with the plate carrying the colour — the horizontal lockup
+   from docs/design-foundation.md. `currentColor` is what the inlined SVG
+   paints with, which is why Logo.astro must never become an <img>. */
+.bp-shell-mark {
+  flex: none;
+  color: var(--bp-color-accent);
+}
+
+.bp-shell-body {
+  display: flex;
+  align-items: flex-start;
+}
+
+.bp-shell-main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 60rem;
+  margin: 0 auto;
+  /* Clears the tab bar, plus the player bar that sits ABOVE it (see
+     `.bp-player`'s own `bottom` below), plus a little air — or the last take
+     row on a tall list renders underneath them. The tab bar's height is the
+     same measured value the player's `bottom` uses, so a system font size
+     that grows the bar grows this reservation with it. Always reserved, even
+     with no track loaded, rather than toggled by JS: a fixed bottom-padding
+     number can't itself cause the width-based scrollWidth-blowout bugs a
+     JS-computed one already has, elsewhere in this project. */
+  padding-top: 1.25rem;
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(
+    1.25rem +
+    var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
+    var(--bp-player-height)
+  );
+  box-sizing: border-box;
+}
+
+/* With nothing loaded the player bar is `[hidden]`, and reserving its height
+   anyway left 7rem of empty page above the tab bar on every screen. Only the
+   tab bar and the same 1.25rem the page starts with, then. A rule of its own
+   rather than zeroing `--bp-player-height`: once a track has played,
+   `Player.tsx` writes that value inline on `.bp-shell`, and an inline custom
+   property outranks any stylesheet rule. `[hidden]` is in the server's
+   markup, so this holds from first paint, before any script runs. */
+.bp-shell:has(.bp-player[hidden]) .bp-shell-main:not(.bp-shell-main-bare) {
+  padding-bottom: calc(
+    1.25rem +
+    var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px)))
+  );
+}
+
+/* No tab bar past `lg`, so nothing but the page's own bottom edge: the same
+   2.25rem the page opens with. */
+@media (min-width: 1024px) {
+  .bp-shell:has(.bp-player[hidden]) .bp-shell-main:not(.bp-shell-main-bare) {
+    padding-bottom: 2.25rem;
+  }
+}
+
+/* The mixer's page, which renders NO sidebar, header or tab bar — see
+   `AppLayout`'s `chrome` prop for why that one page is different.
+
+   Uncapped, unlike every other page here. The reading cap is right when a
+   page is a column of prose or rows, and wrong when the page IS one time
+   axis: every pixel of width is more waveform, and the lanes are read across
+   rather than down. No bottom reservation either — neither the tab bar nor
+   the shell player exists on this page to sit underneath.
+
+   Compound selector on purpose. The `min-width: 64rem` block far below sets
+   `.bp-shell-main`'s own cap, and at equal specificity the later rule wins —
+   which is exactly what quietly defeated the `wide` variant this replaces. */
+.bp-shell-main.bp-shell-main-bare {
+  max-width: none;
+  padding: 1.25rem 1.25rem 2.5rem;
+}
+
+@media (min-width: 64rem) {
+  .bp-shell-main.bp-shell-main-bare {
+    padding: 1.75rem 2rem 2.5rem;
+  }
+}
+
+/* Bottom tab bar — phones and tablets. */
+.bp-tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  border-top: 1px solid var(--bp-color-border);
+  /* The header's brown, let partly through, so the top and bottom bars of
+     the phone are one material with the rows between them. The bar sits over
+     the scrolling page, so a blur keeps its labels legible over whatever
+     passes underneath. */
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-inline: env(safe-area-inset-left, 0) env(safe-area-inset-right, 0);
+}
+
+.bp-tabbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 56px;
+  padding: 0.375rem 0.25rem;
+  text-decoration: none;
+  color: var(--bp-color-muted);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.bp-tabbar-item[aria-current="page"] {
+  color: var(--bp-color-fg);
+}
+
+.bp-tabbar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

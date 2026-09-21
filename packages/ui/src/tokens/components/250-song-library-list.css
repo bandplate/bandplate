@@ -1,0 +1,107 @@
+/* ---------------------------------------------------------------------- */
+/* Library list (songs) — flat rows, not cards: this is an index to scan   */
+/* fast, not a grid of equally-weighted tiles. The title is the one thing  */
+/* in body type; everything else that's a measurement (key, tempo, take    */
+/* count, last played) is mono, right-aligned on desktop as real columns.  */
+/* ---------------------------------------------------------------------- */
+
+/* Task 8: `.bp-song-row` used to BE the `<a>` — the whole row was one
+   link. `FavoriteToggle` renders a `<form>+<button>`, and a `<form>` inside
+   an `<a>` is invalid HTML (interactive content can't nest), so the row is
+   now a plain container with the link as one child (`.bp-song-row-link`,
+   carrying the old link styling) and the favorite toggle as a sibling —
+   same visual result, `:hover`/border/padding unchanged, just moved from
+   the `<a>` onto the row it's still visually indistinguishable from. */
+.bp-song-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding-block: 0.5rem;
+}
+
+.bp-song-row-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--bp-color-fg);
+}
+
+.bp-song-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.bp-song-title {
+  /* `--bp-text-row`: display face at 600, not the body face at 700. A song
+     title is a heading, and a heading at 17px in a bold text face is the same
+     dense little block the section heading was — see theme.css's
+     `--text-section` note. */
+  font-family: var(--bp-font-display);
+  font-size: var(--text-row, 1.1875rem);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0;
+}
+
+/* A stub song — auto-created by ingest, still missing its details. Marked by
+   colour and by the badge beside it, not by a slant: Chivo's italic sits
+   awkwardly against Zilla Slab's upright slabs, and this title IS Zilla Slab,
+   which has no italic cut at all — the browser was synthesising an oblique. */
+.bp-song-title-stub {
+  color: var(--bp-color-muted);
+  font-weight: 600;
+}
+
+.bp-song-meta {
+  font-family: var(--bp-font-body);
+  /* App-formatted numbers, not a character grid: mono is reserved for
+     pasted chord charts and machine strings (see
+     docs/design-foundation.md). Equal-width digits come from tabular
+     figures instead, which is all a duration or a count ever needed. */
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--bp-color-muted);
+}
+
+.bp-song-row-stats {
+  display: none;
+  flex-shrink: 0;
+  gap: 1.5rem;
+  font-family: var(--bp-font-body);
+  /* App-formatted numbers, not a character grid: mono is reserved for
+     pasted chord charts and machine strings (see
+     docs/design-foundation.md). Equal-width digits come from tabular
+     figures instead, which is all a duration or a count ever needed. */
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--bp-color-muted);
+  text-align: right;
+}
+
+.bp-song-row-stat-value {
+  display: block;
+  color: var(--bp-color-fg);
+  font-size: 0.9375rem;
+}
+
+@media (min-width: 1024px) {
+  .bp-song-row-stats {
+    display: flex;
+  }
+}
+
+.bp-badge-concert::before {
+  background: var(--bp-component-accent-strong);
+}
+
+.bp-badge-session::before {
+  background: var(--bp-component-accent-success);
+}
+
+.bp-badge-keeper::before {
+  background: var(--bp-component-accent-success);
+}

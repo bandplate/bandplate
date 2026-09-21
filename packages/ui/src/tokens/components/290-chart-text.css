@@ -1,0 +1,55 @@
+/* ---------------------------------------------------------------------- */
+/* Chords and lyrics — read at arm's length, in bad light, holding an      */
+/* instrument. Generous size and line height; `ch`-based max-width is a    */
+/* direct, font-relative answer to "must not run to 200 characters a      */
+/* line" rather than a guessed `rem` value.                                */
+/* ---------------------------------------------------------------------- */
+
+.bp-chords {
+  /* The accent, per the design canvas: a chord chart and the lyric under it are
+     two different kinds of reading, and on a page that is otherwise one colour
+     of text they ran together into a single grey block. The token flips with
+     the theme (gold on the dark ground, burnt gold #7A4E05 on bone) precisely
+     because raw gold measures 2.1:1 on bone — this is text, so it has to be the
+     token and never the gold hex. */
+  color: var(--bp-color-accent);
+  font-family: var(--bp-font-mono);
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  /* `pre`, not `pre-wrap` — a chord line's spacing is column alignment
+     (monospace exists to keep chord names lined up over the syllable they
+     land on), and letting a long line soft-wrap destroys that alignment.
+     `overflow-x: auto` scrolls the rare line that exceeds the measure
+     instead, keeping every line's own spacing intact. `min(46ch, 100%)`,
+     not a bare `46ch` — 46ch (469px) is wider than a 375px viewport's
+     content column, and `max-width` alone doesn't shrink an element below
+     it; without the `100%` clamp the block itself overflowed its column
+     and scrolled the whole DOCUMENT sideways (measured: `scrollWidth` 489
+     vs `clientWidth` 375), not just this element's own `overflow-x: auto`
+     — the per-line scroll this rule exists for never even engaged. */
+  white-space: pre;
+  overflow-x: auto;
+  max-width: min(46ch, 100%);
+  margin: 0;
+}
+
+/* Verses sit a step back from full ink so the chorus can be the brightest
+   thing in the chart without introducing a colour. Nothing is indented — the
+   label, the chords and the words all hang off the same edge, which is what
+   makes a section read as one block rather than three. */
+.bp-lyrics {
+  font-family: var(--bp-font-body);
+  font-size: var(--text-lyric, 1.1875rem);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  max-width: 38ch;
+  margin: 0;
+  color: color-mix(in srgb, var(--bp-color-fg) 86%, var(--bp-color-bg));
+}
+
+/* The part everyone sings. Full-strength ink and 600 rather than a rule or a
+   tint: it has to read as louder on a page that is already mostly text. */
+.bp-song-chart-section--chorus .bp-lyrics {
+  color: var(--bp-color-fg);
+  font-weight: 600;
+}

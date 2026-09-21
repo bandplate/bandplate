@@ -1,0 +1,43 @@
+/* ---------------------------------------------------------------------- */
+/* Dialog (confirmation) — JS-enhanced modal. The no-JS fallback is a real */
+/* confirm page; this only ever appears once JS has intercepted a click.  */
+/* ---------------------------------------------------------------------- */
+
+/* `ConfirmDialog.tsx` renders a bare `<dialog class="bp-dialog">` — no
+   wrapping element — and opens it with `showModal()`, so the scrim the
+   platform actually paints is the dialog's own `::backdrop` pseudo-element,
+   not a sibling/wrapper div. A `.bp-dialog-backdrop` class used to be
+   defined here but nothing in the markup ever had that class, so it was
+   dead CSS and the intended dimming scrim never rendered at all. */
+.bp-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.bp-dialog {
+  background: var(--bp-color-bg);
+  color: var(--bp-color-fg);
+  border: 2px solid var(--bp-color-fg);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  max-width: 28rem;
+  width: 100%;
+  margin: auto;
+}
+
+.bp-dialog h2 {
+  font-family: var(--bp-font-display);
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem;
+}
+
+.bp-dialog p {
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+
+.bp-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}

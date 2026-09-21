@@ -1,0 +1,226 @@
+/* ---------------------------------------------------------------------- */
+/* Field (label + input/select/textarea + error)                          */
+/* ---------------------------------------------------------------------- */
+
+.bp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+}
+
+.bp-field-label {
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--bp-color-fg);
+}
+
+.bp-field-hint {
+  font-size: 0.8125rem;
+  color: var(--bp-color-muted);
+}
+
+/* Filled and edgeless. The fill IS the affordance — a control reads as
+   editable because it is a lighter shape on the ground, not because it has a
+   line around it. 12.2:1 dark, 12.1:1 light for the value text. */
+.bp-input,
+.bp-select,
+.bp-textarea {
+  font-family: var(--bp-font-body);
+  font-size: 1rem;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm, 3px);
+  border: none;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+}
+
+/* Our own caret, not the UA's. `padding-right` alone does not move the native
+   arrow: Chrome positions it a fixed distance from the border edge and ignores
+   the padding entirely, so the field could never be given breathing room on
+   that side. `appearance: none` drops it and this draws the chevron as a
+   background image instead — positioned where we want, at the size the rest of
+   the system uses, and following the theme through `--bp-select-caret` (a
+   background image cannot resolve `currentColor`, which is the whole reason
+   that token exists). */
+.bp-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  background-image: var(--bp-select-caret);
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 14px 14px;
+}
+
+/* The date picker's calendar glyph, in the same ink as the select caret. The
+   native one is drawn by the UA and follows `color-scheme`, which makes it
+   white on the dark ground — brighter than every other piece of chrome on the
+   field. This hides it (keeping it CLICKABLE, which is what still opens the
+   picker) and paints our own in its place. */
+.bp-input[type="date"],
+.bp-input[type="datetime-local"],
+.bp-input[type="time"] {
+  padding-right: 2.5rem;
+  background-image: var(--bp-date-icon);
+  background-repeat: no-repeat;
+  background-position: right 0.8125rem center;
+  background-size: 16px 16px;
+}
+
+.bp-input[type="date"]::-webkit-calendar-picker-indicator,
+.bp-input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.bp-input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Firefox draws its own arrow on top of the background image unless the
+   element is explicitly told it has no text-indent trick applied; this is the
+   documented way to suppress it. */
+@-moz-document url-prefix() {
+  .bp-select {
+    text-indent: 0.01px;
+    text-overflow: "";
+  }
+}
+
+/* Not `--bp-color-muted`: on a 12% fill that measures 4.26:1 in the light
+   theme and fails. This is foreground at 70% over the fill instead — a
+   different mechanism, 6.5:1 or better in both themes. */
+/* A field that is filled but not editable — `/login` reached from an invite,
+   where the address is the one thing the form already knows. It has to LOOK
+   settled rather than broken: the ink stays full strength (this is real
+   content, not a placeholder) and the ground drops back, so the eye reads
+   "already answered" instead of "disabled, and you cannot proceed". The
+   caret is suppressed because a blinking one in a field that will not take
+   a keystroke is the whole frustration. */
+.bp-input:read-only {
+  background: color-mix(in srgb, var(--bp-fill-subtle) 55%, transparent);
+  color: var(--bp-color-fg);
+  cursor: default;
+  caret-color: transparent;
+}
+
+.bp-input::placeholder,
+.bp-textarea::placeholder {
+  color: var(--bp-color-placeholder);
+  opacity: 1;
+}
+
+.bp-textarea {
+  min-height: 88px;
+}
+
+/* An INSET ring, not a border: an outset border would add 2px to the box and
+   shift every sibling by a pixel the moment a field takes focus. */
+.bp-input:focus-visible,
+.bp-select:focus-visible,
+.bp-textarea:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--bp-color-accent);
+}
+
+.bp-input[aria-invalid="true"],
+.bp-select[aria-invalid="true"],
+.bp-textarea[aria-invalid="true"] {
+  background: var(--bp-fill-alert);
+}
+.bp-input[aria-invalid="true"]:focus-visible,
+.bp-select[aria-invalid="true"]:focus-visible,
+.bp-textarea[aria-invalid="true"]:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--bp-color-danger);
+}
+
+/* On the plain ground, not on the field's fill — so `--bp-color-danger` is
+   safe here (4.6:1 dark, 6.5:1 light) where it would not be on the tint. */
+.bp-field-error {
+  /* Emphasis inside body copy, not a heading — so it stays on the body face
+     and drops to 600. 700 at 14px is the same density problem in miniature.
+     On the plain ground, so `--bp-color-danger` is safe here (4.6:1 dark,
+     6.5:1 light) where it would not be on a field's fill. */
+  font-size: 0.875rem;
+  color: var(--bp-color-danger);
+  font-weight: 600;
+}
+
+.bp-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  border: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+}
+
+.bp-checkbox-group legend {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.bp-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+
+/* A drawn control rather than the platform's. `accent-color` only recolours
+   the tick and leaves the browser's own box, which is a hard white square on
+   the lacquer ground and the most obviously unstyled thing on the page. This
+   is a circle to echo the plate, filled with the accent when checked, and it
+   keeps a real <input> underneath so keyboard, label association and form
+   submission are untouched.
+   WCAG 2.5.8 minimum target is 24px; the row's own 44px min-height carries
+   the rest. */
+.bp-checkbox-item input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  margin: 0;
+  border-radius: 50%;
+  border: 2px solid var(--bp-color-border);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.bp-checkbox-item input[type="checkbox"]::after {
+  content: "";
+  width: 11px;
+  height: 6px;
+  border-left: 2.5px solid var(--bp-color-on-accent);
+  border-bottom: 2.5px solid var(--bp-color-on-accent);
+  transform: translateY(-1px) rotate(-45deg);
+  opacity: 0;
+}
+
+.bp-checkbox-item input[type="checkbox"]:checked {
+  background: var(--bp-color-accent);
+  border-color: var(--bp-color-accent);
+}
+
+.bp-checkbox-item input[type="checkbox"]:checked::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-checkbox-item input[type="checkbox"] {
+    transition: none;
+  }
+}
+
+.bp-checkbox-item label {
+  font-family: var(--bp-font-body);
+  font-size: 0.875rem;
+}

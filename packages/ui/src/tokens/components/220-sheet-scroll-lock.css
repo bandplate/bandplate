@@ -1,0 +1,39 @@
+/* ---------------------------------------------------------------------- */
+/* Scroll lock for any open sheet.                                        */
+/*                                                                        */
+/* `showModal()` makes the rest of the document inert — it cannot be       */
+/* clicked or focused — but inert says nothing about SCROLLING, and no     */
+/* browser stops the page moving under an open dialog. On a phone that is  */
+/* the whole screen sliding away behind the panel: you flick to reach a    */
+/* control near the bottom of the sheet, the gesture chains through to the */
+/* document, and the roster you were editing is somewhere else when you    */
+/* close it. Measured before fixing: 300px of page travel with the member  */
+/* sheet open.                                                            */
+/*                                                                        */
+/* Two rules, because they answer two different halves. `:has()` freezes   */
+/* the document for as long as any sheet is open — pure CSS, so it needs   */
+/* no script to arm and cannot get out of step with a dialog that closed   */
+/* some other way (Escape, a backdrop tap, a form submitting).             */
+/* `overscroll-behavior: contain` stops the panel's OWN scroll from        */
+/* chaining onward once it hits its end, which is the case `overflow`      */
+/* alone leaves open.                                                     */
+/* ---------------------------------------------------------------------- */
+
+html:has(dialog.bp-sheet[open]),
+html:has(dialog.bp-filter-sheet[open]) {
+  overflow: hidden;
+}
+
+/* Belt and braces: some engines take the lock from `body` rather than the
+   root, and the pair costs nothing when only one of them is honoured. */
+html:has(dialog.bp-sheet[open]) body,
+html:has(dialog.bp-filter-sheet[open]) body {
+  overflow: hidden;
+}
+
+.bp-sheet,
+.bp-sheet-body,
+.bp-filter-sheet,
+.bp-filter-groups {
+  overscroll-behavior: contain;
+}

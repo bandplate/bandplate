@@ -1,0 +1,456 @@
+/* ---------------------------------------------------------------------- */
+/* /me — a member's profile, built on the record plate.                   */
+/* ---------------------------------------------------------------------- */
+
+/* One column, not two. The old page put votes beside an aside holding
+   identity, instruments, the language setting and sign-out — a junk drawer,
+   because it held everything that was not a vote. With favourites gone (home
+   is already that shelf) there was nothing left for a rail to be. */
+.bp-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 2.125rem;
+}
+
+/* --- hero ---------------------------------------------------------------
+   Plate, identity, sign-out. On a phone the plate and the sign-out share the
+   first line: sign-out beside the NAME left a control stranded in dead space,
+   while beside the plate it fills the space that is actually empty. */
+.bp-profile-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "plate signout"
+    "identity identity";
+  align-items: start;
+  gap: 0.875rem 1.25rem;
+}
+
+@media (min-width: 40rem) {
+  .bp-profile-hero {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "plate identity signout";
+    align-items: center;
+    gap: 1.75rem;
+  }
+}
+
+/* The app's plate, at profile size. Same recipe as `.bp-plate-disc` — grooves
+   over vinyl — rather than a second way of drawing a record. */
+.bp-profile-plate {
+  grid-area: plate;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  flex: none;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--bp-color-fg) 7%, transparent) 0 1px,
+      transparent 1px 4px
+    ),
+    var(--bp-plate-vinyl);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 10%, transparent),
+    0 6px 18px rgb(0 0 0 / 0.45);
+}
+
+@media (min-width: 40rem) {
+  .bp-profile-plate {
+    width: 128px;
+    height: 128px;
+  }
+}
+
+.bp-profile-plate-label {
+  display: grid;
+  place-items: center;
+  width: 54%;
+  height: 54%;
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.375rem;
+  line-height: 1;
+}
+
+@media (min-width: 40rem) {
+  .bp-profile-plate-label {
+    font-size: 1.75rem;
+  }
+}
+
+.bp-profile-plate-spindle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--bp-color-bg);
+}
+
+.bp-profile-identity {
+  grid-area: identity;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+
+.bp-profile-name {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: var(--text-title, 1.6875rem);
+  line-height: 1.02;
+}
+
+@media (min-width: 40rem) {
+  .bp-profile-name {
+    font-size: var(--text-hero, 2.75rem);
+  }
+}
+
+.bp-profile-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-profile-instruments {
+  margin-top: 0.125rem;
+}
+
+.bp-profile-noinstruments {
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-muted);
+}
+
+/* Top-aligned on a phone so it sits level with the plate's crown rather than
+   floating at its middle. */
+.bp-profile-signout {
+  grid-area: signout;
+  justify-self: end;
+}
+
+/* --- the ledger ----------------------------------------------------------
+   Four figures, ruled apart. Mono, because these are quantities to compare at
+   a glance and tabular figures line up; the rest of the page is not.
+
+   2x2 on a phone: four across 375px would shrink the numbers to the point
+   where they stop being the loudest thing in the row, which is their whole
+   job. */
+.bp-profile-ledger {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  border-top: 1px solid var(--bp-color-border);
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+@media (min-width: 48rem) {
+  .bp-profile-ledger {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.bp-profile-figure {
+  padding: 0.9375rem 0.875rem;
+}
+
+/* The first cell in each row loses its left padding so the figure sits on the
+   page's own margin — a number indented from the edge reads as a cell in a
+   table nobody drew. */
+.bp-profile-figure:nth-child(odd) {
+  padding-left: 0;
+}
+
+.bp-profile-figure:nth-child(n + 3) {
+  border-top: 1px solid var(--bp-color-border);
+}
+
+.bp-profile-figure:nth-child(even) {
+  border-left: 1px solid var(--bp-color-border);
+}
+
+@media (min-width: 48rem) {
+  .bp-profile-figure {
+    padding: 1.125rem 1.25rem;
+    border-left: 1px solid var(--bp-color-border);
+  }
+
+  .bp-profile-figure:nth-child(n + 3) {
+    border-top: none;
+  }
+
+  .bp-profile-figure:first-child {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .bp-profile-figure:nth-child(odd) {
+    padding-left: 1.25rem;
+  }
+
+  .bp-profile-figure:first-child {
+    padding-left: 0;
+  }
+
+  .bp-profile-figure:last-child {
+    padding-right: 0;
+  }
+}
+
+.bp-profile-figure-value {
+  font-family: var(--bp-font-mono);
+  font-weight: 600;
+  font-size: 1.625rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 48rem) {
+  .bp-profile-figure-value {
+    font-size: 1.875rem;
+  }
+}
+
+/* The one figure that is an invitation rather than a record. */
+.bp-profile-figure-live {
+  color: var(--bp-color-accent);
+}
+
+/* Nothing settled yet — a dash at the muted weight, so it reads as "no answer"
+   rather than as a small number. */
+.bp-profile-figure-none {
+  color: var(--bp-color-border);
+}
+
+.bp-profile-figure-unit {
+  font-size: 0.625em;
+  color: var(--bp-color-muted);
+}
+
+.bp-profile-figure-term {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.625rem;
+  margin-top: 0.4375rem;
+}
+
+.bp-profile-figure > .bp-eyebrow {
+  display: block;
+  margin-top: 0.4375rem;
+}
+
+.bp-profile-figure-term > .bp-eyebrow {
+  margin-top: 0;
+}
+
+.bp-profile-figure-go {
+  font-size: var(--text-note, 0.71875rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* --- sections ----------------------------------------------------------- */
+
+/* The language heading is a section heading like "Recent votes", in the same
+   display face — it names a part of the page, and an eyebrow made it read as
+   a field label attached to the row above. */
+.bp-profile-section {
+  margin: 0 0 0.75rem;
+}
+
+.bp-profile-language-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+/* `/me`'s theme picker. Three tiles, each holding a small page drawn in the
+   theme it stands for: `.bp-theme-mini` carries its own `data-theme`, so every
+   token inside it resolves to THAT theme whatever the page around it is using.
+   The tile is the sample; nothing here hardcodes a colour.
+
+   Selection is a ring and a tick, never a recolour of the tile, for the reason
+   the track-colour picker gives: the choices ARE colours. */
+.bp-theme-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
+  max-width: 26rem;
+  margin: 0 0 0.75rem;
+}
+
+.bp-theme-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--bp-color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bp-theme-tile-preview {
+  display: flex;
+  height: 84px;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--bp-color-border);
+  transition: box-shadow 150ms ease;
+}
+
+.bp-theme-tile[aria-pressed="true"] .bp-theme-tile-preview {
+  box-shadow: 0 0 0 2px var(--bp-color-accent);
+}
+
+.bp-theme-tile:focus-visible {
+  outline: none;
+}
+
+.bp-theme-tile:focus-visible .bp-theme-tile-preview {
+  box-shadow:
+    0 0 0 2px var(--bp-color-bg),
+    0 0 0 4px var(--bp-color-fg);
+}
+
+.bp-theme-tile-tick {
+  display: none;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  box-shadow: 0 0 0 3px var(--bp-color-bg);
+}
+
+.bp-theme-tile[aria-pressed="true"] .bp-theme-tile-tick {
+  display: grid;
+}
+
+.bp-theme-tile-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.bp-theme-mini {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 8px 0;
+  background: var(--bp-color-bg);
+}
+
+.bp-theme-mini-title,
+.bp-theme-mini-line,
+.bp-theme-mini-bar,
+.bp-theme-mini-pill {
+  display: block;
+  border-radius: 3px;
+}
+
+.bp-theme-mini-title {
+  width: 72%;
+  height: 7px;
+  background: var(--bp-color-fg);
+}
+
+.bp-theme-mini-line {
+  width: 46%;
+  height: 4px;
+  background: var(--bp-color-muted);
+}
+
+.bp-theme-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: 3px;
+}
+
+.bp-theme-mini-line + .bp-theme-mini-row {
+  margin-top: 4px;
+}
+
+.bp-theme-mini-bar {
+  flex: 1;
+  height: 5px;
+  background: var(--bp-color-fg);
+  opacity: 0.75;
+}
+
+.bp-theme-mini-pill {
+  width: 16px;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--bp-color-accent);
+}
+
+.bp-theme-mini-tabbar {
+  position: absolute;
+  inset: auto 0 0;
+  height: 12px;
+  border-top: 1px solid var(--bp-color-border);
+  background: var(--bp-color-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-theme-tile-preview {
+    transition: none;
+  }
+}
+
+.bp-profile-language-select {
+  min-width: 11rem;
+}
+
+.bp-profile-language > .bp-field-hint {
+  margin-top: 0.5625rem;
+  max-width: 52ch;
+}
+
+/* The list's last row already draws the line that closes this section, so the
+   language block adds none of its own — two rules a gap apart with nothing
+   between them is the extraneous hairline this replaced. */
+
+.bp-vote-row-song--gone {
+  color: var(--bp-color-muted);
+}
+
+.bp-vote-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.625rem;
+  margin-top: 0.1875rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-vote-row-comment {
+  font-style: normal;
+}

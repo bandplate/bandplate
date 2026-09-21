@@ -1,0 +1,117 @@
+/* ---------------------------------------------------------------------- */
+/* Instrument icon picker (admin)                                          */
+/* ---------------------------------------------------------------------- */
+/* A radio group inside the row's own form, so picking a glyph and pressing
+   Save is one submission and the whole thing works with JS off. */
+
+.bp-icon-picker {
+  width: 100%;
+}
+
+.bp-icon-picker > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--bp-color-accent);
+}
+
+.bp-icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border: none;
+  padding: 0.625rem 0 0.25rem;
+  margin: 0;
+  max-width: 26rem;
+}
+
+.bp-icon-choice {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+/* The radio itself is visually replaced by the tile, but stays focusable and
+   in the tab order — `display: none` would take it out of both. */
+.bp-icon-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bp-icon-choice-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+}
+
+.bp-icon-choice-none {
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.625rem;
+  color: var(--bp-color-muted);
+}
+
+.bp-icon-choice input:checked + .bp-icon-choice-face {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+}
+
+/* The focus ring has to be drawn by the tile, since the input it belongs to is
+   the invisible one. */
+.bp-icon-choice input:focus-visible + .bp-icon-choice-face {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* The track-colour picker is the ICON PICKER — same grid, same tile, same
+   44px target, same radius, same focus ring — with the tile filled by the
+   chosen colour instead of holding a glyph. Reusing the classes rather than
+   copying them is the point: two pickers stacked in one sheet that merely
+   resembled each other would drift the first time either was touched.
+
+   Exactly one thing has to differ. The icon picker shows selection by
+   recolouring its tile to the accent; a picker whose CHOICES ARE COLOURS
+   cannot do that without destroying the thing being chosen, and colour alone
+   would be the sole means of conveying it either way (WCAG 1.4.1). So a
+   swatch keeps its colour throughout and takes an inset ring plus a tick. */
+.bp-icon-choice-face.bp-swatch {
+  background: var(--bp-swatch, var(--bp-track-none));
+  color: var(--bp-color-on-accent);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.bp-icon-choice input:checked + .bp-swatch {
+  background: var(--bp-swatch, var(--bp-track-none));
+  box-shadow: inset 0 0 0 2px var(--bp-color-fg);
+}
+
+.bp-icon-choice input:checked + .bp-swatch::after {
+  content: "\2713";
+}
+
+/* The dot beside an instrument's name in the admin table — what the mixer
+   will paint that instrument's lane with, shown where the choice is made.
+   A patch, not a bullet: flush against the label it read as punctuation on
+   the word rather than as a property of the row. */
+.bp-color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 0.5rem;
+  vertical-align: 1px;
+  background: var(--bp-swatch, var(--bp-track-none));
+  flex: none;
+}

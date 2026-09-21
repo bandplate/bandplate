@@ -1,0 +1,15 @@
+/* ---------------------------------------------------------------------- */
+/* Empty states — an invitation, not a report (per the brief's copy rule). */
+/* ---------------------------------------------------------------------- */
+
+.bp-empty-state {
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  color: var(--bp-color-muted);
+  border: 1px dashed var(--bp-color-border);
+  border-radius: 0.5rem;
+}
+
+.bp-empty-state p {
+  margin: 0;
+}

@@ -1,0 +1,310 @@
+/* ---------------------------------------------------------------------- */
+/* Take detail (Task 6) — no player yet (increment 4); see the page's own  */
+/* header comment for where that goes. `--bp-color-muted` for the link     */
+/* underline here is the same >=3:1-in-both-themes token every other link  */
+/* underline in this file uses (4.65:1 / 6.93:1 — see dubplate.css).          */
+/* ---------------------------------------------------------------------- */
+
+/* Take detail, direction T3 — labelled strips off one edge, divided by rules.
+   The definition list this replaces (`.bp-take-detail-meta`, now gone) put the
+   vote in its fifth row, after Instruments, which said that casting one is the
+   same kind of act as reading a duration. */
+/* The shell's full width, like every other page. It was capped at 52rem, on
+   the argument that short strips at full width strand their content across an
+   empty field; in practice it made this the one page that stopped short of
+   the edge the song and event pages reach. The controls inside keep their own
+   widths (the vote pair is content-width), so nothing stretches with it. */
+.bp-take-detail {
+  display: flex;
+  flex-direction: column;
+}
+
+.bp-take-detail-hero {
+  padding-bottom: 1.25rem;
+}
+
+/* Edit, at the top right of the take past `lg`; on a phone it is in the
+   header line instead. The band's ruling has its own strip,
+   `.bp-take-ruling`, under the ways out. */
+.bp-take-hero-actions {
+  display: flex;
+  align-items: center;
+  /* The same 0.875rem the ways below and the listen row use. This page had
+     three different gaps between buttons before it was noticed; the vote
+     pair's own 6px is the one deliberate exception, because those two are
+     halves of ONE choice rather than three separate actions. */
+  gap: 0.875rem;
+  flex: none;
+}
+
+/* No wrap rule of its own any more. The take's heading used to give way to
+   three full pills (Keeper, Reject, Edit), which could not share a row with
+   it, so the row wrapped them under the heading at any width. The ruling has
+   its own strip now and Edit is alone and small, so the row is the plain
+   `.bp-title-row` the song and event heroes use: the heading takes the width
+   and wraps its own text, Edit stays at the end. */
+
+/* The band's ruling, in the Admin strip. Keeper keeps the accent fill and
+   Reject the danger one, the weights they had when they sat by the heading:
+   moving a decision must not quietly demote it. */
+.bp-take-ruling {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+/* No phone shrink for the take's buttons. The ruling and Edit used to drop
+   to the xs size under 40rem, from when three full pills sat under the
+   heading; with the ruling in its own strip that left it 32px beside a 44px
+   play pill and a 48px vote pair. One size for every action in the page's
+   body now, `.bp-btn-sm`'s 44px; the header's controls are the xs tier. */
+
+/* The take's label, inside its name — "Čoudy: take 2". Muted and at the
+   heading's own size: the song is what you came for, the label is which
+   performance of it, and a reader scanning a list of tabs needs both. */
+/* The line under a detail page's heading, past `lg`: a take's label, an
+   event's name. Ink and heavier, like the lead of the phone header's line,
+   at a size that sits under a 52px heading. */
+.bp-hero-label {
+  margin-top: 0.375rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--bp-color-fg);
+}
+
+/* The take's heading is one line: its text gives way with an ellipsis and
+   the star after it keeps its place. It wrapped, and a long name left the
+   star alone on a second line. */
+.bp-take-detail-hero .bp-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.bp-hero-title-text {
+  min-width: 0;
+  overflow: hidden;
+  /* The heading's own 1.05 is tighter than the face's descenders; with
+     overflow hidden the tails of "g" and "j" would be clipped. */
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-take-detail-hero .bp-hero-title .bp-take-favorite-mark {
+  flex: none;
+}
+
+/* One plain sentence under the heading — direction H1 from the canvas. It
+   replaced a run of fragments (event link, drawn rule, date, kind badge) that
+   asked a reader to assemble the sentence themselves, and that had a different
+   shape depending on whether the event had a name. */
+.bp-take-detail-lede {
+  margin-top: 0.625rem;
+  font-size: var(--text-meta, 0.78125rem);
+  line-height: 1.5;
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Both ways out of a take, as a matched pair. Two equal controls, because a
+   take belongs to its song and to its event equally — the shape is the
+   argument. They wrap to a column below `sm` rather than squeezing two names
+   into half a phone each. */
+.bp-take-ways {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  margin-top: 1.375rem;
+}
+
+.bp-take-way {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  flex: 1 1 20rem;
+  min-width: 0;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  /* The home card's material: the surface brown let partly through, no
+     edge. In dark this is the sleeve brown of the Na pultu card; the surface
+     token rather than the fixed sleeve so the light theme's ink stays readable. */
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
+  color: var(--bp-color-fg);
+  text-decoration: none;
+}
+
+/* The same fill a row gets under the pointer, now solid rather than let
+   through: one hover material across the app. */
+.bp-take-way:hover {
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
+}
+
+/* What this leads to: "Song", or the event's kind. Fixed width so the two
+   names beside them start on the same x down the pair — which only works if
+   the width clears the LONGEST word the vocabulary can hold. At 4.625rem
+   "REHEARSAL" overran it and shoved its own name right, so the pair no longer
+   lined up in exactly the case the pair exists for. Sized past it, with room
+   for a kind an admin adds later. */
+.bp-take-way-kind {
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+  flex: none;
+  width: 6rem;
+}
+
+/* The thing itself, named. "Go to the song" said what the control did and
+   nothing about where it went. */
+.bp-take-way-name {
+  font-family: var(--bp-font-display);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  line-height: 1.2;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-take-way-arrow {
+  width: 18px;
+  height: 18px;
+  color: var(--bp-color-muted);
+  flex: none;
+}
+
+/* Inline in the facts run now, in quotation marks, rather than a band of its
+   own between the sentence and the facts. It is the one fact on this page a
+   person typed, and it reads as one among the others rather than as an
+   announcement. */
+.bp-take-detail-note {
+  color: var(--bp-color-muted);
+}
+
+.bp-take-strip {
+  padding: 1.625rem 0 0;
+}
+
+/* The strip's own label: the same slab heading the home page gives its
+   sections ("Rozpracované", "Poslední akce"), so a section reads as one thing
+   wherever it is. It used to be a tracked caps eyebrow, on the argument that
+   five slab headings would out-shout the take's own name. They do not any
+   more: on a phone the name is up in the header, and past `lg` it is a 52px
+   hero these 20px headings sit well under. */
+.bp-strip-label {
+  font-family: var(--bp-font-display);
+  font-size: var(--text-section, 1.25rem);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--bp-color-fg);
+  margin: 0 0 0.75rem;
+}
+
+/* The take row's own subline, in the hero — same size, same drawn rule, same
+   glyph run, so a take reads the same way in a list and on its own page. */
+.bp-take-detail-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.625rem;
+  margin-top: 0.375rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A take's files: `.bp-table` with its column heads, so "mp3", "lossy" and
+   "4,0 MB" each sit under what they are. It used to be a list with a run of
+   those values per row, which a reader had to decode. */
+.bp-asset-row-label {
+  font-weight: 600;
+}
+
+.bp-asset-status {
+  margin-left: 0.5rem;
+}
+
+/* A size is a number this app formatted, not a string anyone transcribes:
+   Chivo with tabular figures, not the mono face the format and tier wear. */
+.bp-asset-size {
+  font-variant-numeric: tabular-nums;
+  color: var(--bp-color-muted);
+}
+
+.bp-asset-table .bp-mono {
+  color: var(--bp-color-muted);
+}
+
+/* No row highlight. The admin tables light a row because the row is what
+   you act on; here the two icons are the only targets, and a band of fill
+   sweeping the whole width under the pointer promised a click the row does
+   not have. */
+.bp-asset-table tbody tr:hover {
+  background: none;
+}
+
+/* The tier and the size are desktop detail, column head and cell alike. On a
+   phone the name is what anyone is looking for, and `mp3` alone answers
+   "what is this"; whether it is lossy and how big are questions asked with a
+   download in mind, on a machine you would download it to. CSS decides it,
+   not `matchMedia`: one DOM at every width. */
+.bp-asset-col-detail {
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .bp-asset-col-detail {
+    display: table-cell;
+  }
+}
+
+/* The row's two icons, flush right in the last column. The cell's own
+   padding is the table's; the 44px targets set the row's height. */
+.bp-asset-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.bp-asset-actions-inner {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+/* The download. An icon and a 44px target rather than a labelled button: there
+   is one per row and up to eight rows, and eight buttons reading "Download"
+   down the right edge is a column of shouting. The row already names the file;
+   this only has to say "take it". The accessible name is on the link. */
+.bp-asset-row-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--bp-color-muted);
+}
+
+.bp-asset-row-download:hover {
+  color: var(--bp-color-fg);
+  background: var(--bp-fill-subtle);
+}
+
+/* Holds the column open for an asset that is still uploading, so a list with
+   one pending row does not have its other rows' icons jump inward. */
+.bp-asset-row-download-empty {
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  flex: none;
+}

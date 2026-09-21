@@ -1,0 +1,89 @@
+/* ---------------------------------------------------------------------- */
+/* Console shell — the gold hairline and the staggered load.              */
+/* ---------------------------------------------------------------------- */
+
+/* The hairline that welds the player onto the tab bar into one unit at the
+   bottom of the screen. It lives on the PLAYER, not on the tab bar, so it is
+   present exactly when something is loaded — the line means "there is audio",
+   which is why it earns being the one piece of accent chrome that is always
+   on screen. With nothing loaded the player is `[hidden]` and the tab bar
+   keeps its ordinary border. Past `lg` there is no tab bar and the player is
+   full-width at the bottom, where the same line reads as the top edge of the
+   transport rather than as a join. */
+.bp-player:not([hidden])::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  /* Flat, not a gradient. A line that fades out across the window reads as a
+     progress bar stuck at about a third — which is exactly what sits two
+     rows below it now that the player draws its own scrub. The line says
+     "there is audio"; it should not also look like it is measuring
+     something. */
+  background: var(--bp-color-accent-gold);
+}
+
+/* One orchestrated load per page, then stillness: list rows rise 8px and fade
+   in on a 40ms stagger. Applied to the existing list containers rather than to
+   a new wrapper class, so no page markup changes.
+
+   Capped at eight steps. An event with thirty takes must not make the last row
+   wait 1.2s — beyond the eighth row everything arrives together, which is also
+   roughly where the fold is on a phone. `backwards` fill matters: without it
+   each row paints at full opacity for its delay and then jumps to the start of
+   the animation.
+
+   `<ClientRouter />` replays this on every navigation, which is the intent —
+   the reveal belongs to the page, not to the session. */
+@media (prefers-reduced-motion: no-preference) {
+  .bp-take-list > *,
+  .bp-song-list > * {
+    animation: bp-row-rise var(--duration-enter, 180ms) var(--ease-bp, ease-out) backwards;
+  }
+
+  .bp-take-list > *:nth-child(1),
+  .bp-song-list > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .bp-take-list > *:nth-child(2),
+  .bp-song-list > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+  .bp-take-list > *:nth-child(3),
+  .bp-song-list > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+  .bp-take-list > *:nth-child(4),
+  .bp-song-list > *:nth-child(4) {
+    animation-delay: 120ms;
+  }
+  .bp-take-list > *:nth-child(5),
+  .bp-song-list > *:nth-child(5) {
+    animation-delay: 160ms;
+  }
+  .bp-take-list > *:nth-child(6),
+  .bp-song-list > *:nth-child(6) {
+    animation-delay: 200ms;
+  }
+  .bp-take-list > *:nth-child(7),
+  .bp-song-list > *:nth-child(7) {
+    animation-delay: 240ms;
+  }
+  .bp-take-list > *:nth-child(n + 8),
+  .bp-song-list > *:nth-child(n + 8) {
+    animation-delay: 280ms;
+  }
+}
+
+@keyframes bp-row-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

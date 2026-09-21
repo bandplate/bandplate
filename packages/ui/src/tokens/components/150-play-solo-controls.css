@@ -1,0 +1,602 @@
+/* ---------------------------------------------------------------------- */
+/* Play/solo controls — plain markup (`[data-audio-source]`), not their    */
+/* own islands; `Player.tsx` delegates clicks and toggles these classes.   */
+/* ---------------------------------------------------------------------- */
+
+/* A filled accent disc — the mark's own shape, and the one place the accent
+   belongs inside a list. It replaced a bare glyph on the ground, which read as
+   an icon rather than as the row's primary control and gave a playable take no
+   more presence than an unplayable one.
+   The 44px touch target is the BOX; the visible plate is 34px, so a row of
+   these does not look like a row of buttons. */
+/* `.bp-player-play` is the persistent player's own control. It shares every
+   rule here rather than the class NAME, so the two are always the same size
+   while "this take has a play control" stays a thing a route test can assert.
+   It was a 48px circle of its own, which made one action look like two
+   different controls on a single screen. */
+.bp-play-toggle,
+.bp-player-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--bp-color-on-accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+/* The filled accent disc is the play control ITSELF, at every size and in every
+   context — it was scoped to `.bp-take-row`, so the same button on the take
+   detail page fell back to a transparent box whose glyph is the GROUND colour
+   (`--bp-color-on-accent` is what reads against the disc), i.e. an all but
+   invisible triangle inside an empty ring. The disc is drawn by `::before` so
+   it can be smaller than the 44px touch target; `--bp-play-disc` is the only
+   thing the large variant has to change. */
+.bp-play-toggle,
+.bp-player-play {
+  position: relative;
+}
+
+.bp-play-toggle::before,
+.bp-player-play::before {
+  content: "";
+  position: absolute;
+  width: var(--bp-play-disc, 34px);
+  height: var(--bp-play-disc, 34px);
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+  transition: box-shadow 120ms ease;
+}
+
+/* A halo in the same 10%-foreground wash the favourite's hover disc is made
+   of, so the two controls in a row answer a hover with one material instead of
+   two. It rings the disc rather than filling it because the disc is already
+   full: the accent IS the play control.
+
+   Not a scale, and not a colour shift. Scale is out for the reason under the
+   favourite — the two controls have to answer alike, and the favourite cannot
+   scale. Colour is out because `--bp-color-accent` is gold on lacquer and burnt
+   umber on sand, so any shift that reads as "brighter" in one theme reads as
+   "darker" in the other; a foreground wash moves the same way in both. */
+.bp-play-toggle:hover::before,
+.bp-play-toggle:focus-visible::before,
+.bp-player-play:hover::before,
+.bp-player-play:focus-visible::before {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
+}
+
+.bp-play-toggle svg,
+.bp-player-play svg {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-favorite-toggle::before,
+  .bp-play-toggle::before,
+  .bp-player-play::before {
+    transition: none;
+  }
+}
+
+/* The pressed glyph stays the ground colour, NOT an accent.
+   This used to turn olive to signal "playing", which worked while the control
+   was a bare glyph on the page ground. It now sits on a filled accent disc, so
+   an olive pause on gold is both off-palette and barely legible — the plate
+   already carries the accent, and the glyph's only job is to read against it
+   (9.8:1 dark, 5.9:1 light). "Playing" is signalled by the icon changing from a
+   triangle to a pause, by `aria-pressed`, and by the player bar appearing. */
+.bp-play-toggle[aria-pressed="true"] {
+  color: var(--bp-color-on-accent);
+}
+
+/* The take-detail hero's own, larger play control — same button, same
+   data attribute and aria contract, just a bigger hit target and glyph
+   since it is the page's primary action rather than one icon among a
+   list of rows. */
+/* Bigger box, bigger disc, and NO ring or surface of its own — it used to be a
+   bordered circle on `--bp-color-surface`, which is what a take detail page's
+   play control looked like before this: a hollow outline where every listing
+   showed a gold plate. One control, one look, two sizes. */
+.bp-play-toggle-lg {
+  --bp-play-disc: 56px;
+  width: 56px;
+  height: 56px;
+}
+
+.bp-play-toggle .bp-play-icon-pause {
+  display: none;
+}
+
+.bp-play-toggle[aria-pressed="true"] .bp-play-icon-play {
+  display: none;
+}
+
+.bp-play-toggle[aria-pressed="true"] .bp-play-icon-pause {
+  display: inline;
+}
+
+/* The take page's two ways to hear it: play this take, open the mixer. Both
+   are the pill "Přehrát vše" is (`.bp-btn-play-all`: an accent disc inside a
+   secondary button), side by side at the gap every row of controls on this
+   page uses, wrapping on a phone rather than squeezing. They were two 56px
+   discs each with a title and a sub-line, a second button language on one
+   page. */
+.bp-take-play-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+/* The play pill's icon swap: the same three rules `.bp-play-toggle` and the
+   plate badge carry, since it wears neither class. The player writes
+   `aria-pressed`; this is only what that looks like. The pause glyph drops
+   the 2px nudge that centres a triangle optically. */
+.bp-play-pill .bp-play-icon-pause {
+  display: none;
+}
+
+.bp-play-pill[aria-pressed="true"] .bp-play-icon-play {
+  display: none;
+}
+
+.bp-play-pill[aria-pressed="true"] .bp-play-icon-pause {
+  display: inline;
+  margin-inline-start: 0;
+}
+
+/* The stems ("Solo") drawer — a row of source-select chips, "Full mix"
+   plus one per available stem. Switching sources plays exactly one stream at
+   a time; playing them TOGETHER is the mixer, which is its own page and its
+   own engine (`/takes/:id/mix`).
+
+   A take's own page no longer draws one — its two ways to listen are the
+   master and the mixer. What still uses these classes is the shell player's
+   source switcher, which does the same job without leaving whatever page you
+   are on, and `/dev/sync`. */
+.bp-solo-drawer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.bp-solo-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--bp-color-border);
+  border-radius: 999px;
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+/* Selection is carried by more than border/text colour alone (WCAG 1.4.1
+   — colour as the sole means): a leading checkmark and bold weight, so the
+   selected chip is identifiable even without colour perception. Reviewed
+   in fix round 1, item 3, alongside the `aria-pressed` fix in
+   `Player.tsx`'s `syncButtons`. */
+.bp-solo-chip.is-active {
+  border-color: var(--bp-component-accent-success);
+  color: var(--bp-component-accent-success);
+  font-weight: 600;
+}
+
+.bp-solo-chip.is-active::before {
+  content: "✓";
+  margin-right: 0.375rem;
+}
+
+@media (min-width: 1024px) {
+  .bp-player {
+    bottom: 0;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* A list page's phone header: the mark, then the page's own name where the
+   product name was. The page's h1 is still there for everything that reads
+   headings, out of sight, so the buttons that sat beside it take a row of
+   their own and stop fighting it for width. Only below `lg`: past it the
+   header is gone and the h1 is the page's title again. */
+.bp-shell-header:has(.bp-shell-title) {
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+
+/* How many, after a page's title: "Skladby (8)". Muted and lighter, so the
+   number reads as a note on the name rather than part of it. */
+.bp-title-count {
+  color: var(--bp-color-muted);
+  font-weight: 500;
+}
+
+/* Two lines before it gives up, not one. A list page's name is one short
+   word, but a song's is whatever the band called it, and on a detail page
+   this is the only place the name is visible on a phone: an ellipsis after
+   one line would cut it off on its own page. */
+.bp-shell-title {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+/* The name, and on a detail page the facts under it. A column so the facts
+   line up under the name rather than under the mark. */
+.bp-shell-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bp-shell-title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+/* The facts under a detail page's name: "Dmi, 76 bpm", "Zkouška, Dezerter".
+   Body face at meta size and muted, the same voice the hero gave them, so
+   they read as a note on the name rather than a second title. */
+.bp-shell-subtitle {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The take's facts card in the hero, past `lg`: the same card as the phone
+   copy under the header (fill, radius, padding), at the page's full width,
+   its facts side by side rather than stacked, because the width is there. On a phone it is `.bp-titled-facts` and out of sight. */
+.bp-take-facts-card {
+  margin-top: 1.25rem;
+  padding: 1.125rem 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
+  color: var(--bp-color-fg);
+}
+
+/* Every fact is a cell of one grid: the row wrapper that groups date,
+   length and verdict on a phone steps out of the way, so the cells flow up
+   to five to a row, which is all of them. The column floor is the larger of
+   10rem and a fifth of the row (less its gaps): never more than five
+   columns, and fewer, wrapping, once a fifth would be under 10rem. */
+.bp-take-facts-card .bp-take-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(10rem, calc((100% - 4 * 1.75rem) / 5)), 1fr));
+  gap: 1rem 1.75rem;
+}
+
+.bp-take-facts-card .bp-take-panel-row {
+  display: contents;
+}
+
+/* A card under the header: a take's event, date, length, ruling and line-up,
+   each under its own label. The same card the home page's Šuplík is, fill,
+   radius and padding, so a group of facts looks like a group of facts
+   wherever it is. Set in from the edges by the page's own gutter; the
+   header keeps its rule. Ink throughout, labels included, at lower weight
+   and size: muted text never sits on a fill. Phone only; past `lg` the hero
+   keeps these facts as before. */
+.bp-shell-subbar {
+  margin-top: 1.25rem;
+  margin-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  margin-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  padding: 1.125rem 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
+  color: var(--bp-color-fg);
+}
+
+@media (min-width: 1024px) {
+  .bp-shell-subbar {
+    display: none;
+  }
+}
+
+/* The event leads, in the slab face, as the panel's own headline; then the
+   short facts in one row; the line-up last, where it has the width. */
+.bp-take-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.bp-take-panel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem 1.75rem;
+}
+
+.bp-take-panel-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.bp-take-panel-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--bp-color-fg) 72%, transparent);
+}
+
+.bp-take-panel-value {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-take-panel-event {
+  font-family: var(--bp-font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* The set's own pad is how it holds together on bare ground; on the panel's
+   fill it would be a tint on a tint. */
+.bp-take-panel .bp-instrument-set {
+  padding: 0;
+  background: none;
+  color: var(--bp-color-fg);
+}
+
+/* A take's own label, opening its facts line: "new arrangement, Dezerter,
+   17. září 2026". Ink and heavier, because it names which take this is and
+   the rest only says where it came from. */
+.bp-shell-subtitle-lead {
+  color: var(--bp-color-fg);
+  font-weight: 600;
+}
+
+/* A detail page's star, right after its name rather than pushed to the far
+   edge: it is a mark on the thing named, the same place the hero heading
+   keeps it. The name gives way first when the row runs out. The negative
+   block margin keeps its 44px touch box from making the name's line taller
+   than the name, which would push the facts line away from it. */
+.bp-shell-header-actions {
+  display: inline-flex;
+  flex: none;
+  margin-block: -0.625rem;
+  margin-left: -0.5rem;
+}
+
+/* A list page's add button, at the far end of the header line. The star
+   hugs the name because it marks it; this is an action on the page, so it
+   takes the edge where a thumb finds it. */
+.bp-shell-header-end {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+}
+
+@media (max-width: 1023.98px) {
+  /* The page's own copy of an action the header now carries. Removed, not
+     clipped, so there is one button to reach. Its row is left holding only
+     the visually hidden h1, which is out of flow, so the row stops being a
+     box at all rather than leaving an empty stack gap at the top. */
+  .bp-shell--titled .bp-titled-action {
+    display: none;
+  }
+
+  .bp-shell--titled .bp-title-row:has(> .bp-titled-action) {
+    display: contents;
+  }
+
+  /* A row of actions whose only member moved up into the header: an event
+     with nothing to play, a take the band has already ruled on. Nothing is
+     left to show, so the row goes rather than leaving its margins behind. */
+  .bp-shell--titled
+  :is(.bp-event-hero-actions, .bp-take-hero-actions):not(:has(> :not(.bp-titled-action))) {
+    display: none;
+  }
+
+  /* The take's title row is its hidden h1 and the band's ruling buttons;
+     only the buttons are a box worth keeping. */
+  .bp-shell--titled .bp-take-detail-hero .bp-title-row {
+    display: contents;
+  }
+
+  /* Its padding spaced the facts run from the first strip. The facts are up
+     in the panel now, and each strip brings its own top padding, so on a
+     take with nothing left to rule on this was 20px of nothing. */
+  /* One step between everything on a phone take: 1.25rem, the gap the
+     facts card already keeps from what follows it. The hero's pieces join
+     the page's column so that an empty hero (a take already ruled on) adds
+     nothing, and each piece drops the margin it used to space itself with.
+     The strips keep only what their heading needs above it. */
+  .bp-shell--titled .bp-take-detail {
+    gap: 1.25rem;
+  }
+
+  .bp-shell--titled .bp-take-detail-hero {
+    display: contents;
+  }
+
+  .bp-shell--titled .bp-take-detail-hero > *,
+  .bp-shell--titled .bp-take-ways {
+    margin-top: 0;
+  }
+
+  .bp-shell--titled .bp-take-strip {
+    padding-top: 0.375rem;
+  }
+
+  /* The hero's own star is display: none, not merely clipped with its
+     heading: a visually hidden heading is still read, and a control inside it
+     would be a second, invisible, focusable copy of the header's star. */
+  .bp-shell--titled .bp-titled-heading .bp-take-favorite-mark {
+    display: none;
+  }
+
+  .bp-shell--titled .bp-titled-heading,
+  .bp-shell--titled .bp-titled-facts,
+  .bp-shell--titled .bp-page-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Sidebar — hidden below `lg`, shown (as a flex row with `.bp-shell-body`) at and above it. */
+.bp-sidebar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .bp-shell-header {
+    display: none;
+  }
+
+  .bp-tabbar {
+    display: none;
+  }
+
+  .bp-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 15rem;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+    /* Bottom padding reserves space for the player bar, which is
+       `position: fixed` and sits ON TOP of this column's own bottom edge
+       (see `.bp-player`'s `z-index: 42` — this sidebar has no z-index of its
+       own, i.e. 0, so the player always paints over it). The sign-out button
+       this originally rescued has moved to `/me`, but the reservation stays:
+       anything this column ever pins to its own bottom would land under the
+       player otherwise. Reuses the same `--bp-player-height` custom property
+       `.bp-shell-main` already reserves against, rather than a second
+       hardcoded number that could drift from the real measured height. Always
+       reserved, even with no track loaded: a fixed number can't itself cause a
+       width-based scrollWidth bug, and nothing should shift when nothing is
+       playing. */
+    padding: 1.75rem 1.25rem calc(1.75rem + var(--bp-player-height));
+    border-right: 1px solid var(--bp-color-border);
+  }
+
+  .bp-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .bp-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    color: var(--bp-color-fg);
+    font-family: var(--bp-font-body);
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  .bp-sidebar-item:hover {
+    background: var(--bp-color-surface);
+  }
+
+  .bp-sidebar-item[aria-current="page"] {
+    background: var(--bp-color-surface);
+    border: 1px solid var(--bp-color-fg);
+  }
+
+  .bp-sidebar-icon {
+    display: flex;
+    align-items: center;
+    color: var(--bp-color-muted);
+  }
+
+  .bp-sidebar-item[aria-current="page"] .bp-sidebar-icon {
+    color: var(--bp-color-fg);
+  }
+
+  /* Admin's own section of the column, under a rule. Not a fifth peer of
+     Songs and Events: running the band's account is a different mode of
+     using the app from listening to it, and the four links inside are
+     admin's OWN navigation rather than the app's. This is also what lets
+     `AdminHeader`'s section pills be a phone-only control — a phone has no
+     column to hold a section, so there Admin stays a single tab. */
+  .bp-sidebar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--bp-color-border);
+  }
+
+  .bp-sidebar-group-label {
+    padding: 0 0.75rem;
+  }
+
+  /* Same box as the items above, one weight lighter — the rule and the
+     section label carry the hierarchy, so the links themselves do not need
+     to shrink or indent to say they are subordinate. */
+  .bp-sidebar-subitem {
+    font-weight: 500;
+  }
+
+  .bp-shell-main {
+    /* No tab bar past this breakpoint (sidebar takes over) — the player
+       bar is the only fixed bottom element, so only its own height needs
+       reserving here, not the 6rem tab-bar clearance mobile carries too. */
+    padding: 2.25rem 2.5rem calc(1.5rem + var(--bp-player-height));
+    /* 72rem, not 56rem. 56 is a reading measure and was right when every page
+       was one column of prose; it is wrong now that the song page is two
+       columns, and on a 1450px window it left the right third of the screen
+       empty with the content jammed against the sidebar. The individual
+       measures that actually matter are capped where they belong — lyrics at
+       38ch, the chart column at 40ch — so the page can be wider without any
+       line of text getting longer. It stays capped rather than fluid: at
+       1920px an uncapped take row would run a date and a duration to opposite
+       ends of the screen.
+
+       90rem since the rows lost their rules: a borderless row reads as one
+       object across a wider span, and at 72rem a 1920px window still left a
+       third of the screen empty beside the home page's shelf. */
+    max-width: 90rem;
+    /* CENTRED in the space beside the sidebar, not pinned against it. This was
+       `margin: 0`, which cancelled the base rule's `margin: 0 auto` — fine
+       when 72rem nearly filled a 1450px window, and wrong on anything wider:
+       at 1900px it left 508px of dead screen on the right with everything
+       jammed left. `margin-inline` rather than `margin` so the block margins
+       the base rule sets are left alone. */
+    margin-inline: auto;
+  }
+}

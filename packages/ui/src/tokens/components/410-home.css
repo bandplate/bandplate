@@ -1,0 +1,786 @@
+/* ---------------------------------------------------------------------- */
+/* Home — three sections in one reading order, the same on every width:   */
+/* what is new (one card), what you are working on (plates and the stash), */
+/* and what the band recorded (the ledger). Width only ever puts things    */
+/* side by side WITHIN a section; it never splits the page into two        */
+/* columns, which is what made the previous home read as scattered.        */
+/* ---------------------------------------------------------------------- */
+
+.bp-home {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.bp-home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* A plain section heading, like every other page's: no rule under it (the
+   app dropped its hairlines), no number, no tagline. The section gap is what
+   marks where one question ends and the next begins. */
+.bp-home-heading {
+  margin: 0;
+}
+
+/* --- 1. Na pultu ----------------------------------------------------- */
+
+/* The one strong call to action on the page, on the same card every list
+   and facts card uses: the surface let partly through, the card radius, no
+   edge. It used to be a dark card in both themes, with its own ground, ink
+   and muted tone (`--bp-stand*`); in the dark theme that was already exactly
+   this surface, so the extra names only existed for the light theme's
+   exception, and they are gone. What marks it out is its accent heading and
+   the gold disc on its play button, not a second material. */
+.bp-stand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
+  color: var(--bp-color-fg);
+}
+
+/* The accent, not the fixed gold: on the light card gold text is 2.1:1, and
+   `--bp-color-accent` is gold in dark and burnt gold in light. */
+.bp-stand-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  color: var(--bp-color-accent);
+}
+
+.bp-stand-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--bp-color-accent);
+}
+
+.bp-stand-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.bp-stand-title {
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.625rem;
+  line-height: 1.05;
+  overflow-wrap: break-word;
+}
+
+.bp-stand-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.bp-stand-title a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+.bp-stand-line {
+  margin: 0;
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-stand-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+/* The buttons take their own fills: the card is an ordinary surface now, so
+   the secondary button's and the pill's washes of the page's ink read on it
+   as they do anywhere. The vote pill keeps a little more room either side. */
+.bp-stand .bp-stand-vote {
+  padding-inline: 1.125rem;
+}
+
+@media (min-width: 40rem) {
+  .bp-stand {
+    padding: 1.75rem 2rem;
+  }
+
+  .bp-stand-title {
+    font-size: 2.125rem;
+  }
+}
+
+/* --- 2. Rozpracované ------------------------------------------------- */
+
+/* The plates, then the stash card: under them on a phone, beside them past
+   `lg`. Beside, not a second column of the PAGE: the heading above spans
+   both, and both are "what you are working on". */
+.bp-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bp-progress > .bp-pinned-rail-wrap {
+  min-width: 0;
+}
+
+@media (min-width: 64rem) {
+  .bp-progress {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 2rem;
+  }
+
+  .bp-progress > .bp-pinned-rail-wrap {
+    flex: 1;
+  }
+
+  /* Wide enough for both pills on one line in Czech, the longer language:
+     at 20rem "Otevřít šuplík" and "Nahrát nápad" wrapped onto two rows. */
+  .bp-progress > .bp-stash-card {
+    flex: none;
+    width: 21.5rem;
+    margin-left: auto;
+  }
+}
+
+.bp-stash-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.125rem 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
+}
+
+.bp-stash-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.bp-stash-card-title svg {
+  flex: none;
+}
+
+.bp-stash-card-latest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.bp-stash-card-name {
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+
+.bp-stash-card-meta {
+  margin: 0;
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the plate ------------------------------------------------------- */
+
+/* A dubplate: grooves cut as a repeating radial gradient rather than an
+   image, so it costs nothing to ship, scales to any size and recolours with
+   the theme. The groove pitch is fixed at 4px regardless of plate size —
+   real grooves do not scale with the record, and a 92px plate with 2px
+   grooves reads as a target, not a disc. */
+.bp-plate {
+  /* The badge's diameter, named because its POSITION is derived from it. */
+  --bp-plate-badge: max(22px, calc(var(--bp-plate-size) * 0.28));
+
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  flex: none;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* The plate's link, as a LAYER rather than as the wrapper.
+   The plate used to be one big `<a>`, which forced the play badge inside it to
+   be decoration: a `<button>` cannot live inside an anchor, so the badge could
+   only ever navigate. Playing straight from the shelf is what the shelf is
+   for, so the anchor became this overlay and the badge became a real control
+   sitting above it. Everything under it — label, spindle, caption — is inert
+   text, so covering it costs nothing. */
+/* WHATEVER HOLDS ONE OF THESE MUST BE POSITIONED. `inset: 0` is measured
+   against the containing block, so a static parent silently hands the overlay
+   to the nearest positioned ancestor instead — which is not a layout glitch
+   but a full-page invisible link, plus a `:hover` on the parent that never
+   stops matching. `.bp-plate` sets it. */
+.bp-plate-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 0.75rem;
+}
+
+.bp-plate-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--bp-plate-size);
+  height: var(--bp-plate-size);
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--bp-color-fg) 7%, transparent) 0 1px,
+      transparent 1px 4px
+    ),
+    var(--bp-plate-vinyl);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 10%, transparent),
+    0 6px 18px rgb(0 0 0 / 0.45);
+}
+
+.bp-plate-label {
+  display: grid;
+  place-items: center;
+  /* 54% of the disc, not the 46% this started at. A real label is about half a
+     7", and the extra width is what lets a two-word title break at its SPACE:
+     at 46% the line box was narrower than the word "Basement", so "Basement
+     Tapes" broke as "Basemen / t Tapes". */
+  width: 54%;
+  height: 54%;
+  padding: 4%;
+  box-sizing: border-box;
+  border-radius: 50%;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  /* Proportional to the plate, with a hard 10px floor: at the rail's 92px the
+     ratio alone gives 8.5px, which is under the size at which Zilla Slab's
+     counters survive — a song title on a small plate became a smudge. */
+  font-size: max(0.625rem, calc(var(--bp-plate-size) * 0.093));
+  /* `break-word`, not `anywhere`: break a word only when it cannot fit on a
+     line of its own, so the space stays the preferred break point. */
+  overflow-wrap: break-word;
+  line-height: 1.02;
+  text-align: center;
+  overflow: hidden;
+  /* The label is a light disc in BOTH themes — a record label is printed
+     paper, and inverting it in light mode would leave a white disc on a
+     white page with nothing to separate them. The ink on it is the dark
+     ground colour for the same reason. */
+  color: var(--bp-lacquer, #150c07);
+}
+
+.bp-plate--take .bp-plate-label {
+  background: var(--bp-color-accent-gold);
+}
+
+.bp-plate--container .bp-plate-label {
+  background: var(--bp-rule);
+}
+
+/* The spindle hole, scaled to the plate rather than fixed at 5px — on a 128px
+   rail plate a fixed dot was proportionally twice the hole a 7" actually has,
+   and it landed on a letter of the title often enough to read as a defect. */
+.bp-plate-spindle {
+  position: absolute;
+  width: max(3px, calc(var(--bp-plate-size) * 0.032));
+  height: max(3px, calc(var(--bp-plate-size) * 0.032));
+  border-radius: 50%;
+  background: var(--bp-plate-vinyl);
+}
+
+/* The play affordance rides the plate's edge rather than sitting in the
+   middle of the label, where it would cover the name the plate exists to
+   show. It IS a button — it starts playback where it stands, which is the
+   difference between a shelf and an index. `z-index` puts it above
+   `.bp-plate-hit`, so the plate navigates and this one control does not. */
+.bp-plate-play {
+  /* Positioned against the PLATE, not the disc — see the component for why it
+     cannot live inside the disc. The disc is `--bp-plate-size` square at the
+     plate's top-left corner, so these resolve to exactly the `right: 2%;
+     bottom: 6%` of the disc this used to be. */
+  position: absolute;
+  left: calc(var(--bp-plate-size) * 0.98 - var(--bp-plate-badge));
+  top: calc(var(--bp-plate-size) * 0.94 - var(--bp-plate-badge));
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: var(--bp-plate-badge);
+  height: var(--bp-plate-badge);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+  cursor: pointer;
+}
+
+/* The badge does NOT carry `.bp-play-toggle`, deliberately. That class is a
+   row control: a fixed 44px box with its own 34px accent disc drawn by
+   `::before` and a hover halo ringing that disc. The plate badge already IS an
+   accent disc, sized from `--bp-plate-size`, so borrowing the class drew a
+   second disc inside the first and a halo around a control that has a drop
+   shadow instead. Only the `data-*` contract is shared — that is what the
+   player's delegate reads, and it is not a class.
+   The icon swap therefore needs its own rules; they are the same three. */
+.bp-plate-play .bp-play-icon-pause {
+  display: none;
+}
+
+.bp-plate-play[aria-pressed="true"] .bp-play-icon-play {
+  display: none;
+}
+
+.bp-plate-play[aria-pressed="true"] .bp-play-icon-pause {
+  display: inline;
+}
+
+.bp-plate-play:hover,
+.bp-plate-play:focus-visible {
+  filter: brightness(1.08);
+}
+
+.bp-plate-play:focus-visible {
+  outline: 2px solid var(--bp-color-fg);
+  outline-offset: 2px;
+}
+
+/* One size for every pin: a phone fits three and a bit in its row, which is
+   what says the row scrolls; a wide screen gets the larger plate. */
+.bp-plate {
+  --bp-plate-size: 96px;
+}
+
+@media (min-width: 40rem) {
+  .bp-plate {
+    --bp-plate-size: 118px;
+  }
+}
+
+/* The cell sizes to its CAPTION, not to the plate: "9 December" wrapped to
+   two lines when the cell was pinned to the plate's 92px. */
+.bp-plate {
+  min-width: var(--bp-plate-size);
+}
+
+.bp-plate-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin-top: 0.5625rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  white-space: nowrap;
+}
+
+.bp-plate-caption-sep {
+  display: inline-block;
+  width: 1px;
+  height: 0.6875rem;
+  flex: none;
+  background: var(--bp-color-border);
+}
+
+/* Hover lifts the plate off the page and deepens its shadow — the one
+   gesture a physical object affords that a row does not. A brightness bump on
+   the label alone (what this was) is invisible against a gold disc on a dark
+   ground, which left the only clickable object on the page looking inert.
+   Focus gets the same treatment plus the system's ring, so a keyboard reaches
+   it too. */
+.bp-plate-disc {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.bp-plate:hover .bp-plate-disc,
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent),
+    0 12px 26px rgb(0 0 0 / 0.5);
+}
+
+.bp-plate:hover .bp-plate-play,
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-play {
+  transform: translateY(-3px);
+}
+
+.bp-plate-play {
+  transition:
+    transform 0.18s ease,
+    filter 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-plate-play {
+    transition: none;
+  }
+
+  .bp-plate:hover .bp-plate-play {
+    transform: none;
+  }
+}
+
+.bp-plate:hover .bp-plate-label,
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-label {
+  filter: brightness(1.08);
+}
+
+/* The caption follows the plate rather than staying muted, so the whole cell
+   reads as one hovered thing instead of a disc that moved on its own. */
+.bp-plate:hover .bp-plate-caption,
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-caption,
+.bp-plate:hover .bp-plate-caption .bp-kind,
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-caption .bp-kind {
+  /* `.bp-kind` sets its own muted colour, so it does not inherit the
+     caption's — the word TAKE stayed dim while the date beside it lit up. */
+  color: var(--bp-color-fg);
+}
+
+.bp-plate:has(> .bp-plate-hit:focus-visible) {
+  outline: none;
+}
+
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-plate-disc {
+    transition: none;
+  }
+
+  .bp-plate:hover .bp-plate-disc,
+  .bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
+    transform: none;
+  }
+}
+
+/* --- the pinned row -------------------------------------------------- */
+
+/* Below `lg` the row scrolls sideways — a phone cannot show four plates in a
+   row, and a wrapping grid there would push the ledger off the first screen.
+   Past it the row wraps instead, so every pin is visible at once without a
+   gesture. */
+.bp-pinned-rail {
+  display: flex;
+  gap: 1.375rem;
+  overflow-x: auto;
+  /* Named so the wrapper's fades can bind to THIS scroller — see
+     `.bp-pinned-rail-wrap`'s `timeline-scope`. */
+  scroll-timeline: --bp-rail inline;
+  scroll-snap-type: x proximity;
+  /* Room for the plates' own drop shadow, which a tight scroll box clips. */
+  padding-bottom: 0.5rem;
+  scrollbar-width: none;
+}
+
+.bp-pinned-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* A rail that scrolls says so.
+   The scrollbar is hidden (a permanent grey bar under a row of records is
+   noise), which left a plate cut off at the viewport edge looking like a
+   layout bug rather than like more shelf. This fades the last plate into the
+   page ground at both ends, and — because `animation-timeline: scroll()`
+   drives the two ends independently — the leading fade only appears once
+   there is something scrolled past, and the trailing one disappears at the
+   end. Nothing is hidden: the fade sits over the plates' outer edge, never
+   over a caption.
+
+   `pointer-events: none` is not optional: this sits on top of the plates,
+   and without it the last plate in view would stop being clickable. */
+.bp-pinned-rail-wrap {
+  position: relative;
+  /* Publishes the rail's own timeline to this element, so the fades below can
+     name it. `scroll(nearest)` does NOT work here: it searches ANCESTORS for a
+     scroll container, and the scroller is this element's CHILD — so both fades
+     ended up driven by the page's vertical scroll, which is why the leading
+     one never appeared. */
+  timeline-scope: --bp-rail;
+}
+
+.bp-pinned-rail-wrap::before,
+.bp-pinned-rail-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2.5rem;
+  pointer-events: none;
+  z-index: 3;
+  /* Off unless the row's scroll timeline drives it. A row that does not
+     overflow has an INACTIVE timeline, the animation then has no effect at
+     all, and without this base value both fades drew at full strength over
+     a row with nothing to scroll: the first plate's caption came out washed
+     away. The `@supports not` block below still turns the trailing one on
+     where there are no timelines. */
+  opacity: 0;
+}
+
+.bp-pinned-rail-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bp-color-bg), transparent);
+  animation: bp-fade-in-start linear both;
+  animation-timeline: --bp-rail;
+  animation-range: 0 2.5rem;
+}
+
+.bp-pinned-rail-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bp-color-bg), transparent);
+  animation: bp-fade-out-end linear both;
+  animation-timeline: --bp-rail;
+  animation-range: calc(100% - 2.5rem) 100%;
+}
+
+@keyframes bp-fade-in-start {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bp-fade-out-end {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Without scroll-driven animations (Safari today) the fades are static: the
+   trailing one always shows, which is right far more often than not on a
+   shelf, and the leading one stays off rather than covering the first plate
+   of a rail that has not been scrolled. */
+@supports not (animation-timeline: scroll()) {
+  .bp-pinned-rail-wrap::before {
+    display: none;
+  }
+
+  .bp-pinned-rail-wrap::after {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Past `lg` the rail wraps instead of scrolling, so there is no edge to
+   suggest and a gradient over wrapped rows would be a smudge. */
+@media (min-width: 64rem) {
+  .bp-pinned-rail-wrap::before,
+  .bp-pinned-rail-wrap::after {
+    display: none;
+  }
+}
+
+.bp-pinned-rail > * {
+  scroll-snap-align: start;
+}
+
+@media (min-width: 64rem) {
+  .bp-pinned-rail {
+    scroll-timeline: none;
+    flex-wrap: wrap;
+    /* Wide enough to breathe: at the old 92px five plates crammed into one row
+       and the captions ran together into a single band of small caps. */
+    gap: 1.5rem 1.375rem;
+    overflow-x: visible;
+  }
+}
+
+/* --- the ledger ------------------------------------------------------ */
+
+/* A chronology, not a list of cards: a date spine on the left in the display
+   face, the venue as the line, the kind in small caps under it, the count on
+   the right. Nothing here carries a plate, a star or a 19px slab title, so no
+   row of it can be mistaken for a take. */
+.bp-ledger {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The row is the outer box (rule, padding, optional star); the LINK inside it
+   is the grid — a star cannot live inside an anchor, and stretching the anchor
+   over the star would swallow its clicks. */
+.bp-ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 0.5rem;
+  padding-block: 0.8125rem;
+}
+
+.bp-ledger-link {
+  display: grid;
+  /* The date column is as wide as its widest content (a three-letter month,
+     "ČVC"), not wider: at 3.25rem it left a two-digit day ~26px of empty
+     column in front of it, on top of the row's own inset. */
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0 1rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The newest event opens the ledger and takes the accent on its date, the
+   one thing on this page that says "this is what just happened". */
+
+/* An event with neither title nor venue has no name; it says so, muted, so the
+   word reads as a fact rather than as a title someone typed. */
+.bp-ledger-venue--none {
+  color: var(--bp-color-muted);
+}
+
+/* See the no-underline note beside `.bp-card-flat:hover`. */
+
+/* Left-aligned, so the day and the month start on the row's gutter line
+   with every other row's first mark. Centred, a single-digit day floated
+   inside its column. */
+.bp-ledger-date {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-ledger-day {
+  display: block;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.3125rem;
+  line-height: 1;
+  color: var(--bp-color-fg);
+}
+
+.bp-ledger-row--latest .bp-ledger-day {
+  color: var(--bp-color-accent);
+}
+
+.bp-ledger-month {
+  display: block;
+  margin-top: 0.1875rem;
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.65625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+}
+
+.bp-ledger-main {
+  display: block;
+  min-width: 0;
+}
+
+.bp-ledger-venue {
+  display: block;
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-fg);
+}
+
+.bp-ledger-main .bp-kind {
+  display: block;
+  margin-top: 0.125rem;
+}
+
+.bp-ledger-count {
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bp-ledger-footer {
+  padding-top: 1rem;
+}
+
+/* Kind filter — toggleable pills, every kind on by default. It was a
+   `<fieldset>` of drawn checkboxes plus an Apply button plus a Clear button: a
+   three-control form to answer "hide the concerts", on a page with three
+   options. Each pill is a plain LINK carrying the resulting query string, so
+   one tap applies it and the whole thing still works with no JS — the same bar
+   the checkbox form met, at a third of the furniture.
+
+   No legend either: "Kind" over three pills reading Rehearsals / Concerts /
+   Sessions labelled what was already obvious. */
+/* A row of toggles. 0.875rem, not 0.5rem: these are xs buttons, 32px with a
+   6px reach, and at 0.5rem two reaches overlapped. */
+.bp-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+}
+
+/* There is no separate pill: a filter, a page number, an admin section and
+   a sheet's source choice are the quiet button (`.bp-btn-quiet`), at the xs
+   size in a row of them and sm where a sheet needs the full target. What
+   used to make a pill a pill is a STATE of that button, below: pressed or
+   current, it takes a gold tint with accent text rather than a solid plate,
+   because a row of these is a choice, not the page's primary action. Where a
+   pill filters, selection also carries a tick, so it never rests on colour
+   alone. (`.bp-pill` had its own 36px height, a third size beside the two
+   the buttons settled on.) */
+.bp-btn-quiet[aria-pressed="true"],
+.bp-btn-quiet[aria-current="page"],
+.bp-btn-quiet.is-active,
+.bp-btn-check input:checked + .bp-btn-quiet {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 16%, transparent);
+  color: var(--bp-color-accent);
+}
+
+.bp-btn-quiet[aria-pressed="true"]:hover,
+.bp-btn-quiet[aria-current="page"]:hover,
+.bp-btn-quiet.is-active:hover,
+.bp-btn-check input:checked + .bp-btn-quiet:hover {
+  background: color-mix(in srgb, var(--bp-color-accent-gold) 24%, transparent);
+}
+
+/* The odd one out in a row of toggles (M8's "Archived"). The sort buttons
+   are one radio group, exactly one always pressed, while this is an
+   independent toggle that changes WHICH RECORDS are listed, not their order.
+   It is pushed to the end of the row and rests in the muted ink; pressed, it
+   takes the same gold tint as its neighbours, because pressed is pressed. */
+.bp-btn--set-apart {
+  margin-inline-start: auto;
+}
+
+.bp-btn--set-apart:not([aria-pressed="true"]) {
+  color: var(--bp-color-muted);
+}
+
+/* `.bp-admin-sections` is the admin header's copy of this row. It exists for
+   the phone, which has a tab bar rather than a column: Admin is one tab
+   there, and these pills are what is behind it. Past `lg` the sidebar lists
+   the same four sections, so keeping both would be the same navigation twice
+   on one screen. Declared HERE rather than beside `.bp-admin-head`, because
+   `.bp-pills`'s own `display: flex` is later in this file and a media
+   query adds no specificity — the earlier rule simply lost. */
+@media (min-width: 1024px) {
+  .bp-admin-sections {
+    display: none;
+  }
+}

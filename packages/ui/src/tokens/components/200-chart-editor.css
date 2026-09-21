@@ -1,0 +1,124 @@
+/* ---------------------------------------------------------------------- */
+/* Chords & lyrics as sections (M9). A section is a ROW — a name, its       */
+/* chords, its words — so nobody has to learn that the chord column wants   */
+/* `Verse:` while the lyric column wants the label on a line of its own.    */
+/* The two textareas underneath are still the real form fields, and still   */
+/* the whole editor when scripting is off.                                  */
+/* ---------------------------------------------------------------------- */
+.bp-chart-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bp-chart-row {
+  padding-block: 0.875rem;
+  border-top: 1px solid var(--bp-color-border);
+}
+
+.bp-chart-row-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.bp-chart-row-name {
+  flex: 1;
+  min-width: 0;
+  /* The section's name is a heading for what follows, so it reads as one —
+     the display face at row size, the same treatment `.bp-song-title` gets. */
+  font-family: var(--bp-font-display);
+  font-size: var(--text-row, 1.1875rem);
+  font-weight: 600;
+}
+
+.bp-chart-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+}
+
+/* Square, because it holds one glyph. `.bp-btn-sm`'s side padding would make
+   an arrow button three times wider than the arrow. */
+.bp-chart-row-move {
+  padding-inline: 0.625rem;
+}
+
+.bp-chart-row-chords {
+  margin-bottom: 0.5rem;
+}
+
+.bp-chart-row-chords,
+.bp-chart-row-lyrics {
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
+}
+
+.bp-chart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+}
+
+/* One pane at a time, and no way to switch: rows are the editor. The text pane
+   is never removed from the DOM — it holds the actual
+   `name="chordProgression"` / `name="lyrics"` fields the form posts, so hiding
+   it must not detach it. `--text` is set only for a song whose text the parser
+   could not read as sections, which edits as text until its text parses. */
+.bp-chart-editor .bp-chart-text-pane {
+  display: none;
+}
+
+.bp-chart-editor--text .bp-chart-rows-pane {
+  display: none;
+}
+
+.bp-chart-editor--text .bp-chart-text-pane {
+  display: block;
+}
+
+/* With scripting off the island renders but nothing can be typed into a row,
+   so CSS makes the same choice the freeform case does: the text boxes ARE the
+   editor, exactly as they are today. An inert editor is worse than none. */
+@media (scripting: none) {
+  .bp-chart-editor .bp-chart-rows-pane {
+    display: none;
+  }
+
+  .bp-chart-editor .bp-chart-text-pane {
+    display: block;
+  }
+}
+
+.bp-uploader-nojs {
+  display: none;
+}
+
+@media (scripting: none) {
+  /* Only the CONTROL goes, not the panel: the Files heading lives in here now,
+     and a strip with no heading would be worse than an inert button. */
+  .bp-uploader-head .bp-btn {
+    display: none;
+  }
+
+  .bp-uploader-nojs {
+    display: block;
+  }
+}
+
+/* `--text-section` — see theme.css for why this is not Chivo 700 at 18px. */
+.bp-section-title {
+  font-family: var(--bp-font-display);
+  font-size: var(--text-section, 1.25rem);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 0.75rem;
+}
+
+.bp-stack-tight {
+  gap: 0.75rem;
+}

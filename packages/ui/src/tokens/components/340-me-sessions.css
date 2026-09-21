@@ -1,0 +1,87 @@
+/* ---------------------------------------------------------------------- */
+/* /me (Task 6, revised in review round 1 for F3) — sessions and vote      */
+/* history. Flat rows, same vocabulary as the take/event rows above rather */
+/* than a third list treatment. Past `lg`, both lists become the same      */
+/* 2-column grid `.bp-take-list--wide` already uses (favorites' own take   */
+/* list gets that exact class) — `/me` used to be identical at 375/1440,   */
+/* just wider single-column rows; this is what actually makes it a real    */
+/* desktop layout instead of a phone layout stretched wide.                */
+/* ---------------------------------------------------------------------- */
+
+.bp-vote-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* One column, not two. The two-up grid was right when `/me` was a single
+   full-width stack of four sections; the page is now a main column beside an
+   aside, and splitting the votes again inside it made two short lists where the
+   member is reading one history. */
+.bp-vote-row {
+  /* Grid, not flex, because the date changes PLACE rather than appearing: it
+     tucks under the title on a phone and steps out into its own column beside
+     it once there is room. Wrapping cannot express that — a wrapped flex item
+     goes below the badge as well, and the badge is what has to stay put. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main badge"
+    "when badge";
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  min-height: 44px;
+  padding: 0.875rem 0.25rem;
+}
+
+.bp-vote-row-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+/* The date. Mono and tabular, so a run of them lines up down the list; muted,
+   because nobody scans this page BY date — it is there to place a call you
+   half remember, not to be read. */
+.bp-vote-row-when {
+  grid-area: when;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bp-vote-row > .bp-badge {
+  grid-area: badge;
+  justify-self: end;
+}
+
+@media (min-width: 40rem) {
+  .bp-vote-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "main when badge";
+    gap: 0.75rem 1rem;
+  }
+}
+
+/* No standing underline — a column of them reads as a list of links rather than
+   a history of decisions, and every other row in the app announces itself on
+   hover instead. The display face at row size matches the take rows this list
+   points at. */
+.bp-vote-row-song {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--bp-font-display);
+  font-weight: 600;
+  font-size: var(--text-row, 1.1875rem);
+  color: var(--bp-color-fg);
+  text-decoration: none;
+}
+
+.bp-vote-row-song:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--bp-color-muted);
+  text-underline-offset: 0.15em;
+}

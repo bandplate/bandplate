@@ -1,0 +1,275 @@
+/* ---------------------------------------------------------------------- */
+/* The two fixed bars, during a view transition.                          */
+/* ---------------------------------------------------------------------- */
+
+/* A named element is captured into the TOP LAYER for the duration of a
+   transition and painted above the page image — and the page image is where
+   everything unnamed lives, the player and the tab bar included. `z-index`
+   inside the document cannot reach across that: the player's 42 is a number
+   in a stacking context the snapshot is no longer part of.
+ 
+   It shows up worst on `/me`, where every vote row carries a
+   `transition:name` of its own: leaving that page sent a column of ten song
+   titles sliding across the player bar. Naming the two bars gives each its
+   own snapshot group, and these `z-index`es put them back on top — which is
+   where they are every other moment.
+ 
+   `transition:persist` is NOT enough on its own. It keeps the element (and
+   the audio) alive across the swap, but a persisted element with no name of
+   its own is still just part of the page image. */
+.bp-player {
+  view-transition-name: bp-player;
+}
+
+.bp-tabbar {
+  view-transition-name: bp-tabbar;
+}
+
+::view-transition-group(bp-player),
+::view-transition-group(bp-tabbar) {
+  z-index: 50;
+}
+
+.bp-player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.bp-player-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex-grow: 1;
+}
+
+.bp-player-title {
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bp-player-subtitle {
+  color: var(--bp-color-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The title is the way into the Hraje sheet. A button that looks like the
+   text it replaced, plus a caret — the bar stays a row of controls you know,
+   and the one new thing is "tap the name". */
+.bp-player-meta-button {
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bp-player-title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 100%;
+}
+
+.bp-player-meta-caret {
+  flex: none;
+  color: var(--bp-color-muted);
+}
+
+.bp-player-meta-button:hover .bp-player-meta-caret {
+  color: var(--bp-color-fg);
+}
+
+.bp-player-transport {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+}
+
+/* Put the player away. Quiet, and last in the row — it stops playback, which
+   is not something to press by accident while reaching for the transport. */
+.bp-player-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bp-color-muted);
+  cursor: pointer;
+}
+
+.bp-player-close:hover {
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+}
+
+/* Previous and next — the queue's own transport, not a seek convenience, so
+   unlike the ±10s buttons this replaced, these are drawn at every width:
+   the compact bar on a phone is where "go to the next take" is needed most.
+   Previous is always rendered (it always does something: go back, or
+   restart); Next only when `hasNext` says there is somewhere to go — a
+   control that cannot work is not rendered. */
+.bp-player-skip {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bp-color-fg);
+  cursor: pointer;
+}
+
+.bp-player-skip:hover:not(:disabled) {
+  background: var(--bp-fill-subtle);
+}
+
+/* Next on the last take: still there, so the transport keeps its shape, but
+   plainly out of reach. Muted rather than faded, so it reads the same on
+   lacquer and on sand. */
+.bp-player-skip:disabled {
+  color: var(--bp-color-muted);
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bp-player-scrub {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bp-player-time {
+  flex: none;
+  font-size: 0.75rem;
+  color: var(--bp-color-muted);
+  /* Equal-width digits, so a value that ticks does not shove the waveform
+     left and right. Chivo's own figures — never mono; see the type rule. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* The drawing and the control are two elements stacked: the bars (or the
+   rail) are `aria-hidden` decoration, and a real `<input type="range">` lies
+   over them, transparent. That is what keeps keyboard operability,
+   arrow-key stepping and a labelled value — everything the native
+   `<audio controls>` gave for free — while letting us draw our own picture.
+   Hand-rolling the interaction instead is the exact category of thing this
+   project's past a11y defects came from. */
+.bp-player-track {
+  position: relative;
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 34px;
+}
+
+.bp-player-wave {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  width: 100%;
+  height: 32px;
+}
+
+.bp-player-bar {
+  flex: 1 1 0;
+  min-width: 1px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--bp-color-fg) 22%, transparent);
+}
+
+.bp-player-bar.is-played {
+  background: var(--bp-color-accent-gold);
+}
+
+.bp-player-rail {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bp-color-fg) 14%, transparent);
+}
+
+.bp-player-rail-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--bp-color-accent-gold);
+}
+
+.bp-player-seek {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bp-player-seek::-webkit-slider-runnable-track,
+.bp-player-seek::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+/* The thumb is invisible because the colour boundary in the drawing behind
+   already IS the position — two markers for one fact. It keeps its full size
+   so the drag target is a real one. */
+.bp-player-seek::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 34px;
+  background: transparent;
+  border: none;
+}
+
+.bp-player-seek::-moz-range-thumb {
+  width: 18px;
+  height: 34px;
+  background: transparent;
+  border: none;
+}
+
+.bp-player-seek:disabled {
+  cursor: default;
+}
+
+/* An invisible thumb cannot show focus, so the whole track does. */
+.bp-player-track:has(.bp-player-seek:focus-visible) {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* Ours now, not the UA's — the bar draws its own transport, waveform and
+   timecode above. Kept in the DOM at zero size rather than removed: the
+   element IS the playback state, and it must survive every track change. */
+.bp-player-audio {
+  display: none;
+}

@@ -1,0 +1,113 @@
+/* ---------------------------------------------------------------------- */
+/* The stash (Šuplík) on /takes and /stash/[id].                          */
+/* ---------------------------------------------------------------------- */
+
+/* The count inside the Šuplík pill: a number, in the pill's own ink. */
+/* A count inside a button: "Šuplík 1". */
+.bp-btn-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+/* The stash view has no filter panel, so past `lg` its results take the
+   whole width rather than sitting beside an empty 20rem column. */
+@media (min-width: 64rem) {
+  .bp-takes--stash {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "bar"
+      "results";
+  }
+}
+
+/* The stash is the plain list, like every other: its one line of copy says
+   whose recordings these are, and the rows are the rows. It was drawn as a
+   drawer pulled open (a recessed well, a gold lip, a grip, a slide-in), which
+   fought the full-width rows it contains and read as a second kind of page.
+   The line keeps the page's section step from the rows below it. */
+.bp-stash-lede {
+  margin-bottom: 0.5rem;
+}
+
+.bp-stash-lede {
+  color: var(--bp-color-muted);
+}
+
+/* "Čeká na signál": a state, so it takes the badge's shape, in the muted
+   fill; a refused upload takes the alert fill. Sentence case, unlike the
+   kind badges: it is a short sentence about this recording, not a label from
+   a vocabulary. */
+.bp-stash-chip {
+  gap: 0.3125rem;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  text-transform: none;
+}
+
+.bp-stash-chip > svg {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.bp-stash-chip.is-failed {
+  background: var(--bp-fill-alert);
+}
+
+/* `.bp-take-label`'s type, without its whole-row link: a recording still on
+   the phone has no page to open yet. */
+.bp-stash-pending-title {
+  font-family: var(--bp-font-display);
+  font-size: var(--text-row, 1.1875rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--bp-color-fg);
+}
+
+/* A refused upload's "Zkusit znovu" and "Zahodit": a third line, under the
+   title's column, so line two keeps its chip, label and date whole at 375px.
+   Auto-placed into an implicit grid row; `.bp-take-row`'s two named rows are
+   untouched. */
+.bp-stash-row-actions {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Under the heading on /stash/[id]: the song and the length. Chivo is the
+   body face already; the figures are tabular, as timecode is everywhere. */
+.bp-stash-sub {
+  margin-top: 0.375rem;
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-stash-back {
+  align-self: flex-start;
+}
+
+.bp-stash-facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.bp-stash-facts dt {
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-stash-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.bp-stash-song-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 22rem;
+}

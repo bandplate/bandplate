@@ -1,0 +1,156 @@
+/* ---------------------------------------------------------------------- */
+/* Button                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.bp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-pill, 999px);
+  /* No border on any variant. Each button's boundary is its FILL, which is
+     what the Label skin settled on — see docs/design-foundation.md "Fills".
+     The two buttons that act take solid fills; the one that backs out takes a
+     tint, so they separate by weight rather than by hue. */
+  border: none;
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--bp-color-fg);
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-btn,
+  .bp-dialog,
+  .bp-dialog::backdrop,
+  .bp-copy-btn,
+  .bp-skip-link {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.bp-btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Solid accent. `--bp-color-on-accent` follows the ground, which is correct
+   for Dubplate because the accents flip lightness with the theme — the
+   opposite of the old ROOST palette, and explained at length in dubplate.css.
+   Measures 9.8:1 dark, 5.9:1 light. */
+.bp-btn-primary {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+}
+/* Hover rings the fill rather than darkening it, as the play discs do. A
+   darkened accent read as a second, muddier gold beside the real one (a
+   pressed Držák vote under a hovered "Označit jako držák"), and a colour
+   shift that reads darker in one theme reads lighter in the other; a halo
+   in the foreground wash moves the same way in both. */
+.bp-btn-primary:hover:not([disabled]) {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
+}
+
+/* Secondary and danger used to have NO resting-state rules at all — only
+   `:hover` — so both rendered as a bare `.bp-btn` at rest, indistinguishable
+   from each other (and, on a "Revoke token" / "Cancel" pair, from a plain
+   unstyled button) until a mouse happened to hover one. Touch has no
+   hover, so on a phone the distinction never appeared at all. Both now
+   have a real resting look, not just a hover accent. */
+/* The quiet one — a tint, not a solid, so it reads as lighter than either
+   acting button without needing a different hue. 11.1:1 dark, 11.3:1 light. */
+.bp-btn-secondary {
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+}
+.bp-btn-secondary:hover:not([disabled]) {
+  background: color-mix(in srgb, var(--bp-color-fg) 22%, transparent);
+}
+
+/* Solid, not a tint — and this is a correctness fix, not a style choice.
+   A danger TINT heavy enough to see lands at almost exactly the luminance of
+   `.bp-btn-secondary`'s tint: measured 1.05:1 apart in the dark theme. Cancel
+   and Delete would then differ by hue alone, which is no difference at all to
+   a red-blind viewer standing in a confirm dialog. Solid puts 3.2:1 between
+   them, so they separate by weight.
+   Text is `--bp-color-on-accent` (the ground): 4.6:1 dark, 6.1:1 light. */
+.bp-btn-danger {
+  background: var(--bp-color-danger);
+  color: var(--bp-color-on-accent);
+}
+/* The same halo as primary, for the same reason: one red, not two. */
+.bp-btn-danger:hover:not([disabled]) {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
+}
+
+/* Solid danger against solid accent measures 1.03:1 in the LIGHT theme —
+   burnt gold and rust are nearly the same lightness — so colour cannot be the
+   only thing marking a destructive action. Every `.bp-btn-danger` carries a
+   leading icon; this reserves its space and keeps it from shrinking. */
+.bp-btn-danger > svg {
+  flex: none;
+  width: 1em;
+  height: 1em;
+}
+
+.bp-btn-sm {
+  /* Still >= the 44px touch-target floor (WCAG 2.5.8) — only the padding
+     and type size shrink for a denser table row. `.bp-btn-sm` used to drop
+     to 36px, which every non-primary control in the admin tables (row
+     actions, the sign-out link, the nav) inherited, putting almost every
+     interactive element on the page under the floor `.bp-btn` itself
+     claims to guarantee. */
+  min-height: 44px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+/* Smaller than `.bp-btn-sm`, for an action that sits BESIDE A SECTION HEADING
+   rather than acting on the page — "Add take" under a song's Takes heading,
+   where a 44px pill beside a 19px heading is heavier than the thing it is
+   attached to and reads as the section's subject rather than its afterthought.
+ *
+ * The DRAWN button shrinks; the TARGET does not. `.bp-btn-sm` was raised from
+ * 36px to 44px in an earlier round precisely because dropping below the floor
+ * there took most of the app's controls with it, and this must not reopen that
+ * — so the `::after` carries the 44px (32 + 6 above + 6 below) while the fill
+ * stays 32. That is the same trick `.bp-take-label::after` already uses to make
+ * a whole row clickable from a short link.
+ *
+ * Use it where the button is ALONE. Two of these side by side would put their
+ * hit areas 0px apart, which is the spacing condition WCAG 2.5.8 relies on
+ * when a target is under 44px; `.bp-btn-sm` is still the right choice in a
+ * row of actions. */
+.bp-btn-xs {
+  position: relative;
+  min-height: 32px;
+  min-width: 0;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.bp-btn-xs::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+}
+
+/* A destructive trigger rendered as a plain link (the no-JS path to a
+   confirm page) but styled to match the button set. */
+a.bp-btn {
+  display: inline-flex;
+}

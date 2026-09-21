@@ -1,0 +1,88 @@
+/* ---------------------------------------------------------------------- */
+/* Small generic utilities — used sparingly, to replace one-off inline     */
+/* `style=` attributes rather than adding new ones (see task-5-report.md's */
+/* inline-style cleanup). Reach for a real component class first; these    */
+/* two exist only for the handful of cases that are genuinely just "zero   */
+/* out the default margin" or "a plain page heading, no hero treatment".   */
+/* A generic single-property spacing/list-reset/cursor tweak (margin,      */
+/* list-style, cursor) belongs to Tailwind's own utilities (already loaded */
+/* via `@tailwindcss/vite`, see `theme.css`) rather than a second,         */
+/* overlapping vocabulary of `.bp-*-sm` classes for the same thing — see   */
+/* task-5-report.md's fix-round-1 notes on `.bp-list-reset`/`.bp-mb-sm`/    */
+/* `.bp-mt-sm`/`.bp-ml-sm`/`.bp-cursor-pointer`, removed in that round.     */
+/* ---------------------------------------------------------------------- */
+
+.bp-m0 {
+  margin: 0;
+}
+
+/* A page's own title is display-face like every other heading in the scale;
+   at this size 700 is comfortable, which is exactly why the smaller section
+   heading above needed its own lighter step rather than inheriting this. */
+.bp-page-title {
+  font-family: var(--bp-font-display);
+  font-size: var(--text-title, 1.6875rem);
+  font-weight: 700;
+  line-height: 1.05;
+  margin: 0;
+}
+
+/* A page title with one action beside it (M8's "Add song" / "Add event").
+   `align-items: center` rather than `baseline`: the title's line-height is
+   1.05 and the button's is a 44px box, so a shared baseline drops the button
+   well below the title's optical centre. The title takes the slack so the
+   button sits hard right at any width — and at 375px "Songs" plus an
+   "Add song" pill measures ~222px against 343px of content, so nothing has
+   to shorten. */
+.bp-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* The heading takes the slack, whatever heading it is — `.bp-page-title` on a
+   list, `.bp-section-title` on a strip, `.bp-hero-title`/`.bp-hero-date` on a
+   detail page. Naming one of them was the bug: beside a section heading the
+   action sat hard against the word instead of at the end of the row. */
+.bp-title-row > :first-child {
+  flex: 1;
+  min-width: 0;
+  /* The ROW owns the vertical rhythm, not the heading. `.bp-section-title`
+     carries a 12px bottom margin (and outranks `.bp-m0`, which is declared
+     earlier), which inside a centred flex row pushed the heading 6px above the
+     button beside it — visibly off, and invisible in the markup. */
+  margin-block: 0;
+}
+
+/* …and the row gives that spacing back, only where a section heading used to
+   provide it. A page title carries none, so this must not apply to one. */
+.bp-title-row:has(> .bp-section-title) {
+  margin-bottom: 0.75rem;
+}
+
+/* "Not published yet" — the strip on a take that exists but nobody can find.
+   A dashed edge rather than a filled banner: this is not news that just
+   happened (which is what `.bp-banner` is for, and why it announces itself to
+   a screen reader), it is a standing condition of the page for as long as the
+   take is a draft. It reads as an outline around something unfinished. */
+.bp-take-draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-top: 1.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px dashed var(--bp-color-border);
+  border-radius: 0.5rem;
+}
+
+.bp-take-draft-say {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.bp-take-draft-say p {
+  margin-top: 0.25rem;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+}

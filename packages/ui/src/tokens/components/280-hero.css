@@ -1,0 +1,34 @@
+/* ---------------------------------------------------------------------- */
+/* Song / event hero — Coda Caption spent on exactly one thing per page:   */
+/* the song's title, or the event's date. Everything else on the page      */
+/* stays in body/mono type — see the design plan in task-5-report.md.      */
+/* ---------------------------------------------------------------------- */
+
+.bp-hero-title {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 2.25rem;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.bp-hero-date {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  .bp-hero-title {
+    font-size: 3.25rem;
+  }
+
+  /* The same size as a song's or a take's name: the date is the event's
+     heading the way a title is theirs, and at 2.5rem the three detail pages
+     opened at two different sizes. */
+  .bp-hero-date {
+    font-size: 3.25rem;
+  }
+}

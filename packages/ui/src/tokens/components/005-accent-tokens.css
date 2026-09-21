@@ -1,0 +1,18 @@
+/*
+ * Component-boundary accents.
+ *
+ * These used to be DERIVED tokens: the previous palette's accents were the
+ * same dark hex in both themes, so each needed a lightened variant to stay
+ * visible as a boundary on the dark ground. Dubplate's accents already flip
+ * lightness with the theme and clear AA in both directions (see
+ * dubplate.css), so there is nothing left to derive — these are now plain
+ * aliases, kept only so the ~30 rules below need no rewrite.
+ *
+ * Same usage rule as before: borders, dots and tinted fills. Never running
+ * text.
+ */
+:root {
+  --bp-component-accent-strong: var(--bp-color-danger);
+  --bp-component-accent-success: var(--bp-color-accent-alt);
+  --bp-component-accent-gold: var(--bp-color-accent-gold);
+}

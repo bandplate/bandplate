@@ -1,0 +1,83 @@
+/* ---------------------------------------------------------------------- */
+/* Admin (M5). There is no admin SHELL any more — a second header with its */
+/* own wordmark, its own pill nav and its own sign-out was the single      */
+/* biggest reason this section read as a different product. These pages    */
+/* render inside `AppLayout` like every other page; what is left below is  */
+/* the little that is genuinely specific to them.                          */
+/* ---------------------------------------------------------------------- */
+
+/* Title, then the sections. `.bp-pills` does the row itself. */
+.bp-admin-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* The overview's three counts. Tiles, not `.bp-card`s: a number under a
+   label is the thinnest content on the site, and a bordered filled panel
+   around each was the treatment that made admin look imported from
+   somewhere else. Hairline and the row hover, at tile proportions. */
+.bp-admin-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+}
+
+.bp-admin-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 1rem 1.125rem 1.125rem;
+  border: 1px solid var(--bp-color-border);
+  border-radius: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.bp-admin-tile:hover {
+  background: color-mix(in srgb, var(--bp-color-fg) 5%, transparent);
+}
+
+.bp-admin-tile-value {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 2.25rem;
+  line-height: 1.05;
+}
+
+.bp-admin-tile-note {
+  font-size: var(--text-note, 0.8125rem);
+  color: var(--bp-color-muted);
+}
+
+/* The add forms — "Add a member", "Add an instrument", "Create a token".
+   One inline row of fields ending in its button, not a bordered panel with
+   its own heading: two labelled inputs and a button already say what they
+   are, and the panel made every one of these pages open on a form rather
+   than on the thing the page is about. `--stacked` is the tokens variant,
+   whose scope checkboxes are the actual decision and need the full width. */
+.bp-admin-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.bp-admin-add .bp-field {
+  flex: 1 1 13rem;
+  min-width: 0;
+  /* `.bp-field` carries a bottom margin for stacked forms; here the row's
+     own gap does that job and the margin would break the baseline the
+     button aligns to. */
+  margin-bottom: 0;
+}
+
+.bp-admin-add > .bp-btn {
+  /* Matches an input's height so the button sits on the field's baseline
+     rather than floating above it. */
+  min-height: 2.75rem;
+}
+
+.bp-admin-add--stacked .bp-checkbox-group {
+  flex: 1 1 100%;
+}

@@ -1,0 +1,30 @@
+/* ---------------------------------------------------------------------- */
+/* Layout helpers                                                         */
+/* ---------------------------------------------------------------------- */
+
+.bp-container {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .bp-container {
+    padding: 2rem;
+  }
+}
+
+.bp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  /* Without this, a flex column's cross-axis (width) sizing still won't
+     shrink below a descendant's min-content size — a `<pre>` with
+     `white-space: pre` and no wrap has a min-content width equal to its
+     longest unwrapped line, so that width bubbles up through every
+     ancestor flex box in the chain and out past the viewport (the
+     ".bp-chords" 46ch-overflow bug). `min-width: 0` on the stack itself is
+     never wrong: a column stack never NEEDS to be wider than its own
+     container's content box. */
+  min-width: 0;
+}

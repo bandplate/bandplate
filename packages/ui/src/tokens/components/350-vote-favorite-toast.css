@@ -1,0 +1,330 @@
+/* ---------------------------------------------------------------------- */
+/* Task 8 — vote toggle, favorite toggle, toast. `VoteToggle.astro`/       */
+/* `FavoriteToggle.astro` render the markup below; `VoteFavorite.tsx`      */
+/* toggles `aria-pressed`/text content on it after a submit, exactly the   */
+/* way `Player.tsx` already toggles `.bp-play-toggle`'s own state.         */
+/*                                                                          */
+/* Contrast (WCAG relative luminance, computed for this task):             */
+/*   Resting vote button: border `--bp-color-fg`, text `--bp-color-fg`,    */
+/*   background `--bp-color-surface` — same combination `.bp-btn-secondary`*/
+/*   already uses; `--bp-color-fg` is ~15:1 against both `--bp-color-bg`   */
+/*   and `--bp-color-surface` in both themes (see dubplate.css's header).     */
+/*                                                                          */
+/*   Pressed vote button: text STAYS `--bp-color-fg` (~15:1) — border and  */
+/*   a tinted background switch to the accent family instead of the text   */
+/*   color, deliberately mirroring `.bp-btn-danger`'s existing pattern     */
+/*   rather than `.bp-solo-chip.is-active`'s (which sets `color` directly  */
+/*   to `--bp-component-accent-success`). `--bp-component-accent-success`  */
+/*   text would have been fine (8.06:1/8.71:1 light, 5.14:1/4.76:1 dark —  */
+/*   all >=4.5:1, per this file's header) but                              */
+/*   `--bp-component-accent-strong` (used for "Not a keeper") is NOT:      */
+/*   9.21:1/9.96:1 in light mode, but only 4.41:1/4.08:1 in dark mode —    */
+/*   BELOW the 4.5:1 normal-text floor at this button's 0.875rem/14px size */
+/*   (not "large text" under WCAG 1.4.3 even at bold weight, which needs   */
+/*   >=14pt/18.66px bold or 18pt/24px regular). Using it as border/tinted- */
+/*   fill instead keeps every accent use at the 3:1 non-text-UI floor      */
+/*   both families already clear in both themes (accent-strong's dark      */
+/*   4.41:1/4.08:1 numbers, while too low for text, are well above 3:1),   */
+/*   and avoids a SIXTH contrast defect in this exact "accent token as     */
+/*   text/fill" spot the project has gotten wrong five times before.       */
+/*   Selection also carries a non-colour affordance (bold weight plus a    */
+/*   leading check/cross mark via `::before` — same technique              */
+/*   `.bp-solo-chip.is-active` already uses), not colour alone (WCAG       */
+/*   1.4.1).                                                               */
+/*                                                                          */
+/*   Favorite star: filled (pressed) uses `--bp-component-accent-gold` as  */
+/*   an ICON FILL (not text) — already verified in this file's header      */
+/*   (3.45:1/3.73:1 light, 9.10:1/8.42:1 dark, clearing the 3:1 non-text   */
+/*   floor). Unfilled (outline) uses `--bp-color-muted` (4.65:1/6.93:1 —   */
+/*   see dubplate.css), comfortably clearing 3:1 too. Filled vs. outline is   */
+/*   itself the non-colour affordance — a different SHAPE, not just a      */
+/*   different colour on the same shape.                                  */
+/*                                                                          */
+/*   Toast: `--bp-color-fg` text on `--bp-color-surface`, border           */
+/*   `--bp-color-fg` — the exact combination `Player.tsx`'s own bar         */
+/*   already uses and documents (16.84:1 light / 14.41:1 dark).            */
+/* ---------------------------------------------------------------------- */
+
+/* `flex-start`. `flex-end` was for the take row's trailing slot, and the row
+   has carried no vote control since it moved to `/takes/[id]` — left there, it
+   pushed the two buttons and their tally against the right edge of a strip
+   whose label sits at the left, with a page of empty ground between them. */
+.bp-vote-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  /* 0.875rem, the gap every other row of controls on the take page uses —
+     the hero's actions, the ways, the listen row. It was 0.375rem, which read
+     as two halves of one segmented control rather than two answers you pick
+     between, and made this the one strip on the page spaced differently from
+     the rest. */
+  gap: 0.875rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bp-vote-toggle-form {
+  display: contents;
+}
+
+/* Compact enough to sit in a row's trailing column, still 44px of target.
+   These were 2px-outlined blocks that dominated every take — the weight now
+   comes from the fill, and the pressed state is a solid, matching the button
+   language: solid means acted, tint means available. */
+/* 44px is a TOUCH-target floor, not a mouse one. WCAG 2.5.8 asks 24px at AA;
+   the brief's 44px comes from holding a phone one-handed in a rehearsal room,
+   which is a coarse pointer. On a fine pointer the same control at 44px is
+   simply oversized — two of these on every row dominated the take they were
+   about. So: compact by default, and the full 44px restored below wherever the
+   pointer is actually coarse. */
+.bp-vote-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Between the thumb and the word. */
+  gap: 0.375rem;
+  min-height: 30px;
+  padding: 0.25rem 0.6875rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (pointer: coarse), (pointer: none) {
+  .bp-vote-btn {
+    min-height: 44px;
+    padding: 0.375rem 0.8125rem;
+  }
+}
+
+/* The selected side takes a SOLID fill and the ground colour for its text.
+   A second, later block used to override both of these with a 14% mix of the
+   olive `--bp-component-accent-success` over the surface — a translucent
+   swamp-green pill with muted text on it, which is what the pressed state
+   actually rendered as. Selection has to be the loudest thing in this strip;
+   it is the record of a decision.
+
+   No tick or cross glyph. The pair is two words that already say which is
+   which, and a mark in front of one of them only crowded the label. The
+   foundation's rule that a selected state must not rest on hue alone still
+   holds here without one: the two fills differ in LIGHTNESS as much as in
+   colour (accent against a raised wash), and `aria-pressed` carries the state
+   for anything not reading pixels. */
+.bp-vote-btn-keeper[aria-pressed="true"] {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+  font-weight: 600;
+}
+
+.bp-vote-btn-not-keeper[aria-pressed="true"] {
+  background: var(--bp-color-muted);
+  color: var(--bp-color-on-accent);
+  font-weight: 600;
+}
+
+@media (pointer: coarse), (pointer: none) {
+  .bp-vote-btn {
+    min-height: 44px;
+    padding: 0.375rem 0.8125rem;
+  }
+}
+
+/* The tally wraps under the two buttons rather than beside them — at 390px
+   "No votes yet." plus both labels does not fit on one line. Full width and
+   right-aligned so it hangs off the same edge as the buttons instead of
+   floating mid-group. */
+/* An unvoted take renders this empty (see `formatVoteTally`), and an empty
+   tally must take no space at all — otherwise every row carries a blank line
+   where a sentence used to be. */
+.bp-vote-tally:empty {
+  display: none;
+}
+
+/* Left, under the buttons it describes — it inherited `text-align: right` from
+   the take row's trailing slot, which the vote control no longer lives in, and
+   on a full-width strip that stranded the tally at the far edge with the
+   buttons at the near one. */
+.bp-vote-tally {
+  width: 100%;
+  text-align: left;
+  font-size: var(--text-meta, 0.78125rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--bp-color-muted);
+}
+
+/* Content-width, at the larger size. They used to split the strip's width
+   between them, which at the page's full width made two slabs half a screen
+   wide each; a decision reads as two buttons, not as a band. A floor of 7rem
+   keeps the pair level and each an easy target on a phone. */
+/* `.bp-btn-sm`'s metrics exactly (height, padding, type), content-width, so
+   the vote pair is the same button as every other action on the take page.
+   It was 48px, then 44px with wider padding and a 7rem floor, which still
+   read as a chunkier third kind of button beside the ruling and the play
+   pill. */
+.bp-vote-toggle-lg .bp-vote-btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+.bp-vote-toggle-lg .bp-vote-tally {
+  font-size: 0.8125rem;
+}
+
+.bp-favorite-toggle-form {
+  display: inline-flex;
+}
+
+.bp-favorite-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--bp-color-muted);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+
+/* The favourite answers a hover with a DISC — the same 34px disc the play
+   control beside it is made of, drawn only while the pointer is on it. That
+   gives the two controls in a row one hover language instead of two.
+
+   It is not a scale on the star, which is what this tried first: a CSS
+   `transform` on the inline `<svg>` root never took — even an `!important`
+   `scale(2)` computed back to the identity matrix — so the star did not
+   move at all. The button behind it is an ordinary box and behaves.
+
+   The colour shift is muted -> foreground, which is theme-neutral. A shift
+   toward `--bp-color-accent` would not be: it is gold on lacquer and burnt
+   umber on sand, so "brighter" in one theme is "darker" in the other. */
+.bp-favorite-toggle::before {
+  content: "";
+  position: absolute;
+  width: var(--bp-play-disc, 34px);
+  height: var(--bp-play-disc, 34px);
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.bp-favorite-toggle svg {
+  position: relative;
+}
+
+.bp-favorite-toggle:hover::before,
+.bp-favorite-toggle:focus-visible::before {
+  background: color-mix(in srgb, var(--bp-color-fg) 10%, transparent);
+}
+
+.bp-favorite-toggle:hover {
+  color: var(--bp-color-fg);
+}
+
+/* Already gold, and gold is the same value in both themes — so the pressed
+   star keeps its colour and answers with the disc alone. */
+.bp-favorite-toggle[aria-pressed="true"]:hover {
+  color: var(--bp-component-accent-gold);
+}
+
+.bp-favorite-toggle .bp-star-filled {
+  display: none;
+  color: var(--bp-component-accent-gold);
+}
+
+.bp-favorite-toggle[aria-pressed="true"] .bp-star-outline {
+  display: none;
+}
+
+.bp-favorite-toggle[aria-pressed="true"] .bp-star-filled {
+  display: inline;
+}
+
+.bp-favorite-toggle-form-lg .bp-favorite-toggle {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.bp-favorite-toggle-form-lg .bp-star-outline,
+.bp-favorite-toggle-form-lg .bp-star-filled {
+  width: 20px;
+  height: 20px;
+}
+
+/* Toast region — top-right, deliberately NOT near the bottom of the
+   viewport: this project has twice shipped a fixed-position/reserved-space
+   element that occluded something else near the bottom (the player bar,
+   the tab bar) — see `.bp-shell`'s own comment. A toast anchored at the
+   top avoids that whole class of bug rather than needing a third height
+   negotiation with the player bar and tab bar. `role="status"`
+   (`VoteFavorite.tsx`) gives it an implicit `aria-live="polite"` region;
+   nothing here ever calls `.focus()` on it — a toast must not steal focus
+   from whatever the member was doing when it appeared. */
+.bp-toast-region {
+  position: fixed;
+  top: 1rem;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  z-index: 150; /* above the player (42) and tab bar (40), below the route-progress bar's 200 and the skip-link's 100 only when focused */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(20rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+/* A pill of tinted ground — no border, no shadow. The Label skin drops both:
+   a border made the toast read as a dialog rather than as a passing note, and
+   the shadow was the only shadow in the whole system (see
+   docs/design-foundation.md "Geometry": a plate has a sleeve, not a drop
+   shadow). Body text is `--bp-color-fg`, per the fill rule. */
+.bp-toast {
+  margin: 0;
+  padding: 0.75rem 1.125rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  pointer-events: auto;
+  animation: bp-toast-in 0.15s ease;
+}
+
+.bp-toast-ok {
+  background: var(--bp-fill-ok);
+}
+
+.bp-toast-error {
+  background: var(--bp-fill-alert);
+}
+
+@keyframes bp-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-toast {
+    animation: none;
+  }
+}

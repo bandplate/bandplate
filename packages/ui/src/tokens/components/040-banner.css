@@ -1,0 +1,104 @@
+/* ---------------------------------------------------------------------- */
+/* Banner                                                                  */
+/* ---------------------------------------------------------------------- */
+
+/* Direction B1. `align-items: center` rather than `flex-start`: with the icon
+   in a 32px disc and the action a 44px pill, a top-aligned row put three
+   objects of three different heights on three different lines. 0.5rem corners
+   to match the cards, empty states and the draft strip — this was the only
+   3px rectangle among them. */
+.bp-banner {
+  border-radius: 0.5rem;
+  border: none;
+  padding: 0.875rem 1.125rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 0.875rem;
+  align-items: center;
+  color: var(--bp-color-fg);
+}
+
+/* A drawn mark in a tinted disc, not a typed character. The disc is what
+   separates it from the sentence — without one, an 18px glyph beside 15px text
+   reads as the first word. */
+/* Lucide's circled glyphs carry their own ring, so no disc behind them. */
+.bp-banner-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The measure. A banner is prose, and prose past ~62 characters per line is
+   harder to read, not more informative — "Saved." used to stretch the width of
+   a 1900px page. */
+.bp-banner-say {
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 62ch;
+}
+
+/* Pinned to the far end, so the space between the sentence and the button is
+   structure rather than a gap. `margin-inline-start: auto` rather than
+   `justify-content: space-between` because the row wraps: on a phone the
+   action drops to its own line and goes full width, where `space-between`
+   would strand it mid-row. */
+.bp-banner-action {
+  flex: none;
+  margin-inline-start: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 559px) {
+  .bp-banner-action {
+    flex: 1 1 100%;
+    margin-inline-start: 0;
+  }
+
+  .bp-banner-action > * {
+    flex: 1 1 auto;
+  }
+}
+
+/* Banner titles had no rule at all, so they fell through to the browser's
+   default <strong> — the body face at 700, which is the small-bold-heading
+   problem again, arrived at by omission rather than by choice. Every heading
+   in this system is the display face; this is one.
+
+   Scoped to `.bp-banner-title`, NOT to every `strong` in the banner. It used
+   to be `.bp-banner strong`, which caught emphasis inside the body copy too
+   and gave it `display: block` — so a sentence like "This take will be marked
+   **keeper** — the band's pick" broke into three lines around the one bold
+   word. */
+.bp-banner-title {
+  display: block;
+  font-family: var(--bp-font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-bottom: 0.125rem;
+}
+
+/* Fill only, no boundary. The old rules leaned on a 2px border for kind,
+   which the Label skin removed — a banner is a block of tinted ground, and the
+   tint alone carries the kind. Body text stays `--bp-color-fg` throughout,
+   which is what makes these safe: on a 24% fill, `--bp-color-muted` measures
+   4.39:1 in the light theme and fails, while fg clears 10:1 everywhere. The
+   `--bp-color-border` note that used to live here no longer applies, because
+   there is no boundary left to hold to 3:1. */
+.bp-banner-success {
+  background: var(--bp-fill-ok);
+}
+
+.bp-banner-error {
+  background: var(--bp-fill-alert);
+}
+
+.bp-banner-info {
+  background: var(--bp-fill-subtle);
+}

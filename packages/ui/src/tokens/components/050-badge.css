@@ -1,0 +1,77 @@
+/* ---------------------------------------------------------------------- */
+/* Badge (role/status pills) — text stays `--bp-color-fg` always; accent   */
+/* colors appear only as the small decorative dot, never as the label     */
+/* text, and the label text itself ("admin" / "active" / ...) is the real */
+/* signal — color is reinforcement, not the sole means (WCAG 1.4.1).      */
+/* ---------------------------------------------------------------------- */
+
+/* Filled, not outlined — and the dot is gone. It was 8px of colour meant to
+   carry the badge's kind, which at that size is invisible against a page of
+   warm browns; every kind rendered as the same pill. The FILL carries the kind
+   now, which is legible across a long list at a glance.
+   Text stays `--bp-color-fg` on every variant: on a 24% fill, muted measures
+   4.39:1 in the light theme and fails, while fg clears 9.8:1 on the lightest
+   of these tints. That is the rule from dubplate.css, applied. */
+/* SOLID, not tinted. A badge is 12px of text in a 60px pill — at that size a
+   24% tint has no presence at all and every kind reads as the same washed-out
+   lozenge, which is exactly what tints looked like here. Solid fills carry the
+   same weight language as the buttons: solid says "this is a fact about the
+   row", tint says "this is chrome".
+   Text is `--bp-color-on-accent` (the ground), measured on every fill below:
+   accent 9.8/5.9, ok 5.8/6.3, danger 4.6/6.1. The neutral default keeps the
+   raised tint with fg text (8.2/9.2), since there is no coloured fill to sit on.
+
+   ---------------------------------------------------------------------
+   On there being only four colours for six badge names
+   ---------------------------------------------------------------------
+   These are FOUR SEPARATE VOCABULARIES sharing one component, not one scale:
+     event kind      rehearsal | concert | session
+     take state      new | published | keeper | rejected
+     member role     member | admin
+     member status   invited | active | disabled
+   Siblings within a vocabulary must differ, and they do. Two badges from
+   DIFFERENT vocabularies may share a colour, because they never label the same
+   axis — `keeper` (a take) and `admin` (a person) are never a choice between
+   each other. Adding a fifth hue to make all six names unique would mean
+   inventing a colour outside the brand palette to solve a problem no reader
+   has, so the repetition is deliberate. `/dev/ui` groups them by vocabulary to
+   make that legible. */
+.bp-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: lowercase;
+  /* `--text-note`, not a hardcoded 0.75rem. It was 12px beside a 12.5px
+     duration and an 11.5px subline — three sizes within half a pixel of each
+     other, which reads as carelessness rather than hierarchy. A badge is a
+     small label, and the scale has exactly one step for that. */
+  font-size: var(--text-note, 0.71875rem);
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--bp-fill-raised);
+  color: var(--bp-color-fg);
+  white-space: nowrap;
+}
+
+.bp-badge-keeper,
+.bp-badge-admin {
+  background: var(--bp-color-accent);
+  color: var(--bp-color-on-accent);
+}
+
+.bp-badge-concert,
+.bp-badge-rejected,
+.bp-badge-disabled {
+  background: var(--bp-color-danger);
+  color: var(--bp-color-on-accent);
+}
+
+.bp-badge-session,
+.bp-badge-active,
+.bp-badge-published {
+  background: var(--bp-color-accent-alt);
+  color: var(--bp-color-on-accent);
+}

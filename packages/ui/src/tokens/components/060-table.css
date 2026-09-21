@@ -1,0 +1,184 @@
+/* ---------------------------------------------------------------------- */
+/* Table — real columns on wide viewports, a stacked key/value list on     */
+/* narrow ones (not a horizontal scrollbar as the only answer).           */
+/* ---------------------------------------------------------------------- */
+
+.bp-table-wrap {
+  width: 100%;
+}
+
+.bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-ui, 0.9375rem);
+}
+
+.bp-table caption {
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* Hairline rows, no vertical rules, no fill — the same box the event ledger
+   and the take list draw, so the one screen in the app that is genuinely a
+   list of RECORDS still speaks the app's language. Left-flush: a table that
+   starts a padding-width in from everything above it reads as a panel. */
+.bp-table th,
+.bp-table td {
+  text-align: left;
+  padding: 0.75rem 1rem 0.75rem 0;
+  border-bottom: 1px solid var(--bp-color-border);
+  vertical-align: middle;
+}
+
+.bp-table th:last-child,
+.bp-table td:last-child {
+  padding-right: 0;
+}
+
+/* Column heads in the small-caps voice `.bp-kind` uses for a label on a
+   fact — which is what a column head is. */
+.bp-table th {
+  font-family: var(--bp-font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--bp-color-muted);
+  padding-bottom: 0.5rem;
+}
+
+/* The same 5% wash every row in the app lights up with — not
+   `--bp-color-surface`, which is a panel fill and reads as selection. */
+.bp-table tbody tr:hover {
+  background: color-mix(in srgb, var(--bp-color-fg) 5%, transparent);
+}
+
+/* The cell that names the record. Everything else in the row is an
+   attribute of it and takes the quiet treatment below. */
+.bp-table-name {
+  color: var(--bp-color-fg);
+}
+
+/* Secondary cells — an email, a slug, a timestamp. Muted and a step down,
+   never mono: `.bp-mono` on an address turned a word into a serial number
+   and was the loudest thing on the roster. Mono is for a secret you read a
+   character at a time. */
+.bp-table-quiet {
+  font-size: var(--text-note, 0.8125rem);
+  color: var(--bp-color-muted);
+}
+
+/* A timestamp is one token, not a sentence: letting "2026-09-08 20:35" wrap
+   to three lines because a disclosure opened in the next column over is the
+   table losing an argument it should not be having. */
+.bp-table-when {
+  white-space: nowrap;
+}
+
+/* A status/role kind sitting under the name in the first cell. */
+.bp-table td .bp-table-name + .bp-kind {
+  margin-left: 0.5rem;
+}
+
+.bp-table .bp-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* `.bp-table--no-stack` keeps a table a table on a phone: for one whose
+   columns fit at 375px once its desktop-only ones step out (a take's
+   files: name, format, two icons), and which reads worse as stacked
+   label/value blocks. */
+@media (max-width: 640px) {
+  .bp-table:not(.bp-table--no-stack) thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .bp-table:not(.bp-table--no-stack),
+  .bp-table:not(.bp-table--no-stack) tbody,
+  .bp-table:not(.bp-table--no-stack) tr,
+  .bp-table:not(.bp-table--no-stack) td {
+    display: block;
+    width: 100%;
+  }
+
+  /* A record per hairline block, not a bordered rounded card each — the
+     card treatment is what made the phone view of admin read as a different
+     product, and it is the same argument that took the panels off the add
+     forms. The heads drop and the row stacks (A1), with each cell carrying
+     its own label. */
+  .bp-table:not(.bp-table--no-stack) tr {
+    border: none;
+    border-bottom: 1px solid var(--bp-color-border);
+    border-radius: 0;
+    margin-bottom: 0;
+    padding: 0.75rem 0;
+  }
+
+  .bp-table:not(.bp-table--no-stack) td {
+    border-bottom: none;
+    padding: 0.1875rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: right;
+  }
+
+  /* A cell with nothing in it — a member who is active, an instrument that
+     is not archived — would otherwise render as a label with a blank beside
+     it, which is a row that says nothing. */
+  .bp-table:not(.bp-table--no-stack) td:empty {
+    display: none;
+  }
+
+  .bp-table:not(.bp-table--no-stack) td::before {
+    content: attr(data-label);
+    font-family: var(--bp-font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--bp-color-muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  /* The cell that names the record leads it, in the display face, with no
+     label of its own — "NAME  Filip" as the first of six labelled pairs made
+     the record look like a form rather than a thing. Everything under it is
+     an attribute and keeps its label. */
+  .bp-table:not(.bp-table--no-stack) td:has(> .bp-table-name) {
+    justify-content: flex-start;
+    text-align: left;
+    font-family: var(--bp-font-display);
+    font-size: var(--text-section, 1.25rem);
+    font-weight: 600;
+    padding-bottom: 0.375rem;
+  }
+
+  .bp-table:not(.bp-table--no-stack) td:has(> .bp-table-name)::before {
+    display: none;
+  }
+
+  /* The instruments table's icon cell: a glyph needs no "ICON" label read
+     out beside it, and it sits directly above the name it belongs to. */
+  .bp-table:not(.bp-table--no-stack) td:has(> .bp-instrument) {
+    justify-content: flex-start;
+  }
+
+  .bp-table:not(.bp-table--no-stack) td:has(> .bp-instrument)::before {
+    display: none;
+  }
+
+  .bp-table:not(.bp-table--no-stack) .bp-table-actions {
+    justify-content: flex-end;
+  }
+}

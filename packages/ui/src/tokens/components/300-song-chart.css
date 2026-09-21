@@ -1,0 +1,39 @@
+/* ---------------------------------------------------------------------- */
+/* Song chart — chords interleaved with lyrics by section (Verse/Chorus/    */
+/* Bridge/…), not two stacked, unrelated `<pre>` blocks (see                */
+/* apps/web/src/server/song-text.ts for the parsing/pairing). A section     */
+/* label is bold plus a short accent-colored left rule — NOT tracked-out    */
+/* ALL-CAPS (the brief's own example of a template tell) — so the           */
+/* structure is findable at a glance, the way a musician actually reads a   */
+/* chart: section first, then the words and changes under it.               */
+/* ---------------------------------------------------------------------- */
+
+.bp-song-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  /* Part of the same min-content-width fix as `.bp-stack` above — every
+     flex box between `.bp-chords` and the page's outer column needs this,
+     not just the `<pre>` itself (tried alone; not enough). */
+  min-width: 0;
+}
+
+.bp-song-chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Every section label is muted, chorus included. Colouring the heading was
+   tried and removed: the emphasis belongs on the words being sung, not on the
+   word "Chorus" above them. */
+.bp-song-chart-label {
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-eyebrow, 0.75rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+  margin: 0 0 0.25rem;
+}

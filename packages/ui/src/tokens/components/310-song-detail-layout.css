@@ -1,0 +1,55 @@
+/* ---------------------------------------------------------------------- */
+/* Song detail layout — chords/lyrics beside the take list at `lg`.        */
+/* ---------------------------------------------------------------------- */
+
+/* Chart left, takes and their notes right — and a different ORDER on a phone.
+   `order` on the children rather than duplicated markup: the DOM stays one
+   source of truth, and a screen reader follows the same sequence a sighted
+   reader does at both sizes. Below `lg` the aside comes first, because a song
+   is opened to hear it far more often than to read it. */
+.bp-song-detail-grid {
+  display: grid;
+  gap: 2.25rem;
+}
+
+.bp-song-detail-chart {
+  order: 2;
+  min-width: 0;
+}
+
+.bp-song-detail-aside {
+  order: 1;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  /* 40ch is the chart's own measure, not a fraction of the window: the lyric
+     column stops growing once it is comfortable to read, and everything left
+     over goes to the takes — which is what makes a take row one line plus its
+     second rather than four wrapped fragments. */
+  .bp-song-detail-grid {
+    grid-template-columns: minmax(0, 40ch) minmax(0, 1fr);
+    gap: 0 3rem;
+    align-items: start;
+  }
+
+  .bp-song-detail-chart {
+    order: 1;
+  }
+
+  .bp-song-detail-aside {
+    order: 2;
+  }
+}
+
+.bp-song-aside-section {
+  margin-top: 1.75rem;
+}
+
+/* Key and tempo — app-formatted values, so tabular figures rather than the
+   mono face. See the page's own comment. */
+.bp-song-hero-meta {
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}

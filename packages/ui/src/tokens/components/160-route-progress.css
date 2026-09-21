@@ -1,0 +1,46 @@
+/* ---------------------------------------------------------------------- */
+/* Route progress — a thin bar for View Transitions navigation, not a      */
+/* spinner: the destination is already known (it's a link), so this shows */
+/* that something is happening rather than blocking on it. Purely         */
+/* decorative (`aria-hidden`), so it carries no text alternative.         */
+/* ---------------------------------------------------------------------- */
+
+.bp-route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 200;
+  /* NOT `--bp-color-accent` — that's the SAME fixed rust hex in both
+     themes (see dubplate.css), which measures 9.21:1 against the light
+     ground but only 1.69:1 against the dark one (the exact regression
+     documented in components.css's file header). This bar needs to be
+     visible as a graphical object in both themes, so it uses the
+     component-scoped, dark-mode-aware variant instead: 9.21:1 / 9.96:1 in
+     light, 4.41:1 / 4.08:1 in dark (against bg / surface respectively). */
+  background: var(--bp-component-accent-strong);
+  transform-origin: left;
+  transform: scaleX(0);
+  opacity: 0;
+}
+
+.bp-route-progress.is-active {
+  opacity: 1;
+  transform: scaleX(0.7);
+  transition: transform 6s cubic-bezier(0.1, 0.5, 0.5, 1);
+}
+
+.bp-route-progress.is-done {
+  opacity: 1;
+  transform: scaleX(1);
+  transition: transform 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-route-progress,
+  .bp-route-progress.is-active,
+  .bp-route-progress.is-done {
+    transition: none !important;
+  }
+}

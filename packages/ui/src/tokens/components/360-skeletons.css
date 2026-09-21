@@ -1,0 +1,76 @@
+/* ---------------------------------------------------------------------- */
+/* Skeletons                                                               */
+/* ---------------------------------------------------------------------- */
+/* The brief made these acceptance criteria and the app shipped without any.
+   They exist for the two places that genuinely wait: a `server:defer` island's
+   fallback slot, and an island fetching after mount. Everything else is
+   server-rendered and has no loading state at all — do not sprinkle these on
+   content that arrives with the document.
+
+   A skeleton must share the real component's radius and spacing and match its
+   line count and width distribution. A wrong-shaped one is worse than a
+   spinner, because it promises a layout that then changes under the reader. */
+
+.bp-skeleton {
+  background: var(--bp-fill-subtle);
+  border-radius: var(--radius-sm, 3px);
+  /* Not `visibility: hidden` text: a skeleton has no accessible name, and the
+     region that owns it carries `aria-busy` instead. */
+  color: transparent;
+  user-select: none;
+}
+
+.bp-skeleton-line {
+  height: 0.75rem;
+}
+
+.bp-skeleton-line + .bp-skeleton-line {
+  margin-top: 0.4375rem;
+}
+
+.bp-skeleton-disc {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* A skeleton row mirrors `.bp-take-row` geometry: the same
+   34px leading disc, the same 12px vertical padding. */
+.bp-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.bp-skeleton-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The shimmer is a single background sweep rather than an opacity pulse:
+   a pulse reads as something blinking at you, a sweep reads as loading.
+   It is also the one animation in the system that repeats, which is why it is
+   confined to a state that is by definition temporary. */
+@media (prefers-reduced-motion: no-preference) {
+  .bp-skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--bp-fill-subtle) 0%,
+      var(--bp-fill-raised) 50%,
+      var(--bp-fill-subtle) 100%
+    );
+    background-size: 200% 100%;
+    animation: bp-skeleton-sweep 1.4s var(--ease-bp, ease-in-out) infinite;
+  }
+}
+
+@keyframes bp-skeleton-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}

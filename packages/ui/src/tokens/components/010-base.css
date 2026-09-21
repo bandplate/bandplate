@@ -1,0 +1,40 @@
+/* ---------------------------------------------------------------------- */
+/* Base                                                                    */
+/* ---------------------------------------------------------------------- */
+
+/* Shared focus style: `--bp-color-fg` rather than an accent, because it's
+   the one color guaranteed to hit 3:1 against `--bp-color-bg` in BOTH
+   themes (~15:1 either way) — see the file header. Never remove an
+   `outline` without this replacement. */
+:focus-visible {
+  outline: 3px solid var(--bp-color-fg);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.bp-skip-link {
+  position: absolute;
+  left: 0.5rem;
+  /* `translateY(-120%)` rather than a fixed negative `top`. The old
+     `top: -3rem` was 48px against a link that renders ~46px tall once its
+     padding and 2px border are counted, so a couple of pixels of it sat
+     permanently below the top edge of every page — a sliver of rounded
+     outline above the header that looked like a rendering fault. A percentage
+     of the element's own height cannot drift when the padding changes. */
+  top: 0;
+  transform: translateY(-120%);
+  z-index: 100;
+  background: var(--bp-color-surface);
+  color: var(--bp-color-fg);
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
+  border: 2px solid var(--bp-color-fg);
+  transition: transform 0.15s ease;
+}
+
+/* Must move the same property the resting state uses, or the link stays
+   translated off-screen while claiming to be focused — which is worse than
+   the sliver, because the target is then invisible AND focused. */
+.bp-skip-link:focus {
+  transform: translateY(0.5rem);
+}

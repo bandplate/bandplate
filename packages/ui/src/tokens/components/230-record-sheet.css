@@ -1,0 +1,504 @@
+/* ---------------------------------------------------------------------- */
+/* The record sheet (M6, direction E2) — one admin record opened for       */
+/* editing. Off the right past `lg`, up from the bottom below it, the same */
+/* shape the takes filters use, so the app has ONE panel-of-controls-about-*/
+/* one-thing rather than two that behave differently.                     */
+/* ---------------------------------------------------------------------- */
+
+.bp-sheet {
+  width: 100%;
+  max-width: none;
+  max-height: 88vh;
+  margin: 0;
+  margin-top: auto;
+  padding: 0;
+  border: none;
+  border-top: 1px solid var(--bp-color-border);
+  border-radius: 1.125rem 1.125rem 0 0;
+  background: var(--bp-color-bg);
+  color: var(--bp-color-fg);
+  box-shadow: 0 -18px 40px rgb(0 0 0 / 0.5);
+  overflow: hidden;
+  /* The sheet lives inside the row's Actions cell, and below 640px that cell
+     is `text-align: right` so the stacked table reads as label/value pairs.
+     Inherited, that right-aligned every label in the panel. A modal dialog is
+     in the top layer and owes its container nothing but inheritance, so this
+     is where that inheritance stops. */
+  text-align: left;
+}
+
+/* Only when open. Setting `display: flex` on the base rule overrides the UA's
+   own `dialog:not([open]) { display: none }`, which renders EVERY record's
+   sheet inline inside its table cell — seven of them at once, blowing the
+   page 400px wider than the window. Found by measuring `scrollWidth`. */
+.bp-sheet[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Opaque on a phone, where the sheet covers most of the screen and anything
+   showing through reads as a rendering fault (it is what the bottom tab bar
+   was doing under the filters). Past `lg` the panel is a quarter of the
+   window and the roster behind it is context worth keeping, so the scrim
+   dims rather than hides. */
+.bp-sheet::backdrop {
+  background: var(--bp-color-bg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bp-sheet {
+    transition:
+      translate var(--duration-enter, 180ms) var(--ease-bp, ease-out),
+      overlay var(--duration-enter, 180ms) allow-discrete,
+      display var(--duration-enter, 180ms) allow-discrete;
+  }
+
+  /* Declared, not left to the absence of a rule: if a browser never gets a
+     frame to transition in, the starting value is where it would stay. And
+     translate ONLY — animating opacity leaves the sheet translucent for the
+     whole 180ms, which is the bleed-through the filters had to fix twice. */
+  .bp-sheet[open] {
+    translate: none;
+  }
+
+  .bp-sheet:not([open]) {
+    translate: 0 100%;
+  }
+
+  @starting-style {
+    .bp-sheet[open] {
+      translate: 0 100%;
+    }
+  }
+
+  .bp-sheet::backdrop {
+    transition:
+      overlay var(--duration-enter, 180ms) allow-discrete,
+      display var(--duration-enter, 180ms) allow-discrete;
+  }
+}
+
+.bp-sheet-head {
+  flex: none;
+  padding: 0.75rem 1.375rem 0;
+}
+
+.bp-sheet-grip {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 32px;
+  margin: -0.375rem auto 0.625rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bp-sheet-grip::before {
+  content: "";
+  display: block;
+  width: 2.375rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bp-color-border);
+}
+
+.bp-sheet-grip:hover::before {
+  background: var(--bp-color-muted);
+}
+
+.bp-sheet-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+.bp-sheet-heading {
+  min-width: 0;
+}
+
+.bp-sheet-title {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: var(--text-section, 1.25rem);
+  line-height: 1.15;
+  margin-top: 0.25rem;
+}
+
+.bp-sheet-sub {
+  font-size: var(--text-note, 0.8125rem);
+  color: var(--bp-color-muted);
+  margin-top: 0.1875rem;
+  overflow-wrap: break-word;
+}
+
+/* The X is the desktop dismissal; on a phone the grip and a tap outside do
+   the job and a target in the corner is the hardest thing on the screen to
+   reach one-handed. */
+.bp-sheet-x {
+  display: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  cursor: pointer;
+}
+
+.bp-sheet-x:hover {
+  background: var(--bp-fill-raised);
+}
+
+/* The form fills the sheet so head and foot can stay put while the middle
+   scrolls — the confirm is always in reach however long the field list is. */
+.bp-sheet-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-grow: 1;
+}
+
+.bp-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  padding: 1.125rem 1.375rem 1.375rem;
+  overflow-y: auto;
+  /* Takes the slack so the footer sits on the bottom edge of the panel. A
+     footer floating halfway up a full-height sheet reads as unfinished. */
+  flex-grow: 1;
+}
+
+/* A labelled control. The label is the whole point of this pass: a bare
+   select reading "member" tells you the value and never the field. */
+.bp-sheet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.bp-sheet-field > .bp-select,
+.bp-sheet-field > .bp-input {
+  width: 100%;
+}
+
+/* Explanatory text under a control, and the sheet's one destructive line. */
+.bp-sheet-hint {
+  font-size: var(--text-note, 0.8125rem);
+  line-height: 1.5;
+  color: var(--bp-color-muted);
+}
+
+/* Secondary actions — resend an invitation, the destructive one. Under a
+   rule at the end of the fields, not in the footer beside Save: the footer is
+   for what you do with the changes you just made, and these two are neither. */
+.bp-sheet-extras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 1.125rem;
+  border-top: 1px solid var(--bp-color-border);
+}
+
+/* The reassuring answer, when there is one. Body size and a tinted band, not
+   the muted small type of the loss list beside it: "nothing is lost" is the
+   sentence someone opening a destructive dialog is looking for, and it was
+   set smaller than everything around it. */
+.bp-dialog-note {
+  margin: 0.75rem 0 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bp-fill-ok);
+  color: var(--bp-color-fg);
+  font-weight: 600;
+}
+
+/* What a confirm would destroy, inside the dialog. A list rather than a run
+   of sentences: each line is a different thing that will not survive, and
+   running them together is how someone approves one without reading the
+   others. */
+.bp-dialog-details {
+  margin: 0.5rem 0 0;
+  padding-left: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--bp-color-muted);
+  font-size: var(--text-note, 0.71875rem);
+  line-height: 1.5;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+/* The two lifecycle actions, kept together. Archive retires an instrument the
+   band stopped playing; delete removes one that should never have existed —
+   the same question from opposite ends, so they belong in the same corner of
+   the sheet rather than with a picker between them. */
+.bp-sheet-lifecycle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+/* Why delete is not on offer. Full width, under the pair: a sentence sitting
+   IN a row of controls reads as a label for whichever one is next to it. */
+.bp-sheet-blocked {
+  flex-basis: 100%;
+  max-width: 54ch;
+}
+
+/* An empty form that exists only to be targeted by a `form=` button. */
+.bp-sheet-aux {
+  display: none;
+}
+
+.bp-sheet-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1.375rem calc(0.875rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--bp-color-border);
+  background: var(--bp-color-bg);
+}
+
+.bp-sheet-foot .bp-btn-primary {
+  flex-grow: 1;
+}
+
+/* The destructive one, at the far end of the fields rather than in the
+   footer beside Save — and as text, not a red pill. A red button on every
+   row down a roster made the page read as being about revoking sessions. */
+.bp-sheet-danger {
+  align-self: flex-start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--bp-color-danger);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: var(--text-ui, 0.9375rem);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* A stash recording's everyday actions, above the rule its danger link sits
+   under. */
+.bp-stash-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.bp-sheet-danger:hover {
+  text-decoration: underline;
+}
+
+@media (min-width: 1024px) {
+  .bp-sheet {
+    margin: 0 0 0 auto;
+    width: 26rem;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    border-top: none;
+    border-left: 1px solid var(--bp-color-border);
+    box-shadow: -18px 0 40px rgb(0 0 0 / 0.5);
+  }
+
+  .bp-sheet::backdrop {
+    background: color-mix(in srgb, var(--bp-color-bg) 72%, transparent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .bp-sheet:not([open]) {
+      translate: 100% 0;
+    }
+
+    @starting-style {
+      .bp-sheet[open] {
+        translate: 100% 0;
+      }
+    }
+  }
+
+  .bp-sheet-grip {
+    display: none;
+  }
+
+  .bp-sheet-head {
+    padding-top: 1.375rem;
+  }
+
+  .bp-sheet-x {
+    display: grid;
+  }
+}
+
+/* No JS: a `<dialog>` with no `open` is `display: none`, so without this the
+   editors would simply be unreachable. Each sheet renders as a plain block
+   under its own row instead — E1's drawer, permanently open — and every form
+   still submits. Verbose with a long roster, and the honest trade for not
+   making editing a JS-only feature. */
+@media (scripting: none) {
+  .bp-sheet,
+  .bp-sheet:not([open]) {
+    display: flex;
+    /* `flex-direction` lives on `.bp-sheet[open]`, which a sheet that is never
+       opened never matches — so every no-JS sheet laid its head BESIDE its
+       body and `overflow: hidden` cut the fields off. Found by measuring
+       `scrollWidth` against `clientWidth` in a sandboxed (script-free)
+       iframe, which is the only way to see this page as a no-JS reader does. */
+    flex-direction: column;
+    position: static;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0 0 1.25rem;
+    translate: none;
+    border: 1px solid var(--bp-color-border);
+    border-radius: 0.5rem;
+    box-shadow: none;
+  }
+
+  .bp-sheet-grip,
+  .bp-sheet-x {
+    display: none;
+  }
+
+  .bp-sheet-body {
+    overflow-y: visible;
+  }
+}
+
+/* The same rendering, made unconditional, for a sheet that IS its page.
+   `/stash/[id]` is one recording and nothing else: there is no row to open a
+   dialog from, so it renders the sheet's own markup in the flow rather than
+   keeping a second hand-written copy of it. Written at the specificity of
+   `.bp-sheet:not([open])` above, and after it, so it wins in both directions.
+   The head goes: the page has a heading of its own. */
+.bp-sheet--inline,
+.bp-sheet--inline:not([open]) {
+  display: flex;
+  flex-direction: column;
+  position: static;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  translate: none;
+  border: 1px solid var(--bp-color-border);
+  border-radius: 0.5rem;
+  box-shadow: none;
+}
+
+.bp-sheet--inline .bp-sheet-head {
+  display: none;
+}
+
+.bp-sheet--inline .bp-sheet-body {
+  overflow-y: visible;
+}
+
+/* A disclosure inside a table cell — the roster's instruments and its row
+   actions. Closed it is one line, which is what lets the table stay a table
+   you can scan a column of; open it holds a real form. The alternative was a
+   four-row `<select multiple>` and a red button on every row, which between
+   them made each record five lines tall. */
+.bp-cell-editor > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+/* The instruments summary is content, not a button — a row of glyphs with a
+   default disclosure triangle beside them read as neither. Give it the quiet
+   pill's hover instead, so it says "press me" the way every other borderless
+   control here does, and drop the marker. */
+.bp-cell-editor > summary:not(.bp-btn) {
+  list-style: none;
+  padding: 0.25rem 0.5rem;
+  margin-left: -0.5rem;
+  border-radius: 999px;
+}
+
+.bp-cell-editor > summary:not(.bp-btn)::-webkit-details-marker {
+  display: none;
+}
+
+.bp-cell-editor > summary:not(.bp-btn):hover {
+  background: var(--bp-fill-subtle);
+}
+
+.bp-cell-editor-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: 0.625rem;
+}
+
+.bp-cell-editor-body .bp-pills {
+  flex: 1 1 100%;
+}
+
+.bp-cell-editor-body fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The per-row inline edit forms in the admin tables (rename+reorder an
+   instrument, change a member's role/status) — compact controls that sit
+   next to a Save button in a single wrapping line. */
+.bp-inline-form {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.bp-input-compact {
+  padding: 0.25rem 0.5rem;
+}
+
+.bp-input-inline-label {
+  padding: 0.25rem 0.5rem;
+  max-width: 12rem;
+}
+
+.bp-input-inline-number {
+  padding: 0.25rem 0.5rem;
+  max-width: 5rem;
+}
+
+/* Admin roster's per-member instrument multi-select (Task 6 review round 1
+   — the member<->instrument data-model gap). A native `<select multiple>`,
+   not a checkbox fieldset — the option list is the same instrument
+   vocabulary `/admin/instruments` already manages, and this keeps the row
+   compact in a table cell. */
+.bp-instrument-multiselect {
+  min-width: 9rem;
+}

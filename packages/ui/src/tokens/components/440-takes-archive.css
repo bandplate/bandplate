@@ -1,0 +1,688 @@
+/* ---------------------------------------------------------------------- */
+/* /takes — the archive.                                                   */
+/*                                                                         */
+/* ONE set of filter controls, two presentations, and the element is the    */
+/* same `<dialog>` in both: a bar across the top of the page past `lg`, a   */
+/* modal sheet below it. A second copy of the fields would mean a second    */
+/* set of ids, and the `<label for>` pairs would be the first to rot.       */
+/*                                                                         */
+/* The three states that must never blur into each other:                   */
+/*   - past `lg`: a static bar, never modal, always visible;                */
+/*   - below `lg` with script: a sheet, and NOTHING inline — a `<dialog>`   */
+/*     that is not open is `display: none`, which is exactly what is wanted; */
+/*   - below `lg` with no script: a plain block, because nothing can open   */
+/*     it. `@media (scripting: none)` is the real feature for this. It      */
+/*     replaced a `.bp-no-js` class on `<html>`, which `<ClientRouter />`   */
+/*     restored on every soft navigation — so after one filter change the   */
+/*     phone got the no-JS layout back and the panel appeared inline.       */
+/* ---------------------------------------------------------------------- */
+
+.bp-takes {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* 0.875rem, not 0.5rem: Filtry and its Clear are both 32px targets with a
+   6px reach, and at 0.5rem those reaches overlapped. This leaves the two
+   44px targets clear of each other, the spacing condition a sub-44px
+   target relies on (the same reasoning as `.bp-take-hero-actions`). */
+.bp-takes-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+/* The title takes the slack, so the trigger and its Clear stay together at the
+   far end rather than drifting apart as the title's length changes. */
+.bp-takes-bar-title {
+  margin-right: auto;
+}
+
+/* The size `.bp-btn-xs` draws at, with the same 6px reach so the touch
+   target stays 44px: at full size it was the tallest thing under a header
+   whose own buttons are small. */
+.bp-filter-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 32px;
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--bp-fill-subtle);
+  color: var(--bp-color-fg);
+  font-family: var(--bp-font-body);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.bp-filter-trigger::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+}
+
+.bp-filter-trigger:hover {
+  background: var(--bp-fill-raised);
+}
+
+/* --- the sheet (below `lg`) ------------------------------------------- */
+
+.bp-filter-sheet {
+  width: 100%;
+  max-width: none;
+  max-height: 88vh;
+  margin: 0;
+  margin-top: auto;
+  padding: 0;
+  border: none;
+  border-top: 1px solid var(--bp-color-border);
+  border-radius: 1.125rem 1.125rem 0 0;
+  background: var(--bp-color-bg);
+  color: var(--bp-color-fg);
+  box-shadow: 0 -18px 40px rgb(0 0 0 / 0.5);
+  overflow: hidden;
+}
+
+/* Opaque, not the app's 92% overlay. At 8% transparency the fixed bottom tab
+   bar read straight through the backdrop above the sheet — a strip of nav
+   floating over a modal. A sheet's backdrop has one job, which is to stop the
+   page behind it being part of the picture. */
+.bp-filter-sheet::backdrop {
+  background: var(--bp-color-bg);
+}
+
+/* Slides up, and does NOT fade: animating opacity left the sheet translucent
+   for the whole 180ms, so the rows underneath showed through it. Only the
+   backdrop fades. `@starting-style` and `allow-discrete` are what make either
+   animatable at all on an element that goes from `display: none` to shown in
+   one step; a browser without them simply shows the sheet. */
+@media (prefers-reduced-motion: no-preference) {
+  .bp-filter-sheet {
+    transition:
+      translate var(--duration-enter, 180ms) var(--ease-bp, ease-out),
+      overlay var(--duration-enter, 180ms) allow-discrete,
+      display var(--duration-enter, 180ms) allow-discrete;
+  }
+
+  /* Declared, not left to the absence of a rule: if a browser never gets a
+     frame to transition in, the starting value is where it would stay. */
+  .bp-filter-sheet[open] {
+    translate: none;
+  }
+
+  .bp-filter-sheet:not([open]) {
+    translate: 0 100%;
+  }
+
+  @starting-style {
+    .bp-filter-sheet[open] {
+      translate: 0 100%;
+    }
+  }
+
+  /* The backdrop does NOT fade. It is opaque, so fading it in means the page
+     behind is visible through it for the whole 180ms — which is exactly what
+     the bottom tab bar was doing while the sheet slid up. It appears at full
+     strength on the first frame and the sheet slides over it. `allow-discrete`
+     is still needed so it survives long enough for the slide-out. */
+  .bp-filter-sheet::backdrop {
+    transition:
+      overlay var(--duration-enter, 180ms) allow-discrete,
+      display var(--duration-enter, 180ms) allow-discrete;
+  }
+}
+
+.bp-filter-form {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+}
+
+.bp-filter-sheet-head {
+  padding: 0.75rem 1.375rem 0;
+}
+
+/* A button with a 44px target and a 4px bar drawn inside it — a bare 4px strip
+   is the right shape and an impossible thing to hit. */
+.bp-filter-sheet-grip {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 32px;
+  margin: -0.375rem auto 0.625rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bp-filter-sheet-grip::before {
+  content: "";
+  display: block;
+  width: 2.375rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bp-color-border);
+}
+
+.bp-filter-sheet-grip:hover::before {
+  background: var(--bp-color-muted);
+}
+
+.bp-filter-sheet-head-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.bp-filter-sheet-title {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: var(--text-section, 1.25rem);
+}
+
+/* The scrolling middle; head and foot stay put so the confirm is always in
+   reach however long the instrument list gets. */
+.bp-filter-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  padding: 1rem 1.375rem 1.375rem;
+  overflow-y: auto;
+}
+
+.bp-filter-group {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.bp-filter-legend {
+  display: block;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+.bp-filter-legend-note {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* The exact-date escape hatch under the Recorded pills.
+ *
+ * A `<details>` rather than a script-driven panel, for the same reason the
+ * whole sheet is form-first: this page works with JS off, and a date range you
+ * cannot open is worse than one that is always visible. It opens by default
+ * only when a date is actually set — see `usingExactDates` on the page. */
+.bp-filter-dates-fold {
+  margin-top: 0.75rem;
+}
+
+.bp-filter-dates-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  /* The marker is drawn below, so the native one goes — and with it the
+     Safari-only `::-webkit-details-marker`, which `list-style` alone misses. */
+  list-style: none;
+  min-height: 32px;
+  font-family: var(--bp-font-body);
+  font-size: var(--text-note, 0.875rem);
+  font-weight: 600;
+  color: var(--bp-color-muted);
+  cursor: pointer;
+}
+
+.bp-filter-dates-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.bp-filter-dates-toggle::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  rotate: -45deg;
+  translate: 0 -1px;
+  transition: rotate 0.12s ease;
+}
+
+.bp-filter-dates-fold[open] > .bp-filter-dates-toggle::before {
+  rotate: 45deg;
+  translate: 0 -2px;
+}
+
+.bp-filter-dates-toggle:hover {
+  color: var(--bp-color-fg);
+}
+
+.bp-filter-dates-toggle:focus-visible {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 2px;
+  border-radius: var(--bp-radius-sm, 6px);
+}
+
+.bp-filter-dates-fold > .bp-field-hint {
+  margin-top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-filter-dates-toggle::before {
+    transition: none;
+  }
+}
+
+.bp-filter-dates {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: 0.625rem;
+}
+
+.bp-filter-dates .bp-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.bp-filter-dates-sep {
+  flex: none;
+  font-size: var(--text-note, 0.71875rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-filter-sheet-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.375rem calc(1.25rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--bp-color-border);
+  background: var(--bp-color-bg);
+}
+
+.bp-filter-apply {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+/* A toggle that is really a checkbox. The input stays in the DOM (it is what
+   the form submits and what a screen reader announces) and is drawn as the
+   same quiet button the link-filters on `/events` use, so a filter looks the
+   same whether it is a link or a field. */
+.bp-btn-check {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.bp-btn-check input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+
+.bp-btn-check input:focus-visible + .bp-btn {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 2px;
+}
+
+.bp-takes-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  margin-bottom: 0.5rem;
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the panel (past `lg`) -------------------------------------------- */
+
+@media (min-width: 64rem) {
+  /* Filters in a column of their own on the left, results on the right, both
+     starting at the top of the page. The page title spans the two. */
+  .bp-takes {
+    display: grid;
+    /* 20rem, not 15. The column has to hold the widest thing in it, and that
+       is the recorded range: two date fields with a placeholder, an icon each,
+       and the word "to" between them. At 15rem they truncated to "dd.n". */
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    grid-template-areas:
+      "bar bar"
+      "filters results";
+    gap: 1.25rem 2.5rem;
+    align-items: start;
+  }
+
+  .bp-takes-bar {
+    grid-area: bar;
+  }
+
+  .bp-search-results {
+    grid-area: results;
+  }
+
+  /* Both are phone controls: past here the panel is always on screen, so a
+     button that opens it would open something already open, and the Clear it
+     sits next to is already beside the panel's confirm. */
+  .bp-filter-trigger,
+  .bp-takes-bar-clear {
+    display: none;
+  }
+
+  /* The same element, now a column. A `<dialog>` with no `open` attribute is
+     `display: none` — this is the override that makes it a panel, and it is
+     why there is only ever one copy of these fields. */
+  .bp-filter-sheet,
+  .bp-filter-sheet:not([open]) {
+    display: block;
+    grid-area: filters;
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+    /* Never carries the closed sheet's off-screen transform. */
+    translate: none;
+    transition: none;
+  }
+
+  .bp-filter-sheet-head,
+  .bp-filter-sheet-grip {
+    display: none;
+  }
+
+  .bp-filter-groups {
+    padding: 0;
+    overflow: visible;
+  }
+
+  /* No rule above the buttons. The sheet has one because its footer is pinned
+     over a scrolling list and needs the separation; in a column that simply
+     ends, it draws a line under the last field for no reason. */
+  .bp-filter-sheet-foot {
+    padding: 1.125rem 0 0;
+    border-top: none;
+    background: transparent;
+  }
+}
+
+/* --- no script -------------------------------------------------------- */
+
+/* Nothing can open the dialog, so it has to render as a plain block at every
+   width — and the trigger that would open it has to go. */
+@media (scripting: none) {
+  .bp-filter-sheet,
+  .bp-filter-sheet:not([open]) {
+    display: block;
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+    translate: none;
+    transition: none;
+  }
+
+  .bp-filter-trigger,
+  .bp-filter-sheet-grip {
+    display: none;
+  }
+
+  .bp-filter-groups {
+    padding-inline: 0;
+  }
+
+  .bp-filter-sheet-foot {
+    padding-inline: 0;
+    background: transparent;
+  }
+}
+
+/* --- the take-list fold ----------------------------------------------- */
+
+/* A song's takes are near-identical rows, and a song with a dozen of them
+   buried the chart the page exists to show. Three stand above the fold; the
+   rest live in a `<details>` so the whole thing still works with JS off.
+   The control is the `<summary>`, styled as a row of its own rather than as a
+   button — it belongs to the list, not beside it. */
+.bp-take-fold {
+  position: relative;
+}
+
+.bp-take-fold-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.8125rem 0;
+  font-size: var(--text-note, 0.71875rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bp-color-muted);
+  cursor: pointer;
+  list-style: none;
+  transition: color 0.15s ease;
+}
+
+/* Safari draws its own disclosure triangle through `list-style: none`. */
+.bp-take-fold-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.bp-take-fold-toggle:hover,
+.bp-take-fold-toggle:focus-visible {
+  color: var(--bp-color-fg);
+}
+
+.bp-take-fold-toggle:focus-visible {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: -2px;
+  border-radius: 0.375rem;
+}
+
+/* The chevron. Rotates when the fold opens, so the control says which way it
+   goes without the words having to. */
+.bp-take-fold-toggle::after {
+  content: "";
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+.bp-take-fold[open] .bp-take-fold-toggle::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+/* One label at a time — the same element carries both words so the control
+   never changes width as it toggles. */
+.bp-take-fold-close,
+.bp-take-fold[open] .bp-take-fold-open {
+  display: none;
+}
+
+.bp-take-fold[open] .bp-take-fold-close {
+  display: inline;
+}
+
+/* The fade that says the list continues: the last row above the closed fold
+   fades out toward its bottom edge. A MASK on that row, not a gradient laid
+   over it: rows are rounded and bleed past the list's box, so an overlay
+   drew a square shadow that stopped short of the row's own corners and sat on
+   top of its hover fill. A mask fades the row, fill and corners included.
+   Only while closed: once the rest is on screen there is nothing to suggest. */
+.bp-take-row:has(+ .bp-take-fold:not([open])) {
+  mask-image: linear-gradient(to bottom, #000 35%, rgb(0 0 0 / 0.2));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-take-fold-toggle,
+  .bp-take-fold-toggle::after {
+    transition: none;
+  }
+}
+
+/* --- Pagination ---------------------------------------------------------
+
+   The numbers are quiet xs buttons: same size, same fill, same accent for
+   the chosen one, and that class already styled `[aria-current="page"]`
+   before anything paged. What is left here is the ROW — how the numbers sit
+   between the two steps, and what happens when there is not enough width for
+   all of them.
+
+   The narrow case is the whole design problem. A row of eleven numbers plus
+   two worded steps does not fit a 375px phone, and there are only three ways
+   out: wrap it (a two-line control that reflows as you page), scroll it
+   (numbers hidden off-screen with nothing saying so), or drop something. This
+   drops the WORDS from the steps below `sm`, leaving the arrows — a left and
+   a right chevron flanking the numbers is the one pagination idiom that needs
+   no words at all, and the accessible names stay on the links either way. */
+.bp-pagination {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--bp-color-rule);
+}
+
+.bp-pagination-range {
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+}
+
+.bp-pagination-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.bp-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Square-ish rather than the pill's text-width padding: a row of numbers of
+   different digit counts ("9" beside "10" beside "100") reads as a row of
+   buttons only when they share a width. */
+.bp-pagination-page {
+  justify-content: center;
+  min-width: 40px;
+  padding-inline: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-pagination-gap {
+  padding-inline: 0.125rem;
+  color: var(--bp-color-muted);
+  user-select: none;
+}
+
+/* The two ends carry more weight than a number: they are what a thumb goes
+   for, and `margin-inline-start: auto` on Next pushes them to the edges so
+   the numbers sit centred between them on a wide row. */
+.bp-pagination-step {
+  flex: 0 0 auto;
+}
+
+.bp-pagination-step[rel="next"],
+.bp-pagination-step--off:last-child {
+  margin-inline-start: auto;
+}
+
+/* Present but inert on the first and last page — see the component for why it
+   is rendered at all rather than omitted. Not `[disabled]`: this is a `<span>`
+   with no href, so there is nothing to disable, and the muted fill is what
+   says "not now" without claiming to be a broken control. */
+.bp-pagination-step--off {
+  background: transparent;
+  color: var(--bp-color-muted);
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* The phone's stand-in for the numbered links — see the component's header
+   for the measurements that made this the answer rather than a smaller
+   window or a scroller. Hidden by default because the numbers are the
+   desktop truth; the query below swaps which one is drawn. */
+.bp-pagination-here {
+  display: none;
+  font-size: var(--text-meta, 0.78125rem);
+  font-weight: 600;
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .bp-pagination-step-word {
+    /* The same technique `.bp-visually-hidden` uses, applied to one span:
+       the word leaves the layout but stays in the accessible name, so the
+       arrow is still called "Previous" by a screen reader. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* 44px in BOTH directions. The xs button's 32px (44px reach) is right
+     for a button in a wrapping bank of filters, where the label beside it makes
+     the target read wider than it is; an icon-only arrow that is the primary
+     thing a thumb reaches for on this control has to clear the floor on its
+     own. */
+  .bp-pagination-step {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .bp-pagination-pages {
+    display: none;
+  }
+
+  .bp-pagination-here {
+    display: inline;
+    margin-inline: auto;
+  }
+
+  /* With the numbers gone the row cannot wrap, and `margin-inline-start: auto`
+     on Next is doing the pushing — so the label is centred between the two
+     arrows rather than pinned to either. */
+  .bp-pagination-row {
+    flex-wrap: nowrap;
+  }
+}

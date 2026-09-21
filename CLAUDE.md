@@ -105,14 +105,18 @@ source.
 
 Biome 2's CSS parser (`css.parser.tailwindDirectives: true` handles
 `@theme`/`@custom-variant`) parses `@starting-style` and
-`@-moz-document url-prefix()` cleanly, so `packages/ui/src/tokens/*.css` —
-`components.css` included — is fully linted and formatted now; the file-wide
-exclusion that used to cover it under Biome 1.9 is gone. Three rules stay off
-for `components.css` specifically, via a rule-scoped override rather than a
-blanket one: `noDescendingSpecificity` (the file is organized by component
-section, not by cascade order — enforcing ascending specificity would mean
-reshuffling ~9,500 lines for no behavior change), `noDuplicateProperties`
-(the repeated `min-height: 100vh` / `100dvh` pairs are a deliberate
-older-browser fallback, not a mistake), and `noImportantStyles` (the
-`prefers-reduced-motion` block's `!important` is what makes the override
-win regardless of what else targets the same element).
+`@-moz-document url-prefix()` cleanly, so `packages/ui/src/tokens/*.css` is
+fully linted and formatted now; the file-wide exclusion that used to cover
+`components.css` under Biome 1.9 is gone. `components.css` itself is now
+just an ordered list of `@import`s into `packages/ui/src/tokens/components/`
+(one file per component family, numbered so the order — which is the
+cascade order — stays obvious; see that directory's own files rather than
+one 9,500-line one). Three rules stay off across that directory, via a
+rule-scoped override rather than a blanket one: `noDescendingSpecificity`
+(the files are organized by component, not by cascade order — enforcing
+ascending specificity would mean reshuffling for no behavior change),
+`noDuplicateProperties` (the repeated `min-height: 100vh` / `100dvh` pairs
+are a deliberate older-browser fallback, not a mistake), and
+`noImportantStyles` (the `prefers-reduced-motion` block's `!important` is
+what makes the override win regardless of what else targets the same
+element).

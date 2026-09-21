@@ -45,7 +45,7 @@
       }
     },
     {
-      "includes": ["**/packages/ui/src/tokens/components.css"],
+      "includes": ["**/packages/ui/src/tokens/components/**"],
       "linter": {
         "rules": {
           "style": {

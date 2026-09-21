@@ -7291,6 +7291,8 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-pill--action {
   min-height: 44px;
   font-size: 0.875rem;
+  /* A button's label does not wrap: a two-line pill reads as two controls. */
+  white-space: nowrap;
 }
 
 .bp-pill:hover {
@@ -9289,7 +9291,10 @@ html:has(dialog.bp-filter-sheet[open]) body {
   display: none;
 }
 
-@media (max-width: 26rem) {
+/* 40rem, not a phone's 26rem: the long forms need about 620px in Czech (the
+   longer language here), and between the two a phone held sideways wrapped
+   the title and both captions onto two lines each. */
+@media (max-width: 40rem) {
   .bp-takes-bar .bp-record-word,
   .bp-takes-bar .bp-pill--stash-close .bp-record-word {
     position: absolute;

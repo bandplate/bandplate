@@ -22,7 +22,7 @@ import type { Clock } from "../ports/clock.js";
 import type { PushMessage, PushSender, PushTarget } from "../ports/push.js";
 import { isAllowedPushEndpoint } from "./endpoint.js";
 import { encodePayload, newTakesMessage, songMessage, weeklyMessage } from "./messages.js";
-import { NEW_TAKES_QUIET_MS, isBatchStale } from "./new-takes.js";
+import { isBatchStale, NEW_TAKES_QUIET_MS } from "./new-takes.js";
 import { selectRecipients } from "./recipients.js";
 import { weeklyReminderSlot } from "./schedule.js";
 import { SONG_MAX_AGE_MS, SONG_THROTTLE_MS, songNotificationKind } from "./songs.js";

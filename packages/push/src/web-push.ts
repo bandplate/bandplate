@@ -4,7 +4,7 @@
 // the actual encryption/signing and returns a fetch `RequestInit`; this
 // module's only job is the status-code-to-`PushResult` mapping and making
 // sure `send` truly never throws.
-import type { PushResult, PushSendOptions, PushSender, PushTarget } from "@bandplate/core";
+import type { PushResult, PushSender, PushSendOptions, PushTarget } from "@bandplate/core";
 import { buildPushPayload } from "@block65/webcrypto-web-push";
 import type { VapidConfig } from "./vapid.js";
 

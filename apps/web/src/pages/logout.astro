@@ -14,7 +14,7 @@
 import { revokeSession } from "@bandplate/core";
 import { pushSubscriptionsRepo } from "@bandplate/db";
 import { getAppDeps, getAuthDeps } from "../server/app.js";
-import { SESSION_COOKIE_NAME, clearSessionCookie } from "../server/cookies.js";
+import { clearSessionCookie, SESSION_COOKIE_NAME } from "../server/cookies.js";
 import { isSameOrigin } from "../server/csrf.js";
 import { pushEndpointFromForm } from "../server/pages/logout.js";
 

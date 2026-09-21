@@ -1,6 +1,6 @@
 import {
-  type Db,
   authSessionsRepo,
+  type Db,
   loginTokensRepo,
   membersRepo,
   serviceTokensRepo,

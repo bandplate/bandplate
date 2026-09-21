@@ -2,8 +2,8 @@
 // mailer, fake advanceable clock, in-memory rate limiter, in-memory
 // storage) for `app.request()` tests. Not part of the runtime library
 // surface.
-import { type Clock, type Storage, createInMemoryRateLimiter } from "@bandplate/core";
-import { type Db, createD1Db } from "@bandplate/db";
+import { type Clock, createInMemoryRateLimiter, type Storage } from "@bandplate/core";
+import { createD1Db, type Db } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { type CapturingMailer, createCapturingMailer } from "@bandplate/mail";
 import { createInMemoryStorage } from "@bandplate/storage/testing";

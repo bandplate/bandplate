@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  decideHomeVisit,
   FIRST_VISIT_WINDOW_MS,
   type HomeVisitState,
   VISIT_GAP_MS,
-  decideHomeVisit,
 } from "./home-visit.js";
 
 const MINUTE = 60 * 1000;

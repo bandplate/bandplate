@@ -38,13 +38,13 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import {
-  RECORDED_WINDOWS,
-  type SearchTakesResult,
-  TAKES_PER_PAGE,
   hasAnyFilter,
   hasRecordedFilter,
   parseSearchQuery,
+  RECORDED_WINDOWS,
+  type SearchTakesResult,
   searchTakes,
+  TAKES_PER_PAGE,
 } from "../../server/pages/search.js";
 import { applyStashWrite, getStashView } from "../../server/pages/stash.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";

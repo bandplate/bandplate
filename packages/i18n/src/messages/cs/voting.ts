@@ -17,7 +17,7 @@
 // │   vote → hlas / hlasy / hlasů                                           │
 // └────────────────────────────────────────────────────────────────────────┘
 import { formatNumber, plural } from "../../plural.js";
-import type { VoteTally, voting as enVoting } from "../en/voting.js";
+import type { voting as enVoting, VoteTally } from "../en/voting.js";
 
 export const voting = {
   tally: ({ keeperVotes, totalVotes, ratingScore }: VoteTally): string => {

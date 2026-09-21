@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { type LogErrorInput, buildErrorLogRecord, describeError, logError } from "./log-error.js";
+import { buildErrorLogRecord, describeError, type LogErrorInput, logError } from "./log-error.js";
 
 describe("buildErrorLogRecord", () => {
   it("builds the minimal record from kind + message", () => {

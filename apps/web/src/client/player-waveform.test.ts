@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PEAK_FULL_SCALE, downsamplePeaks } from "./player-store.js";
+import { downsamplePeaks, PEAK_FULL_SCALE } from "./player-store.js";
 
 describe("downsamplePeaks", () => {
   it("reads the contract's -128..127 integers, not 0..1 fractions", () => {

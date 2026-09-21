@@ -26,7 +26,7 @@
 // There is a test in `packages/api`'s workerd suite pinning that Workers
 // really does carry the ICU data for `cs` — the one place that question can
 // actually be answered.
-import { type Locale, intlTag } from "./locale.js";
+import { intlTag, type Locale } from "./locale.js";
 
 /**
  * The forms of one countable word.

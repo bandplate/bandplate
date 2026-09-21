@@ -3,7 +3,7 @@
 // the browser, and an empty heading is worse than no section.
 import { useStore } from "@nanostores/preact";
 import { useEffect, useState } from "preact/hooks";
-import { type InstallHint as Hint, decideInstallHint } from "../client/install-hint.js";
+import { decideInstallHint, type InstallHint as Hint } from "../client/install-hint.js";
 import { $installPrompt } from "../client/install-prompt.js";
 
 interface Props {

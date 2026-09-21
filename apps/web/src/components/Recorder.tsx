@@ -13,16 +13,16 @@ import { Pause, Play, Trash, X } from "lucide-preact";
 import { useCallback, useEffect, useReducer, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import {
-  type RecorderError,
-  type SongOption,
   formatElapsed,
   initialRecorderState,
   levelFromTimeDomain,
   needsDurationFix,
-  pickRecorderMime,
   pickerGroups,
+  pickRecorderMime,
+  type RecorderError,
   recordCtaLabel,
   reduceRecorder,
+  type SongOption,
   shapeForMime,
   shouldDrawWaveform,
   waveformBars,

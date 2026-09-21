@@ -32,7 +32,7 @@
 // The text boxes are also the no-JS path: the two `<textarea>`s ARE the form
 // fields, always present and always in sync, so with scripting off you get
 // exactly the editor that exists today. Nothing here is required to save.
-import { type Locale, islandsMessages } from "@bandplate/i18n";
+import { islandsMessages, type Locale } from "@bandplate/i18n";
 import { currentLocale } from "../client/locale.js";
 
 /** Read at call time — see `client/locale.ts`. */
@@ -42,6 +42,7 @@ const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
 function rowName(row: { label: string }, index: number, locale?: Locale): string {
   return row.label || ti(locale).chartUnnamedSection(index + 1);
 }
+
 import { ArrowDown, ArrowUp } from "lucide-preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {

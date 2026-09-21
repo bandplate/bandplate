@@ -12,7 +12,7 @@
 // slot at a time instead of this.
 import type { DeclaredAsset, Storage } from "@bandplate/core";
 import { resolveSlotForUpload } from "@bandplate/core";
-import type { Db, assetsRepo } from "@bandplate/db";
+import type { assetsRepo, Db } from "@bandplate/db";
 import type { AssetInput } from "./schemas.js";
 
 /**

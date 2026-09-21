@@ -11,11 +11,12 @@
 // steps" — automatic focus restoration to whatever was focused before it
 // opened (the trigger), for free, in every evergreen browser. Hand-rolling
 // that is a common source of a11y bugs; the platform already does it.
-import { type Locale, islandsMessages } from "@bandplate/i18n";
+import { islandsMessages, type Locale } from "@bandplate/i18n";
 import { currentLocale } from "../client/locale.js";
 
 /** Read at call time, never captured: this island is `transition:persist`. */
 const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
+
 import { TriangleAlert } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 

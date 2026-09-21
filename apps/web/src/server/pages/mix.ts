@@ -15,7 +15,7 @@ import { membersRepo } from "@bandplate/db";
 // instruments, and answers the three questions the mixer cannot work out for
 // itself — what the tracks are, which of them are YOURS, and which
 // instruments have no track at all.
-import { type Locale, formatLongDate, messages } from "@bandplate/i18n";
+import { formatLongDate, type Locale, messages } from "@bandplate/i18n";
 // Imported AND re-exported, not `export ... from`: that form re-exports the
 // name without binding it in this module, so `getMixData` below saw an
 // undefined identifier at runtime while the build stayed quiet.

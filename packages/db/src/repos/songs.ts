@@ -1,5 +1,5 @@
 import { normalizeTitle, uuidv7 } from "@bandplate/core";
-import { type SQL, and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
   favorites,

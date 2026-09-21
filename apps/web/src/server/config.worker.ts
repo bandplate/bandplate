@@ -9,7 +9,7 @@ import { DEFAULT_LOCALE, LOCALES, type Locale } from "@bandplate/i18n";
 // so nothing downstream (the composition root, `AppDeps`, every repo/
 // route) needs to know which profile built it.
 import { z } from "zod";
-import { ConfigError, type RuntimeConfig, addVapidIssues } from "./config.js";
+import { addVapidIssues, ConfigError, type RuntimeConfig } from "./config.js";
 
 /**
  * The bindings/vars this Worker declares in `wrangler.toml` — see

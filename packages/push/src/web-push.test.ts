@@ -4,7 +4,7 @@ import type { PushTarget } from "@bandplate/core";
 // stubbed. This is what proves the outgoing request shape, not just our own
 // code's belief about it.
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { type VapidConfig, generateVapidKeys } from "./vapid.js";
+import { generateVapidKeys, type VapidConfig } from "./vapid.js";
 import { createWebPushSender } from "./web-push.js";
 
 function toBase64Url(bytes: Uint8Array): string {

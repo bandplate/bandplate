@@ -15,7 +15,7 @@
 // badge already says the thing they actually wanted to find.
 import type { Db, PageArgs } from "@bandplate/db";
 import { favoritesRepo, takesRepo } from "@bandplate/db";
-import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
+import { attachFullContext, type TakeWithFullContext } from "./take-context.js";
 
 export interface SearchQuery {
   /**

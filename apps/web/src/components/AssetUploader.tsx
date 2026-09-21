@@ -20,18 +20,16 @@
 // plain notice in its place under `@media (scripting: none)` — and deleting a
 // file stays an ordinary confirm page precisely so the destructive half never
 // depends on script.
-import { type Locale, islandsMessages } from "@bandplate/i18n";
-import { formatBytes as i18nFormatBytes } from "@bandplate/i18n";
+import { formatBytes as i18nFormatBytes, islandsMessages, type Locale } from "@bandplate/i18n";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 
 /** Read at call time — see `client/locale.ts`. */
 const ti = (fallback?: Locale) => islandsMessages(currentLocale(fallback));
+
 import { Plus } from "lucide-preact";
 import {
   type AssetKind,
-  type UploadEvent,
-  type UploadItem,
   blockedReason,
   canStart,
   defaultKind,
@@ -40,6 +38,8 @@ import {
   needsDecision,
   readAudioShape,
   reduceItem,
+  type UploadEvent,
+  type UploadItem,
 } from "../client/upload-actions.js";
 
 interface InstrumentOption {

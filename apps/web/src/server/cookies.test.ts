@@ -8,9 +8,9 @@
 import { describe, expect, it } from "vitest";
 import { THEME_COOKIE_NAME } from "../client/theme.js";
 import {
-  SESSION_COOKIE_NAME,
   clearSessionCookie,
   readThemeCookie,
+  SESSION_COOKIE_NAME,
   setSessionCookie,
   setThemeCookie,
 } from "./cookies.js";

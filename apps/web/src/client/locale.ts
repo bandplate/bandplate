@@ -16,7 +16,7 @@
 // (The language picker on `/me` still forces a full document load with
 // `data-astro-reload`, because a persisted island's already-rendered DOM
 // cannot re-translate itself. That is a separate problem from this one.)
-import { DEFAULT_LOCALE, type Locale, isLocale } from "@bandplate/i18n";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@bandplate/i18n";
 
 /**
  * @param fallback What to use when there is no document to read.

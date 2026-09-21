@@ -124,8 +124,11 @@ export const takes = {
     label,
     format,
     size,
-  }: { label: string; format: string; size: string }): string =>
-    `Download ${label} (${format}, ${size})`,
+  }: {
+    label: string;
+    format: string;
+    size: string;
+  }): string => `Download ${label} (${format}, ${size})`,
   deleteAsset: (label: string): string => `Delete ${label}`,
   deleteAssetConfirmTitle: (label: string): string => `Delete the ${label} from this take?`,
   deleteTake: "Delete take",

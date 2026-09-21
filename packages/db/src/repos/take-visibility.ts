@@ -1,4 +1,4 @@
-import { type SQL, and, eq } from "drizzle-orm";
+import { and, eq, type SQL } from "drizzle-orm";
 import { takes } from "../schema/sqlite/index.js";
 
 /**

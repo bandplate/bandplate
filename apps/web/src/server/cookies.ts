@@ -4,13 +4,13 @@
 // `@bandplate/core`'s auth services, not the HTTP API) and the two must stay
 // interchangeable: a session started via `/setup` (Astro) must resolve the
 // same way through the API's own cookie parsing, and vice versa.
-import { type Locale, isLocale } from "@bandplate/i18n";
+import { isLocale, type Locale } from "@bandplate/i18n";
 import type { AstroCookies } from "astro";
 import {
+  isThemeChoice,
   THEME_COOKIE_MAX_AGE_SECONDS,
   THEME_COOKIE_NAME,
   type ThemeChoice,
-  isThemeChoice,
 } from "../client/theme.js";
 
 export const SESSION_COOKIE_NAME = "bp_session";

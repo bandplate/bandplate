@@ -23,7 +23,7 @@
 //     clipboard still held whatever was there before. For a
 //     shown-once secret that is the worst possible failure mode: the
 //     member navigates away believing they have it.
-import { type Locale, islandsMessages } from "@bandplate/i18n";
+import { islandsMessages, type Locale } from "@bandplate/i18n";
 import { useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 

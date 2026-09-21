@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SONG_THROTTLE_MS, chartChanged, songNotificationKind } from "./songs.js";
+import { chartChanged, SONG_THROTTLE_MS, songNotificationKind } from "./songs.js";
 
 describe("SONG_THROTTLE_MS", () => {
   it("is 6 hours", () => {

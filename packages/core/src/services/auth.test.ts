@@ -2,7 +2,7 @@ import { type Db, membersRepo, schema, serviceTokensRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Clock } from "../ports/clock.js";
-import type { MailMessage, Mailer } from "../ports/mailer.js";
+import type { Mailer, MailMessage } from "../ports/mailer.js";
 import {
   type AuthDeps,
   bootstrapAdmin,

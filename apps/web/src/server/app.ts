@@ -25,11 +25,11 @@
 import { type AppDeps, createApp } from "@bandplate/api";
 import {
   type AuthDeps,
-  type Mailer,
-  type NotificationTickDeps,
   createInMemoryRateLimiter,
   describeError,
   logError,
+  type Mailer,
+  type NotificationTickDeps,
   systemClock,
 } from "@bandplate/core";
 import { createDb } from "@bandplate/db";
@@ -37,7 +37,7 @@ import { createDevMailer } from "@bandplate/mail";
 import { createWebPushSender, vapidKeyId } from "@bandplate/push";
 import { createS3Storage } from "@bandplate/storage";
 import { createClient } from "@libsql/client";
-import { type RuntimeConfig, loadConfig } from "./config.js";
+import { loadConfig, type RuntimeConfig } from "./config.js";
 import {
   shouldStartNotificationScheduler,
   startNotificationScheduler,

@@ -144,8 +144,11 @@ export const takes = {
     label,
     format,
     size,
-  }: { label: string; format: string; size: string }): string =>
-    `Stáhnout ${label} (${format}, ${size})`,
+  }: {
+    label: string;
+    format: string;
+    size: string;
+  }): string => `Stáhnout ${label} (${format}, ${size})`,
   deleteAsset: (label: string): string => `Smazat ${label}`, // en: `Delete ${label}`
   // en: `Delete the ${label} from this take?`
   deleteAssetConfirmTitle: (label: string): string => `Smazat ${label} z téhle nahrávky?`,

@@ -14,16 +14,16 @@
 import { deletePending, getPending, listPending, putPending } from "./stash-db.js";
 import { pendingStash, syncedStash } from "./stash-store.js";
 import {
-  type PendingStashItem,
-  type SyncRequest,
   afterFailure,
   canRetryByHand,
   classifyFailure,
   nextSyncStep,
-  ownPending,
   ownedBy,
+  ownPending,
+  type PendingStashItem,
   pendingForTake,
   retryItem,
+  type SyncRequest,
   shouldSync,
   summarize,
   syncedForRender,

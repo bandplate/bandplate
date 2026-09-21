@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NEW_TAKES_MAX_AGE_MS, NEW_TAKES_QUIET_MS, isBatchStale } from "./new-takes.js";
+import { isBatchStale, NEW_TAKES_MAX_AGE_MS, NEW_TAKES_QUIET_MS } from "./new-takes.js";
 
 describe("constants", () => {
   it("quiet period is 10 minutes", () => {

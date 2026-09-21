@@ -1,6 +1,5 @@
 import { normalizeTitle, uuidv7 } from "@bandplate/core";
 import {
-  type SQL,
   and,
   asc,
   desc,
@@ -14,12 +13,13 @@ import {
   ne,
   notInArray,
   or,
+  type SQL,
   sql,
 } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
-  events,
   assets,
+  events,
   favorites,
   instruments,
   members,
@@ -337,9 +337,7 @@ export async function remove(db: Db, id: string): Promise<void> {
     // harmless while the only caller was the ingest DELETE, which can only
     // touch an `uploading`/`new` take nobody has voted on, and a real leak the
     // moment a member could delete a published one.
-    db
-      .delete(votes)
-      .where(eq(votes.takeId, id)),
+    db.delete(votes).where(eq(votes.takeId, id)),
     db.delete(favorites).where(and(eq(favorites.targetType, "take"), eq(favorites.targetId, id))),
     db.delete(takes).where(eq(takes.id, id)),
   ]);

@@ -1,7 +1,7 @@
 import { describeError, logError } from "@bandplate/core";
 import {
-  type Db,
   assetsRepo,
+  type Db,
   eventsRepo,
   favoritesRepo,
   membersRepo,
@@ -25,7 +25,7 @@ import {
 import { type Locale, messages } from "@bandplate/i18n";
 import { type EventListItem, withOwnerNames } from "./events.js";
 import { decideHomeVisit } from "./home-visit.js";
-import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
+import { attachFullContext, type TakeWithFullContext } from "./take-context.js";
 
 /** How many events the ledger lists before pointing at `/events` for the rest. */
 const RECENT_EVENTS_LIMIT = 5;

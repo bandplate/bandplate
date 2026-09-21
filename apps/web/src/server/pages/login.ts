@@ -1,10 +1,10 @@
 import {
   DEFAULT_TRUSTED_PROXY_DEPTH,
+  extractClientIp,
   LOGIN_EMAIL_LIMIT,
   LOGIN_EMAIL_WINDOW_MS,
   LOGIN_IP_LIMIT,
   LOGIN_IP_WINDOW_MS,
-  extractClientIp,
 } from "@bandplate/api";
 // `/login` page logic — extracted into a plain function so it's testable
 // without booting Astro. Reuses the exact rate-limit policy the JSON API's

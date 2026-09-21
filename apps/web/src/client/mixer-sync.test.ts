@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SYNC_TUNING,
-  INITIAL_SYNC_STATE,
-  type TrackSample,
   decideSync,
+  INITIAL_SYNC_STATE,
   pickLeader,
   resetSyncState,
+  type TrackSample,
 } from "./mixer-sync.js";
 
 const ok = (mediaTime: number): TrackSample => ({ mediaTime, ended: false, stalled: false });

@@ -1,6 +1,6 @@
 import {
-  type Db,
   assetsRepo,
+  type Db,
   eventsRepo,
   instrumentsRepo,
   songsRepo,
@@ -10,10 +10,10 @@ import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Storage, StoredObject } from "../ports/index.js";
 import {
-  type DeclaredAsset,
   assetStorageKey,
   canPublish,
   contentTypeForFormat,
+  type DeclaredAsset,
   hexSha256ToBase64,
   playableSources,
   resolveSlotForUpload,

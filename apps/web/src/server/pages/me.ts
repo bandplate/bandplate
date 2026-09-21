@@ -1,4 +1,4 @@
-import type { Db, PageArgs, instrumentsRepo } from "@bandplate/db";
+import type { Db, instrumentsRepo, PageArgs } from "@bandplate/db";
 import { membersRepo, takesRepo, votesRepo } from "@bandplate/db";
 // `/me` — the signed-in member's own page: who they are, and what they have
 // done. Not a shelf: home already IS the shelf of exactly the things this page
@@ -17,8 +17,8 @@ import { membersRepo, takesRepo, votesRepo } from "@bandplate/db";
 // table rather than a JSON column. `membersRepo.listInstrumentsForMember`
 // includes archived instruments on purpose, so a member who plays one the
 // band has since dropped still sees it here.
-import { type Locale, isLocale } from "@bandplate/i18n";
-import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
+import { isLocale, type Locale } from "@bandplate/i18n";
+import { attachFullContext, type TakeWithFullContext } from "./take-context.js";
 
 export interface VoteWithTake {
   vote: votesRepo.Vote;

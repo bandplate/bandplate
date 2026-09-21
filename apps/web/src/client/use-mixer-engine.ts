@@ -18,12 +18,12 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { type LoopRegion, loopEngagedFrom, loopWrapTarget } from "./mixer-loop.js";
 import {
   DEFAULT_SYNC_TUNING,
-  INITIAL_SYNC_STATE,
-  type SyncState,
-  type TrackSample,
   decideSync,
+  INITIAL_SYNC_STATE,
   pickLeader,
   resetSyncState,
+  type SyncState,
+  type TrackSample,
 } from "./mixer-sync.js";
 
 /** How often alignment is checked. A timer, not rAF: rAF stops dead in a background tab. */

@@ -12,7 +12,7 @@ import AuthState from "../../components/AuthState.astro";
 import AuthLayout from "../../layouts/AuthLayout.astro";
 import { getAppDeps, getAuthDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import { type LoginPostResult, handleLoginPost } from "../../server/pages/login.js";
+import { handleLoginPost, type LoginPostResult } from "../../server/pages/login.js";
 
 let result: LoginPostResult | undefined;
 let originError = false;

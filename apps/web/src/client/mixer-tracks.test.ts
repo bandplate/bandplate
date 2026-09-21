@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  MAX_FADER,
-  type MixerState,
-  type TrackControl,
   clampFader,
   initialMixerState,
+  MAX_FADER,
+  type MixerState,
   setFader,
   setMuted,
   setSoloed,
+  type TrackControl,
   toggleMuteMine,
   trackGains,
 } from "./mixer-tracks.js";

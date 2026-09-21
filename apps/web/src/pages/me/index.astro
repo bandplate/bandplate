@@ -36,16 +36,16 @@
 // those, and listing them twice is what this page was being cured of.
 import { notificationPrefsRepo } from "@bandplate/db";
 import {
-  LANGUAGE_NAMES,
-  LOCALES,
   formatLongDate,
   formatShortDate,
+  LANGUAGE_NAMES,
+  LOCALES,
   messages,
 } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Pagination from "@bandplate/ui/components/Pagination.astro";
 import Check from "@lucide/astro/icons/check";
-import { THEMES, isThemeChoice } from "../../client/theme.js";
+import { isThemeChoice, THEMES } from "../../client/theme.js";
 import InstallHint from "../../components/InstallHint.tsx";
 import InstrumentSet from "../../components/InstrumentSet.astro";
 import NotificationSettings from "../../components/NotificationSettings.tsx";
@@ -54,7 +54,7 @@ import { getAppDeps, getWebConfig } from "../../server/app.js";
 import { readThemeCookie, setLocaleCookie, setThemeCookie } from "../../server/cookies.js";
 import { isSameOrigin } from "../../server/csrf.js";
 
-import { VOTES_PER_PAGE, getMeData, setLocaleFromForm } from "../../server/pages/me.js";
+import { getMeData, setLocaleFromForm, VOTES_PER_PAGE } from "../../server/pages/me.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;

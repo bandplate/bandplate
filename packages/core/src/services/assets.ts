@@ -1,4 +1,4 @@
-import { type Db, assetsRepo } from "@bandplate/db";
+import { assetsRepo, type Db } from "@bandplate/db";
 // Asset slots: what names one, what occupies it, and how a caller gets a
 // presigned URL to fill it.
 //

@@ -24,6 +24,7 @@ import { describeError, logError, runNotificationTick } from "@bandplate/core";
 
 /** Mirrors `wrangler.toml`'s `[triggers] crons` — keep the two in step. */
 const CRON_PATTERN = "*/10 * * * *";
+
 import { getNotificationDeps, initWorkersRuntime } from "../server/app.js";
 import type { CloudflareEnv } from "./config.worker.js";
 

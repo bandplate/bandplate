@@ -6,7 +6,7 @@
 // times: after a dropped response, from two tabs, after a phone woke up in a
 // tunnel. So it is idempotent on the client's own id, and every path that can
 // race (the personal event, the take) re-reads instead of failing.
-import { type Db, assetsRepo, eventsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import { assetsRepo, type Db, eventsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { zonedParts } from "../notifications/schedule.js";
 
 /** Keeps the browser's local ids out of the bridge's `client_ref` namespace. */

@@ -3,7 +3,7 @@
 // contract v1 §4 "Phase 2 — declare a take", "Phase 3 — commit", and §8.
 import type { Clock, Storage } from "@bandplate/core";
 import { buildUploadItems, describeError, logError } from "@bandplate/core";
-import { type Db, assetsRepo, eventsRepo, instrumentsRepo, takesRepo } from "@bandplate/db";
+import { assetsRepo, type Db, eventsRepo, instrumentsRepo, takesRepo } from "@bandplate/db";
 import { errorResponse } from "../../errors.js";
 import { type GuardedRouter, requireServiceScopes } from "../../route-registry.js";
 import { syncDeclaredAssets } from "./asset-sync.js";

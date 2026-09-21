@@ -1,6 +1,6 @@
 // The stash's page logic: the recorder's song list, the stash view's rows, and
 // the "Přidat k písni" page with its actions (publish, rename, delete).
-import { type Storage, canPublish } from "@bandplate/core";
+import { canPublish, type Storage } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
 import { assetsRepo, eventsRepo, membersRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { z } from "zod";

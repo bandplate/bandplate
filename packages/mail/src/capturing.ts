@@ -1,7 +1,7 @@
 // Test mailer that records every send instead of doing anything with it.
 // Used by this package's own tests, and by Task 4's E2E suite and the API
 // package's route tests to assert on exactly what would have been sent.
-import type { MailMessage, Mailer, SendLoginLinkOptions } from "@bandplate/core";
+import type { Mailer, MailMessage, SendLoginLinkOptions } from "@bandplate/core";
 
 export interface CapturedLoginLink {
   kind: "login-link";

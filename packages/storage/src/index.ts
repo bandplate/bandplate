@@ -5,5 +5,6 @@
 // server backing `InMemoryStorage`'s test-only fake), directly or
 // transitively. See `barrel-is-workers-safe.test.ts` and `in-memory.ts`'s
 // own header comment.
-export * from "./s3.js";
+
 export * from "./quantise.js";
+export * from "./s3.js";

@@ -11,9 +11,9 @@
 // waiting 10 minutes or reimplementing fake timers around global mutable
 // state.
 import {
-  type NotificationTickDeps,
   describeError,
   logError,
+  type NotificationTickDeps,
   runNotificationTick,
 } from "@bandplate/core";
 

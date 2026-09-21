@@ -1,19 +1,19 @@
 import {
   type AuthDeps,
   type Clock,
+  describeError,
+  logError,
   type Mailer,
   type RateLimiter,
   type Sleep,
   type Storage,
-  describeError,
-  logError,
 } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
 import { Hono } from "hono";
 import { errorResponse } from "./errors.js";
 import { originCheckMiddleware } from "./middleware/origin.js";
 import { principalMiddleware } from "./middleware/principal.js";
-import { GuardedRouter, assertEveryRouteIsGuarded, publicRoute } from "./route-registry.js";
+import { assertEveryRouteIsGuarded, GuardedRouter, publicRoute } from "./route-registry.js";
 import { registerAdminInstrumentRoutes } from "./routes/admin-instruments.js";
 import { registerAdminMemberRoutes } from "./routes/admin-members.js";
 import { registerAdminTokenRoutes } from "./routes/admin-tokens.js";
@@ -160,7 +160,6 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   return buildRoutedApp(deps).app;
 }
 
-export type { AppEnv } from "./types.js";
 export {
   GuardedRouter,
   publicRoute,
@@ -173,9 +172,10 @@ export {
 // routes/auth.ts's doc comments on these.
 export {
   DEFAULT_TRUSTED_PROXY_DEPTH,
+  extractClientIp,
   LOGIN_EMAIL_LIMIT,
   LOGIN_EMAIL_WINDOW_MS,
   LOGIN_IP_LIMIT,
   LOGIN_IP_WINDOW_MS,
-  extractClientIp,
 } from "./routes/auth.js";
+export type { AppEnv } from "./types.js";

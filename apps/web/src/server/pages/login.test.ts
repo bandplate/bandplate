@@ -6,7 +6,7 @@ import { type AuthDeps, createInMemoryRateLimiter, systemClock } from "@bandplat
 import { createTestDb } from "@bandplate/db/testing";
 import { type CapturingMailer, createCapturingMailer } from "@bandplate/mail";
 import { beforeEach, describe, expect, it } from "vitest";
-import { type LoginPostDeps, handleLoginPost } from "./login.js";
+import { handleLoginPost, type LoginPostDeps } from "./login.js";
 
 function formData(email: string): FormData {
   const fd = new FormData();

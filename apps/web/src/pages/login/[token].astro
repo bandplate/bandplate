@@ -17,7 +17,7 @@ import AuthLayout from "../../layouts/AuthLayout.astro";
 import { getAppDeps, getAuthDeps } from "../../server/app.js";
 import { setSessionCookie } from "../../server/cookies.js";
 import { isSameOrigin } from "../../server/csrf.js";
-import { type LoginTokenView, consume, peekView } from "../../server/pages/login-token.js";
+import { consume, type LoginTokenView, peekView } from "../../server/pages/login-token.js";
 
 Astro.response.headers.set("Cache-Control", "no-store");
 

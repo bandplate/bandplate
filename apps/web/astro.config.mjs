@@ -4,6 +4,7 @@ import node from "@astrojs/node";
 import preact from "@astrojs/preact";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
+
 // Load `.env` into `process.env`, not just `import.meta.env`.
 //
 // `server/config.ts` validates `process.env` — it has to, because the same

@@ -13,7 +13,7 @@
 //   * `takes_push_pending_idx` is a raw partial index hand-added in 0009 that
 //     drizzle-kit does not know about, so a generated rebuild drops it and
 //     never puts it back. That is the regression this file exists to catch.
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { createClient } from "@libsql/client";
 import { describe, expect, it } from "vitest";
 

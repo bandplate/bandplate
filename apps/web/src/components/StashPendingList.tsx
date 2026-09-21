@@ -27,9 +27,9 @@
 // where another attempt can succeed (`canRetryByHand`), and always "Zahodit",
 // behind a confirm, because throwing it away is the one thing that loses it.
 import {
-  type Locale,
   formatDuration,
   formatShortDate,
+  type Locale,
   playerMessages,
   stashMessages,
 } from "@bandplate/i18n";
@@ -42,15 +42,8 @@ import { queueHoldsSource } from "../client/player-queue.js";
 import { currentTrack, playQueue } from "../client/player-store.js";
 import { stashName, stashNote } from "../client/stash-display.js";
 import { stashSheetId } from "../client/stash-sheet-ids.js";
-import { type StashSheets, createStashSheets } from "../client/stash-sheets.js";
+import { createStashSheets, type StashSheets } from "../client/stash-sheets.js";
 import { pendingStash, syncedStash } from "../client/stash-store.js";
-import {
-  type LocalStashRow,
-  type PendingSummary,
-  canRetryByHand,
-  localPlayId,
-  localStashRows,
-} from "../client/stash-sync-logic.js";
 import {
   discardPending,
   discardPendingForTake,
@@ -58,6 +51,13 @@ import {
   refreshPendingStash,
   retryPending,
 } from "../client/stash-sync.js";
+import {
+  canRetryByHand,
+  type LocalStashRow,
+  localPlayId,
+  localStashRows,
+  type PendingSummary,
+} from "../client/stash-sync-logic.js";
 
 interface Props {
   locale: Locale;

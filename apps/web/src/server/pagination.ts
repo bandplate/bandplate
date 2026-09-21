@@ -8,7 +8,7 @@
 // Every paginated listing in the app goes through `pageView`, so the control
 // under a list of songs behaves exactly like the one under a list of takes —
 // including what it does when someone edits the number in the URL by hand.
-import { MAX_PAGE_SIZE, type PageArgs, clampPageSize } from "@bandplate/db";
+import { clampPageSize, MAX_PAGE_SIZE, type PageArgs } from "@bandplate/db";
 import type { PaginationLabels } from "@bandplate/ui/components/Pagination.astro";
 
 /** The query parameter every listing pages on. */

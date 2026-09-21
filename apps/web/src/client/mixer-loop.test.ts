@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  LOOP_NUDGE_S,
-  MIN_LOOP_S,
   canLoop,
+  LOOP_NUDGE_S,
   loopEngagedFrom,
   loopFractions,
   loopWrapTarget,
+  MIN_LOOP_S,
   makeLoop,
   nudgeLoopEdge,
   setLoopEdge,

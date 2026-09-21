@@ -2,10 +2,10 @@ import { createServiceToken } from "@bandplate/core";
 import { membersRepo } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
-  TEST_APP_ORIGIN,
   buildTestApp,
   extractLoginToken,
   extractSessionCookieValue,
+  TEST_APP_ORIGIN,
 } from "./test-helpers.js";
 
 const jsonHeaders = { "content-type": "application/json", origin: TEST_APP_ORIGIN };

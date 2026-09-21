@@ -1,5 +1,5 @@
-import { eventsRepo, membersRepo, songsRepo, takesRepo, votesRepo } from "@bandplate/db";
 import type { Db } from "@bandplate/db";
+import { eventsRepo, membersRepo, songsRepo, takesRepo, votesRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { castVoteFromForm } from "./votes.js";

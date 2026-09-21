@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import {
-  GuardedRouter,
   assertEveryRouteIsGuarded,
+  GuardedRouter,
   publicRoute,
   requireScopes,
 } from "./route-registry.js";

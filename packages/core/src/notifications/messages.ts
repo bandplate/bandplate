@@ -4,7 +4,7 @@
 // says, in the recipient's own locale, using `@bandplate/i18n`'s `push`
 // area for the words. It has no idea how a message gets delivered — that is
 // `@bandplate/push`'s job, same as `@bandplate/mail`'s for `MailMessage`.
-import { type Locale, formatNumber, pushMessages } from "@bandplate/i18n";
+import { formatNumber, type Locale, pushMessages } from "@bandplate/i18n";
 import type { PushMessage } from "../ports/push.js";
 import { BAND_TIME_ZONE, zonedParts } from "./schedule.js";
 

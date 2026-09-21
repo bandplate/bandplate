@@ -19,7 +19,7 @@
 // every date on every page says. It wants its own commit. Flagged rather than
 // quietly carried forward, because the first person to see it will reasonably
 // assume translation caused it.
-import { type Locale, intlTag } from "./locale.js";
+import { intlTag, type Locale } from "./locale.js";
 import { formatNumber } from "./plural.js";
 
 /** What an absent date, duration or size renders as. */

@@ -8,8 +8,9 @@
 // Same batching shape as `server/pages/songs.ts#getSongDetail` and
 // `server/pages/events.ts#getEventDetail`: one query per kind of data
 // (songs, events, instruments), never one round trip per take.
-import { type Db, assetsRepo } from "@bandplate/db";
 import {
+  assetsRepo,
+  type Db,
   eventsRepo,
   type instrumentsRepo,
   membersRepo,

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  THEME_COOKIE_NAME,
   isThemeChoice,
   rootThemeAttribute,
+  THEME_COOKIE_NAME,
   themeColorMetas,
   themeCookieString,
 } from "./theme.js";

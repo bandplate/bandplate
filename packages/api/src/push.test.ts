@@ -8,11 +8,11 @@ import { createServiceToken } from "@bandplate/core";
 import { membersRepo, notificationPrefsRepo, pushSubscriptionsRepo } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
-  TEST_APP_ORIGIN,
-  type TestApp,
   buildTestApp,
   extractLoginToken,
   extractSessionCookieValue,
+  TEST_APP_ORIGIN,
+  type TestApp,
 } from "./test-helpers.js";
 
 const jsonHeaders = { "content-type": "application/json", origin: TEST_APP_ORIGIN };

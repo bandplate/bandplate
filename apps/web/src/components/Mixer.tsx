@@ -22,10 +22,10 @@ import { ArrowLeftFromLine, ArrowRightFromLine, Pause, Play, UserX, X } from "lu
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import {
+  canLoop,
   LOOP_NUDGE_S,
   type LoopEdge,
   type LoopRegion,
-  canLoop,
   loopFractions,
   makeLoop,
   nudgeLoopEdge,
@@ -34,9 +34,9 @@ import {
 import { type LanePeaks, mixerLaneBars } from "../client/mixer-peaks.js";
 import { timelineTicks } from "../client/mixer-ticks.js";
 import {
+  initialMixerState,
   MAX_FADER,
   type MixerState,
-  initialMixerState,
   setFader,
   setMuted,
   setSoloed,

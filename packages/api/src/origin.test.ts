@@ -1,6 +1,6 @@
 import { createServiceToken } from "@bandplate/core";
 import { describe, expect, it } from "vitest";
-import { TEST_APP_ORIGIN, buildTestApp } from "./test-helpers.js";
+import { buildTestApp, TEST_APP_ORIGIN } from "./test-helpers.js";
 
 describe("origin check", () => {
   it("rejects a mutating request with a wrong Origin", async () => {

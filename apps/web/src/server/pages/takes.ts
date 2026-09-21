@@ -1,4 +1,4 @@
-import { type Storage, canPublish, describeError, logError } from "@bandplate/core";
+import { canPublish, describeError, logError, type Storage } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
 import {
   assetsRepo,
@@ -22,7 +22,7 @@ import {
 // is or isn't one of their favorites), unlike the decorative heading star
 // this same review round removed. See `TakeRow`'s own `favorited` prop for
 // the rest of this marker's use.
-import { type Locale, formatBytes, messages } from "@bandplate/i18n";
+import { formatBytes, type Locale, messages } from "@bandplate/i18n";
 import { z } from "zod";
 
 export interface TakeDetail {

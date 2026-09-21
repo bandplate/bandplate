@@ -10,7 +10,7 @@
 // this subpath directly and pass the resulting `Mailer` into `AppDeps`
 // themselves — there is no generic factory that can reach this module,
 // by design (see `factory.ts`).
-import { type Mailer, buildLoginLinkMessage } from "@bandplate/core";
+import { buildLoginLinkMessage, type Mailer } from "@bandplate/core";
 import nodemailer from "nodemailer";
 
 export interface SmtpConfig {

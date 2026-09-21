@@ -1,7 +1,7 @@
-import { type Db, assetsRepo, eventsRepo, songsRepo, takesRepo } from "@bandplate/db";
+import { assetsRepo, type Db, eventsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
-import { STASH_CLIENT_REF_PREFIX, createStashTake } from "./stash.js";
+import { createStashTake, STASH_CLIENT_REF_PREFIX } from "./stash.js";
 
 describe("createStashTake", () => {
   let db: Db;

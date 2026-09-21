@@ -19,8 +19,8 @@
 import { type AppDeps, createApp } from "@bandplate/api";
 import {
   type AuthDeps,
-  type NotificationTickDeps,
   createInMemoryRateLimiter,
+  type NotificationTickDeps,
   systemClock,
 } from "@bandplate/core";
 import { createD1Db } from "@bandplate/db";
@@ -29,8 +29,8 @@ import { createWebPushSender, vapidKeyId } from "@bandplate/push";
 import { createS3Storage } from "@bandplate/storage";
 import {
   type CloudflareEnv,
-  type WorkersRuntimeConfig,
   loadWorkersConfig,
+  type WorkersRuntimeConfig,
 } from "./config.worker.js";
 
 type ApiApp = ReturnType<typeof createApp>;

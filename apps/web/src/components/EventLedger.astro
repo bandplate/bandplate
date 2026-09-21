@@ -1,4 +1,5 @@
 ---
+import type { eventsRepo } from "@bandplate/db";
 // The event ledger — a chronology, drawn as one: a date spine on the left, the
 // venue as the line, the kind in small caps under it, the take count on the
 // right, newest first with its date in the accent.
@@ -16,8 +17,6 @@ import { formatMonthShort, messages } from "@bandplate/i18n";
 import ArrowRight from "@lucide/astro/icons/arrow-right";
 import { eventName } from "../server/format.js";
 import FavoriteToggle from "./FavoriteToggle.astro";
-
-import type { eventsRepo } from "@bandplate/db";
 
 export interface Props {
   /**

@@ -24,9 +24,9 @@ import { votingMessages } from "@bandplate/i18n";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import {
-  type Tally,
   computeOptimisticTally,
   formatVoteTallyClient,
+  type Tally,
 } from "../client/vote-favorite-actions.js";
 
 interface ToastMessage {

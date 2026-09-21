@@ -2,7 +2,7 @@
 // anything with it. Used by this package's own tests, and by later tasks'
 // E2E/route tests to assert on exactly what would have been sent — mirrors
 // `@bandplate/mail`'s `createCapturingMailer`.
-import type { PushResult, PushSendOptions, PushSender, PushTarget } from "@bandplate/core";
+import type { PushResult, PushSender, PushSendOptions, PushTarget } from "@bandplate/core";
 
 export interface RecordedPush {
   target: PushTarget;

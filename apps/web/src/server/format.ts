@@ -11,12 +11,12 @@
 // its page is translated, one area per commit.
 import {
   DEFAULT_LOCALE,
-  type Locale,
   formatBytes as i18nFormatBytes,
   formatDateTime as i18nFormatDateTime,
   formatDuration as i18nFormatDuration,
   formatLongDate as i18nFormatLongDate,
   formatShortDate as i18nFormatShortDate,
+  type Locale,
   messages,
   votingMessages,
 } from "@bandplate/i18n";

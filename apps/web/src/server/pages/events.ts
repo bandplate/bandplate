@@ -1,9 +1,12 @@
-import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
 import {
+  assetsRepo,
+  type Db,
   eventsRepo,
   favoritesRepo,
   type instrumentsRepo,
   membersRepo,
+  type PageArgs,
+  type Paged,
   songsRepo,
   takesRepo,
   votesRepo,

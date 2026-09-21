@@ -4,7 +4,6 @@ import { assetsRepo, eventsRepo, membersRepo, songsRepo, takesRepo } from "@band
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  RECENT_SONGS_LIMIT,
   applyStashWrite,
   deleteStashTake,
   getStashItem,
@@ -12,6 +11,7 @@ import {
   getStashView,
   listRecordableSongs,
   publishStashTake,
+  RECENT_SONGS_LIMIT,
   renameStashTake,
   resolvePreselectedSong,
 } from "./stash.js";

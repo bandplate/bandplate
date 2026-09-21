@@ -2,7 +2,7 @@ import type { AuthDeps, RateLimiter } from "@bandplate/core";
 import { consumeLoginToken, peekLoginToken, requestLogin, revokeSession } from "@bandplate/core";
 import { getCookie } from "hono/cookie";
 import { z } from "zod";
-import { SESSION_COOKIE_NAME, clearSessionCookie, setSessionCookie } from "../cookies.js";
+import { clearSessionCookie, SESSION_COOKIE_NAME, setSessionCookie } from "../cookies.js";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, publicRoute } from "../route-registry.js";
 

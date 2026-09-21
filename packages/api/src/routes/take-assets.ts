@@ -19,11 +19,11 @@
 // are the existing precedent for a cookie-principal JSON route.
 import type { Clock, DeclaredAsset, Storage } from "@bandplate/core";
 import {
-  UPLOAD_URL_TTL_SECONDS,
   contentTypeForFormat,
   resolveSlotForUpload,
+  UPLOAD_URL_TTL_SECONDS,
 } from "@bandplate/core";
-import { type Db, assetsRepo, instrumentsRepo, takesRepo } from "@bandplate/db";
+import { assetsRepo, type Db, instrumentsRepo, takesRepo } from "@bandplate/db";
 import { z } from "zod";
 import { errorResponse } from "../errors.js";
 import { type GuardedRouter, requireScopes } from "../route-registry.js";

@@ -1,15 +1,15 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { schema } from "../client.js";
 import type { Db } from "../client.js";
+import { schema } from "../client.js";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as events from "./events.js";
 import * as instruments from "./instruments.js";
 import * as members from "./members.js";
 import { DEFAULT_PAGE_SIZE } from "./pagination.js";
 import * as songs from "./songs.js";
-import * as takes from "./takes.js";
 import type { TakeState } from "./takes.js";
+import * as takes from "./takes.js";
 import * as votes from "./votes.js";
 
 /**

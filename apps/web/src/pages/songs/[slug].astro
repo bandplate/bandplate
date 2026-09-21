@@ -26,19 +26,19 @@ import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { eventLabel, factsLine, formatShortDate } from "../../server/format.js";
 import {
-  SONG_TAKES_PER_PAGE,
-  type SongField,
   archiveSongConsequence,
   deleteSongConsequence,
   getSongDetail,
+  SONG_TAKES_PER_PAGE,
+  type SongField,
   updateSong,
 } from "../../server/pages/songs.js";
 import { applyStashWrite } from "../../server/pages/stash.js";
-import { type TakeField, createTake } from "../../server/pages/takes.js";
+import { createTake, type TakeField } from "../../server/pages/takes.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 import { withQuery } from "../../server/safe-redirect.js";
 import { songToRows } from "../../server/song-chart-rows.js";
-import { KNOWN_SECTION_WORDS, buildSongChart } from "../../server/song-text.js";
+import { buildSongChart, KNOWN_SECTION_WORDS } from "../../server/song-text.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {

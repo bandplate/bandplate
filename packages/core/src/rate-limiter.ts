@@ -3,7 +3,7 @@
 // in a Durable Object-backed implementation of the same port later (see
 // `ports/rate-limiter.ts`).
 import type { Clock } from "./ports/clock.js";
-import type { RateLimitResult, RateLimiter } from "./ports/rate-limiter.js";
+import type { RateLimiter, RateLimitResult } from "./ports/rate-limiter.js";
 
 interface Bucket {
   tokens: number;

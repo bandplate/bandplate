@@ -6,7 +6,7 @@
 // idempotency proved by DIFFING DATABASE STATE across a repeated run, not
 // by asserting a status code twice.
 import { createHash } from "node:crypto";
-import { STASH_CLIENT_REF_PREFIX, createServiceToken } from "@bandplate/core";
+import { createServiceToken, STASH_CLIENT_REF_PREFIX } from "@bandplate/core";
 import {
   assetsRepo,
   eventsRepo,
@@ -17,12 +17,12 @@ import {
 } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import {
-  TEST_APP_ORIGIN,
-  type TestApp,
   buildTestApp,
   extractLoginToken,
   extractSessionCookieValue,
   isWorkerdRuntime,
+  TEST_APP_ORIGIN,
+  type TestApp,
 } from "./test-helpers.js";
 
 async function ingestToken(testApp: TestApp, scopes: string[] = ["ingest:write"]) {

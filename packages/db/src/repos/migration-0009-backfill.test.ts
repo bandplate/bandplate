@@ -6,7 +6,7 @@
 // checks the backfill actually ran — the guarantee the spec's "the
 // migration backfills `push_batched_at = published_at` for existing rows,
 // or the first deploy would announce the whole archive" depends on.
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { createClient } from "@libsql/client";
 import { describe, expect, it } from "vitest";
 

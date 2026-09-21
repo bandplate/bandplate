@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  type PendingSummary,
   afterFailure,
   canRetryByHand,
   classifyFailure,
   localStashRows,
   newPendingItem,
   nextSyncStep,
-  ownPending,
   ownedBy,
+  ownPending,
+  type PendingSummary,
   pendingForTake,
   retryItem,
   shouldSync,

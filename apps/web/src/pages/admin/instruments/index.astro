@@ -2,7 +2,7 @@
 import { adminMessages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
-import { INSTRUMENT_GLYPHS, INSTRUMENT_GLYPH_CREDIT } from "@bandplate/ui/icons/instruments.js";
+import { INSTRUMENT_GLYPH_CREDIT, INSTRUMENT_GLYPHS } from "@bandplate/ui/icons/instruments.js";
 import { TRACK_COLORS, trackColorVar } from "@bandplate/ui/tokens/track-colors.js";
 import AdminHeader from "../../../components/AdminHeader.astro";
 import InstrumentIcon from "../../../components/InstrumentIcon.astro";
@@ -11,10 +11,10 @@ import AppLayout from "../../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../../server/app.js";
 import { isSameOrigin } from "../../../server/csrf.js";
 import {
-  type InstrumentUsage,
   addInstrumentAlias,
   aliasesByInstrument,
   createInstrument,
+  type InstrumentUsage,
   instrumentUsage,
   isInstrumentUnused,
   listInstruments,

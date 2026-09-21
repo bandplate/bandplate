@@ -23,14 +23,14 @@ import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { eventLabel, factsLine } from "../../server/format.js";
 import {
+  archiveEventConsequence,
   EVENT_TAKES_PER_PAGE,
   type EventField,
-  archiveEventConsequence,
   findSameDayEvents,
   getEventDetail,
   updateEvent,
 } from "../../server/pages/events.js";
-import { type TakeField, createTake } from "../../server/pages/takes.js";
+import { createTake, type TakeField } from "../../server/pages/takes.js";
 import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;

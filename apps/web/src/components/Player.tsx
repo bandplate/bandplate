@@ -38,11 +38,11 @@ import { currentLocale } from "../client/locale.js";
 import { MIN_MIXER_STEMS } from "../client/mixer-tracks.js";
 import { controlState, decidePlayerClickAction } from "../client/player-actions.js";
 import {
-  type QueueItem,
   canGoPrevious,
   decidePrevious,
   hasNext,
   nextIndex,
+  type QueueItem,
   queueFrom,
   queuePosition,
   sameQueue,
@@ -50,12 +50,12 @@ import {
 } from "../client/player-queue.js";
 import {
   AUDIO_SOURCE_ATTR,
-  type PlayerSource,
-  type PlayerTrack,
   audioUrl,
   currentTrack,
   downsamplePeaks,
   isPlaying,
+  type PlayerSource,
+  type PlayerTrack,
   peaksUrl,
   playQueue,
   sourcesUrl,

@@ -1,10 +1,10 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  UNSAFE_BASELINE,
   findUnsafeStatements,
   parsePendingMigrations,
+  UNSAFE_BASELINE,
 } from "./migration-guard.js";
 
 describe("findUnsafeStatements", () => {

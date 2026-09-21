@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  type UploadItem,
   blockedReason,
   canStart,
   defaultKind,
@@ -9,6 +8,7 @@ import {
   needsDecision,
   readAudioShape,
   reduceItem,
+  type UploadItem,
 } from "./upload-actions.js";
 
 describe("readAudioShape", () => {

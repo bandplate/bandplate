@@ -21,7 +21,7 @@ import { defineMiddleware } from "astro:middleware";
 import { describeError, logError } from "@bandplate/core";
 import { type Locale, negotiateLocale } from "@bandplate/i18n";
 import { getAppDeps, getAuthDeps, getWebConfig, initWorkersRuntime } from "./server/app.js";
-import { SESSION_COOKIE_NAME, readLocaleCookie, setLocaleCookie } from "./server/cookies.js";
+import { readLocaleCookie, SESSION_COOKIE_NAME, setLocaleCookie } from "./server/cookies.js";
 import { isSameOrigin } from "./server/csrf.js";
 import { guardAdminPath, guardMemberPath, normalizePathname } from "./server/guard.js";
 import { resolvePrincipalFromCookie } from "./server/principal.js";

@@ -1,18 +1,21 @@
 import {
-  type Storage,
   allocateSongSlug,
   chartChanged,
   describeError,
   logError,
   normalizeTitle,
+  type Storage,
 } from "@bandplate/core";
-import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
 import {
+  assetsRepo,
+  type Db,
   eventsRepo,
   favoritesRepo,
   type instrumentsRepo,
   membersRepo,
   notificationsRepo,
+  type PageArgs,
+  type Paged,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -36,9 +39,9 @@ import {
 // `/search` filters takes and keeps it. On a page listing songs it was a
 // dozen checkboxes answering a question about a different object, and on a
 // phone it pushed the songs themselves below the fold.
-import { type Locale, formatBytes, messages } from "@bandplate/i18n";
+import { formatBytes, type Locale, messages } from "@bandplate/i18n";
 import { z } from "zod";
-import { type StashRowData, getStashRows } from "./stash.js";
+import { getStashRows, type StashRowData } from "./stash.js";
 
 export type SongListItem = songsRepo.SongWithStats;
 

@@ -1,7 +1,7 @@
 // The `validation` area, both languages, plus the resolver the pages use.
 import type { Locale } from "../locale.js";
 import { validation as cs } from "./cs/validation.js";
-import { type ValidationKey, validation as en } from "./en/validation.js";
+import { validation as en, type ValidationKey } from "./en/validation.js";
 
 export type { ValidationKey };
 

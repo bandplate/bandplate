@@ -5307,6 +5307,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-muted);
 }
 
+/* No row highlight. The admin tables light a row because the row is what
+   you act on; here the two icons are the only targets, and a band of fill
+   sweeping the whole width under the pointer promised a click the row does
+   not have. */
+.bp-asset-table tbody tr:hover {
+  background: none;
+}
+
 /* The tier and the size are desktop detail, column head and cell alike. On a
    phone the name is what anyone is looking for, and `mp3` alone answers
    "what is this"; whether it is lossy and how big are questions asked with a

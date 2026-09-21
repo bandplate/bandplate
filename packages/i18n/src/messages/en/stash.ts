@@ -44,11 +44,8 @@ export const stash = {
    */
   songSectionCount: (count: number): string =>
     `${count} ${plural("en", count, { one: "recording", other: "recordings" })}`,
-  /** Home, above the recent events: the way into the stash, carrying its count. */
-  showStash: "Show stash",
-  /** The heading over it, in the shape home's other sections use. */
-  homeHeading: (count: number): string =>
-    `You have ${count} ${plural("en", count, { one: "recording", other: "recordings" })} in your stash`,
+  /** Home's stash card: the way into the stash. Its count is in the card's title. */
+  openStash: "Open stash",
 
   // --- the recorder ---------------------------------------------------------
   close: "Close",

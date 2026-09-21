@@ -1,32 +1,39 @@
-// `/` — police: co sis připnul, a co kapela poslední dobou nahrála.
+// `/` — tři sekce, vždycky v tomhle pořadí: co je pro tebe nové, na čem
+// pracuješ, a co kapela poslední dobou nahrála.
 //
 // ┌─ PROOFREADING ─────────────────────────────────────────────────────────┐
 // │ English on each line as a trailing comment. Edit here; the edit is the  │
 // │ fix. Register is INFORMAL (tykání) — this is the page the band opens    │
 // │ one-handed while holding a nástroj, so short and warm beats correct.    │
 // │                                                                        │
-// │ GLOSSARY: favorites → oblíbené · take → NAHRÁVKA · song → skladba       │
+// │ GLOSSARY: take → NAHRÁVKA · song → skladba · stash → šuplík             │
 // │                                                                        │
-// │ WORTH CHECKING: `backTo` → "Zpátky k". It sits above a title in the     │
-// │ nominative ("Zpátky k / Čoudy"), so it does not govern the case of what │
-// │ follows — the heading is its own line, not the end of the phrase.       │
+// │ WORTH CHECKING: `onTheStand` → "Na pultu". Not a translation of "Up     │
+// │ next": the notový pult is where the thing you are about to play sits,  │
+// │ and that is the picture the section is named for.                      │
+// │ `newTakesLine` → "na 2 ještě nemáš hlas". Built so the number never     │
+// │ has to agree with a noun: "na 1", "na 2", "na 5" all read the same.    │
 // └────────────────────────────────────────────────────────────────────────┘
 import type { home as enHome } from "../en/home.js";
 
 export const home = {
   title: "Domů", // en: Home
 
-  favorites: "Oblíbené", // en: Favorites
-  backTo: "Zpátky k", // en: Back to
+  onTheStand: "Na pultu", // en: Up next
+  newSinceLastVisit: "Nové od tvé poslední návštěvy", // en: New since your last visit
+  // en: `${kind}, ${date}`
+  unnamedEventTitle: ({ kind, date }: { kind: string; date: string }): string => `${kind} ${date}`,
+  // en: `${takes}, ${unvoted} you haven't voted on yet` (or just `${takes}` at 0)
+  newTakesLine: ({ takes, unvoted }: { takes: string; unvoted: number }): string =>
+    unvoted > 0 ? `${takes}, na ${unvoted} ještě nemáš hlas` : takes,
+  voteCount: (count: number): string => `Hlasovat (${count})`, // en: Vote ({count})
 
-  untitledTake: "Nahrávka bez názvu", // en: Untitled take
+  inProgress: "Rozpracované", // en: In progress
+
   untitled: "Bez názvu", // en: Untitled
 
   takeWord: "Nahrávka", // en: Take
   songWord: "Skladba", // en: Song
-
-  // en: `${name} — ${kind}`
-  heroName: ({ name, kind }: { name: string; kind: string }): string => `${name} — ${kind}`,
 
   // en: `${name} — take from ${date}`
   plateTakeName: ({ name, date }: { name: string; date: string }): string =>
@@ -37,6 +44,10 @@ export const home = {
   // en: `${name} — ${detail}`
   plateEventName: ({ name, detail }: { name: string; detail: string }): string =>
     `${name} — ${detail}`,
+
+  // en: `${date}, ${length}`
+  stashLatestWhen: ({ date, length }: { date: string; length: string }): string =>
+    `${date}, ${length}`,
 
   emptyPinnedLead: "Zatím nic připnutého.", // en: Nothing pinned yet.
   // en: Tap the star on a song, take or event and it lands here — this is the shelf you reach for.

@@ -1,30 +1,29 @@
-import { type Db, assetsRepo } from "@bandplate/db";
 import {
+  type Db,
+  assetsRepo,
   eventsRepo,
   favoritesRepo,
-  type instrumentsRepo,
   membersRepo,
   songsRepo,
   takesRepo,
-  votesRepo,
 } from "@bandplate/db";
-// Home's data. Two questions only: what has this member PINNED, and what
-// has the band recorded lately.
+// Home's data. Three questions, always in this order:
 //
-// It used to answer a third — "which published takes haven't you voted on" —
-// and render them as a queue. That is gone: nothing on the page everyone opens
-// should nag, and a take usually arrives as a shared link anyway. The unvoted
-// count moved to `/me`, where it is something you go looking for. With it went
-// `getUnvotedTakes`, `UNVOTED_LIMIT` and this module's use of
-// `takesRepo.listUnvotedByMember` (the repo function stays — `/me` counts with
-// it now).
+//   1. What is new for you: the newest band event with takes published since
+//      your last visit ("Na pultu"). Absent when nothing is, and then the
+//      page does not draw the section at all.
+//   2. What you are working on: the things you pinned, and your stash.
+//   3. What the band recorded lately: the event ledger.
 //
-// Recent events no longer carry their takes either. Home lists EVENTS, and
-// opening one is how you reach its takes; fetching every take of the three
-// newest events to render a list nobody was reading cost four extra queries
-// per page load.
+// The old "needs your vote" queue is still gone. The first section carries a
+// count of the new takes you have not voted on, which is a fact about what
+// just arrived, not a list of everything you owe.
+//
+// Recent events carry no takes: home lists EVENTS, and opening one is how you
+// reach its takes.
 import { type Locale, messages } from "@bandplate/i18n";
 import { type EventListItem, withOwnerNames } from "./events.js";
+import { decideHomeVisit } from "./home-visit.js";
 import { type TakeWithFullContext, attachFullContext } from "./take-context.js";
 
 /** How many events the ledger lists before pointing at `/events` for the rest. */
@@ -246,27 +245,143 @@ async function getPinned(
   return { items, total };
 }
 
+/** One new take in the lead event, as the play-all queue needs it. */
+export interface NewTake {
+  take: takesRepo.Take;
+  song: songsRepo.Song | undefined;
+  /** Undefined until a master is ready; such a take is counted but not queued. */
+  playableAssetId: string | undefined;
+}
+
+/**
+ * "Na pultu": the newest band event with takes published since the member's
+ * last visit. Never a personal day (see `takesRepo.publishedSinceConditions`).
+ */
+export interface OnTheStand {
+  event: eventsRepo.Event;
+  /** The event's new takes, in recorded order. */
+  takes: NewTake[];
+  /** Of those, how many this member has not voted on and is asked to. */
+  unvotedCount: number;
+}
+
+/** The stash card. Only ever this member's own recordings. */
+export interface StashCard {
+  count: number;
+  latest: takesRepo.Take;
+  latestSong: songsRepo.Song | undefined;
+}
+
+/**
+ * The lead event and its new takes, or undefined when nothing is new. Three
+ * reads rather than one clever one: pick the event, list its new takes, count
+ * the unvoted among them. Each stays under D1's parameter cap however many
+ * takes arrived.
+ */
+async function getOnTheStand(
+  db: Db,
+  memberId: string,
+  since: number,
+): Promise<OnTheStand | undefined> {
+  const eventId = await takesRepo.newestEventWithTakesPublishedSince(db, since);
+  if (!eventId) {
+    return undefined;
+  }
+  const [event, takes, unvotedCount] = await Promise.all([
+    eventsRepo.getById(db, eventId),
+    takesRepo.listPublishedSinceInEvent(db, eventId, since),
+    takesRepo.countUnvotedPublishedSinceInEvent(db, memberId, eventId, since),
+  ]);
+  if (!event || takes.length === 0) {
+    return undefined;
+  }
+  const [songs, playable] = await Promise.all([
+    songsRepo.getByIds(db, takesRepo.songIdsOf(takes)),
+    assetsRepo.listPlayableMastersByTakeIds(
+      db,
+      takes.map((t) => t.id),
+    ),
+  ]);
+  const songById = new Map(songs.map((s) => [s.id, s]));
+  return {
+    event,
+    takes: takes.map((take) => ({
+      take,
+      song: take.songId ? songById.get(take.songId) : undefined,
+      playableAssetId: playable.get(take.id)?.id,
+    })),
+    unvotedCount,
+  };
+}
+
+async function getStashCard(db: Db, memberId: string): Promise<StashCard | undefined> {
+  const [count, latest] = await Promise.all([
+    takesRepo.countStash(db, memberId),
+    takesRepo.latestStash(db, memberId),
+  ]);
+  if (count === 0 || !latest) {
+    return undefined;
+  }
+  const latestSong = latest.songId ? await songsRepo.getById(db, latest.songId) : undefined;
+  return { count, latest, latestSong };
+}
+
+/**
+ * Reads the member's visit columns, decides whether this load starts a new
+ * visit, and writes that back. Returns the moment "new" is measured from.
+ */
+async function trackVisit(db: Db, memberId: string, now: number): Promise<number> {
+  const member = await membersRepo.getById(db, memberId);
+  const decision = decideHomeVisit(
+    {
+      visitStartedAt: member?.homeVisitStartedAt ?? null,
+      lastVisitAt: member?.homeLastVisitAt ?? null,
+      memberCreatedAt: member?.createdAt ?? now,
+    },
+    now,
+  );
+  if (member && decision.startsNewVisit) {
+    // A lost race (another tab started the visit first) leaves the columns as
+    // that tab wrote them; this load still measures from what it read, which
+    // is the same baseline.
+    await membersRepo.startHomeVisit(db, memberId, {
+      previousStartedAt: member.homeVisitStartedAt,
+      startedAt: decision.visitStartedAt,
+    });
+  }
+  return decision.since;
+}
+
 export interface HomeData {
-  /** Newest-pinned first, capped at `PINNED_LIMIT`. The first entry is the page's hero. */
+  /** What is new since the last visit. Undefined: the section is not drawn. */
+  onTheStand: OnTheStand | undefined;
+  /** Newest-pinned first, capped at `PINNED_LIMIT`. */
   pinned: PinnedItem[];
   /** How many things the member has pinned in all — may exceed `pinned.length`. */
   pinnedTotal: number;
   /** The ledger — events only, newest first, each with its take count. */
   recentEvents: EventListItem[];
-  /** How many recordings are in this member's stash. */
-  stashCount: number;
+  /** This member's stash, when it holds anything. */
+  stash: StashCard | undefined;
 }
 
-export async function getHomeData(db: Db, memberId: string): Promise<HomeData> {
-  const [pinned, recentEvents, stashCount] = await Promise.all([
+export async function getHomeData(
+  db: Db,
+  memberId: string,
+  now: number = Date.now(),
+): Promise<HomeData> {
+  const since = await trackVisit(db, memberId, now);
+  const [onTheStand, pinned, recentEvents, stash] = await Promise.all([
+    getOnTheStand(db, memberId, since),
     getPinned(db, memberId),
     eventsRepo.listRecentWithTakeCounts(db, { limit: RECENT_EVENTS_LIMIT }),
-    takesRepo.countStash(db, memberId),
+    getStashCard(db, memberId),
   ]);
   return {
+    onTheStand,
     pinned: pinned.items,
     pinnedTotal: pinned.total,
     recentEvents: await withOwnerNames(db, recentEvents.rows),
-    stashCount,
+    stash,
   };
 }

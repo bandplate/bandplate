@@ -1,6 +1,6 @@
 import { uuidv7 } from "@bandplate/core";
 import { DEFAULT_LOCALE, type Locale } from "@bandplate/i18n";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { instruments, memberInstruments, members } from "../schema/sqlite/index.js";
 import { assertColumnCount } from "./column-order-guard.js";
@@ -106,6 +106,41 @@ export async function update(db: Db, id: string, input: UpdateMemberInput): Prom
   await db.update(members).set(input).where(eq(members.id, id));
 }
 
+export interface HomeVisitWrite {
+  /** What `homeVisitStartedAt` held when the decision was made. */
+  previousStartedAt: number | null;
+  /** The new visit's start. */
+  startedAt: number;
+}
+
+/**
+ * Starts a new home visit: the old visit's start becomes the last visit, and
+ * `startedAt` the current one. One UPDATE.
+ *
+ * Whether a load starts a visit at all is `decideHomeVisit`'s question, not
+ * this function's. What this adds is a compare-and-swap: the write only lands
+ * if `homeVisitStartedAt` still holds what the decision read. Two tabs opening
+ * home in the same instant would otherwise both shift the pair, and the second
+ * would copy the first's brand-new start into `homeLastVisitAt`, which makes
+ * "new since your last visit" mean "new in the last millisecond". Returns
+ * whether it landed.
+ */
+export async function startHomeVisit(db: Db, id: string, write: HomeVisitWrite): Promise<boolean> {
+  const rows = await db
+    .update(members)
+    .set({ homeLastVisitAt: write.previousStartedAt, homeVisitStartedAt: write.startedAt })
+    .where(
+      and(
+        eq(members.id, id),
+        write.previousStartedAt === null
+          ? isNull(members.homeVisitStartedAt)
+          : eq(members.homeVisitStartedAt, write.previousStartedAt),
+      ),
+    )
+    .returning({ id: members.id });
+  return rows.length === 1;
+}
+
 export async function count(db: Db): Promise<number> {
   const [row] = await db.select({ count: sql<number>`count(*)` }).from(members);
   return row?.count ?? 0;
@@ -152,15 +187,17 @@ export interface CreateIfEmptyInput {
  * `SQLiteInsertBuilder.select`'s `select(selectQuery: SQL)` signature.
  */
 export function buildCreateIfEmptyStatement(db: Db, input: CreateIfEmptyInput) {
-  // 9 values below (id, displayName, slug, email, role, status, createdAt,
-  // emailVerifiedAt, locale) must match `members`' column count and order —
-  // see `column-order-guard.ts` for why this is checked explicitly rather
-  // than left implicit. `locale` is last because drizzle emits columns in
-  // schema DECLARATION order and it was declared last.
-  assertColumnCount(members, 9);
+  // 11 values below (id, displayName, slug, email, role, status, createdAt,
+  // emailVerifiedAt, locale, homeVisitStartedAt, homeLastVisitAt) must match
+  // `members`' column count and order — see `column-order-guard.ts` for why
+  // this is checked explicitly rather than left implicit. Drizzle emits
+  // columns in schema DECLARATION order, and `locale` then the two home-visit
+  // timestamps were declared last, in that order. The first admin has never
+  // opened home, so both are NULL.
+  assertColumnCount(members, 11);
   const id = uuidv7();
   const statement = db.insert(members).select(sql`
-    select ${id}, ${input.displayName}, ${input.slug}, ${normalizeEmail(input.email)}, 'admin', 'active', ${input.createdAt}, ${input.emailVerifiedAt ?? null}, ${input.locale ?? DEFAULT_LOCALE}
+    select ${id}, ${input.displayName}, ${input.slug}, ${normalizeEmail(input.email)}, 'admin', 'active', ${input.createdAt}, ${input.emailVerifiedAt ?? null}, ${input.locale ?? DEFAULT_LOCALE}, null, null
     where not exists (select 1 from members)
   `);
   return { id, statement };

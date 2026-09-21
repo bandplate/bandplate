@@ -71,6 +71,17 @@ export const members = sqliteTable("members", {
   locale: text("locale", { enum: ["en", "cs"] })
     .notNull()
     .default("en"),
+  // Home's "new since your last visit". A visit is a stretch of activity, not
+  // a page load: `homeVisitStartedAt` is when the current one began, and
+  // `homeLastVisitAt` is when the one before it began, which is the baseline
+  // "new" is measured from. Both NULL until the member first opens home. The
+  // decision about when a load starts a new visit is `decideHomeVisit` in
+  // `apps/web/src/server/pages/home-visit.ts`.
+  //
+  // Declared after `locale` for the same reason `locale` was declared last:
+  // `membersRepo.buildCreateIfEmptyStatement` inserts positionally.
+  homeVisitStartedAt: ts("home_visit_started_at"),
+  homeLastVisitAt: ts("home_last_visit_at"),
 });
 
 export const loginTokens = sqliteTable(

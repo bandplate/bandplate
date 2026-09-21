@@ -1,35 +1,40 @@
 ---
-// Home — opened one-handed, mid-rehearsal. It answers two things and no more:
-// what you PINNED (the songs and takes you are working on), and what the band
-// recorded lately.
+// Home — opened one-handed, mid-rehearsal. It answers three questions, always
+// in this order, one section each, on a phone and on a wide screen alike:
 //
-// Two sections, drawn so they cannot be mistaken for each other. Pinned items
-// are PLATES — the acetate the app is named for, a dark grooved disc with a
-// centre label — because they are things you reach for, and a list of rows was
-// what made this page read as undifferentiated stuff. Recent events are a
-// LEDGER: a date spine on the left, the venue as the line, the kind in small
-// caps, the take count on the right. A chronology drawn as one.
+//   1. Na pultu: what is new for you. One card, the page's only strong call to
+//      action: the newest band event with takes published since your last
+//      visit, with "Přehrát vše" and, when you owe it, "Hlasovat (N)". With
+//      nothing new the section is not drawn at all, heading included; an
+//      empty state here would be a nag with nothing to say.
+//   2. Rozpracované: what you are working on. Your pinned things as PLATES,
+//      one row at one size, and your stash as a card beside them (under them
+//      on a phone).
+//   3. Poslední akce: what the band recorded lately, as a LEDGER.
 //
-// What used to be here and is deliberately gone:
+// Width only ever puts things side by side WITHIN a section. The previous home
+// split the page into two unrelated columns and led with a large "Zpátky k"
+// hero, and the owner's verdict was that it had no natural reading order. Both
+// are gone, and so is the stash's own heading and pill: the stash card
+// replaces them.
 //
-//   - "Needs your vote". Nothing on the page everyone opens should nag, and a
-//     new recording usually arrives as a shared link anyway. The count moved to
-//     `/me`, where it is something you go looking for.
-//   - Takes nested under each recent event. Home says an event happened;
-//     opening it is how you reach its takes.
-//   - `claimTakeTransition` / `<TakeTransitionRetarget />`. Both existed only
-//     because one take could appear in two sections of this page at once, which
-//     assigns the same `view-transition-name` twice and (per the spec) silently
-//     aborts the transition for the WHOLE page. With one pinned list and no
-//     take rows, a take cannot appear twice, so the problem and its two
-//     workarounds are gone together.
-import { formatShortDate, messages } from "@bandplate/i18n";
+// Still deliberately absent:
+//
+//   - A "needs your vote" list. The first card counts the NEW takes you have
+//     not voted on, which is a fact about what just arrived; the full count
+//     lives on `/me`.
+//   - Takes nested under each recent event. Opening the event reaches them.
+//   - `claimTakeTransition` / `<TakeTransitionRetarget />`. One take can still
+//     appear only once on this page (the plates are the only take links), so
+//     no `view-transition-name` is ever assigned twice.
+import { formatDayMonth, formatDuration, formatShortDate, messages } from "@bandplate/i18n";
+import { stashName } from "../client/stash-display.js";
 import EventLedger from "../components/EventLedger.astro";
 import PinnedPlate from "../components/PinnedPlate.astro";
 import AppLayout from "../layouts/AppLayout.astro";
 import { getAppDeps } from "../server/app.js";
 import { eventName } from "../server/format.js";
-import { getHomeData, pinnedKindWord } from "../server/pages/home.js";
+import { getHomeData } from "../server/pages/home.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -37,158 +42,241 @@ if (!principal) {
 }
 
 const appDeps = await getAppDeps();
-const { pinned, recentEvents, stashCount } = await getHomeData(appDeps.db, principal.memberId);
+const { onTheStand, pinned, recentEvents, stash } = await getHomeData(
+  appDeps.db,
+  principal.memberId,
+);
 
-// The most recently pinned thing leads the page — "back to" whatever you were
-// last on. The rest follow in the rail beneath it.
 const locale = Astro.locals.locale;
 const t = messages(locale);
 
-const [hero, ...rail] = pinned;
+// --- Na pultu -------------------------------------------------------------
 
-// The hero's link is now an overlay with no text inside it, so it has to name
-// itself. Built from the same parts the visible heading and meta line show.
-const heroAccessibleName = hero
-  ? hero.kind === "take"
-    ? t.home.heroName({ name: hero.song?.title ?? t.home.untitledTake, kind: t.home.takeWord })
-    : hero.kind === "song"
-      ? t.home.heroName({ name: hero.song.title, kind: t.home.songWord })
-      : t.home.heroName({
-          name: formatShortDate(locale, hero.event.heldAt),
-          kind: pinnedKindWord(hero, locale),
-        })
-  : "";
-
-/** What the hero says under its title: the event it came from, then the date,
- *  on separate lines. No running time — this is an invitation back to a take,
- *  not a spec sheet. */
-function heroLines(item: typeof hero): string[] {
-  if (!item) {
-    return [];
+// The card's title: the event's own name, or, for the common untitled
+// rehearsal, its kind and its day ("Zkouška 13. září"). The ledger says
+// "Bez názvu" in that case, but a card's title has to be a name you could
+// say out loud.
+function standTitle(event: NonNullable<typeof onTheStand>["event"]): string {
+  const named = eventName(event, null);
+  if (named) {
+    return named;
   }
-  if (item.kind === "take") {
-    // A personal take's event has no name of its own, and the kind beside it
-    // here says "Take", not whose: so the line says both.
-    const name = !item.event
-      ? ""
-      : item.event.kind === "personal"
-        ? item.ownerName
-          ? t.events.personalOf(item.ownerName)
-          : ""
-        : eventName(item.event, null);
-    return [name, formatShortDate(locale, item.take.recordedAt)].filter(Boolean);
-  }
-  if (item.kind === "song") {
-    return [t.events.takeCount(item.takeCount)];
-  }
-  // An untitled event IS its date — that is what the plate's label and the
-  // title both say — so repeating it underneath told the member nothing twice.
-  // What it has instead is a count.
-  const name = eventName(item.event, item.ownerName);
-  const count = t.events.takeCount(item.takeCount);
-  return name ? [name, formatShortDate(locale, item.event.heldAt)] : [count];
+  const kind = t.events.kindLabel(event.kind);
+  return t.home.unnamedEventTitle({
+    kind: kind.charAt(0).toLocaleUpperCase(locale) + kind.slice(1),
+    date: formatDayMonth(locale, event.heldAt),
+  });
 }
+
+const stand = onTheStand
+  ? {
+      id: onTheStand.event.id,
+      title: standTitle(onTheStand.event),
+      line: t.home.newTakesLine({
+        takes: t.events.takeCount(onTheStand.takes.length),
+        unvoted: onTheStand.unvotedCount,
+      }),
+      unvoted: onTheStand.unvotedCount,
+      // Only takes with a ready master can be queued. A new take still
+      // uploading is counted in the line above but has nothing to play yet.
+      queue: onTheStand.takes.flatMap(({ take, song, playableAssetId }) =>
+        playableAssetId
+          ? [{ takeId: take.id, assetId: playableAssetId, title: song?.title ?? t.home.untitled }]
+          : [],
+      ),
+    }
+  : undefined;
+
+// --- Rozpracované -----------------------------------------------------------
+
+const stashCard = stash
+  ? {
+      count: stash.count,
+      name: stashName(
+        {
+          songId: stash.latest.songId,
+          songTitle: stash.latestSong?.title,
+          label: stash.latest.label,
+        },
+        { noSong: t.stash.noSongYet, unknownSong: t.stash.unknownSong },
+      ),
+      when:
+        stash.latest.durationMs != null
+          ? t.home.stashLatestWhen({
+              date: formatShortDate(locale, stash.latest.recordedAt),
+              length: formatDuration(stash.latest.durationMs),
+            })
+          : formatShortDate(locale, stash.latest.recordedAt),
+    }
+  : undefined;
 ---
 
 <AppLayout title={t.home.title} principal={principal} current="home">
   <div class="bp-home">
-    <section class="bp-home-pinned">
-      {/* The page's h1. The shelf had no name at all — the hero title named
-          the ONE thing on it, which left the rail beside it looking like
-          loose stock rather than the rest of a list. "Favorites" is the word
-          the star means everywhere else in the app. */}
-      <h1 class="bp-section-title">{t.home.favorites}</h1>
-      {
-        hero ? (
-          <>
-            {/* One link, not two. The plate and the title point at the same
-                thing, so they hover, focus and click together — the plate was
-                lifting on its own while the words beside it sat inert. The
-                link is an overlay rather than the wrapper, so the plate's play
-                button can sit above it instead of inside it (see
-                `PinnedPlate.astro`). */}
-            <div class="bp-pinned-hero">
-              <a
-                class="bp-plate-hit"
-                aria-label={heroAccessibleName}
-                href={hero.kind === "take" ? `/takes/${hero.id}` : hero.kind === "song" ? `/songs/${hero.song.slug}` : `/events/${hero.id}`}
-              />
-              <PinnedPlate item={hero} size="hero" interactive={false} />
-              <div class="bp-pinned-hero-text">
-                <p class="bp-eyebrow bp-pinned-hero-eyebrow bp-m0">{t.home.backTo}</p>
-                <h2 class="bp-pinned-hero-title bp-m0">
-                  {hero.kind === "take"
-                    ? (hero.song?.title ?? t.home.untitledTake)
-                    : hero.kind === "song"
-                      ? hero.song.title
-                      : formatShortDate(locale, hero.event.heldAt)}
-                </h2>
-                {/* The kind leads the meta line, exactly as it does on the
-                    rail plates below — the hero was the one pinned thing on the
-                    page that never said whether it was a song, a take or an
-                    event. */}
-                <p class="bp-pinned-hero-meta bp-m0">
-                  <span class="bp-kind">{pinnedKindWord(hero, locale)}</span>
-                  <span class="bp-pinned-hero-sep" aria-hidden="true" />
-                  <span>
-                    {heroLines(hero).map((line, i) => (
-                      <>
-                        {i > 0 && <br />}
-                        {line}
-                      </>
-                    ))}
-                  </span>
-                </p>
-              </div>
+    {/* Every section is headed by an h2; the page's own h1 is the page's
+        name, read out but not drawn, since the sidebar already says where you
+        are. */}
+    <h1 class="bp-visually-hidden">{t.home.title}</h1>
+
+    {
+      stand && (
+        <section class="bp-home-section" aria-labelledby="home-stand-heading">
+          <h2 id="home-stand-heading" class="bp-section-title bp-home-heading">
+            {t.home.onTheStand}
+          </h2>
+          <div class="bp-stand">
+            <p class="bp-eyebrow bp-stand-eyebrow">
+              <span class="bp-stand-dot" aria-hidden="true" />
+              {t.home.newSinceLastVisit}
+            </p>
+            <div class="bp-stand-head">
+              <h3 class="bp-stand-title">
+                <a href={`/events/${stand.id}`}>{stand.title}</a>
+              </h3>
+              <p class="bp-stand-line">{stand.line}</p>
             </div>
-            {rail.length > 0 && (
-              /* The wrapper exists only to hang the scroll fades on — the rail
-                 itself is the scroll container, and a pseudo-element on it
-                 would scroll away with the content. */
-              <div class="bp-pinned-rail-wrap">
-                <div class="bp-pinned-rail">
-                  {rail.map((item) => (
-                    <PinnedPlate item={item} size="rail" />
-                  ))}
-                </div>
+            {(stand.queue.length > 0 || stand.unvoted > 0) && (
+              <div class="bp-stand-actions">
+                {/* The event page's own play-all: `Player.tsx` reads the
+                    queue out of the element this names. The queue is the
+                    NEW takes, the ones the line above counts. */}
+                {stand.queue.length > 0 && (
+                  <button
+                    type="button"
+                    class="bp-pill bp-pill--action bp-stand-play"
+                    data-play-queue-start="home-new-takes"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M7 4.5v15l13-7.5z" />
+                    </svg>
+                    {t.events.playAll}
+                  </button>
+                )}
+                {/* `/takes?unvoted=1` has no event filter, so this goes to
+                    the event, which lists exactly these takes; each one's
+                    vote is on its own page, one tap from there. */}
+                {stand.unvoted > 0 && (
+                  <a href={`/events/${stand.id}`} class="bp-pill bp-pill--action bp-stand-vote">
+                    {t.home.voteCount(stand.unvoted)}
+                  </a>
+                )}
               </div>
             )}
-          </>
-        ) : (
+            {/* The play-all queue, as data only. Not buttons: nothing here is
+                pressed, and a row of hidden controls would be focusable
+                nothing. The attributes are the ones every play toggle
+                carries, which is all `readQueueIn` looks at. */}
+            {stand.queue.length > 0 && (
+              <div id="home-new-takes" hidden>
+                {stand.queue.map((item) => (
+                  <span
+                    data-audio-source
+                    data-take-id={item.takeId}
+                    data-asset-id={item.assetId}
+                    data-title={item.title}
+                    data-subtitle={stand.title}
+                    data-source-kind="master"
+                    data-role="toggle"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )
+    }
+
+    <section class="bp-home-section" aria-labelledby="home-progress-heading">
+      <h2 id="home-progress-heading" class="bp-section-title bp-home-heading">
+        {t.home.inProgress}
+      </h2>
+      {
+        pinned.length === 0 && !stashCard ? (
           <div class="bp-empty-state">
             <p>
               <strong>{t.home.emptyPinnedLead}</strong> {t.home.emptyPinnedBody}{" "}
               <a href="/takes">{t.home.emptyPinnedLink}</a> {t.home.emptyPinnedTail}
             </p>
           </div>
+        ) : (
+          <div class="bp-progress">
+            {pinned.length > 0 && (
+              /* The wrapper exists only to hang the scroll fades on — the row
+                 itself is the scroll container, and a pseudo-element on it
+                 would scroll away with the content. */
+              <div class="bp-pinned-rail-wrap">
+                <div class="bp-pinned-rail">
+                  {pinned.map((item) => (
+                    <PinnedPlate item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {stashCard && (
+              <div class="bp-stash-card">
+                <h3 class="bp-stash-card-title">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M4 5h16v6H4z" />
+                    <path d="M4 13h16v6H4z" />
+                    <path d="M10 8h4M10 16h4" />
+                  </svg>
+                  <span>
+                    {t.stash.pill}{" "}<span class="bp-title-count">({stashCard.count})</span>
+                  </span>
+                </h3>
+                <div class="bp-stash-card-latest">
+                  <p class="bp-stash-card-name">{stashCard.name}</p>
+                  <p class="bp-stash-card-meta">{stashCard.when}</p>
+                </div>
+                <div class="bp-pills">
+                  <a href="/takes?stash=1" class="bp-pill bp-pill--action">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 5h16v6H4z" />
+                      <path d="M4 13h16v6H4z" />
+                      <path d="M10 8h4M10 16h4" />
+                    </svg>
+                    {t.stash.openStash}
+                  </a>
+                  <a
+                    href="/record"
+                    class="bp-pill bp-pill--action bp-record-btn bp-pill--record"
+                    data-astro-reload
+                  >
+                    <span class="bp-record-mark" aria-hidden="true" />
+                    {t.stash.recordIdea}
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
         )
       }
     </section>
 
-    <section class="bp-home-ledger">
-      {stashCount > 0 && <h2 class="bp-section-title">{t.stash.homeHeading(stashCount)}</h2>}
-      {stashCount > 0 && (
-        <a href="/takes?stash=1" class="bp-pill bp-pill--action bp-home-stash">
-          <svg
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M4 5h16v6H4z" />
-          <path d="M4 13h16v6H4z" />
-          <path d="M10 8h4M10 16h4" />
-        </svg>
-          {t.stash.showStash}
-          <span class="bp-pill-count">{stashCount}</span>
-        </a>
-      )}
-      <h2 class="bp-section-title">{t.home.recentEvents}</h2>
+    <section class="bp-home-section" aria-labelledby="home-events-heading">
+      <h2 id="home-events-heading" class="bp-section-title bp-home-heading">
+        {t.home.recentEvents}
+      </h2>
       {
         recentEvents.length === 0 ? (
           <div class="bp-empty-state">

@@ -14,21 +14,15 @@ import { formatShortDate, messages, playerMessages } from "@bandplate/i18n";
 import { eventName } from "../server/format.js";
 import { type PinnedItem, pinnedKindWord } from "../server/pages/home.js";
 
+// One size. Home used to lead with a large "hero" plate beside a title and put
+// the rest in a rail of smaller ones; the split read as two unrelated things,
+// so every pin is now the same plate in one row (sized in CSS, smaller on a
+// phone), each carrying its own link and caption.
 export interface Props {
   item: PinnedItem;
-  /** `hero` is the page's lead plate; `rail` is one of the small ones under it. */
-  size: "hero" | "rail";
-  /**
-   * Whether the plate carries its own link. `false` for the hero, where the
-   * plate and the title beside it point at the same thing and must hover,
-   * focus and click as ONE target — two adjacent links to the same place is
-   * two tab stops and two hover states. The hero's own wrapper carries the
-   * link instead, and this renders only the disc.
-   */
-  interactive?: boolean;
 }
 
-const { item, size, interactive = true } = Astro.props;
+const { item } = Astro.props;
 
 const href =
   item.kind === "take"
@@ -85,7 +79,7 @@ const playTitle = item.kind === "take" ? (item.song?.title ?? t.home.untitled) :
 const playSubtitle = item.kind === "take" ? (item.take.label ?? detail) : "";
 ---
 
-<div class={`bp-plate bp-plate--${size} bp-plate--${labelTone}`}>
+<div class={`bp-plate bp-plate--${labelTone}`}>
   {/* The link is an OVERLAY, not the wrapper.
       A plate used to be one big `<a>`, which made the play badge inside it
       decoration — clicking it could only ever navigate, because a `<button>`
@@ -93,7 +87,7 @@ const playSubtitle = item.kind === "take" ? (item.take.label ?? detail) : "";
       of the shelf, so the anchor moves to a layer of its own and the badge
       becomes a real control on top of it. One link and one button, siblings,
       no nesting. */}
-  {interactive && <a class="bp-plate-hit" href={href} aria-label={accessibleName} />}
+  <a class="bp-plate-hit" href={href} aria-label={accessibleName} />
   <span class="bp-plate-disc" aria-hidden={playable ? undefined : "true"}>
     <span class="bp-plate-label" aria-hidden="true">
       {label}
@@ -146,13 +140,9 @@ const playSubtitle = item.kind === "take" ? (item.take.label ?? detail) : "";
         </button>
       )
     }
-  {
-    size === "rail" && (
-      <span class="bp-plate-caption" aria-hidden="true">
-        <span class="bp-kind">{kindWord}</span>
-        <span class="bp-plate-caption-sep" />
-        <span>{detail}</span>
-      </span>
-    )
-  }
+  <span class="bp-plate-caption" aria-hidden="true">
+    <span class="bp-kind">{kindWord}</span>
+    <span class="bp-plate-caption-sep" />
+    <span>{detail}</span>
+  </span>
 </div>

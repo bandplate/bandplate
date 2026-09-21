@@ -1,5 +1,6 @@
-// `/` composition logic — the two home sections (the pinned list and the
-// event ledger), exercised against a real test database (not over HTTP —
+// `/` composition logic — the three home sections (what is new, the pinned
+// list with the stash, and the event ledger), exercised against a real test
+// database (not over HTTP —
 // `home-search-me-takes.route.test.ts` covers the actual route). Same split
 // as `songs.test.ts`/`events.test.ts`.
 //
@@ -14,6 +15,7 @@ import {
   membersRepo,
   songsRepo,
   takesRepo,
+  votesRepo,
 } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -306,28 +308,205 @@ describe("getHomeData", () => {
     expect(recentEvents[0]?.takeCount).toBe(0);
   });
 
-  it("says how many recordings are waiting in this member's stash", async () => {
-    expect((await getHomeData(db, memberId)).stashCount).toBe(0);
-    const song = await songsRepo.create(db, { title: "S", slug: "s", createdAt: 1, updatedAt: 1 });
-    const event = await eventsRepo.findOrCreatePersonal(db, {
-      memberId,
-      dayKey: "2026-09-19",
-      heldAt: 1,
-      now: 1,
+  describe("the stash card", () => {
+    async function stashTake(ownerId: string, recordedAt: number, label: string | null = null) {
+      const event = await eventsRepo.findOrCreatePersonal(db, {
+        memberId: ownerId,
+        dayKey: `2026-09-${String(10 + (recordedAt % 10)).padStart(2, "0")}`,
+        heldAt: recordedAt,
+        now: recordedAt,
+      });
+      return takesRepo.create(db, {
+        eventId: event.id,
+        recordedAt,
+        durationMs: 47_000,
+        label,
+        visibility: "private",
+        ownerMemberId: ownerId,
+        createdAt: recordedAt,
+        updatedAt: recordedAt,
+      });
+    }
+
+    it("is absent while the stash is empty", async () => {
+      expect((await getHomeData(db, memberId)).stash).toBeUndefined();
     });
-    await takesRepo.create(db, {
-      songId: song.id,
-      eventId: event.id,
-      recordedAt: 1,
-      visibility: "private",
-      ownerMemberId: memberId,
-      createdAt: 1,
-      updatedAt: 1,
+
+    it("counts this member's recordings and names the latest", async () => {
+      await stashTake(memberId, 1, "První");
+      const latest = await stashTake(memberId, 2, "Nápad do mezihry");
+      const data = await getHomeData(db, memberId);
+      expect(data.stash?.count).toBe(2);
+      expect(data.stash?.latest.id).toBe(latest.id);
+      // The personal day it sits in is not a recent event either.
+      expect(data.recentEvents).toEqual([]);
     });
-    const data = await getHomeData(db, memberId);
-    expect(data.stashCount).toBe(1);
-    // …and the personal day it sits in is not a recent event.
-    expect(data.recentEvents).toEqual([]);
+
+    it("never counts or shows another member's stash", async () => {
+      const other = await membersRepo.create(db, {
+        displayName: "Filip",
+        slug: "filip-stash",
+        email: "filip-stash@example.com",
+        createdAt: 1,
+      });
+      await stashTake(other.id, 5, "Filipův nápad");
+      expect((await getHomeData(db, memberId)).stash).toBeUndefined();
+
+      const mine = await stashTake(memberId, 3, "Můj");
+      const data = await getHomeData(db, memberId);
+      expect(data.stash?.count).toBe(1);
+      // Filip's is newer, and still not the one named.
+      expect(data.stash?.latest.id).toBe(mine.id);
+    });
+  });
+
+  describe("Na pultu: new since your last visit", () => {
+    const HOUR = 60 * 60 * 1000;
+    const DAY = 24 * HOUR;
+    const NOW = Date.UTC(2026, 8, 21, 18, 0, 0);
+
+    let songId: string;
+
+    beforeEach(async () => {
+      // A member who joined long ago, so the first visit's floor is the
+      // 14-day window rather than their joining.
+      const member = await membersRepo.create(db, {
+        displayName: "Stand Member",
+        slug: "stand-member",
+        email: "stand-member@example.com",
+        createdAt: NOW - 400 * DAY,
+      });
+      memberId = member.id;
+      const song = await songsRepo.create(db, {
+        title: "Neon Skyline",
+        slug: "neon-skyline-stand",
+        createdAt: NOW - 400 * DAY,
+        updatedAt: NOW - 400 * DAY,
+      });
+      songId = song.id;
+    });
+
+    async function bandEvent(
+      heldAt: number,
+      extra: { title?: string; kind?: "rehearsal" | "concert" } = {},
+    ) {
+      return eventsRepo.create(db, {
+        kind: extra.kind ?? "rehearsal",
+        heldAt,
+        title: extra.title,
+        createdAt: heldAt,
+        updatedAt: heldAt,
+      });
+    }
+
+    async function publishedTake(
+      eventId: string,
+      publishedAt: number,
+      extra: { ownerMemberId?: string } = {},
+    ) {
+      const take = await takesRepo.create(db, {
+        songId,
+        eventId,
+        recordedAt: publishedAt - HOUR,
+        createdAt: publishedAt - HOUR,
+        updatedAt: publishedAt - HOUR,
+        ownerMemberId: extra.ownerMemberId ?? null,
+      });
+      await takesRepo.setStateWithPublishedAt(db, take.id, "published", publishedAt, publishedAt);
+      return take;
+    }
+
+    it("is absent when nothing was published since the last visit", async () => {
+      const event = await bandEvent(NOW - 30 * DAY);
+      await publishedTake(event.id, NOW - 20 * DAY);
+      expect((await getHomeData(db, memberId, NOW)).onTheStand).toBeUndefined();
+    });
+
+    it("leads with the newest band event, counting its new takes and the unvoted among them", async () => {
+      const older = await bandEvent(NOW - 5 * DAY);
+      await publishedTake(older.id, NOW - 4 * DAY);
+      const newest = await bandEvent(NOW - 2 * DAY, { title: "Zkouška na Attic" });
+      const a = await publishedTake(newest.id, NOW - DAY);
+      await publishedTake(newest.id, NOW - DAY + 1);
+      await publishedTake(newest.id, NOW - DAY + 2);
+      await votesRepo.castVote(db, { takeId: a.id, memberId, keeper: true, now: NOW - HOUR });
+
+      const { onTheStand } = await getHomeData(db, memberId, NOW);
+      expect(onTheStand?.event.id).toBe(newest.id);
+      expect(onTheStand?.takes).toHaveLength(3);
+      expect(onTheStand?.unvotedCount).toBe(2);
+    });
+
+    it("stays up for the whole visit, and goes once the next visit starts", async () => {
+      const event = await bandEvent(NOW - 2 * DAY);
+      await publishedTake(event.id, NOW - DAY);
+
+      expect((await getHomeData(db, memberId, NOW)).onTheStand?.event.id).toBe(event.id);
+      // A reload twenty minutes later is the same visit: still new.
+      expect((await getHomeData(db, memberId, NOW + 20 * 60 * 1000)).onTheStand?.event.id).toBe(
+        event.id,
+      );
+      // An hour later a new visit starts, measured from the first one's start,
+      // and the take was published before that.
+      expect((await getHomeData(db, memberId, NOW + HOUR)).onTheStand).toBeUndefined();
+    });
+
+    it("shows what was published between two visits", async () => {
+      await getHomeData(db, memberId, NOW);
+      const event = await bandEvent(NOW + 2 * HOUR);
+      await publishedTake(event.id, NOW + 3 * HOUR);
+      expect((await getHomeData(db, memberId, NOW + 5 * HOUR)).onTheStand?.event.id).toBe(event.id);
+    });
+
+    it("never leads with a personal day, even one newer than every band event", async () => {
+      const band = await bandEvent(NOW - 3 * DAY);
+      await publishedTake(band.id, NOW - 2 * DAY);
+      const filip = await membersRepo.create(db, {
+        displayName: "Filip",
+        slug: "filip-stand",
+        email: "filip-stand@example.com",
+        createdAt: 1,
+      });
+      const personal = await eventsRepo.findOrCreatePersonal(db, {
+        memberId: filip.id,
+        dayKey: "2026-09-21",
+        heldAt: NOW - HOUR,
+        now: NOW - HOUR,
+      });
+      // Added to its song, so it is band-visible and published.
+      await publishedTake(personal.id, NOW - 30 * 60 * 1000, { ownerMemberId: filip.id });
+
+      const { onTheStand } = await getHomeData(db, memberId, NOW);
+      expect(onTheStand?.event.id).toBe(band.id);
+    });
+
+    it("ignores private takes, and does not ask for a vote on a personal recording", async () => {
+      const event = await bandEvent(NOW - 2 * DAY);
+      await publishedTake(event.id, NOW - DAY);
+      // A personal recording published into a band event: counted as new,
+      // never votable.
+      const filip = await membersRepo.create(db, {
+        displayName: "Filip",
+        slug: "filip-votable",
+        email: "filip-votable@example.com",
+        createdAt: 1,
+      });
+      await publishedTake(event.id, NOW - DAY + 1, { ownerMemberId: filip.id });
+      // A stash take in the same event: invisible, and not counted.
+      const hidden = await takesRepo.create(db, {
+        eventId: event.id,
+        recordedAt: NOW - DAY,
+        visibility: "private",
+        ownerMemberId: filip.id,
+        createdAt: NOW - DAY,
+        updatedAt: NOW - DAY,
+      });
+      await takesRepo.setStateWithPublishedAt(db, hidden.id, "published", NOW - DAY + 2, NOW);
+
+      const { onTheStand } = await getHomeData(db, memberId, NOW);
+      expect(onTheStand?.takes).toHaveLength(2);
+      expect(onTheStand?.unvotedCount).toBe(1);
+    });
   });
 
   describe("a personal recording names whose it is", () => {

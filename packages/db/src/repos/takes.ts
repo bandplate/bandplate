@@ -5,17 +5,20 @@ import {
   asc,
   desc,
   eq,
+  gt,
   gte,
   inArray,
   isNotNull,
   isNull,
   lte,
+  ne,
   notInArray,
   or,
   sql,
 } from "drizzle-orm";
 import type { Db } from "../client.js";
 import {
+  events,
   assets,
   favorites,
   instruments,
@@ -959,6 +962,108 @@ export async function countStash(
     .select({ value: sql<number>`count(*)` })
     .from(takes)
     .where(and(...stashConditions(memberId, options)));
+  return rows[0]?.value ?? 0;
+}
+
+/**
+ * The latest recording in one member's stash, or undefined when it is empty —
+ * home's stash card names it. Same conditions and order as `listStash`, one row.
+ */
+export async function latestStash(db: Db, memberId: string): Promise<Take | undefined> {
+  const [row] = await db
+    .select()
+    .from(takes)
+    .where(and(...stashConditions(memberId, {})))
+    .orderBy(desc(takes.recordedAt), desc(takes.id))
+    .limit(1);
+  return row;
+}
+
+// ---------------------------------------------------------------------------
+// new since a moment (home's "Na pultu")
+// ---------------------------------------------------------------------------
+
+/**
+ * A take the band can hear that went out after `since`: band-visible, in a
+ * published state, with a `publishedAt` past the moment, in a live band event.
+ * A personal day never counts, even for a take its owner added to a song: the
+ * card is about what the BAND recorded.
+ */
+function publishedSinceConditions(since: number): SQL[] {
+  return [
+    bandVisibleCondition(),
+    inArray(takes.state, ["published", "keeper"]),
+    gt(takes.publishedAt, since),
+    ne(events.kind, "personal"),
+    isNull(events.archivedAt),
+  ];
+}
+
+/**
+ * The newest band event (by when it was held) that has at least one take
+ * published after `since`, or undefined when nothing is new.
+ */
+export async function newestEventWithTakesPublishedSince(
+  db: Db,
+  since: number,
+): Promise<string | undefined> {
+  const [row] = await db
+    .select({ eventId: events.id })
+    .from(takes)
+    .innerJoin(events, eq(events.id, takes.eventId))
+    .where(and(...publishedSinceConditions(since)))
+    .groupBy(events.id)
+    .orderBy(desc(events.heldAt), desc(events.id))
+    .limit(1);
+  return row?.eventId;
+}
+
+/** One event's takes published after `since`, in recorded order (the event page's order). */
+export async function listPublishedSinceInEvent(
+  db: Db,
+  eventId: string,
+  since: number,
+): Promise<Take[]> {
+  const rows = await db
+    .select({ take: takes })
+    .from(takes)
+    .innerJoin(events, eq(events.id, takes.eventId))
+    .where(and(eq(takes.eventId, eventId), ...publishedSinceConditions(since)))
+    .orderBy(asc(takes.recordedAt), asc(takes.id))
+    .limit(DEFAULT_TAKE_LIST_CAP);
+  return rows.map((row) => row.take);
+}
+
+/**
+ * Of those same takes, how many this member is being asked to judge and has
+ * not: the rule `listUnvotedByMember` applies (published, votable, no vote of
+ * theirs). Scoped by the event and the moment rather than by a list of take
+ * ids, so it binds a handful of parameters however many takes are new — D1
+ * caps a statement at 100.
+ */
+export async function countUnvotedPublishedSinceInEvent(
+  db: Db,
+  memberId: string,
+  eventId: string,
+  since: number,
+): Promise<number> {
+  const votedTakeIds = db
+    .select({ takeId: votes.takeId })
+    .from(votes)
+    .where(eq(votes.memberId, memberId));
+  const rows = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(takes)
+    .innerJoin(events, eq(events.id, takes.eventId))
+    .where(
+      and(
+        eq(takes.eventId, eventId),
+        ...publishedSinceConditions(since),
+        eq(takes.state, "published"),
+        votableCondition(),
+        notInArray(takes.id, votedTakeIds),
+      ),
+    );
   return rows[0]?.value ?? 0;
 }
 

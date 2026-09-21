@@ -54,8 +54,12 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // An event kind this map has never heard of passes straight through in
   // every language — that is the point. See `en/events.ts`.
   "events.kindLabel(unknown)",
-  // Both languages join a name and a kind with an em dash here.
-  "home.heroName(parts)",
+  // A date and a running time joined by a comma: the date is already in the
+  // reader's language, and a comma is a comma.
+  "home.stashLatestWhen(parts)",
+  // With nothing left to vote on, the line is just the take count, which the
+  // caller already rendered in the reader's language.
+  "home.newTakesLine(voted)",
   // An event plate's name is already its own label plus its own count —
   // there is no English word in it to translate.
   "home.plateEventName(parts)",
@@ -89,11 +93,6 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "many", args: [5] },
   ],
   "stash.recordFor": [{ label: "t", args: ["Čoudy"] }],
-  "stash.homeHeading": [
-    { label: "one", args: [1] },
-    { label: "few", args: [3] },
-    { label: "many", args: [15] },
-  ],
   "stash.pageTitle": [{ label: "t", args: ["Čoudy"] }],
   "stash.songAndLength": [{ label: "t", args: ["Čoudy", "2:47"] }],
   "stash.personalEvent": [{ label: "d", args: ["19. 9. 2026"] }],
@@ -155,7 +154,13 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "one", args: [{ takeCount: 1 }] },
     { label: "many", args: [{ takeCount: 6 }] },
   ],
-  "home.heroName": [{ label: "parts", args: [{ name: "Čoudy", kind: "take" }] }],
+  "home.unnamedEventTitle": [{ label: "parts", args: [{ kind: "Zkouška", date: "13. září" }] }],
+  "home.newTakesLine": [
+    { label: "voted", args: [{ takes: "3 nahrávky", unvoted: 0 }] },
+    { label: "unvoted", args: [{ takes: "3 nahrávky", unvoted: 2 }] },
+  ],
+  "home.voteCount": [{ label: "n", args: [2] }],
+  "home.stashLatestWhen": [{ label: "parts", args: [{ date: "21. 9. 2026", length: "0:47" }] }],
   "common.editingSheet": [{ label: "n", args: ["Čoudy"] }],
   "voting.favoriteAdd": [{ label: "n", args: ["Čoudy"] }],
   "voting.favoriteRemove": [{ label: "n", args: ["Čoudy"] }],

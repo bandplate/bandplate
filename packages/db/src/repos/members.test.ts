@@ -291,3 +291,73 @@ describe("members.getByIds", () => {
     expect(await members.getByIds(db, [])).toEqual([]);
   });
 });
+
+describe("members.startHomeVisit", () => {
+  let db: Db;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  it("a new member has never visited home", async () => {
+    const m = await members.create(db, {
+      displayName: "A",
+      slug: "a",
+      email: "a@example.com",
+      createdAt: 1,
+    });
+    expect(m.homeVisitStartedAt).toBeNull();
+    expect(m.homeLastVisitAt).toBeNull();
+  });
+
+  it("the bootstrap admin's positional insert leaves both visit columns empty", async () => {
+    const admin = await members.createIfEmpty(db, {
+      displayName: "Admin",
+      slug: "admin",
+      email: "admin@example.com",
+      createdAt: 1,
+    });
+    expect(admin?.locale).toBe("en");
+    expect(admin?.homeVisitStartedAt).toBeNull();
+    expect(admin?.homeLastVisitAt).toBeNull();
+  });
+
+  it("moves the old visit's start into the last visit, in one write", async () => {
+    const m = await members.create(db, {
+      displayName: "A",
+      slug: "a",
+      email: "a@example.com",
+      createdAt: 1,
+    });
+    expect(
+      await members.startHomeVisit(db, m.id, { previousStartedAt: null, startedAt: 100 }),
+    ).toBe(true);
+    expect(
+      await members.startHomeVisit(db, m.id, { previousStartedAt: 100, startedAt: 5000 }),
+    ).toBe(true);
+    const after = await members.getById(db, m.id);
+    expect(after?.homeVisitStartedAt).toBe(5000);
+    expect(after?.homeLastVisitAt).toBe(100);
+  });
+
+  it("refuses a write decided on a start that has since moved", async () => {
+    // Two tabs read the same start; the second to write must not copy the
+    // first tab's brand-new start into the last visit.
+    const m = await members.create(db, {
+      displayName: "A",
+      slug: "a",
+      email: "a@example.com",
+      createdAt: 1,
+    });
+    await members.startHomeVisit(db, m.id, { previousStartedAt: null, startedAt: 100 });
+    expect(
+      await members.startHomeVisit(db, m.id, { previousStartedAt: 100, startedAt: 5000 }),
+    ).toBe(true);
+    expect(
+      await members.startHomeVisit(db, m.id, { previousStartedAt: 100, startedAt: 5001 }),
+    ).toBe(false);
+    const after = await members.getById(db, m.id);
+    expect(after?.homeVisitStartedAt).toBe(5000);
+    expect(after?.homeLastVisitAt).toBe(100);
+  });
+});

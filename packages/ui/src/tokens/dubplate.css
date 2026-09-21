@@ -193,6 +193,17 @@
      without touching component CSS. */
   --bp-plate-vinyl: #17100a;
   --bp-plate-label-bone: #e8dcc6;
+
+  /* ---- the stand ----
+     Home's "Na pultu" card: the one strong call to action on the page, drawn
+     as a dark sleeve on the bone ground. Its ink is fixed for the same reason
+     the plate label's is: the card is dark in both themes. In the dark theme
+     the ground is already that dark, so the card lifts a step and takes an
+     edge (see the dark blocks). Muted ink on the card: 9.5:1 light, 9.3:1 dark. */
+  --bp-stand: #1c120b;
+  --bp-stand-edge: transparent;
+  --bp-stand-fg: #efe3cf;
+  --bp-stand-muted: #cbb89c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -235,6 +246,8 @@
        grooves disappeared with it. In the light theme the same disc separates
        from bone on its own, so only dark needs the lift. */
     --bp-plate-vinyl: #2a1a0e;
+    --bp-stand: var(--bp-sleeve);
+    --bp-stand-edge: var(--bp-groove);
   }
 }
 
@@ -273,4 +286,6 @@
 
   /* See the `prefers-color-scheme` block above. */
   --bp-plate-vinyl: #2a1a0e;
+  --bp-stand: var(--bp-sleeve);
+  --bp-stand-edge: var(--bp-groove);
 }

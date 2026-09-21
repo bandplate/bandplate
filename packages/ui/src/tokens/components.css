@@ -5024,14 +5024,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-muted);
 }
 
-.bp-pinned-hero-sep {
-  display: inline-block;
-  width: 1px;
-  height: 0.6875rem;
-  flex: none;
-  background: var(--bp-color-border);
-}
-
 .bp-take-strip {
   padding: 1.625rem 0 0;
 }
@@ -6715,16 +6707,226 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Home — plates and a ledger. The page's two sections deliberately share  */
-/* no type size, no leading element and no row shape: pinned things are    */
-/* OBJECTS you reach for, recent events are a CHRONOLOGY. When both were   */
-/* the same take row, home read as one long undifferentiated list.         */
+/* Home — three sections in one reading order, the same on every width:   */
+/* what is new (one card), what you are working on (plates and the stash), */
+/* and what the band recorded (the ledger). Width only ever puts things    */
+/* side by side WITHIN a section; it never splits the page into two        */
+/* columns, which is what made the previous home read as scattered.        */
 /* ---------------------------------------------------------------------- */
 
 .bp-home {
   display: flex;
   flex-direction: column;
-  gap: 2.25rem;
+  gap: 2.5rem;
+}
+
+.bp-home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* A section heading with a hairline under it. The rule is what marks where
+   one question ends and the next begins; no number and no tagline. */
+.bp-home-heading {
+  margin: 0;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--bp-color-border);
+}
+
+/* --- 1. Na pultu ----------------------------------------------------- */
+
+/* The one strong call to action on the page, so the one dark card: a record
+   sleeve on the bone ground. In the dark theme the page is already that dark,
+   so the card lifts a step and takes an edge instead (see `--bp-stand`). */
+.bp-stand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.25rem;
+  border: 1px solid var(--bp-stand-edge);
+  border-radius: 1.25rem;
+  background: var(--bp-stand);
+  color: var(--bp-stand-fg);
+}
+
+.bp-stand-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  color: var(--bp-color-accent-gold);
+}
+
+.bp-stand-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--bp-color-accent-gold);
+}
+
+.bp-stand-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.bp-stand-title {
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.625rem;
+  line-height: 1.05;
+  overflow-wrap: break-word;
+}
+
+.bp-stand-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.bp-stand-title a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+.bp-stand-line {
+  margin: 0;
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-stand-muted);
+}
+
+.bp-stand-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+/* Both declared with the card in front, so they outrank `.bp-pill:hover`
+   (same specificity, earlier in this file) by specificity rather than by
+   source order. Gold on the dark card is the page's primary action; the
+   second is a quiet tint of the card's own ink. */
+.bp-stand .bp-stand-play {
+  padding-inline: 1.125rem;
+  background: var(--bp-color-accent-gold);
+  color: var(--bp-lacquer);
+  font-weight: 700;
+}
+
+.bp-stand .bp-stand-play:hover {
+  background: var(--bp-color-accent-gold);
+  filter: brightness(1.08);
+}
+
+.bp-stand .bp-stand-vote {
+  padding-inline: 1.125rem;
+  background: color-mix(in srgb, var(--bp-stand-fg) 12%, transparent);
+  color: var(--bp-stand-fg);
+}
+
+.bp-stand .bp-stand-vote:hover {
+  background: color-mix(in srgb, var(--bp-stand-fg) 20%, transparent);
+}
+
+/* The app's focus ring is the accent, which in the light theme is a dark
+   brown: on this card it would be invisible. Gold is what the card already
+   uses for "this one". */
+.bp-stand :focus-visible {
+  outline: 2px solid var(--bp-color-accent-gold);
+  outline-offset: 2px;
+}
+
+@media (min-width: 40rem) {
+  .bp-stand {
+    padding: 1.75rem 2rem;
+  }
+
+  .bp-stand-title {
+    font-size: 2.125rem;
+  }
+}
+
+/* --- 2. Rozpracované ------------------------------------------------- */
+
+/* The plates, then the stash card: under them on a phone, beside them past
+   `lg`. Beside, not a second column of the PAGE: the heading above spans
+   both, and both are "what you are working on". */
+.bp-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bp-progress > .bp-pinned-rail-wrap {
+  min-width: 0;
+}
+
+@media (min-width: 64rem) {
+  .bp-progress {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 2rem;
+  }
+
+  .bp-progress > .bp-pinned-rail-wrap {
+    flex: 1;
+  }
+
+  .bp-progress > .bp-stash-card {
+    flex: none;
+    width: 20rem;
+    margin-left: auto;
+  }
+}
+
+.bp-stash-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.125rem 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
+}
+
+.bp-stash-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.bp-stash-card-title svg {
+  flex: none;
+}
+
+.bp-stash-card-latest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.bp-stash-card-name {
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+
+.bp-stash-card-meta {
+  margin: 0;
+  font-size: var(--text-meta, 0.78125rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* --- the plate ------------------------------------------------------- */
@@ -6757,16 +6959,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
    against the containing block, so a static parent silently hands the overlay
    to the nearest positioned ancestor instead — which is not a layout glitch
    but a full-page invisible link, plus a `:hover` on the parent that never
-   stops matching. `.bp-plate` sets it; `.bp-pinned-hero` had to be taught. */
+   stops matching. `.bp-plate` sets it. */
 .bp-plate-hit {
   position: absolute;
   inset: 0;
   z-index: 1;
   border-radius: 0.75rem;
-}
-
-.bp-pinned-hero > .bp-plate-hit {
-  border-radius: 1rem;
 }
 
 .bp-plate-disc {
@@ -6892,17 +7090,21 @@ html:has(dialog.bp-filter-sheet[open]) body {
   outline-offset: 2px;
 }
 
-.bp-plate--hero {
-  --bp-plate-size: 168px;
+/* One size for every pin: a phone fits three and a bit in its row, which is
+   what says the row scrolls; a wide screen gets the larger plate. */
+.bp-plate {
+  --bp-plate-size: 96px;
 }
 
-.bp-plate--rail {
-  --bp-plate-size: 128px;
+@media (min-width: 40rem) {
+  .bp-plate {
+    --bp-plate-size: 118px;
+  }
 }
 
 /* The cell sizes to its CAPTION, not to the plate: "9 December" wrapped to
    two lines when the cell was pinned to the plate's 92px. */
-.bp-plate--rail {
+.bp-plate {
   min-width: var(--bp-plate-size);
 }
 
@@ -6942,9 +7144,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 .bp-plate:hover .bp-plate-play,
-.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-play,
-.bp-pinned-hero:hover .bp-plate-play,
-.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-play {
+.bp-plate:has(> .bp-plate-hit:focus-visible) .bp-plate-play {
   transform: translateY(-3px);
 }
 
@@ -6957,8 +7157,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
     transition: none;
   }
 
-  .bp-plate:hover .bp-plate-play,
-  .bp-pinned-hero:hover .bp-plate-play {
+  .bp-plate:hover .bp-plate-play {
     transform: none;
   }
 }
@@ -6999,101 +7198,15 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 }
 
-/* --- the pinned section ---------------------------------------------- */
+/* --- the pinned row -------------------------------------------------- */
 
-/* One link wrapping the plate and its title, so both react together. Every
-   hover rule below is written against this wrapper rather than `.bp-plate`,
-   which the hero's own plate no longer is (it renders as a plain element —
-   see `PinnedPlate.astro`'s `interactive` prop). */
-.bp-pinned-hero {
-  /* REQUIRED, not cosmetic: this element holds a `.bp-plate-hit` directly, and
-     an `inset: 0` overlay is only the size of its containing block. Left
-     static, the hero's link resolved against `.bp-shell` and measured
-     1280x900 — the whole viewport — so every click anywhere on home hit the
-     hero, and `:hover` below matched permanently because the thing under the
-     pointer was always a descendant of the hero. See `.bp-plate-hit`. */
-  position: relative;
-
-  display: flex;
-  align-items: center;
-  gap: 1.375rem;
-  margin-bottom: 1.5rem;
-  color: inherit;
-  text-decoration: none;
-}
-
-.bp-pinned-hero:hover .bp-plate-disc,
-.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
-  transform: translateY(-3px);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bp-color-fg) 16%, transparent), 0 12px 26px
-    rgb(0 0 0 / 0.5);
-}
-
-.bp-pinned-hero:hover .bp-plate-label,
-.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-label {
-  filter: brightness(1.08);
-}
-
-/* The hero hovers exactly like a rail plate — lift, brighter label, brighter
-   caption — and nothing else. An underline under a 32px slab drew as a heavy
-   double rule the width of the title, which is a different gesture from the one
-   every other plate makes. */
-.bp-pinned-hero:hover .bp-pinned-hero-meta,
-.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-pinned-hero-meta,
-.bp-pinned-hero:hover .bp-pinned-hero-meta .bp-kind,
-.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-pinned-hero-meta .bp-kind {
-  color: var(--bp-color-fg);
-}
-
-.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) {
-  outline: none;
-}
-
-.bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
-  outline: 2px solid var(--bp-color-accent);
-  outline-offset: 3px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bp-pinned-hero:hover .bp-plate-disc,
-  .bp-pinned-hero:has(> .bp-plate-hit:focus-visible) .bp-plate-disc {
-    transform: none;
-  }
-}
-
-.bp-pinned-hero-text {
-  min-width: 0;
-}
-
-.bp-pinned-hero-eyebrow {
-  color: var(--bp-color-accent);
-  margin-bottom: 0.5rem;
-}
-
-.bp-pinned-hero-title {
-  font-family: var(--bp-font-display);
-  font-weight: 700;
-  font-size: 2rem;
-  line-height: 1.02;
-}
-
-.bp-pinned-hero-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin-top: 0.4375rem;
-  font-size: var(--text-meta, 0.78125rem);
-  line-height: 1.45;
-  color: var(--bp-color-muted);
-}
-
-/* Below `lg` the rail scrolls sideways — a phone cannot show four plates in a
+/* Below `lg` the row scrolls sideways — a phone cannot show four plates in a
    row, and a wrapping grid there would push the ledger off the first screen.
-   Past it the rail wraps instead, so every pin is visible at once without a
+   Past it the row wraps instead, so every pin is visible at once without a
    gesture. */
 .bp-pinned-rail {
   display: flex;
-  gap: 1rem;
+  gap: 1.375rem;
   overflow-x: auto;
   /* Named so the wrapper's fades can bind to THIS scroller — see
      `.bp-pinned-rail-wrap`'s `timeline-scope`. */
@@ -7209,7 +7322,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
     flex-wrap: wrap;
     /* Wide enough to breathe: at the old 92px five plates crammed into one row
        and the captions ran together into a single band of small caps. */
-    gap: 1.75rem 2rem;
+    gap: 1.5rem 1.375rem;
     overflow-x: visible;
   }
 }
@@ -9479,17 +9592,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
   align-items: center;
   gap: 0.5rem;
   color: var(--bp-color-muted);
-}
-
-/* Home's way into the stash: the same pill the takes bar carries, so the two
-   read as one control in two places. It sits above "Recent events", and the
-   gap is its own: the heading brings no margin of its own to lean on. */
-.bp-home-stash {
-  align-self: flex-start;
-  /* It is the end of its own section, and "Recent events" begins right under
-     it: the gap has to read as a section break rather than as a line of the
-     same block. */
-  margin-bottom: 2rem;
 }
 
 .bp-song-record {

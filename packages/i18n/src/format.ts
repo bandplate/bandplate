@@ -25,11 +25,12 @@ import { formatNumber } from "./plural.js";
 /** What an absent date, duration or size renders as. */
 export const EMPTY_VALUE = "—";
 
-type DateStyle = "long" | "short" | "monthShort" | "dateTime";
+type DateStyle = "long" | "short" | "dayMonth" | "monthShort" | "dateTime";
 
 const DATE_OPTIONS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   long: { year: "numeric", month: "long", day: "numeric" },
   short: { year: "numeric", month: "short", day: "numeric" },
+  dayMonth: { month: "long", day: "numeric" },
   monthShort: { month: "short" },
   dateTime: {
     year: "numeric",
@@ -69,6 +70,14 @@ export function formatLongDate(locale: Locale, ms: number | undefined | null): s
 /** "Jul 8, 2026" / "8. 7. 2026" — list rows, where the long form would not fit. */
 export function formatShortDate(locale: Locale, ms: number | undefined | null): string {
   return formatDate(locale, "short", ms);
+}
+
+/**
+ * "September 13" / "13. září" — an event named by its day, where the year is
+ * the one everyone is living in (home's "Na pultu" card).
+ */
+export function formatDayMonth(locale: Locale, ms: number | undefined | null): string {
+  return formatDate(locale, "dayMonth", ms);
 }
 
 /**

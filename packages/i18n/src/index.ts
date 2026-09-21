@@ -17,6 +17,7 @@ export {
   EMPTY_VALUE,
   formatBytes,
   formatDateTime,
+  formatDayMonth,
   formatDuration,
   formatLongDate,
   formatMonthShort,

@@ -773,8 +773,15 @@ describe("home / search / me / take-detail routes over real HTTP", () => {
       const res = await fetch(`${ORIGIN}/`, { headers: signedIn() });
       const body = await res.text();
       expect(body).toContain('<html lang="cs"');
-      expect(body).toContain("Oblíbené");
+      expect(body).toContain("Rozpracované");
       expect(body).toContain("Poslední akce");
+      // The old home's hero eyebrow and its stash heading are gone for good.
+      expect(body).not.toContain("Zpátky k");
+      expect(body).not.toContain("V šuplíku máš");
+      // Nothing in the fixture was published since this member's last visit
+      // (no take carries a `publishedAt`), so the first section is not drawn
+      // at all: no empty card, no heading.
+      expect(body).not.toContain("Na pultu");
       expect(body).not.toContain("Recent events");
       expect(body).not.toContain("Nothing pinned yet.");
     });

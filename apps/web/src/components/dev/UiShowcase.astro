@@ -442,25 +442,14 @@ const scale = [
   <section class="flex flex-col gap-3">
     <h2 class="bp-section-title bp-m0">Pinned plates</h2>
     <p class="text-meta text-muted bp-m0">
-      Home's pinned section. The centre label says which kind of thing it is without a word — gold
-      for a take (the accent the play control already uses), bone for a song or an event — and the
-      caption says it again in words, since colour is never the only carrier. The hero is the most
-      recently pinned thing; the rail is everything else, scrolling sideways below <code>lg</code>
-      and wrapping above it.
+      Home's "Rozpracované" section. The centre label says which kind of thing it is without a
+      word — gold for a take (the accent the play control already uses), bone for a song or an
+      event — and the caption says it again in words, since colour is never the only carrier. One
+      row at one size, scrolling sideways on a phone and wrapping on a wide screen.
     </p>
-    <div class="bp-pinned-hero">
-      <PinnedPlate item={PINNED[0]} size="hero" />
-      <div class="bp-pinned-hero-text">
-        <p class="bp-eyebrow bp-pinned-hero-eyebrow bp-m0">Back to</p>
-        <h3 class="bp-pinned-hero-title bp-m0">
-          <a href="#">Neon Skyline</a>
-        </h3>
-        <p class="bp-pinned-hero-meta bp-m0">Live at The Attic<br />8 July 2026</p>
-      </div>
-    </div>
     <div class="bp-pinned-rail">
-      {PINNED.slice(1).map((item) => (
-        <PinnedPlate item={item} size="rail" />
+      {PINNED.map((item) => (
+        <PinnedPlate item={item} />
       ))}
     </div>
   </section>

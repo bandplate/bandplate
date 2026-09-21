@@ -47,9 +47,9 @@ import SlidersVertical from "@lucide/astro/icons/sliders-vertical";
 import Trash from "@lucide/astro/icons/trash";
 import AssetUploader from "../../components/AssetUploader.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
-import InstrumentSet from "../../components/InstrumentSet.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
+import TakeFactsCard from "../../components/TakeFactsCard.astro";
 import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -210,7 +210,16 @@ const headerLead = song && noteText ? noteText : undefined;
 // one can stand alone as a value ("Zkouška").
 const panelEvent = event ? factsLine([eventName || kindLabel], locale) : null;
 const panelDate = formatLongDate(locale, event ? event.heldAt : take.recordedAt);
-const ruled = take.state === "keeper" || take.state === "rejected";
+const factsCard = {
+  event: panelEvent,
+  date: panelDate,
+  duration: formatDuration(take.durationMs),
+  verdict:
+    take.state === "keeper" || take.state === "rejected"
+      ? { label: TAKE_STATE_LABEL[take.state], keeper: take.state === "keeper" }
+      : null,
+  instruments,
+};
 
 // The link preview's sentence is the page's own lede. A second one written
 // for the card is a second one to keep true.
@@ -272,41 +281,10 @@ function assetLabel(asset: assetsRepo.Asset): string {
   principal={principal}
   current="home"
 >
-  {/* Phone only: the take's measurable facts, each under its own label, on a
-      panel joined under the header. The hero's own run of them is
-      `.bp-titled-facts` and is what assistive tech reads. */}
-  <div slot="header-panel" class="bp-take-panel">
-    {panelEvent && (
-      <div class="bp-take-panel-cell">
-        <span class="bp-take-panel-label">{t.takes.panelEventLabel}</span>
-        <span class="bp-take-panel-event">{panelEvent}</span>
-      </div>
-    )}
-    <div class="bp-take-panel-row">
-      <div class="bp-take-panel-cell">
-        <span class="bp-take-panel-label">{t.takes.recordedLabel}</span>
-        <span class="bp-take-panel-value">{panelDate}</span>
-      </div>
-      <div class="bp-take-panel-cell">
-        <span class="bp-take-panel-label">{t.takes.lengthLabel}</span>
-        <span class="bp-take-panel-value">{formatDuration(take.durationMs)}</span>
-      </div>
-      {ruled && (
-        <div class="bp-take-panel-cell">
-          <span class="bp-take-panel-label">{t.takes.verdictLabel}</span>
-          <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-            {TAKE_STATE_LABEL[take.state]}
-          </span>
-        </div>
-      )}
-    </div>
-    {instruments.length > 0 && (
-      <div class="bp-take-panel-cell">
-        <span class="bp-take-panel-label">{t.takes.instrumentsHeading}</span>
-        <InstrumentSet instruments={instruments} />
-      </div>
-    )}
-  </div>
+  {/* The take's facts on a phone: a card under the header. A picture of the
+      hero's own copy, which is what assistive tech reads, so the shell marks
+      this one aria-hidden. */}
+  <TakeFactsCard slot="header-panel" {...factsCard} />
   <button
     slot="header-end"
     type="button"
@@ -377,9 +355,13 @@ function assetLabel(asset: assetsRepo.Asset): string {
         {/* Adjacent on purpose, with no whitespace between the tags: a
             newline here becomes a text node, and the colon would float away
             from the song's name as "Čoudy : take 1". */}
-        <span>{song ? song.title : "Take"}</span>{
+        {/* One line, cut with an ellipsis, so the star beside it never
+            drops to a line of its own. The cut lands at the end, on the
+            label, before the song's name. `title` shows the whole of it on
+            hover; the heading's text is whole for anything that reads it. */}
+        <span class="bp-hero-title-text" title={heroTitle}><span>{song ? song.title : "Take"}</span>{
           song && noteText && <span class="bp-hero-title-note">: {noteText}</span>
-        }
+        }</span>
         <span class="bp-take-favorite-mark">
           <FavoriteToggle
             targetType="take"
@@ -401,30 +383,21 @@ function assetLabel(asset: assetsRepo.Asset): string {
         </div>
       </div>
 
-      <p class="bp-take-detail-lede bp-m0 bp-titled-facts">{heroLede}</p>
       {/* Whose it is, as the personal event's own hero says it: a labelled
           field, because "osobní nahrávky" in the lede does not name anyone. */}
       {isPersonal && ownerName && (
         <p class="bp-take-detail-lede bp-m0">{t.events.recordedByLabel}: {ownerName}</p>
       )}
 
-      {/* One quiet run of everything measurable about the take. No rule against
-          the instrument set on either side: the set carries a tinted pad, which
-          is what holds it together as one object, and a rule beside a thing that
-          is already bounded reads as a stray mark. */}
-      <p class="bp-take-detail-facts bp-m0 bp-titled-facts">
-        <span>{formatDuration(take.durationMs)}</span>
-        <InstrumentSet instruments={instruments} />
-        {/* The band's call. A settled state is one word and needs no gloss.
-            Only keeper or rejected: `new` is every take until someone acts. */}
-        {
-          (take.state === "keeper" || take.state === "rejected") && (
-            <span class={`bp-badge ${take.state === "keeper" ? "bp-badge-keeper" : ""}`}>
-              {TAKE_STATE_LABEL[take.state]}
-            </span>
-          )
-        }
-      </p>
+      {/* The take's facts, each under its own label, on the card the home
+          page's Šuplík uses. Past `lg` this is the one on screen; on a phone
+          the header carries a copy and this one is out of sight but still
+          read, which is why it is here and not only in the header. It took
+          the place of a sentence ("Nahrávka z akce …") and a run of a length
+          and some glyphs, which said the same things with no labels. */}
+      <div class="bp-take-facts-card bp-titled-facts">
+        <TakeFactsCard {...factsCard} />
+      </div>
 
       {/* A take created by hand starts empty and out of sight. This is where it
           gets let out — an explicit press, not a side effect of the first file

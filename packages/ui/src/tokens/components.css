@@ -2392,6 +2392,23 @@ a.bp-btn {
   font-variant-numeric: tabular-nums;
 }
 
+/* The take's facts card in the hero, past `lg`: the same card as the phone
+   copy under the header, fill, radius and padding, sized to its content so
+   the labels do not float across the page's full width. On a phone it is
+   `.bp-titled-facts` and out of sight. */
+.bp-take-facts-card {
+  /* The hero is a block, not a flex column, so this is the width and not
+     `align-self`. A floor so a take with one short fact is still a card. */
+  width: fit-content;
+  min-width: min(100%, 22rem);
+  max-width: 100%;
+  margin-top: 1.25rem;
+  padding: 1.125rem 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
+  color: var(--bp-color-fg);
+}
+
 /* A card under the header: a take's event, date, length, ruling and line-up,
    each under its own label. The same card the home page's Šuplík is, fill,
    radius and padding, so a group of facts looks like a group of facts
@@ -5095,6 +5112,30 @@ html:has(dialog.bp-filter-sheet[open]) body {
    performance of it, and a reader scanning a list of tabs needs both. */
 .bp-hero-title-note {
   color: var(--bp-color-muted);
+}
+
+/* The take's heading is one line: its text gives way with an ellipsis and
+   the star after it keeps its place. It wrapped, and a long label ("just
+   for fun") left the star alone on a second line. */
+.bp-take-detail-hero .bp-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.bp-hero-title-text {
+  min-width: 0;
+  overflow: hidden;
+  /* The heading's own 1.05 is tighter than the face's descenders; with
+     overflow hidden the tails of "g" and "j" would be clipped. */
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-take-detail-hero .bp-hero-title .bp-take-favorite-mark {
+  flex: none;
 }
 
 /* One plain sentence under the heading — direction H1 from the canvas. It

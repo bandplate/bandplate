@@ -1,0 +1,66 @@
+---
+// A take's facts, each under its own label: the event in the slab face as the
+// card's own headline, then when, how long and the band's verdict in a row,
+// then the line-up. One component because the take page draws it twice: in
+// the phone header's panel, and in the hero past `lg`. Two hand-kept copies
+// of the same five facts would be two to keep true.
+//
+// Only the markup inside the card lives here. Where it sits, and the card
+// itself (fill, radius, padding), is the caller's: the phone copy is the
+// shell's `.bp-shell-subbar`, the desktop one `.bp-take-facts-card`.
+import type { instrumentsRepo } from "@bandplate/db";
+import { messages } from "@bandplate/i18n";
+import InstrumentSet from "./InstrumentSet.astro";
+
+export interface Props {
+  /** The event's name, or its kind where it has none. `null` with no event. */
+  event: string | null;
+  /** When it was played, already formatted. */
+  date: string;
+  /** How long, already formatted. */
+  duration: string;
+  /** The band's ruling, once there is one: its word and whether it kept it. */
+  verdict: { label: string; keeper: boolean } | null;
+  instruments: instrumentsRepo.Instrument[];
+}
+
+const { event, date, duration, verdict, instruments } = Astro.props;
+const t = messages(Astro.locals.locale);
+---
+
+<div class="bp-take-panel">
+  {
+    event && (
+      <div class="bp-take-panel-cell">
+        <span class="bp-take-panel-label">{t.takes.panelEventLabel}</span>
+        <span class="bp-take-panel-event">{event}</span>
+      </div>
+    )
+  }
+  <div class="bp-take-panel-row">
+    <div class="bp-take-panel-cell">
+      <span class="bp-take-panel-label">{t.takes.recordedLabel}</span>
+      <span class="bp-take-panel-value">{date}</span>
+    </div>
+    <div class="bp-take-panel-cell">
+      <span class="bp-take-panel-label">{t.takes.lengthLabel}</span>
+      <span class="bp-take-panel-value">{duration}</span>
+    </div>
+    {
+      verdict && (
+        <div class="bp-take-panel-cell">
+          <span class="bp-take-panel-label">{t.takes.verdictLabel}</span>
+          <span class={`bp-badge ${verdict.keeper ? "bp-badge-keeper" : ""}`}>{verdict.label}</span>
+        </div>
+      )
+    }
+  </div>
+  {
+    instruments.length > 0 && (
+      <div class="bp-take-panel-cell">
+        <span class="bp-take-panel-label">{t.takes.instrumentsHeading}</span>
+        <InstrumentSet instruments={instruments} tone="bare" />
+      </div>
+    )
+  }
+</div>

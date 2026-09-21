@@ -106,35 +106,39 @@ export async function update(db: Db, id: string, input: UpdateMemberInput): Prom
   await db.update(members).set(input).where(eq(members.id, id));
 }
 
-export interface HomeVisitWrite {
-  /** What `homeVisitStartedAt` held when the decision was made. */
-  previousStartedAt: number | null;
-  /** The new visit's start. */
-  startedAt: number;
+export interface HomeLoadWrite {
+  /** What `homeLastSeenAt` held when the decision was made. */
+  previousLastSeenAt: number | null;
+  /** This load's time: the new `homeLastSeenAt`. */
+  lastSeenAt: number;
+  /** `homeLastVisitAt` after this load — moved only when a new visit started. */
+  lastVisitAt: number | null;
 }
 
 /**
- * Starts a new home visit: the old visit's start becomes the last visit, and
- * `startedAt` the current one. One UPDATE.
+ * Records a home load: `homeLastSeenAt` becomes this load's time, and
+ * `homeLastVisitAt` takes whatever `decideHomeVisit` said (the previous
+ * visit's end when this load started a new one, unchanged otherwise). One
+ * UPDATE, on every load.
  *
- * Whether a load starts a visit at all is `decideHomeVisit`'s question, not
- * this function's. What this adds is a compare-and-swap: the write only lands
- * if `homeVisitStartedAt` still holds what the decision read. Two tabs opening
- * home in the same instant would otherwise both shift the pair, and the second
- * would copy the first's brand-new start into `homeLastVisitAt`, which makes
- * "new since your last visit" mean "new in the last millisecond". Returns
- * whether it landed.
+ * A compare-and-swap on `homeLastSeenAt`: the write only lands if it still
+ * holds what the decision read. Two tabs opening home in the same instant
+ * after a long gap would otherwise both roll the visit over, and the second
+ * would copy the first's brand-new "last seen" into `homeLastVisitAt`, which
+ * makes "new since your last visit" mean "new in the last millisecond". The
+ * losing write is simply dropped: the winner already recorded a load at the
+ * same moment. Returns whether it landed.
  */
-export async function startHomeVisit(db: Db, id: string, write: HomeVisitWrite): Promise<boolean> {
+export async function recordHomeLoad(db: Db, id: string, write: HomeLoadWrite): Promise<boolean> {
   const rows = await db
     .update(members)
-    .set({ homeLastVisitAt: write.previousStartedAt, homeVisitStartedAt: write.startedAt })
+    .set({ homeLastSeenAt: write.lastSeenAt, homeLastVisitAt: write.lastVisitAt })
     .where(
       and(
         eq(members.id, id),
-        write.previousStartedAt === null
-          ? isNull(members.homeVisitStartedAt)
-          : eq(members.homeVisitStartedAt, write.previousStartedAt),
+        write.previousLastSeenAt === null
+          ? isNull(members.homeLastSeenAt)
+          : eq(members.homeLastSeenAt, write.previousLastSeenAt),
       ),
     )
     .returning({ id: members.id });
@@ -188,7 +192,7 @@ export interface CreateIfEmptyInput {
  */
 export function buildCreateIfEmptyStatement(db: Db, input: CreateIfEmptyInput) {
   // 11 values below (id, displayName, slug, email, role, status, createdAt,
-  // emailVerifiedAt, locale, homeVisitStartedAt, homeLastVisitAt) must match
+  // emailVerifiedAt, locale, homeLastSeenAt, homeLastVisitAt) must match
   // `members`' column count and order — see `column-order-guard.ts` for why
   // this is checked explicitly rather than left implicit. Drizzle emits
   // columns in schema DECLARATION order, and `locale` then the two home-visit

@@ -328,25 +328,27 @@ async function getStashCard(db: Db, memberId: string): Promise<StashCard | undef
 
 /**
  * Reads the member's visit columns, decides whether this load starts a new
- * visit, and writes that back. Returns the moment "new" is measured from.
+ * visit, and records the load. Returns the moment "new" is measured from.
  */
 async function trackVisit(db: Db, memberId: string, now: number): Promise<number> {
   const member = await membersRepo.getById(db, memberId);
   const decision = decideHomeVisit(
     {
-      visitStartedAt: member?.homeVisitStartedAt ?? null,
+      lastSeenAt: member?.homeLastSeenAt ?? null,
       lastVisitAt: member?.homeLastVisitAt ?? null,
       memberCreatedAt: member?.createdAt ?? now,
     },
     now,
   );
-  if (member && decision.startsNewVisit) {
-    // A lost race (another tab started the visit first) leaves the columns as
-    // that tab wrote them; this load still measures from what it read, which
-    // is the same baseline.
-    await membersRepo.startHomeVisit(db, memberId, {
-      previousStartedAt: member.homeVisitStartedAt,
-      startedAt: decision.visitStartedAt,
+  if (member) {
+    // Every load, so a visit lasts as long as home keeps being opened. A lost
+    // race (another tab recorded a load in between) leaves the columns as that
+    // tab wrote them; this load still measures from what it read, which is the
+    // same baseline.
+    await membersRepo.recordHomeLoad(db, memberId, {
+      previousLastSeenAt: member.homeLastSeenAt,
+      lastSeenAt: decision.lastSeenAt,
+      lastVisitAt: decision.lastVisitAt,
     });
   }
   return decision.since;

@@ -292,21 +292,19 @@ describe("members.getByIds", () => {
   });
 });
 
-describe("members.startHomeVisit", () => {
+describe("members.recordHomeLoad", () => {
   let db: Db;
 
   beforeEach(async () => {
     db = await createTestDb();
   });
 
-  it("a new member has never visited home", async () => {
-    const m = await members.create(db, {
-      displayName: "A",
-      slug: "a",
-      email: "a@example.com",
-      createdAt: 1,
-    });
-    expect(m.homeVisitStartedAt).toBeNull();
+  const newMember = () =>
+    members.create(db, { displayName: "A", slug: "a", email: "a@example.com", createdAt: 1 });
+
+  it("a new member has never loaded home", async () => {
+    const m = await newMember();
+    expect(m.homeLastSeenAt).toBeNull();
     expect(m.homeLastVisitAt).toBeNull();
   });
 
@@ -318,46 +316,36 @@ describe("members.startHomeVisit", () => {
       createdAt: 1,
     });
     expect(admin?.locale).toBe("en");
-    expect(admin?.homeVisitStartedAt).toBeNull();
+    expect(admin?.homeLastSeenAt).toBeNull();
     expect(admin?.homeLastVisitAt).toBeNull();
   });
 
-  it("moves the old visit's start into the last visit, in one write", async () => {
-    const m = await members.create(db, {
-      displayName: "A",
-      slug: "a",
-      email: "a@example.com",
-      createdAt: 1,
-    });
-    expect(
-      await members.startHomeVisit(db, m.id, { previousStartedAt: null, startedAt: 100 }),
-    ).toBe(true);
-    expect(
-      await members.startHomeVisit(db, m.id, { previousStartedAt: 100, startedAt: 5000 }),
-    ).toBe(true);
+  it("writes both columns in one update, on every load", async () => {
+    const m = await newMember();
+    const first = { previousLastSeenAt: null, lastSeenAt: 100, lastVisitAt: null };
+    expect(await members.recordHomeLoad(db, m.id, first)).toBe(true);
+    const second = { previousLastSeenAt: 100, lastSeenAt: 5000, lastVisitAt: 100 };
+    expect(await members.recordHomeLoad(db, m.id, second)).toBe(true);
     const after = await members.getById(db, m.id);
-    expect(after?.homeVisitStartedAt).toBe(5000);
+    expect(after?.homeLastSeenAt).toBe(5000);
     expect(after?.homeLastVisitAt).toBe(100);
   });
 
-  it("refuses a write decided on a start that has since moved", async () => {
-    // Two tabs read the same start; the second to write must not copy the
-    // first tab's brand-new start into the last visit.
-    const m = await members.create(db, {
-      displayName: "A",
-      slug: "a",
-      email: "a@example.com",
-      createdAt: 1,
+  it("refuses a write decided on a last-seen that has since moved", async () => {
+    // Two tabs read the same last-seen; the second to write must not copy the
+    // first tab's brand-new load into the last visit.
+    const m = await newMember();
+    await members.recordHomeLoad(db, m.id, {
+      previousLastSeenAt: null,
+      lastSeenAt: 100,
+      lastVisitAt: null,
     });
-    await members.startHomeVisit(db, m.id, { previousStartedAt: null, startedAt: 100 });
-    expect(
-      await members.startHomeVisit(db, m.id, { previousStartedAt: 100, startedAt: 5000 }),
-    ).toBe(true);
-    expect(
-      await members.startHomeVisit(db, m.id, { previousStartedAt: 100, startedAt: 5001 }),
-    ).toBe(false);
+    const winner = { previousLastSeenAt: 100, lastSeenAt: 5000, lastVisitAt: 100 };
+    expect(await members.recordHomeLoad(db, m.id, winner)).toBe(true);
+    const loser = { previousLastSeenAt: 100, lastSeenAt: 5001, lastVisitAt: 100 };
+    expect(await members.recordHomeLoad(db, m.id, loser)).toBe(false);
     const after = await members.getById(db, m.id);
-    expect(after?.homeVisitStartedAt).toBe(5000);
+    expect(after?.homeLastSeenAt).toBe(5000);
     expect(after?.homeLastVisitAt).toBe(100);
   });
 });

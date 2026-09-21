@@ -1,75 +1,99 @@
 import { describe, expect, it } from "vitest";
-import { FIRST_VISIT_WINDOW_MS, VISIT_GAP_MS, decideHomeVisit } from "./home-visit.js";
+import {
+  FIRST_VISIT_WINDOW_MS,
+  type HomeVisitState,
+  VISIT_GAP_MS,
+  decideHomeVisit,
+} from "./home-visit.js";
 
-const DAY = 24 * 60 * 60 * 1000;
+const MINUTE = 60 * 1000;
+const DAY = 24 * 60 * MINUTE;
 const NOW = Date.UTC(2026, 8, 21, 12, 0, 0);
+
+/** Loads home at each of `times` in turn, carrying the columns forward. */
+function loads(start: HomeVisitState, times: number[]) {
+  let state = start;
+  return times.map((now) => {
+    const decision = decideHomeVisit(state, now);
+    state = { ...state, lastSeenAt: decision.lastSeenAt, lastVisitAt: decision.lastVisitAt };
+    return decision;
+  });
+}
 
 describe("decideHomeVisit", () => {
   it("a first-ever load starts a visit and measures from the member's joining", () => {
     const joined = NOW - 3 * DAY;
-    const decision = decideHomeVisit(
-      { visitStartedAt: null, lastVisitAt: null, memberCreatedAt: joined },
-      NOW,
-    );
-    expect(decision).toEqual({
-      startsNewVisit: true,
-      visitStartedAt: NOW,
-      lastVisitAt: null,
-      since: joined,
-    });
+    expect(
+      decideHomeVisit({ lastSeenAt: null, lastVisitAt: null, memberCreatedAt: joined }, NOW),
+    ).toEqual({ startsNewVisit: true, lastSeenAt: NOW, lastVisitAt: null, since: joined });
   });
 
   it("a first-ever load by a long-standing member looks back 14 days, not to their joining", () => {
     const decision = decideHomeVisit(
-      { visitStartedAt: null, lastVisitAt: null, memberCreatedAt: NOW - 400 * DAY },
+      { lastSeenAt: null, lastVisitAt: null, memberCreatedAt: NOW - 400 * DAY },
       NOW,
     );
     expect(decision.since).toBe(NOW - FIRST_VISIT_WINDOW_MS);
   });
 
-  it("a reload within the visit changes nothing, so the card stays up", () => {
-    const started = NOW - 10 * 60 * 1000;
-    const last = NOW - 2 * DAY;
+  it("every load records itself as the last seen, new visit or not", () => {
     const decision = decideHomeVisit(
-      { visitStartedAt: started, lastVisitAt: last, memberCreatedAt: 0 },
+      { lastSeenAt: NOW - 5 * MINUTE, lastVisitAt: NOW - DAY, memberCreatedAt: 0 },
       NOW,
     );
     expect(decision).toEqual({
       startsNewVisit: false,
-      visitStartedAt: started,
-      lastVisitAt: last,
-      since: last,
+      lastSeenAt: NOW,
+      lastVisitAt: NOW - DAY,
+      since: NOW - DAY,
     });
   });
 
-  it("a reload during a first visit keeps the first-visit floor", () => {
-    const joined = NOW - 3 * DAY;
-    const decision = decideHomeVisit(
-      { visitStartedAt: NOW - 60_000, lastVisitAt: null, memberCreatedAt: joined },
-      NOW,
+  it("a member reloading every 20 minutes for two hours keeps the same baseline", () => {
+    const lastVisit = NOW - 2 * DAY;
+    const times = Array.from({ length: 7 }, (_, i) => NOW + i * 20 * MINUTE);
+    const decisions = loads(
+      { lastSeenAt: NOW - 3 * 60 * MINUTE, lastVisitAt: lastVisit, memberCreatedAt: 0 },
+      times,
     );
-    expect(decision.startsNewVisit).toBe(false);
-    expect(decision.since).toBe(joined);
+    // The first load, three hours after the last one, starts the visit...
+    expect(decisions[0]?.startsNewVisit).toBe(true);
+    const baseline = decisions[0]?.since;
+    expect(baseline).toBe(NOW - 3 * 60 * MINUTE);
+    // ...and two hours of loads 20 minutes apart never end it.
+    for (const decision of decisions.slice(1)) {
+      expect(decision.startsNewVisit).toBe(false);
+      expect(decision.since).toBe(baseline);
+    }
   });
 
-  it("exactly 30 minutes in is still the same visit; a moment later is a new one", () => {
-    const started = NOW - VISIT_GAP_MS;
-    const state = { visitStartedAt: started, lastVisitAt: NOW - DAY, memberCreatedAt: 0 };
+  it("a first visit kept alive by reloads keeps its first-visit floor", () => {
+    const joined = NOW - 3 * DAY;
+    const decisions = loads({ lastSeenAt: null, lastVisitAt: null, memberCreatedAt: joined }, [
+      NOW,
+      NOW + 25 * MINUTE,
+      NOW + 50 * MINUTE,
+    ]);
+    expect(decisions.map((d) => d.since)).toEqual([joined, joined, joined]);
+  });
+
+  it("exactly 30 minutes of quiet is still the same visit", () => {
+    const state = { lastSeenAt: NOW - VISIT_GAP_MS, lastVisitAt: NOW - DAY, memberCreatedAt: 0 };
     expect(decideHomeVisit(state, NOW).startsNewVisit).toBe(false);
     expect(decideHomeVisit(state, NOW + 1).startsNewVisit).toBe(true);
   });
 
-  it("a new visit makes the old visit's start the baseline", () => {
-    const started = NOW - 5 * 60 * 60 * 1000;
+  it("a 31-minute gap rolls over: the previous visit's last load becomes the baseline", () => {
+    const lastLoad = NOW - 31 * MINUTE;
     const decision = decideHomeVisit(
-      { visitStartedAt: started, lastVisitAt: NOW - 3 * DAY, memberCreatedAt: 0 },
+      { lastSeenAt: lastLoad, lastVisitAt: NOW - 3 * DAY, memberCreatedAt: 0 },
       NOW,
     );
     expect(decision).toEqual({
       startsNewVisit: true,
-      visitStartedAt: NOW,
-      lastVisitAt: started,
-      since: started,
+      lastSeenAt: NOW,
+      lastVisitAt: lastLoad,
+      since: lastLoad,
     });
   });
 });

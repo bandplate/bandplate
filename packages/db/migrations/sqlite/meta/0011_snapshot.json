@@ -744,8 +744,8 @@
           "autoincrement": false,
           "default": "'en'"
         },
-        "home_visit_started_at": {
-          "name": "home_visit_started_at",
+        "home_last_seen_at": {
+          "name": "home_last_seen_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

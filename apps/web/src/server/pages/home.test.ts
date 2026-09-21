@@ -437,18 +437,19 @@ describe("getHomeData", () => {
       expect(onTheStand?.unvotedCount).toBe(2);
     });
 
-    it("stays up for the whole visit, and goes once the next visit starts", async () => {
+    it("stays up while home keeps being loaded, and goes after 30 quiet minutes", async () => {
       const event = await bandEvent(NOW - 2 * DAY);
       await publishedTake(event.id, NOW - DAY);
+      const MIN = 60 * 1000;
 
-      expect((await getHomeData(db, memberId, NOW)).onTheStand?.event.id).toBe(event.id);
-      // A reload twenty minutes later is the same visit: still new.
-      expect((await getHomeData(db, memberId, NOW + 20 * 60 * 1000)).onTheStand?.event.id).toBe(
-        event.id,
-      );
-      // An hour later a new visit starts, measured from the first one's start,
-      // and the take was published before that.
-      expect((await getHomeData(db, memberId, NOW + HOUR)).onTheStand).toBeUndefined();
+      // Two hours of loads twenty minutes apart: one visit, card up throughout.
+      for (let i = 0; i <= 6; i++) {
+        const data = await getHomeData(db, memberId, NOW + i * 20 * MIN);
+        expect(data.onTheStand?.event.id, `load at +${i * 20} min`).toBe(event.id);
+      }
+      // 31 quiet minutes after the last load: a new visit, measured from that
+      // last load, and the take was published long before it.
+      expect((await getHomeData(db, memberId, NOW + 151 * MIN)).onTheStand).toBeUndefined();
     });
 
     it("shows what was published between two visits", async () => {

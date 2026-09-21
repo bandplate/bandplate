@@ -27,13 +27,9 @@ import { canPublish, hasAllScopes } from "@bandplate/core";
 // penalty rather than assuming it: zero ppm of drift over five minutes on
 // Chrome. See `Mixer.tsx`.
 //
-// `transition:name={`take-${take.id}`}` on the song-title hero matches the
-// same name `TakeRow.astro` puts on its own link — clicking a take row
-// morphs that link into this heading via View Transitions. Continuity is
-// closest coming from "event"/"full" mode rows (whose own link text is
-// already the song title); a "song" mode row's link is the recorded date
-// instead, so that one morphs a date into a title — still a smooth shared
-// transition, just not a pixel-identical one. See task-6-report.md.
+// The song-title hero carries no `transition:name`: a take row's label used
+// to morph into it, and the owner found titles sliding between pages
+// obtrusive. The page cross-fades like every other.
 import type { assetsRepo } from "@bandplate/db";
 import { instrumentsRepo, songsRepo } from "@bandplate/db";
 import {
@@ -314,7 +310,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
         {/* Adjacent on purpose, with no whitespace between the tags: a
             newline here becomes a text node, and the colon would float away
             from the song's name as "Čoudy : take 1". */}
-        <span transition:name={`take-${take.id}`}>{song ? song.title : "Take"}</span>{
+        <span>{song ? song.title : "Take"}</span>{
           song && noteText && <span class="bp-hero-title-note">: {noteText}</span>
         }
         <span class="bp-take-favorite-mark">

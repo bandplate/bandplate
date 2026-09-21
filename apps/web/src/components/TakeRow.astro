@@ -60,19 +60,15 @@ import type { instrumentsRepo, takesRepo } from "@bandplate/db";
 // `take-row-context.ts`, not exported from here — see that file's header
 // comment for why (an Astro server-build compiler bug, not a style choice).
 //
-// --- `transitionName` (Task 6 review round 1, F1) --------------------
+// --- No shared-element transition --------------------------------------
 //
-// Every row used to hardcode `transition:name={`take-${take.id}`}`. That's
-// fine as long as a given take id is rendered at most once per page — but
-// `/` and `/me` both list takes across more than one section (favorites,
-// recent events, needs-your-vote / favorites, votes), and a take that's
-// both a favorite AND e.g. unvoted lands in two of them at once. Two
-// elements sharing one `view-transition-name` isn't a warning — per the
-// CSS View Transitions spec it silently aborts the transition for the
-// WHOLE page, not just those two elements. `transitionName` lets the
-// caller de-duplicate: omit it (or pass `undefined`) for the normal case
-// and it defaults to `take-${take.id}`; pass `null` to suppress the
-// attribute entirely for a take id the same page render already used once.
+// A take's title used to carry `transition:name`, so following a row morphed
+// its label into the take page's heading. The owner found the titles sliding
+// round between pages obtrusive rather than helpful, and it is gone; the page
+// itself still cross-fades. (It also retires the whole duplicate-name problem:
+// two elements sharing one `view-transition-name` aborts the transition for
+// the entire page, which is what the old `transitionName` prop existed to
+// dodge on pages that list one take twice.)
 //
 // --- `favorited` (Task 6 review round 1, F4; interactive since Task 8) --
 //
@@ -112,11 +108,6 @@ export interface Props {
   take: takesRepo.Take;
   instruments: instrumentsRepo.Instrument[];
   context: TakeRowContext;
-  /** `undefined` (the default, when omitted) → `take-${take.id}`. `null` →
-   *  no `transition:name` at all. A caller listing the same take id more
-   *  than once on one page must pass `null` for every occurrence after the
-   *  first — see this file's header comment. */
-  transitionName?: string | null;
   /** Fills the favourite star at the row's right end. Defaults to
    *  `false` — see this file's header comment. */
   favorited?: boolean;
@@ -142,7 +133,6 @@ const {
   take,
   instruments,
   context,
-  transitionName,
   favorited = false,
   playableAssetId,
   ownerName = null,
@@ -150,8 +140,6 @@ const {
 
 const locale = Astro.locals.locale;
 const t = messages(locale);
-const resolvedTransitionName =
-  transitionName === null ? undefined : (transitionName ?? `take-${take.id}`);
 
 const event = context.kind !== "event" ? context.event : undefined;
 const song = context.kind !== "song" ? context.song : undefined;
@@ -245,7 +233,6 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
       <a
         href={`/takes/${take.id}`}
         class="bp-take-label"
-        transition:name={resolvedTransitionName}
         data-take-id={take.id}
       >
         {primaryLabel}

@@ -349,15 +349,10 @@ const initials = member.displayName
             {votes.map(({ vote, take }) => (
               <li class="bp-vote-row">
                 <div class="bp-vote-row-main">
-                  {/* A plain `transition:name`, no claim-and-retarget dance:
-                      votes are one per take per member, so a take cannot appear
-                      twice in this list and the duplicate-name problem that
-                      machinery existed for cannot arise here. */}
                   {take ? (
                     <a
                       href={`/takes/${take.id}`}
                       class="bp-vote-row-song"
-                      transition:name={`take-${take.id}`}
                       data-take-id={take.id}
                     >
                       {take.song?.title ?? t.me.untitledTake}

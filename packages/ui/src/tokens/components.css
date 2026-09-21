@@ -1893,21 +1893,26 @@ a.bp-btn {
    which says "keep scrolling" without a control that would have to be
    pressed. Set from the list's own scroll position (NowPlayingSheet.tsx), so
    each fade is gone once that end is reached. */
-.bp-now-playing-list {
+.bp-now-playing-list,
+.bp-rec-scroll {
   --bp-fade-top: 0px;
   --bp-fade-bottom: 0px;
 }
 
-.bp-now-playing-list.has-more-above {
+.bp-now-playing-list.has-more-above,
+.bp-rec-scroll.has-more-above {
   --bp-fade-top: 2.5rem;
 }
 
-.bp-now-playing-list.has-more-below {
+.bp-now-playing-list.has-more-below,
+.bp-rec-scroll.has-more-below {
   --bp-fade-bottom: 2.5rem;
 }
 
 .bp-now-playing-list.has-more-above,
-.bp-now-playing-list.has-more-below {
+.bp-now-playing-list.has-more-below,
+.bp-rec-scroll.has-more-above,
+.bp-rec-scroll.has-more-below {
   mask-image: linear-gradient(
     to bottom,
     transparent,
@@ -8755,6 +8760,20 @@ html:has(dialog.bp-filter-sheet[open]) body {
   background: color-mix(in srgb, var(--bp-color-accent-gold) 18%, transparent);
   border-color: var(--bp-color-accent);
   color: var(--bp-color-accent);
+}
+
+/* The picker is exactly one screen tall, so its song list — not the page —
+   is what scrolls: the heading, the search and the record button stay put,
+   and the list fades at whichever end has more (the shared rule above). */
+.bp-rec--pick {
+  height: 100dvh;
+}
+
+.bp-rec-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .bp-rec-group {

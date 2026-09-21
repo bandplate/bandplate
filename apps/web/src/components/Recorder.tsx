@@ -134,6 +134,13 @@ export default function Recorder({
   // `confirm-discard` belongs to the stage, where "keep going" means keep
   // RECORDING, and reusing it here would have to mean something else.
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const leaveDialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = leaveDialogRef.current;
+    if (confirmLeave && dialog && !dialog.open) {
+      dialog.showModal();
+    }
+  }, [confirmLeave]);
   const [leaving, setLeaving] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -141,6 +148,37 @@ export default function Recorder({
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  // The picker's song list scrolls in its own box, and fades at whichever end
+  // has more past it — the Hraje sheet's order list does the same.
+  const songListRef = useRef<HTMLDivElement>(null);
+  const [songsMore, setSongsMore] = useState({ above: false, below: false });
+  const measureSongList = useCallback(() => {
+    const list = songListRef.current;
+    if (!list) {
+      return;
+    }
+    setSongsMore({
+      above: list.scrollTop > 1,
+      below: list.scrollTop + list.clientHeight < list.scrollHeight - 1,
+    });
+  }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: not read inside, they are the triggers — the list's content changes with the phase and the search
+  useEffect(() => {
+    const list = songListRef.current;
+    measureSongList();
+    if (!list) {
+      return;
+    }
+    // The box and what is in it both change size after the first paint (the
+    // display face loading, the search narrowing the list), and a fade set
+    // from a measurement taken before either would be wrong until a scroll.
+    const observer = new ResizeObserver(measureSongList);
+    observer.observe(list);
+    for (const child of Array.from(list.children)) {
+      observer.observe(child);
+    }
+    return () => observer.disconnect();
+  }, [state.phase, query, measureSongList]);
   const mimeRef = useRef("");
   const blobRef = useRef<Blob | null>(null);
   const recordedAtRef = useRef(0);
@@ -483,36 +521,42 @@ export default function Recorder({
                 {t.noSongYet}
               </button>
             </div>
-            {groups.map((group) => {
-              const heading = groupHeading[group.kind];
-              return (
-                <section
-                  key={group.kind}
-                  class="bp-rec-group"
-                  aria-label={heading ?? t.searchLabel}
-                >
-                  {heading && <h2 class="bp-eyebrow bp-rec-group-title">{heading}</h2>}
-                  {group.songs.length > 0 ? (
-                    <ul class="bp-rec-songs">
-                      {group.songs.map((option) => (
-                        <li key={option.id}>
-                          <button
-                            type="button"
-                            class="bp-rec-song"
-                            aria-pressed={option.id === state.songId ? "true" : "false"}
-                            onClick={() => dispatch({ type: "select", songId: option.id })}
-                          >
-                            {option.title}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p class="bp-rec-empty bp-m0">{t.noSongMatch}</p>
-                  )}
-                </section>
-              );
-            })}
+            <div
+              ref={songListRef}
+              class={`bp-rec-scroll${songsMore.above ? " has-more-above" : ""}${songsMore.below ? " has-more-below" : ""}`}
+              onScroll={measureSongList}
+            >
+              {groups.map((group) => {
+                const heading = groupHeading[group.kind];
+                return (
+                  <section
+                    key={group.kind}
+                    class="bp-rec-group"
+                    aria-label={heading ?? t.searchLabel}
+                  >
+                    {heading && <h2 class="bp-eyebrow bp-rec-group-title">{heading}</h2>}
+                    {group.songs.length > 0 ? (
+                      <ul class="bp-rec-songs">
+                        {group.songs.map((option) => (
+                          <li key={option.id}>
+                            <button
+                              type="button"
+                              class="bp-rec-song"
+                              aria-pressed={option.id === state.songId ? "true" : "false"}
+                              onClick={() => dispatch({ type: "select", songId: option.id })}
+                            >
+                              {option.title}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p class="bp-rec-empty bp-m0">{t.noSongMatch}</p>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
           </>
         )}
         {/* Always there: with nothing selected it records without a song,
@@ -628,39 +672,48 @@ export default function Recorder({
           />
         </div>
         <p class="bp-rec-private bp-m0">{t.privateNote}</p>
+        {/* A modal, like every other confirm in the app: the question is about
+            leaving, so it covers the page rather than sitting among its
+            buttons. Escape keeps the recording, as "Nechat" does. */}
+        <dialog
+          ref={leaveDialogRef}
+          class="bp-dialog"
+          aria-modal="true"
+          aria-labelledby="rec-leave-title"
+          onClose={() => setConfirmLeave(false)}
+          onCancel={() => setConfirmLeave(false)}
+        >
+          <h2 id="rec-leave-title">{t.discardQuestion}</h2>
+          <p>{t.discardLeaveBody}</p>
+          <div class="bp-dialog-actions">
+            <button
+              type="button"
+              class="bp-btn bp-btn-secondary"
+              onClick={() => leaveDialogRef.current?.close()}
+            >
+              {t.keepIt}
+            </button>
+            <a class="bp-btn bp-btn-danger" href={closeHref} onClick={() => setLeaving(true)}>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+              </svg>
+              {t.discard}
+            </a>
+          </div>
+        </dialog>
         <div class="bp-rec-foot">
           {state.error && (
             <p class="bp-field-error bp-m0" role="alert">
               {errorText[state.error]}
             </p>
-          )}
-          {confirmLeave && (
-            <div class="bp-rec-confirm" role="alertdialog" aria-label={t.discardQuestion}>
-              <p class="bp-m0">{t.discardQuestion}</p>
-              <div class="bp-rec-actions">
-                <button
-                  type="button"
-                  class="bp-btn bp-btn-secondary"
-                  onClick={() => setConfirmLeave(false)}
-                >
-                  {t.keepIt}
-                </button>
-                <a class="bp-btn bp-btn-danger" href={closeHref} onClick={() => setLeaving(true)}>
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-                  </svg>
-                  {t.discard}
-                </a>
-              </div>
-            </div>
           )}
           <div class="bp-rec-actions">
             <button

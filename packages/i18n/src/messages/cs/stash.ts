@@ -70,6 +70,7 @@ export const stash = {
   timerLabel: "Délka nahrávky", // en: Recording length
   discardQuestion: "Zahodit nahrávku?", // en: Throw this recording away?
   discard: "Zahodit", // en: Throw away
+  discardLeaveBody: "Ještě nebyla uložená, takže zmizí natrvalo.", // en: It was never saved, so it is gone for good.
   keepRecording: "Nahrávat dál", // en: Keep recording
   keepIt: "Nechat", // en: Keep it
   finishing: "Dokončuju nahrávku", // en: Finishing the recording

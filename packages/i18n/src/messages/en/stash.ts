@@ -82,6 +82,7 @@ export const stash = {
   timerLabel: "Recording length",
   discardQuestion: "Throw this recording away?",
   discard: "Throw away",
+  discardLeaveBody: "It was never saved, so it is gone for good.",
   keepRecording: "Keep recording",
   /**
    * The same question on the review screen, where the recording has already

@@ -6897,7 +6897,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 /* The one strong call to action on the page, so the one dark card: a record
    sleeve on the bone ground. In the dark theme the page is already that dark,
-   so the card lifts a step and takes an edge instead (see `--bp-stand`). */
+   so the card lifts a step on a translucent sleeve brown instead, with no
+   edge (see `--bp-stand`). The border stays declared for the light theme's
+   transparent one. */
 .bp-stand {
   display: flex;
   flex-direction: column;

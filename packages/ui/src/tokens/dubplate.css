@@ -246,8 +246,11 @@
        grooves disappeared with it. In the light theme the same disc separates
        from bone on its own, so only dark needs the lift. */
     --bp-plate-vinyl: #2a1a0e;
-    --bp-stand: var(--bp-sleeve);
-    --bp-stand-edge: var(--bp-groove);
+    /* The home card: the sleeve brown, let partly through so the grooves of
+       the page run under it, and no edge. The fill alone lifts it; a groove
+       line around it read as a frame drawn on top. */
+    --bp-stand: color-mix(in srgb, var(--bp-sleeve) 80%, transparent);
+    --bp-stand-edge: transparent;
   }
 }
 
@@ -286,6 +289,6 @@
 
   /* See the `prefers-color-scheme` block above. */
   --bp-plate-vinyl: #2a1a0e;
-  --bp-stand: var(--bp-sleeve);
-  --bp-stand-edge: var(--bp-groove);
+  --bp-stand: color-mix(in srgb, var(--bp-sleeve) 80%, transparent);
+  --bp-stand-edge: transparent;
 }

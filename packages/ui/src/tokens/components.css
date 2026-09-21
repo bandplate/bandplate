@@ -2393,20 +2393,28 @@ a.bp-btn {
 }
 
 /* The take's facts card in the hero, past `lg`: the same card as the phone
-   copy under the header, fill, radius and padding, sized to its content so
-   the labels do not float across the page's full width. On a phone it is
-   `.bp-titled-facts` and out of sight. */
+   copy under the header (fill, radius, padding), at the page's full width,
+   its facts in three columns rather than stacked, because the width is
+   there. On a phone it is `.bp-titled-facts` and out of sight. */
 .bp-take-facts-card {
-  /* The hero is a block, not a flex column, so this is the width and not
-     `align-self`. A floor so a take with one short fact is still a card. */
-  width: fit-content;
-  min-width: min(100%, 22rem);
-  max-width: 100%;
   margin-top: 1.25rem;
   padding: 1.125rem 1.25rem;
   border-radius: 1rem;
   background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
   color: var(--bp-color-fg);
+}
+
+/* Every fact is a cell of one grid: the row wrapper that groups date,
+   length and verdict on a phone steps out of the way, so the five cells
+   flow three to a row (event, date, length; then verdict, line-up). */
+.bp-take-facts-card .bp-take-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem 1.75rem;
+}
+
+.bp-take-facts-card .bp-take-panel-row {
+  display: contents;
 }
 
 /* A card under the header: a take's event, date, length, ruling and line-up,

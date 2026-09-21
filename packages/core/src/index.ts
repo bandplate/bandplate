@@ -2,6 +2,7 @@
 // Node-only globals). Must run unmodified on Cloudflare Workers.
 export * from "./ports/index.js";
 export * from "./ids.js";
+export * from "./log-error.js";
 export * from "./text.js";
 export * from "./crypto.js";
 export * from "./storage-keys.js";

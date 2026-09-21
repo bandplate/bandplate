@@ -2,7 +2,7 @@
 // `POST /ingest/v1/takes/:id/commit`, `DELETE /ingest/v1/takes/:id` —
 // contract v1 §4 "Phase 2 — declare a take", "Phase 3 — commit", and §8.
 import type { Clock, Storage } from "@bandplate/core";
-import { buildUploadItems } from "@bandplate/core";
+import { buildUploadItems, describeError, logError } from "@bandplate/core";
 import { type Db, assetsRepo, eventsRepo, instrumentsRepo, takesRepo } from "@bandplate/db";
 import { errorResponse } from "../../errors.js";
 import { type GuardedRouter, requireServiceScopes } from "../../route-registry.js";
@@ -390,7 +390,13 @@ export function registerIngestTakeRoutes(router: GuardedRouter, deps: IngestTake
       try {
         await deps.storage.delete(assets.map((a) => a.storageKey));
       } catch (err) {
-        console.error("[ingest] failed to delete storage objects for removed take", takeId, err);
+        const { message, stack } = describeError(err);
+        logError({
+          kind: "storage-delete",
+          route: c.req.path,
+          message: `[ingest] failed to delete storage objects for removed take ${takeId}: ${message}`,
+          stack,
+        });
       }
     }
 

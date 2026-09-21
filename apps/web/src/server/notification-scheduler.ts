@@ -10,7 +10,12 @@
 // singleton, which a unit test can't meaningfully exercise without either
 // waiting 10 minutes or reimplementing fake timers around global mutable
 // state.
-import { type NotificationTickDeps, runNotificationTick } from "@bandplate/core";
+import {
+  type NotificationTickDeps,
+  describeError,
+  logError,
+  runNotificationTick,
+} from "@bandplate/core";
 
 /** The tick runs every 10 minutes. */
 export const NOTIFICATION_TICK_INTERVAL_MS = 600_000;
@@ -78,7 +83,12 @@ async function tick(deps: NotificationTickDeps, state: SchedulerState): Promise<
         `failed=${result.failed} skippedStale=${result.skippedStale}`,
     );
   } catch (err) {
-    console.error(`[scheduler] notification tick threw: ${String(err)}`);
+    const { message, stack } = describeError(err);
+    logError({
+      kind: "scheduled-tick",
+      message: `[scheduler] notification tick threw: ${message}`,
+      stack,
+    });
   } finally {
     state.inFlight = false;
   }

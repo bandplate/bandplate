@@ -1,4 +1,4 @@
-import type { Storage } from "@bandplate/core";
+import { type Storage, describeError, logError } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
 import { assetsRepo, instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 // `/admin/instruments` page logic — mirrors
@@ -349,7 +349,12 @@ export async function mergeInstruments(
     try {
       await storage.delete(keys);
     } catch (err) {
-      console.error("failed to delete merged-away storage objects", keys, err);
+      const { message, stack } = describeError(err);
+      logError({
+        kind: "storage-delete",
+        message: `failed to delete merged-away storage objects ${JSON.stringify(keys)}: ${message}`,
+        stack,
+      });
     }
   }
   return { kind: "ok" };

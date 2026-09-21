@@ -1,4 +1,4 @@
-import { type Storage, canPublish } from "@bandplate/core";
+import { type Storage, canPublish, describeError, logError } from "@bandplate/core";
 import type { Db } from "@bandplate/db";
 import {
   assetsRepo,
@@ -364,7 +364,12 @@ export async function deleteTake(db: Db, storage: Storage, id: string): Promise<
     try {
       await storage.delete(assets.map((a) => a.storageKey));
     } catch (err) {
-      console.error("failed to delete storage objects for take", id, err);
+      const { message, stack } = describeError(err);
+      logError({
+        kind: "storage-delete",
+        message: `failed to delete storage objects for take ${id}: ${message}`,
+        stack,
+      });
     }
   }
   return { kind: "ok", take, deletedAssets: assets.length };
@@ -426,7 +431,12 @@ export async function deleteAsset(
   try {
     await storage.delete([asset.storageKey]);
   } catch (err) {
-    console.error("failed to delete storage object", asset.storageKey, err);
+    const { message, stack } = describeError(err);
+    logError({
+      kind: "storage-delete",
+      message: `failed to delete storage object ${asset.storageKey}: ${message}`,
+      stack,
+    });
   }
   return {
     kind: "ok",

@@ -13,6 +13,16 @@ compatibility_flags = ["nodejs_compat"]
 directory = "dist"
 binding = "ASSETS"
 
+# Workers Logs: turns on the dashboard's Logs tab, which is where every
+# structured `console.error(JSON.stringify({...}))` line this app emits
+# (see `packages/core/src/log-error.ts`) actually ends up in production —
+# Cloudflare > Workers & Pages > bandplate > Logs. `head_sampling_rate = 1`
+# keeps every invocation's logs (no sampling); this app's volume doesn't
+# warrant sampling down.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 # Runs the notification tick every 10 minutes — the `scheduled` handler
 # `src/worker.ts` exports alongside the normal `fetch` one (wired in via
 # `workerEntryPoint` in `astro.config.mjs`). Cron Triggers run in UTC; the

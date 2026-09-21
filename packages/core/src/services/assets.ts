@@ -16,6 +16,7 @@ import { type Db, assetsRepo } from "@bandplate/db";
 // and is now a loop over `resolveSlotForUpload`. A browser adding one file to
 // a take it has already half-filled must not be told that the files it did
 // not mention this time should go away.
+import { describeError, logError } from "../log-error.js";
 import type { Storage } from "../ports/index.js";
 import { masterStorageKey, peaksStorageKey, stemStorageKey } from "../storage-keys.js";
 
@@ -263,7 +264,12 @@ export async function resolveSlotForUpload(
     try {
       await storage.delete([existing.storageKey]);
     } catch (err) {
-      console.error("failed to delete superseded storage object", existing.storageKey, err);
+      const { message, stack } = describeError(err);
+      logError({
+        kind: "storage-delete",
+        message: `failed to delete superseded storage object ${existing.storageKey}: ${message}`,
+        stack,
+      });
     }
   }
 

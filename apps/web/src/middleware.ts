@@ -18,6 +18,7 @@ import { defineMiddleware } from "astro:middleware";
 // unguarded even by accident. The ten existing pages' own `isSameOrigin`
 // calls are left exactly as they were (redundant with this, not replaced
 // by it) — see the task-4 handoff's "do not disturb" list.
+import { describeError, logError } from "@bandplate/core";
 import { DEFAULT_LOCALE, type Locale, negotiateLocale } from "@bandplate/i18n";
 import { getAppDeps, getAuthDeps, getWebConfig, initWorkersRuntime } from "./server/app.js";
 import { SESSION_COOKIE_NAME, readLocaleCookie, setLocaleCookie } from "./server/cookies.js";
@@ -161,7 +162,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect(memberDecision.to);
   }
 
-  const response = await next();
+  // Any page handler (`.astro` frontmatter, a bespoke `.ts` endpoint under
+  // `src/pages/`) that throws instead of returning a Response ends up here.
+  // Logged once, structured, then rethrown unchanged — this middleware
+  // does not turn it into a Response itself, so Astro's own dev/production
+  // error handling still runs exactly as before; only what reaches the
+  // console differs.
+  let response: Response;
+  try {
+    response = await next();
+  } catch (err) {
+    const { message, stack } = describeError(err);
+    logError({ kind: "page", route: context.url.pathname, message, stack });
+    throw err;
+  }
 
   // What this response depended on, for any cache between here and the reader.
   //

@@ -20,7 +20,10 @@
 // `app.workers.ts` — caught by diffing the built `dist/_worker.js` output
 // against the stock (pre-this-file) Cloudflare build, which has no
 // `createSmtpMailer` chunk at all.
-import { runNotificationTick } from "@bandplate/core";
+import { describeError, logError, runNotificationTick } from "@bandplate/core";
+
+/** Mirrors `wrangler.toml`'s `[triggers] crons` — keep the two in step. */
+const CRON_PATTERN = "*/10 * * * *";
 import { getNotificationDeps, initWorkersRuntime } from "../server/app.js";
 import type { CloudflareEnv } from "./config.worker.js";
 
@@ -61,6 +64,12 @@ export async function runScheduledTick(env: CloudflareEnv): Promise<void> {
         `failed=${result.failed} skippedStale=${result.skippedStale}`,
     );
   } catch (err) {
-    console.error(`[scheduled] notification tick threw: ${String(err)}`);
+    const { message, stack } = describeError(err);
+    logError({
+      kind: "scheduled-tick",
+      cron: CRON_PATTERN,
+      message: `[scheduled] notification tick threw: ${message}`,
+      stack,
+    });
   }
 }

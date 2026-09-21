@@ -1,4 +1,11 @@
-import { type Storage, allocateSongSlug, chartChanged, normalizeTitle } from "@bandplate/core";
+import {
+  type Storage,
+  allocateSongSlug,
+  chartChanged,
+  describeError,
+  logError,
+  normalizeTitle,
+} from "@bandplate/core";
 import { type Db, type PageArgs, type Paged, assetsRepo } from "@bandplate/db";
 import {
   eventsRepo,
@@ -499,7 +506,12 @@ export async function deleteSong(db: Db, storage: Storage, id: string): Promise<
     try {
       await storage.delete(storageKeys);
     } catch (err) {
-      console.error("failed to delete storage objects for song", id, err);
+      const { message, stack } = describeError(err);
+      logError({
+        kind: "storage-delete",
+        message: `failed to delete storage objects for song ${id}: ${message}`,
+        stack,
+      });
     }
   }
 

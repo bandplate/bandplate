@@ -28,6 +28,8 @@ import {
   type Mailer,
   type NotificationTickDeps,
   createInMemoryRateLimiter,
+  describeError,
+  logError,
   systemClock,
 } from "@bandplate/core";
 import { createDb } from "@bandplate/db";
@@ -174,7 +176,12 @@ function maybeStartNotificationScheduler(runtime: Runtime): void {
     }
     startNotificationScheduler(deps);
   } catch (err) {
-    console.error(`[scheduler] failed to start: ${String(err)}`);
+    const { message, stack } = describeError(err);
+    logError({
+      kind: "scheduler-start",
+      message: `[scheduler] failed to start: ${message}`,
+      stack,
+    });
   }
 }
 

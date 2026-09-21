@@ -368,4 +368,29 @@ describe("middleware onRequest — which language the request renders in", () =>
     await onRequest(context, next);
     expect(context.cookiesSet).toEqual([]);
   });
+
+  it("logs one structured line for an unhandled page error, then rethrows it unchanged", async () => {
+    resolvePrincipalFromCookie.mockResolvedValue(member());
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const boom = new Error("page handler exploded");
+    const throwingNext = vi.fn(async () => {
+      throw boom;
+    });
+    const context = makeContext("/takes/123", { cookieValue: "session-token" });
+
+    // `rawOnRequest`, not the `onRequest` wrapper above — that wrapper
+    // requires a `Response` back and this case deliberately throws instead,
+    // exactly as it did before this middleware started catching it.
+    await expect(rawOnRequest(context, throwingNext)).rejects.toBe(boom);
+
+    expect(errorSpy).toHaveBeenCalledOnce();
+    const [line] = errorSpy.mock.calls[0] as [string];
+    expect(JSON.parse(line)).toMatchObject({
+      level: "error",
+      kind: "page",
+      route: "/takes/123",
+      message: "page handler exploded",
+    });
+    errorSpy.mockRestore();
+  });
 });

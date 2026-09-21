@@ -1,3 +1,4 @@
+import { describeError, logError } from "@bandplate/core";
 import {
   type Db,
   assetsRepo,
@@ -374,7 +375,12 @@ async function readVisit(
         lastVisitAt: decision.lastVisitAt,
       });
     } catch (err) {
-      console.error("failed to record the home visit", memberId, err);
+      const { message, stack } = describeError(err);
+      logError({
+        kind: "home-visit-write",
+        message: `failed to record the home visit for member ${memberId}: ${message}`,
+        stack,
+      });
     }
   };
   return { since: decision.since, record };

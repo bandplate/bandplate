@@ -64,11 +64,15 @@ describe("getHomeData when the visit write throws", () => {
     expect(membersRepo.recordHomeLoad).toHaveBeenCalledOnce();
     expect(data.onTheStand?.event.id).toBe(event.id);
     expect(data.recentEvents.map((e) => e.id)).toEqual([event.id]);
-    expect(console.error).toHaveBeenCalledWith(
-      "failed to record the home visit",
-      memberId,
-      expect.any(Error),
-    );
+    // One structured JSON line (see `@bandplate/core`'s `log-error.ts`) —
+    // not the old free-text `console.error(prefix, id, err)` shape.
+    expect(console.error).toHaveBeenCalledOnce();
+    const [line] = vi.mocked(console.error).mock.calls[0] as [string];
+    expect(JSON.parse(line)).toMatchObject({
+      level: "error",
+      kind: "home-visit-write",
+      message: `failed to record the home visit for member ${memberId}: D1 is having a day`,
+    });
     // Nothing was written, so the next load still sees a first visit.
     expect((await membersRepo.getById(db, memberId))?.homeLastSeenAt).toBeNull();
   });

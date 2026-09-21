@@ -1,4 +1,13 @@
-import type { AuthDeps, Clock, Mailer, RateLimiter, Sleep, Storage } from "@bandplate/core";
+import {
+  type AuthDeps,
+  type Clock,
+  type Mailer,
+  type RateLimiter,
+  type Sleep,
+  type Storage,
+  describeError,
+  logError,
+} from "@bandplate/core";
 import type { Db } from "@bandplate/db";
 import { Hono } from "hono";
 import { errorResponse } from "./errors.js";
@@ -89,7 +98,7 @@ export function buildRoutedApp(deps: AppDeps): { app: Hono<AppEnv>; router: Guar
   // includes raw exception text in the response.
   app.notFound((c) => errorResponse(c, 404, "not_found", "Not found."));
   app.onError((err, c) => {
-    console.error("[api] unhandled error", err);
+    logError({ kind: "api", route: c.req.path, ...describeError(err) });
     return errorResponse(c, 500, "internal_error", "An unexpected error occurred.");
   });
 

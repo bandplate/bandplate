@@ -2317,6 +2317,13 @@ a.bp-btn {
   gap: 0.75rem;
 }
 
+/* How many, after a page's title: "Skladby (8)". Muted and lighter, so the
+   number reads as a note on the name rather than part of it. */
+.bp-title-count {
+  color: var(--bp-color-muted);
+  font-weight: 500;
+}
+
 .bp-shell-title {
   min-width: 0;
   overflow: hidden;

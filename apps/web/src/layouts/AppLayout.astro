@@ -39,6 +39,8 @@ export interface Props {
    * Past `lg` the header is gone and nothing changes.
    */
   headerTitle?: string;
+  /** A count shown after `headerTitle`, in the muted tone: "Skladby (8)". */
+  headerCount?: number;
   principal: MemberPrincipal;
   current: NavKey;
   // Which admin section is open, when `current` is "admin". The sidebar lists
@@ -82,6 +84,7 @@ const {
   title,
   description,
   headerTitle,
+  headerCount,
   principal,
   current,
   adminSection,
@@ -161,7 +164,10 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
               </a>
               {/* A picture of the h1, not a second one: the heading is the
                   page's own, which a screen reader already reaches. */}
-              <p class="bp-shell-title bp-m0" aria-hidden="true">{headerTitle}</p>
+              <p class="bp-shell-title bp-m0" aria-hidden="true">
+                {headerTitle}
+                {headerCount !== undefined && <span class="bp-title-count"> ({headerCount})</span>}
+              </p>
             </>
           ) : (
             <a href="/" class="bp-shell-wordmark">

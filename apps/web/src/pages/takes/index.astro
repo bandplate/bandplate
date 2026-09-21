@@ -166,10 +166,10 @@ if (!viewingStash && pages.redirectTo) {
 // The real count, not a hedge. This read `${results.length}+ takes` when the
 // old hard cap truncated — "200+" said nothing a member could act on, and was
 // indistinguishable from an archive that held exactly 200.
-const countLabel = t.takes.count(total);
 ---
 
-<AppLayout title={t.takes.title} headerTitle={viewingStash ? t.stash.pill : t.takes.title} principal={principal} current="takes">
+<AppLayout title={t.takes.title} headerTitle={viewingStash ? t.stash.pill : t.takes.title}
+  headerCount={viewingStash ? stashCount : total} principal={principal} current="takes">
   <div class={viewingStash ? "bp-takes bp-takes--stash" : "bp-takes"}>
     <div class="bp-takes-bar">
       <h1 class="bp-page-title bp-m0 bp-takes-bar-title">
@@ -179,10 +179,13 @@ const countLabel = t.takes.count(total);
         {viewingStash ? (
           <>
             <span class="bp-record-word">{t.stash.viewTitle(t.takes.title)}</span>
-            <span class="bp-record-word-short">{t.stash.pill}</span>
+            <span class="bp-record-word-short">{t.stash.pill}</span>{" "}
+            <span class="bp-title-count">({stashCount})</span>
           </>
         ) : (
-          t.takes.title
+          <>
+            {t.takes.title}{" "}<span class="bp-title-count">({total})</span>
+          </>
         )}
       </h1>
       {/* The stash, as a pill beside the filters: a different list of MY
@@ -242,7 +245,8 @@ const countLabel = t.takes.count(total);
             {t.stash.pill}
           </>
         )}
-        {stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
+        {/* Open, the count is in the title ("Šuplík (1)"), not on the way out. */}
+        {!viewingStash && stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
       </a>
       {/* In the stash, the way in to the recorder where the filters were: the
           SAME pill the song page carries, caption and all, so one affordance
@@ -505,10 +509,13 @@ const countLabel = t.takes.count(total);
       </div>
     ) : (
       <div class="bp-search-results">
-        <p class="bp-takes-count bp-m0">
-          {countLabel}
-          {filtersApplied && <span class="bp-kind">{t.takes.filtered}</span>}
-        </p>
+        {/* The count is in the title now ("Nahrávky (18)"); what the title
+            cannot say is that a filter narrowed it, so that part stays. */}
+        {filtersApplied && (
+          <p class="bp-takes-count bp-m0">
+            <span class="bp-kind">{t.takes.filtered}</span>
+          </p>
+        )}
         {
           results.length === 0 ? (
             <div class="bp-empty-state">

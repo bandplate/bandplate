@@ -133,10 +133,12 @@ function archivedHref(): string {
 }
 ---
 
-<AppLayout title={t.events.title} headerTitle={t.events.title} principal={principal} current="events">
+<AppLayout title={t.events.title} headerTitle={t.events.title} headerCount={events.total} principal={principal} current="events">
   <div class="bp-stack">
     <div class="bp-title-row">
-      <h1 class="bp-page-title">{t.events.title}</h1>
+      <h1 class="bp-page-title">
+        {t.events.title}{" "}<span class="bp-title-count">({events.total})</span>
+      </h1>
       <button type="button" class="bp-btn bp-btn-primary bp-btn-sm" data-sheet-open="add-event">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />

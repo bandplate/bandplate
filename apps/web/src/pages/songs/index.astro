@@ -151,13 +151,15 @@ function archivedHref(): string {
 }
 ---
 
-<AppLayout title={t.songs.title} headerTitle={t.songs.title} principal={principal} current="songs">
+<AppLayout title={t.songs.title} headerTitle={t.songs.title} headerCount={songCount} principal={principal} current="songs">
   <div class="bp-stack">
     {/* Direction B from the canvas: the write affordance is a primary button
         in the title row, opening the record sheet the admin pages already
         use. It shortens to "Add" on a phone so the title keeps its room. */}
     <div class="bp-title-row">
-      <h1 class="bp-page-title">{t.songs.title}</h1>
+      <h1 class="bp-page-title">
+        {t.songs.title}{" "}<span class="bp-title-count">({songCount})</span>
+      </h1>
       <button type="button" class="bp-btn bp-btn-primary bp-btn-sm" data-sheet-open="add-song">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
@@ -278,7 +280,9 @@ function archivedHref(): string {
       }
     </div>
 
-    <p class="bp-field-hint bp-m0">{resultsLabel}</p>
+    {/* The plain count lives in the title now ("Skladby (8)"). A search or
+        the archive says something the title cannot, so those keep the line. */}
+    {(query.search || viewingArchive) && <p class="bp-field-hint bp-m0">{resultsLabel}</p>}
 
     {
       songs.rows.length === 0 ? (

@@ -2456,7 +2456,28 @@ a.bp-btn {
   margin-left: -0.5rem;
 }
 
+/* A list page's add button, at the far end of the header line. The star
+   hugs the name because it marks it; this is an action on the page, so it
+   takes the edge where a thumb finds it. */
+.bp-shell-header-end {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+}
+
 @media (max-width: 1023.98px) {
+  /* The page's own copy of an action the header now carries. Removed, not
+     clipped, so there is one button to reach. Its row is left holding only
+     the visually hidden h1, which is out of flow, so the row stops being a
+     box at all rather than leaving an empty stack gap at the top. */
+  .bp-shell--titled .bp-titled-action {
+    display: none;
+  }
+
+  .bp-shell--titled .bp-title-row:has(> .bp-titled-action) {
+    display: contents;
+  }
+
   /* The hero's own star is display: none, not merely clipped with its
      heading: a visually hidden heading is still read, and a control inside it
      would be a second, invisible, focusable copy of the header's star. */

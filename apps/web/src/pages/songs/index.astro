@@ -154,15 +154,26 @@ function archivedHref(): string {
 ---
 
 <AppLayout title={t.songs.title} headerTitle={t.songs.title} headerCount={songCount} principal={principal} current="songs">
+  <button
+    slot="header-end"
+    type="button"
+    class="bp-btn bp-btn-primary bp-btn-sm"
+    data-sheet-open="add-song"
+    aria-label={t.songs.addSong}
+  >
+    <Plus size={16} aria-hidden="true" />
+    {t.shell.headerAdd}
+  </button>
   <div class="bp-stack">
     {/* Direction B from the canvas: the write affordance is a primary button
         in the title row, opening the record sheet the admin pages already
-        use. It shortens to "Add" on a phone so the title keeps its room. */}
+        use. On a phone it moves up into the header line as "Add", beside the
+        page's name, and this copy is hidden. */}
     <div class="bp-title-row">
       <h1 class="bp-page-title">
         {t.songs.title}{" "}<span class="bp-title-count">({songCount})</span>
       </h1>
-      <button type="button" class="bp-btn bp-btn-primary bp-btn-sm" data-sheet-open="add-song">
+      <button type="button" class="bp-btn bp-btn-primary bp-btn-sm bp-titled-action" data-sheet-open="add-song">
         <Plus size={16} aria-hidden="true" />
         {t.songs.addSong}
       </button>

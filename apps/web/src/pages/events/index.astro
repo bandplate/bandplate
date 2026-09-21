@@ -135,12 +135,22 @@ function archivedHref(): string {
 ---
 
 <AppLayout title={t.events.title} headerTitle={t.events.title} headerCount={events.total} principal={principal} current="events">
+  <button
+    slot="header-end"
+    type="button"
+    class="bp-btn bp-btn-primary bp-btn-sm"
+    data-sheet-open="add-event"
+    aria-label={t.events.addEvent}
+  >
+    <Plus size={16} aria-hidden="true" />
+    {t.shell.headerAdd}
+  </button>
   <div class="bp-stack">
     <div class="bp-title-row">
       <h1 class="bp-page-title">
         {t.events.title}{" "}<span class="bp-title-count">({events.total})</span>
       </h1>
-      <button type="button" class="bp-btn bp-btn-primary bp-btn-sm" data-sheet-open="add-event">
+      <button type="button" class="bp-btn bp-btn-primary bp-btn-sm bp-titled-action" data-sheet-open="add-event">
         <Plus size={16} aria-hidden="true" />
         {t.events.addEvent}
       </button>

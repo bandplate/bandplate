@@ -7,6 +7,13 @@
 // already uses: a new nav item is a typecheck error here until it has a word.
 
 export const shell = {
+  /**
+   * The add button in a list page's phone header. One word: the page's name
+   * sits beside it, so "Add" there already means "add a song". Its accessible
+   * name is the page's full label ("Add song"), which contains this word.
+   */
+  headerAdd: "Add",
+
   nav: {
     home: "Home",
     songs: "Songs",

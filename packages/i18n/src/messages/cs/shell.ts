@@ -22,6 +22,8 @@
 import type { shell as enShell } from "../en/shell.js";
 
 export const shell = {
+  headerAdd: "Přidat", // en: Add
+
   nav: {
     home: "Domů", // en: Home
     songs: "Skladby", // en: Songs

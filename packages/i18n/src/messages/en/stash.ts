@@ -111,14 +111,14 @@ export const stash = {
   pageTitle: (title: string): string => `${title} in your stash`,
   songAndLength: (title: string, length: string): string => `${title}, ${length}`,
   backToStash: "Back to the stash",
-  addTitle: "Add to song",
   fieldSong: "Song",
   fieldEvent: "Event",
   fieldBy: "Recorded by",
   personalEvent: (date: string): string => `Personal recordings, ${date}`,
-  publishNote:
-    "The whole band will see it with the song. There's no vote on it and nobody gets notified.",
-  publish: "Add to song",
+  publishNote: "The whole band will see it with the song, and it will not come back to your stash.",
+  publish: "Share with the band",
+  /** The question before it: sharing is one-way. */
+  publishConfirmTitle: "Share this recording with the band?",
   /** The picker on a recording that has no song, above "Add to song". */
   chooseSong: "Which song is this?",
   chooseSongPlaceholder: "Pick a song",

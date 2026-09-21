@@ -93,13 +93,13 @@ export const stash = {
   pageTitle: (title: string): string => `${title} v šuplíku`, // en: {title} in your stash
   songAndLength: (title: string, length: string): string => `${title}, ${length}`, // en: {title}, {m:ss}
   backToStash: "Zpět do šuplíku", // en: Back to the stash
-  addTitle: "Přidat k písni", // en: Add to song
   fieldSong: "Píseň", // en: Song
   fieldEvent: "Akce", // en: Event
   fieldBy: "Kdo nahrál", // en: Recorded by
   personalEvent: (date: string): string => `Osobní nahrávky, ${date}`, // en: Personal recordings, {date}
-  publishNote: "Uvidí ji celá kapela u písně. Nehlasuje se o ní a nikomu nepřijde upozornění.", // en: The whole band will see it …
-  publish: "Přidat k písni", // en: Add to song
+  publishNote: "Uvidí ji celá kapela u písně a do šuplíku se už nevrátí.", // en: The whole band will see it with the song, and it will not come back to your stash.
+  publish: "Sdílet s kapelou", // en: Share with the band
+  publishConfirmTitle: "Sdílet nahrávku s kapelou?", // en: Share this recording with the band?
   chooseSong: "Ke které písni to patří?", // en: Which song is this?
   chooseSongPlaceholder: "Vyber píseň", // en: Pick a song
   noSongChosen: "Nejdřív vyber píseň, pak ji přidej.", // en: Pick a song first, then add it.

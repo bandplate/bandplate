@@ -49,6 +49,14 @@ interface ConfirmState {
    * the dialog opens first and asks.
    */
   bodyUrl?: string;
+  /**
+   * A submit button whose own form IS the action: confirming submits that
+   * form, fields and all, rather than posting an empty body to
+   * `data-confirm-action`. For a write whose inputs the member has just
+   * chosen in a sheet (a song picked for a recording) — a URL cannot carry
+   * those, and the form already does.
+   */
+  submitter?: HTMLButtonElement;
   /** Lines under the body, one per thing that will not survive. */
   details?: string[];
   /**
@@ -77,6 +85,19 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
       if (!target) {
         return;
       }
+      const submitter =
+        target instanceof HTMLButtonElement &&
+        target.type === "submit" &&
+        target.form &&
+        !target.dataset.confirmAction
+          ? target
+          : undefined;
+      // A form that is not ready to send is not ready to confirm: let the
+      // browser's own validation speak (a song not yet picked, say) instead
+      // of asking "are you sure?" about a submission that cannot happen.
+      if (submitter && !submitter.form?.checkValidity()) {
+        return;
+      }
       // Capture phase, and stop the event dead. `<ClientRouter />` has its own
       // document-level click listener for links, registered when the layout
       // script runs — before this island hydrates — so in the bubble phase it
@@ -102,7 +123,7 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
       const action =
         target.dataset.confirmAction ??
         (target instanceof HTMLAnchorElement ? target.href : undefined);
-      if (!action) {
+      if (!action && !submitter) {
         return;
       }
       // A trigger whose action depends on a control beside it — a picker
@@ -120,7 +141,8 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
       setState({
         title: target.dataset.confirmTitle ?? ti().confirmTitle,
         body: target.dataset.confirmBody ?? (bodyUrl ? ti().confirmLoading : ti().confirmBody),
-        action: `${action}${query}`,
+        action: action ? `${action}${query}` : "",
+        submitter,
         cta: target.dataset.confirmCta ?? ti().confirmCta,
         redirect: target.dataset.confirmRedirect,
         danger: target.dataset.confirmTone !== "neutral",
@@ -214,6 +236,13 @@ export default function ConfirmDialog({ locale }: { locale?: Locale } = {}) {
     }
     setPending(true);
     setError(null);
+    if (state.submitter?.form) {
+      // The form's own submission, so the page's handler sees exactly what
+      // it would have seen without this dialog, and a failure renders where
+      // every other form error on that page renders.
+      state.submitter.form.requestSubmit(state.submitter);
+      return;
+    }
     try {
       const res = await fetch(state.action, {
         method: "POST",

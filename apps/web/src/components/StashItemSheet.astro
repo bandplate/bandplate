@@ -170,7 +170,22 @@ const afterDelete = returnTo ?? `/takes?stash=1&deleted=${row.id}`;
       </div>
     </div>
     <div class="bp-sheet-foot">
-      {canPublishHere && <button type="submit" class="bp-btn bp-btn-primary">{t.stash.publish}</button>}
+      {/* One-way, so it asks: nothing puts a shared recording back in the
+          stash. The dialog submits THIS form, so the song picked above goes
+          with it. Neutral tone: sharing is not destruction. */}
+      {canPublishHere && (
+        <button
+          type="submit"
+          class="bp-btn bp-btn-primary"
+          data-confirm
+          data-confirm-tone="neutral"
+          data-confirm-title={t.stash.publishConfirmTitle}
+          data-confirm-body={t.stash.publishNote}
+          data-confirm-cta={t.stash.publish}
+        >
+          {t.stash.publish}
+        </button>
+      )}
       {/* No Close on a page: there is nothing to close, and a button that
           does nothing is the fake affordance this app does not render. */}
       {!standalone && <button type="button" class="bp-btn bp-btn-secondary" data-sheet-close>{t.stash.close}</button>}

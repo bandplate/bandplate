@@ -66,7 +66,7 @@ const PROBE_ORIGIN = "https://app.invalid";
  */
 export function safeAppPath(candidate: string | null | undefined): string | null {
   const value = candidate?.trim();
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+  if (!value?.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
     return null;
   }
   let url: URL;

@@ -19,7 +19,7 @@ import { defineMiddleware } from "astro:middleware";
 // calls are left exactly as they were (redundant with this, not replaced
 // by it) — see the task-4 handoff's "do not disturb" list.
 import { describeError, logError } from "@bandplate/core";
-import { DEFAULT_LOCALE, type Locale, negotiateLocale } from "@bandplate/i18n";
+import { type Locale, negotiateLocale } from "@bandplate/i18n";
 import { getAppDeps, getAuthDeps, getWebConfig, initWorkersRuntime } from "./server/app.js";
 import { SESSION_COOKIE_NAME, readLocaleCookie, setLocaleCookie } from "./server/cookies.js";
 import { isSameOrigin } from "./server/csrf.js";

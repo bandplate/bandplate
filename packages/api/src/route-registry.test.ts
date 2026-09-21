@@ -60,7 +60,7 @@ describe("assertEveryRouteIsGuarded", () => {
     const app = new Hono<AppEnv>();
     const router = new GuardedRouter(app);
     router.get("/a", publicRoute(), (c) => c.json({}));
-    app.use("/secret", async (c, next) => {
+    app.use("/secret", async (_c, next) => {
       await next();
     });
 
@@ -71,7 +71,7 @@ describe("assertEveryRouteIsGuarded", () => {
     const app = new Hono<AppEnv>();
     const router = new GuardedRouter(app);
     router.get("/a", publicRoute(), (c) => c.json({}));
-    router.use("*", async (c, next) => {
+    router.use("*", async (_c, next) => {
       await next();
     });
 

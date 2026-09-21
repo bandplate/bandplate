@@ -630,7 +630,6 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                     the ruler's range input already does properly with a
                     keyboard, not a control in its own right — so it must not
                     appear twice to a screen reader. */}
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: the ruler's range input IS this control's keyboard path; a second one here is the same seek twice */}
                 <span
                   class="bp-mixer-wave"
                   aria-hidden="true"
@@ -651,7 +650,6 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
                   ) : lanes[index] ? (
                     lanes[index]?.map((value, bar) => (
                       <span
-                        // biome-ignore lint/suspicious/noArrayIndexKey: bar N is bar N
                         key={bar}
                         class="bp-mixer-bar"
                         style={{ height: `${Math.max(6, value * 100)}%` }}

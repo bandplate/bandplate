@@ -361,7 +361,7 @@ describe("ingest API", () => {
         await seedInstruments(testApp);
         const auth = await ingestToken(testApp);
 
-        const event = await declareEvent(testApp, auth, "proj-flow");
+        await declareEvent(testApp, auth, "proj-flow");
 
         const masterBytes = new TextEncoder().encode("fake opus master bytes");
         const stemBytes = new TextEncoder().encode("fake opus bass stem bytes");

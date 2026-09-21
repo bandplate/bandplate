@@ -166,7 +166,6 @@ export default function Recorder({
       below: list.scrollTop + list.clientHeight < list.scrollHeight - 1,
     });
   }, []);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: not read inside, they are the triggers — the list's content changes with the phase and the search
   useEffect(() => {
     const list = songListRef.current;
     measureSongList();
@@ -620,7 +619,6 @@ export default function Recorder({
             <button type="button" class="bp-rec-wave" aria-label={t.reviewSeek} onClick={seek}>
               {bars.map((bar, index) => (
                 <span
-                  // biome-ignore lint/suspicious/noArrayIndexKey: bars are positional and never reorder
                   key={index}
                   class={index / bars.length < progress ? "bp-rec-bar is-played" : "bp-rec-bar"}
                   style={{ height: `${Math.max(6, bar * 100)}%` }}

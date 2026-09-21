@@ -340,6 +340,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments, loca
           : ti(locale).uploadFilesAdded;
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: dragover/dragleave/drop are pointer-only progressive enhancement — the real, keyboard-reachable control is the <input type="file"> and <button> rendered inside this panel
     <div
       class={`bp-uploader${dragging ? " bp-uploader--over" : ""}`}
       onDragOver={(event) => {

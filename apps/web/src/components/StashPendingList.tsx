@@ -75,8 +75,6 @@ interface Props {
   deletedTakeId?: string | undefined;
 }
 
-const TRASH_PATH = "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3";
-
 /**
  * Whether revoking this URL would break playback. Not just the track playing
  * now: the queue this row was started from holds the rows AFTER it too, and
@@ -238,7 +236,6 @@ export default function StashPendingList({
   // with its bytes in hand, and that row must get its URL then rather than
   // staying inert until something else changes.
   const rowIds = rows.map((entry) => `${entry.kind}:${entry.row.localId}`).join(" ");
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the row ids are the trigger; the rows and the blobs are re-read inside
   useEffect(() => {
     if (retiredRef.current) {
       return;

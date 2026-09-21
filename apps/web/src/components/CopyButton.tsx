@@ -118,7 +118,7 @@ export default function CopyButton({ value, label, locale }: Props) {
           ? ti(locale).copied
           : state === "failed"
             ? ti(locale).copyFailed
-            : label}
+            : copyLabel}
       </button>
       {state === "failed" && (
         <p class="bp-field-error bp-m0">

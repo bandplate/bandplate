@@ -1,4 +1,4 @@
-import { type Db, authSessionsRepo, membersRepo, schema, serviceTokensRepo } from "@bandplate/db";
+import { type Db, membersRepo, schema, serviceTokensRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Clock } from "../ports/clock.js";
@@ -51,7 +51,7 @@ const buildLoginUrl = (rawToken: string) => `https://band.example/login/${rawTok
 
 function extractToken(mailer: CapturingMailer): string {
   const sent = mailer.sent[0];
-  if (!sent || sent.kind !== "login-link") {
+  if (sent?.kind !== "login-link") {
     throw new Error("expected a login link to have been sent");
   }
   const rawToken = sent.url.split("/").pop();

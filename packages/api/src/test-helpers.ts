@@ -192,7 +192,7 @@ export async function buildTestApp(overrides: Partial<AppConfig> = {}): Promise<
 /** Extract the raw login token from the last captured login-link email. */
 export function extractLoginToken(mailer: CapturingMailer): string {
   const last = mailer.sent.at(-1);
-  if (!last || last.kind !== "login-link") {
+  if (last?.kind !== "login-link") {
     throw new Error("expected a login link to have been captured");
   }
   const token = last.url.split("/").pop();

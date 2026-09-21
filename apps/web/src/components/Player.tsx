@@ -33,7 +33,6 @@ import { type Locale, playerMessages } from "@bandplate/i18n";
 // and again after every navigation.
 import { useStore } from "@nanostores/preact";
 import { ChevronUp, Pause, Play, SkipBack, SkipForward, X } from "lucide-preact";
-import { Fragment } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import { MIN_MIXER_STEMS } from "../client/mixer-tracks.js";
@@ -530,7 +529,6 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   // list arrives, after the track change that asked for it. The sheet
   // renders their selected state itself; this adds the classes it leaves
   // to `syncButtons`, so the pills match every other control.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `sources` is the trigger (new pills in the DOM), not a value the effect reads
   useEffect(() => {
     syncButtons(track, playing);
   }, [track, playing, sources]);
@@ -905,7 +903,6 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
                 <span
                   // Index is the identity: a fixed-length list of positions
                   // along one timeline, not a list of things.
-                  // biome-ignore lint/suspicious/noArrayIndexKey: bar N is bar N
                   key={i}
                   class={`bp-player-bar${i / bars.length <= progress ? " is-played" : ""}`}
                   style={{ height: `${Math.max(8, value * 100)}%` }}

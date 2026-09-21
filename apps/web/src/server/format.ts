@@ -11,7 +11,6 @@
 // its page is translated, one area per commit.
 import {
   DEFAULT_LOCALE,
-  EMPTY_VALUE,
   type Locale,
   formatBytes as i18nFormatBytes,
   formatDateTime as i18nFormatDateTime,

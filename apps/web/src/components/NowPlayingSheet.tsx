@@ -73,7 +73,6 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
   // recompute whether anything is hidden below it (the fade says so).
   const queueIndex = queue?.index ?? -1;
   const queueLength = queue?.items.length ?? 0;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: queueIndex/queueLength are triggers: the list's DOM is what is read.
   useEffect(() => {
     const list = listRef.current;
     if (!open || !list) return;

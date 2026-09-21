@@ -61,7 +61,7 @@ export function zodToJsonSchema(schema: ZodTypeAny): JsonSchema {
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: `_def`'s shape is Zod-internal and varies by typeName
-function zodInnerToJsonSchema(inner: ZodTypeAny, def: any): JsonSchema {
+function zodInnerToJsonSchema(_inner: ZodTypeAny, def: any): JsonSchema {
   switch (def.typeName) {
     case "ZodObject": {
       const shape = def.shape();

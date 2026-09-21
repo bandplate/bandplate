@@ -159,7 +159,7 @@ export default function ChartEditor({
         const name = row.querySelector<HTMLInputElement>(".bp-chart-row-name");
         const chords = row.querySelector<HTMLTextAreaElement>(".bp-chart-row-chords");
         const words = row.querySelector<HTMLTextAreaElement>(".bp-chart-row-lyrics");
-        if (!name || name.value.trim() !== "") {
+        if (name?.value.trim() !== "") {
           continue;
         }
         if (chords?.value.trim() === "" && words?.value.trim() === "") {

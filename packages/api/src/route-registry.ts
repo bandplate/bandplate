@@ -106,7 +106,7 @@ export class GuardedRouter {
     this.app[method](path, async (c: Context<AppEnv>) => {
       if (!("public" in guard)) {
         const principal = c.get("principal");
-        if (guard.requireServiceToken && (!principal || principal.kind !== "service")) {
+        if (guard.requireServiceToken && principal?.kind !== "service") {
           return c.json(
             { error: { code: "unauthorized", message: "A valid service token is required." } },
             401,

@@ -278,7 +278,7 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
     }
 
     const asset = await assetsRepo.getById(deps.db, id);
-    if (!asset || asset.status !== "ready" || asset.kind === "peaks") {
+    if (asset?.status !== "ready" || asset.kind === "peaks") {
       return errorResponse(c, 404, "not_found", "Asset not found.");
     }
 

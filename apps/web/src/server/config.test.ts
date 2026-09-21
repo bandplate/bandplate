@@ -29,7 +29,6 @@ beforeEach(() => {
 describe("loadConfig", () => {
   it("fails, naming BANDPLATE_DATABASE_URL, when it is missing", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).BANDPLATE_DATABASE_URL;
     expect(() => loadConfig(env)).toThrow(ConfigError);
     expect(() => loadConfig(env)).toThrow(/BANDPLATE_DATABASE_URL/);
@@ -37,7 +36,6 @@ describe("loadConfig", () => {
 
   it("fails, naming BANDPLATE_BOOTSTRAP_TOKEN, when it is missing", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).BANDPLATE_BOOTSTRAP_TOKEN;
     expect(() => loadConfig(env)).toThrow(/BANDPLATE_BOOTSTRAP_TOKEN/);
   });
@@ -72,7 +70,6 @@ describe("loadConfig", () => {
 
   it("fails when no mailer is configured (no SMTP, no dev-mailer opt-in)", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).BANDPLATE_ALLOW_DEV_MAILER;
     expect(() => loadConfig(env)).toThrow(
       /no way to deliver login links|BANDPLATE_ALLOW_DEV_MAILER/i,
@@ -81,7 +78,6 @@ describe("loadConfig", () => {
 
   it("fails, naming the missing field, when SMTP config is partially set", () => {
     const env = { ...BASE_ENV, BANDPLATE_SMTP_HOST: "smtp.example.com" };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).BANDPLATE_ALLOW_DEV_MAILER;
     expect(() => loadConfig(env)).toThrow(/BANDPLATE_SMTP_PORT|BANDPLATE_SMTP_FROM/);
   });
@@ -174,42 +170,36 @@ describe("loadConfig", () => {
 
   it("fails, naming S3_ENDPOINT, when it is missing", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).S3_ENDPOINT;
     expect(() => loadConfig(env)).toThrow(/S3_ENDPOINT/);
   });
 
   it("fails, naming S3_PUBLIC_ENDPOINT, when it is missing", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).S3_PUBLIC_ENDPOINT;
     expect(() => loadConfig(env)).toThrow(/S3_PUBLIC_ENDPOINT/);
   });
 
   it("fails, naming S3_BUCKET, when it is missing", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).S3_BUCKET;
     expect(() => loadConfig(env)).toThrow(/S3_BUCKET/);
   });
 
   it("fails, naming S3_REGION, when it is missing", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).S3_REGION;
     expect(() => loadConfig(env)).toThrow(/S3_REGION/);
   });
 
   it("fails, naming S3_ACCESS_KEY_ID, when it is missing", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).S3_ACCESS_KEY_ID;
     expect(() => loadConfig(env)).toThrow(/S3_ACCESS_KEY_ID/);
   });
 
   it("fails, naming S3_SECRET_ACCESS_KEY, when it is missing", () => {
     const env = { ...BASE_ENV };
-    // biome-ignore lint/performance/noDelete: test-only env manipulation
     delete (env as Record<string, string | undefined>).S3_SECRET_ACCESS_KEY;
     expect(() => loadConfig(env)).toThrow(/S3_SECRET_ACCESS_KEY/);
   });

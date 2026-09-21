@@ -379,7 +379,7 @@ describe("message catalog parity", () => {
     (locale) => {
       const untranslated = all
         .filter(({ path }) => !IDENTICAL_IS_FINE.has(path))
-        .filter(({ path, render }) => render("en") === render(locale))
+        .filter(({ render }) => render("en") === render(locale))
         .map(({ path }) => path);
 
       expect(

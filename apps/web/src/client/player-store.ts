@@ -155,3 +155,19 @@ export function normalisePeaks(bars: number[]): number[] {
 export function downsamplePeaks(peaks: number[], bars: number): number[] {
   return normalisePeaks(downsamplePeaksAbsolute(peaks, bars));
 }
+
+/**
+ * A peaks response body as the values, or null when it is not a list of
+ * numbers.
+ *
+ * The ingest contract §5 specifies the file as "a single array of 1000
+ * integers", and that is what the bridge writes. Reading only `body.peaks`
+ * meant every waveform ingested to spec silently drew a plain rail (`[].peaks`
+ * is undefined, and the fallback is indistinguishable from a 404). The older
+ * wrapped shape stays accepted. The player and the mixer both read peaks
+ * through this, so they cannot disagree about which shapes count.
+ */
+export function parsePeaksBody(body: unknown): number[] | null {
+  const raw = Array.isArray(body) ? body : (body as { peaks?: unknown } | null)?.peaks;
+  return Array.isArray(raw) && raw.every((v) => typeof v === "number") ? (raw as number[]) : null;
+}

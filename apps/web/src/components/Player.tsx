@@ -36,7 +36,11 @@ import { ChevronUp, Pause, Play, SkipBack, SkipForward, X } from "lucide-preact"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
 import { MIN_MIXER_STEMS } from "../client/mixer-tracks.js";
-import { controlState, decidePlayerClickAction } from "../client/player-actions.js";
+import {
+  type ClickedSource,
+  controlState,
+  decidePlayerClickAction,
+} from "../client/player-actions.js";
 import {
   canGoPrevious,
   decidePrevious,
@@ -44,7 +48,6 @@ import {
   nextIndex,
   type QueueItem,
   queueFrom,
-  queuePosition,
   sameQueue,
   sheetHasContent,
 } from "../client/player-queue.js";
@@ -56,10 +59,23 @@ import {
   isPlaying,
   type PlayerSource,
   type PlayerTrack,
+  parsePeaksBody,
   peaksUrl,
   playQueue,
   sourcesUrl,
 } from "../client/player-store.js";
+import {
+  controlDropsFocus,
+  drawnBarCount,
+  nowPlayingAnnouncement,
+  playerSubtitle,
+  queueableItem,
+  queueItemOf,
+  readSourceControl,
+  remoteTransport,
+  showsMixer,
+  stemCount,
+} from "../client/player-view.js";
 import {
   barCountForWidth,
   finiteDuration,
@@ -99,71 +115,24 @@ function playerText(fallback?: Locale) {
   return playerMessages(currentLocale(fallback));
 }
 
-interface SourceButtonData {
-  takeId: string;
-  assetId: string;
-  title: string;
-  subtitle: string;
-  sourceKind: "master" | "stem";
-  sourceName: string;
-  /** "source-select" (the Hraje sheet's source pills) keeps its own text as its name; the default play/pause toggle gets a Play/Pause label. */
-  role: string;
-  /** `data-audio-src`: an object URL to play instead of the asset route, for a recording the server does not have yet. */
-  src?: string;
-}
-
-function readButtonData(el: HTMLElement): SourceButtonData | null {
-  const { takeId, assetId, title } = el.dataset;
-  if (!takeId || !assetId || !title) {
-    return null;
-  }
-  return {
-    takeId,
-    assetId,
-    title,
-    subtitle: el.dataset.subtitle ?? "",
-    // A control that says nothing about its source is the master — that is
-    // what every plain play button on a row or a plate is.
-    sourceKind: el.dataset.sourceKind === "stem" ? "stem" : "master",
-    sourceName: el.dataset.sourceName ?? "",
-    role: el.dataset.role ?? "toggle",
-    src: el.dataset.audioSrc,
-  };
-}
-
 /**
  * The list a toggle was pressed in, as queue items, in document order. Only
  * plain master toggles count, which is every play control a take row has:
  * a queued take starts on its master. A toggle outside any
  * `[data-play-queue]` is a queue of one.
  */
-function readQueueAround(target: HTMLElement, clicked: SourceButtonData): QueueItem[] {
+function readQueueAround(target: HTMLElement, clicked: ClickedSource): QueueItem[] {
   const container = target.closest<HTMLElement>("[data-play-queue]");
-  const self = {
-    takeId: clicked.takeId,
-    assetId: clicked.assetId,
-    title: clicked.title,
-    subtitle: clicked.subtitle,
-    src: clicked.src,
-  };
-  if (!container) {
-    return [self];
-  }
-  return readQueueIn(container);
+  return container ? readQueueIn(container) : [queueItemOf(clicked)];
 }
 
 function readQueueIn(container: HTMLElement): QueueItem[] {
   const items: QueueItem[] = [];
   for (const el of container.querySelectorAll<HTMLElement>(`[${AUDIO_SOURCE_ATTR}]`)) {
-    const data = readButtonData(el);
-    if (data && data.role === "toggle" && data.sourceKind === "master") {
-      items.push({
-        takeId: data.takeId,
-        assetId: data.assetId,
-        title: data.title,
-        subtitle: data.subtitle,
-        src: data.src,
-      });
+    const data = readSourceControl(el.dataset);
+    const entry = data && queueableItem(data);
+    if (entry) {
+      items.push(entry);
     }
   }
   return items;
@@ -172,7 +141,7 @@ function readQueueIn(container: HTMLElement): QueueItem[] {
 /** Updates every `[data-audio-source]` element currently in the DOM to reflect the live player state — aria-pressed, a few CSS hooks, and (for plain toggle buttons) the aria-label. Called on every store change and after every navigation (`astro:page-load`), since Astro swaps in fresh, unsynced elements on each page. What each control should show is `controlState` in `player-actions.ts`; this only writes it. */
 function syncButtons(track: PlayerTrack | null, playing: boolean): void {
   for (const el of document.querySelectorAll<HTMLElement>(`[${AUDIO_SOURCE_ATTR}]`)) {
-    const data = readButtonData(el);
+    const data = readSourceControl(el.dataset);
     if (!data) {
       continue;
     }
@@ -265,8 +234,14 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       const focused = document.activeElement;
       if (
         focused instanceof HTMLElement &&
-        ((!hasNext(next) && focused.hasAttribute("data-player-next")) ||
-          (!canGoPrevious(next, 0) && focused.hasAttribute("data-player-prev")))
+        controlDropsFocus(
+          next,
+          focused.hasAttribute("data-player-next")
+            ? "next"
+            : focused.hasAttribute("data-player-prev")
+              ? "previous"
+              : null,
+        )
       ) {
         focused
           .closest(".bp-player-transport, .bp-now-playing-foot")
@@ -340,7 +315,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   const [barCount, setBarCount] = useState(WAVEFORM_BARS);
   const [sources, setSources] = useState<PlayerSource[] | null>(null);
   /** How many of them are stems — what decides whether a mixer is worth offering. */
-  const stemCount = sources?.filter((source) => source.kind === "stem").length ?? 0;
+  const stems = stemCount(sources);
   /** Whether the Hraje sheet is showing — the title button opens it, `NowPlayingSheet` renders it. */
   const [sheetOpen, setSheetOpen] = useState(false);
   sheetOpenRef.current = sheetOpen;
@@ -432,7 +407,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       if (!target) {
         return;
       }
-      const data = readButtonData(target);
+      const data = readSourceControl(target.dataset);
       const audio = audioRef.current;
       if (!data || !audio) {
         return;
@@ -490,13 +465,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           // loaded, so they switch source instead of starting anything.
           const queue = queueFrom(readQueueAround(target, data), data.takeId);
           playQueue.set(queue);
-          startItem({
-            takeId: data.takeId,
-            assetId: data.assetId,
-            title: data.title,
-            subtitle: data.subtitle,
-            src: data.src,
-          });
+          startItem(queueItemOf(data));
           break;
         }
       }
@@ -557,8 +526,9 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     session.metadata = track
       ? new MediaMetadata({ title: track.title, artist: track.subtitle })
       : null;
-    session.setActionHandler("previoustrack", track ? goPrevious : null);
-    session.setActionHandler("nexttrack", track && hasNext(queue) ? goNext : null);
+    const offered = remoteTransport(track, queue);
+    session.setActionHandler("previoustrack", offered.previous ? goPrevious : null);
+    session.setActionHandler("nexttrack", offered.next ? goNext : null);
   }, [track, queue, goNext, goPrevious]);
 
   // The waveform for whatever source is loaded. Re-fetched on every source
@@ -579,19 +549,13 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     setPeaks(null);
     fetch(peaksUrl(sourceAssetId))
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { peaks?: unknown } | number[] | null) => {
+      .then((body: unknown) => {
         if (cancelled) {
           return;
         }
-        // The ingest contract §5 specifies the file as "a single array of 1000
-        // integers", and that is what the bridge writes. Reading only
-        // `body.peaks` meant every waveform ingested to spec silently drew a
-        // plain rail -- `[].peaks` is undefined, and the fallback below is
-        // indistinguishable from a 404. The wrapped shape stays accepted.
-        const raw = Array.isArray(body) ? body : body?.peaks;
-        setPeaks(
-          Array.isArray(raw) && raw.every((v) => typeof v === "number") ? (raw as number[]) : null,
-        );
+        // Both the contract's bare array and the older wrapped shape; see
+        // `parsePeaksBody`.
+        setPeaks(parsePeaksBody(body));
       })
       .catch(() => {
         if (!cancelled) {
@@ -707,11 +671,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   }, []);
 
   const t = playerText(locale);
-  const announced = !track
-    ? ""
-    : track.sourceKind === "stem"
-      ? t.nowPlayingSource({ title: track.title, source: t.solo(track.sourceName) })
-      : t.nowPlaying(track.title);
+  const announced = nowPlayingAnnouncement(track, t);
 
   // One bar per `BAR_PITCH_PX` of actual rail. Observed rather than read once:
   // the player is persistent, so it outlives rotations, window drags and the
@@ -743,25 +703,17 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   }, []);
 
   const bars = useMemo(
-    () => (peaks ? downsamplePeaks(peaks, Math.max(1, Math.min(barCount, peaks.length))) : []),
+    () => (peaks ? downsamplePeaks(peaks, drawnBarCount(barCount, peaks.length)) : []),
     [peaks, barCount],
   );
   const progress = playedFraction(playhead, duration);
 
   // The queue's own position — "3 of 10" — distinct from `playhead`, the
   // scrub position in seconds, which is why that state was renamed above.
-  const position = queuePosition(queue);
-  const sourceLabel = !track ? "" : track.sourceKind === "stem" ? track.sourceName : t.master;
-  const subtitleLine = [
-    track?.subtitle,
-    sources && sources.length > 1 ? sourceLabel : "",
-    position ? t.position(position) : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const subtitleLine = playerSubtitle({ track, sources, queue, t });
   const canOpenSheet = sheetHasContent({
     sourceCount: sources?.length ?? 0,
-    stemCount,
+    stemCount: stems,
     queueLength: queue?.items.length ?? 0,
     minMixerStems: MIN_MIXER_STEMS,
   });
@@ -937,7 +889,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           onClose={() => setSheetOpen(false)}
           track={track}
           sources={sources}
-          showMixer={sources !== null && stemCount >= MIN_MIXER_STEMS}
+          showMixer={showsMixer(sources)}
           queue={queue}
           onPick={playIndex}
           onPrevious={goPrevious}

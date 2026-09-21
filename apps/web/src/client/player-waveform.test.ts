@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { downsamplePeaks, PEAK_FULL_SCALE } from "./player-store.js";
+import { downsamplePeaks, PEAK_FULL_SCALE, parsePeaksBody } from "./player-store.js";
 
 describe("downsamplePeaks", () => {
   it("reads the contract's -128..127 integers, not 0..1 fractions", () => {
@@ -52,5 +52,24 @@ describe("downsamplePeaks", () => {
 
   it("keeps PEAK_FULL_SCALE as the contract's full-amplitude value", () => {
     expect(PEAK_FULL_SCALE).toBe(127);
+  });
+});
+
+describe("parsePeaksBody", () => {
+  it("reads the contract's bare array", () => {
+    // Ingest contract §5: "a single array of 1000 integers".
+    expect(parsePeaksBody([1, -2, 3])).toEqual([1, -2, 3]);
+  });
+
+  it("still reads the older wrapped shape", () => {
+    expect(parsePeaksBody({ peaks: [4, 5] })).toEqual([4, 5]);
+  });
+
+  it("is nothing for a body that is not a list of numbers", () => {
+    // A 404 lands here as null; either way the lane draws its plain rail.
+    expect(parsePeaksBody(null)).toBeNull();
+    expect(parsePeaksBody({})).toBeNull();
+    expect(parsePeaksBody({ peaks: "1,2" })).toBeNull();
+    expect(parsePeaksBody([1, "2", 3])).toBeNull();
   });
 });

@@ -15,7 +15,7 @@
 import type { playerMessages } from "@bandplate/i18n";
 import { ChevronDown, Pause, Play, SkipBack, SkipForward, SlidersVertical } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { PlayQueue } from "../client/player-queue.js";
+import { type PlayQueue, queuePosition } from "../client/player-queue.js";
 import { AUDIO_SOURCE_ATTR, type PlayerSource, type PlayerTrack } from "../client/player-store.js";
 import { scrollFades } from "../client/timeline.js";
 
@@ -85,10 +85,8 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
     setMore(scrollFades(list));
   }
 
-  const position =
-    queue && queue.items.length > 1
-      ? t.position({ current: queue.index + 1, total: queue.items.length })
-      : "";
+  const where = queuePosition(queue);
+  const position = where ? t.position(where) : "";
 
   return (
     // The click below only detects a press OUTSIDE the dialog's own content

@@ -43,6 +43,7 @@ import {
   toggleMuteMine,
   trackGains,
 } from "../client/mixer-tracks.js";
+import { parsePeaksBody } from "../client/player-store.js";
 import { barCountForWidth, formatClock, fractionAt, playedFraction } from "../client/timeline.js";
 import { type MixerFailure, useMixerEngine } from "../client/use-mixer-engine.js";
 
@@ -144,13 +145,9 @@ export default function Mixer({ tracks, canMuteMine, onlyInMaster, locale }: Mix
           if (!res.ok) {
             return null;
           }
-          const body: unknown = await res.json();
-          // The contract says a bare array; an older shape wrapped it. Both
-          // are accepted for the same reason the player accepts both.
-          const raw = Array.isArray(body) ? body : (body as { peaks?: unknown } | null)?.peaks;
-          return Array.isArray(raw) && raw.every((v) => typeof v === "number")
-            ? (raw as number[])
-            : null;
+          // The contract's bare array or the older wrapped shape, read the
+          // same way the player reads them.
+          return parsePeaksBody(await res.json());
         } catch {
           // A 404 is the ORDINARY case, not an error: per-stem peaks are a
           // real slot in the contract, but whether a stem has one depends on

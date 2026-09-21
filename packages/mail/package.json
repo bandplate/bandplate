@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "@bandplate/core": "workspace:*",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^10.0.10"
   },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.17",
+    "@types/nodemailer": "^8.0.2",
     "esbuild": "^0.24.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

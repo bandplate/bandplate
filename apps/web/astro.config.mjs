@@ -61,6 +61,7 @@ const adapter =
 
 export default defineConfig({
   output: "server",
+  devToolbar: { enabled: false },
   adapter,
   integrations: [
     preact({ compat: true }),
@@ -114,6 +115,12 @@ export default defineConfig({
         },
       },
     ].filter(Boolean),
+    // Optimized up front, not discovered when the first island imports it.
+    // A late discovery makes Vite re-optimize mid-session, and the open page
+    // then fails every island with "504 Outdated Optimize Dep".
+    optimizeDeps: {
+      include: ["lucide-preact"],
+    },
   },
   // Astro's built-in Origin/CSRF guard (`security.checkOrigin`, on by
   // default since Astro 5) compares `request.headers.get("origin")`

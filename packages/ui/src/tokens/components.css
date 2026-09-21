@@ -7227,7 +7227,10 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 .bp-ledger-link {
   display: grid;
-  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  /* The date column is as wide as its widest content (a three-letter month,
+     "ČVC"), not wider: at 3.25rem it left a two-digit day ~26px of empty
+     column in front of it, on top of the row's own inset. */
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 0 1rem;
   min-width: 0;
@@ -7248,7 +7251,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 .bp-ledger-date {
   display: block;
-  text-align: right;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 

@@ -2524,8 +2524,26 @@ a.bp-btn {
   /* Its padding spaced the facts run from the first strip. The facts are up
      in the panel now, and each strip brings its own top padding, so on a
      take with nothing left to rule on this was 20px of nothing. */
+  /* One step between everything on a phone take: 1.25rem, the gap the
+     facts card already keeps from what follows it. The hero's pieces join
+     the page's column so that an empty hero (a take already ruled on) adds
+     nothing, and each piece drops the margin it used to space itself with.
+     The strips keep only what their heading needs above it. */
+  .bp-shell--titled .bp-take-detail {
+    gap: 1.25rem;
+  }
+
   .bp-shell--titled .bp-take-detail-hero {
-    padding-bottom: 0;
+    display: contents;
+  }
+
+  .bp-shell--titled .bp-take-detail-hero > *,
+  .bp-shell--titled .bp-take-ways {
+    margin-top: 0;
+  }
+
+  .bp-shell--titled .bp-take-strip {
+    padding-top: 0.375rem;
   }
 
   /* The hero's own star is display: none, not merely clipped with its
@@ -5128,15 +5146,17 @@ html:has(dialog.bp-filter-sheet[open]) body {
   flex: 1 1 20rem;
   min-width: 0;
   padding: 0.875rem 1rem;
-  border: 1px solid var(--bp-color-border);
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--bp-color-fg) 3%, transparent);
+  border-radius: 1rem;
+  /* The home card's material: the surface brown let partly through, no
+     edge. In dark this is the sleeve brown of the Na pultu card; the surface
+     token rather than `--bp-stand` so the light theme's ink stays readable. */
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
   color: var(--bp-color-fg);
   text-decoration: none;
 }
 
-/* The same fill a row gets under the pointer, for the same reason — one hover
-   material across the app. */
+/* The same fill a row gets under the pointer, now solid rather than let
+   through: one hover material across the app. */
 .bp-take-way:hover {
   background: var(--bp-color-surface);
   color: var(--bp-color-fg);

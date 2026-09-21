@@ -5050,35 +5050,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 0.875rem;
 }
 
-/* Small variants once the row has dropped under the heading. Three full pills
-   across a phone is a band of colour heavier than the take's own name.
- *
- * Sized like `.bp-btn-xs` but NOT by borrowing it, because that variant's own
- * comment rules out this use: its `::after` reaches 6px past the fill on every
- * side, so two of them at a 0.5rem gap have hit areas that OVERLAP, and WCAG
- * 2.5.8's spacing condition is what a sub-44px target leans on. The row's own
- * 0.875rem gap is what makes this safe — 14px less two 6px reaches leaves the
- * 44px targets 2px clear of each other — so that gap is load-bearing here,
- * not styling. The four metrics below are a deliberate copy of
- * `.bp-btn-xs`'s and have to stay in step with it. */
-@media (max-width: 39.999rem) {
-  .bp-take-hero-actions .bp-btn,
-  .bp-take-ruling .bp-btn {
-    position: relative;
-    min-height: 32px;
-    min-width: 0;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8125rem;
-  }
-
-  .bp-take-hero-actions .bp-btn::after,
-  .bp-take-ruling .bp-btn::after {
-    content: "";
-    position: absolute;
-    inset: -6px;
-    border-radius: inherit;
-  }
-}
+/* No phone shrink for the take's buttons. The ruling and Edit used to drop
+   to the xs size under 40rem, from when three full pills sat under the
+   heading; with the ruling in its own strip that left it 32px beside a 44px
+   play pill and a 48px vote pair. One size for every action in the page's
+   body now, `.bp-btn-sm`'s 44px; the header's controls are the xs tier. */
 
 /* The take's label, inside its name — "Čoudy: take 2". Muted and at the
    heading's own size: the song is what you came for, the label is which
@@ -5586,9 +5562,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-vote-toggle-lg .bp-vote-btn {
   flex: none;
   min-width: 7rem;
-  min-height: 48px;
-  padding: 0.8125rem 1.5rem;
-  font-size: 0.9375rem;
+  /* `.bp-btn-sm`'s metrics, so the vote pair is the same 44px as every other
+     action on the take page. It was 48px, a third size in one column. */
+  min-height: 44px;
+  padding: 0.375rem 1.25rem;
+  font-size: 0.875rem;
 }
 
 .bp-vote-toggle-lg .bp-vote-tally {

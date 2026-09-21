@@ -177,7 +177,11 @@ const initials = member.displayName
       {/* Sign out belongs to the person, so it lives on their own header —
           and it stays outline-only, because it is the one destructive thing
           on the page and must not compete with the plate for a thumb. */}
-      <form method="post" action="/logout" class="bp-profile-signout">
+      {/* `data-signout-form` is what the shared inline script in `AppLayout`
+          looks for — see its comment there for why the hidden field and the
+          unsubscribe happen on submit rather than eagerly. */}
+      <form method="post" action="/logout" class="bp-profile-signout" data-signout-form>
+        <input type="hidden" name="pushEndpoint" value="" />
         <button type="submit" class="bp-btn bp-btn-quiet bp-btn-sm">{t.me.signOut}</button>
       </form>
     </header>

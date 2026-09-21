@@ -88,6 +88,37 @@ describe("pushSubscriptionsRepo", () => {
     expect(await pushSubscriptions.countForMember(db, member.id)).toBe(0);
   });
 
+  // Task 5 (push unsubscribe on sign-out): the sign-out form's hidden
+  // endpoint field is client-supplied, so the server's delete must scope on
+  // (member, endpoint) together, never endpoint alone — otherwise a member
+  // who copies (or forges) another member's endpoint into the field could
+  // silence someone else's device just by signing out.
+  it("removeByEndpoint deletes nothing when the endpoint belongs to a different member", async () => {
+    const owner = await createMember("push-3-owner");
+    const attacker = await createMember("push-3-attacker");
+    await pushSubscriptions.upsert(
+      db,
+      {
+        memberId: owner.id,
+        endpoint: "https://push.example.com/owner-device",
+        p256dh: "p256dh",
+        auth: "auth",
+        vapidKeyId: "key1",
+      },
+      1000,
+    );
+
+    await pushSubscriptions.removeByEndpoint(
+      db,
+      attacker.id,
+      "https://push.example.com/owner-device",
+    );
+
+    expect(await pushSubscriptions.countForMember(db, owner.id)).toBe(1);
+    const row = await pushSubscriptions.getByEndpoint(db, "https://push.example.com/owner-device");
+    expect(row?.memberId).toBe(owner.id);
+  });
+
   it("removeById removes a subscription by its id", async () => {
     const member = await createMember("push-4");
     await pushSubscriptions.upsert(

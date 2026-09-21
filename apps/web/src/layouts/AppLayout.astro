@@ -389,3 +389,70 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
     }, 300);
   });
 </script>
+
+<script>
+  // Push unsubscribe on sign-out (Task 5). One listener for every
+  // `[data-signout-form]` in the document — there is only one today (`/me`'s
+  // header), but a second one (a menu, say) gets this for free rather than
+  // needing its own copy.
+  //
+  // CAPTURE, same reasoning as the theme picker's listener above:
+  // `<ClientRouter />` also listens for `submit` on `document`, in the
+  // bubble phase, and decides whether to intercept the POST by reading
+  // `event.defaultPrevented` when ITS listener runs. This one has to see the
+  // event and call `preventDefault()` first, so the router's decision (soft
+  // navigation vs. letting it through) is made with our hidden field already
+  // filled in, not the empty value the form rendered with.
+  //
+  // `data-push-checked` is the loop guard: `form.requestSubmit()` re-fires
+  // `submit` on the same form, which re-enters this same capture listener.
+  // The second time through, the flag is already set, so this returns
+  // immediately and the event proceeds untouched — through the router's own
+  // listener, then as a real network POST — exactly as it would have without
+  // this script at all.
+  //
+  // Every await in `resolveAndSubmit` is wrapped so it can never leave the
+  // member stuck: whatever throws (no service worker, a revoked permission,
+  // `unsubscribe()` rejecting), the `finally` still submits. Signing out
+  // must never depend on push working.
+  import { endpointFieldValue } from "../client/push-logout.js";
+
+  async function resolveAndSubmit(form: HTMLFormElement) {
+    const field = form.elements.namedItem("pushEndpoint");
+    try {
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        const subscription = registration ? await registration.pushManager.getSubscription() : null;
+        if (field instanceof HTMLInputElement) {
+          field.value = endpointFieldValue(subscription);
+        }
+        if (subscription) {
+          await subscription.unsubscribe();
+        }
+      }
+    } catch {
+      // Nothing to do — the field stays whatever it already was (empty, on
+      // the form's initial render), and the server falls back to leaving
+      // push subscriptions alone for this device, same as the no-JS path.
+    } finally {
+      form.dataset.pushChecked = "1";
+      form.requestSubmit();
+    }
+  }
+
+  document.addEventListener(
+    "submit",
+    (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || !form.hasAttribute("data-signout-form")) {
+        return;
+      }
+      if (form.dataset.pushChecked === "1") {
+        return; // the re-submission below — let it go through for real
+      }
+      event.preventDefault();
+      resolveAndSubmit(form);
+    },
+    { capture: true },
+  );
+</script>

@@ -1,10 +1,22 @@
 ---
 // POST-only sign-out. A direct GET (e.g. a bookmarked URL) just bounces
 // home rather than doing anything.
+//
+// Task 5: also stops push notifications for THIS device. The signing-out
+// member's browser sends the current subscription's endpoint in a hidden
+// field (filled, and the subscription unsubscribed, by the inline script in
+// `AppLayout.astro` — see that file), and the server deletes only the row
+// matching (this member, that endpoint): `pushSubscriptionsRepo.removeByEndpoint`
+// already scopes on both, so a forged or stale endpoint belonging to another
+// member deletes nothing (see its repo test). No field at all — the no-JS
+// path, or a device that was never subscribed — does nothing server side,
+// same as before this task; signing out must never depend on push working.
 import { revokeSession } from "@bandplate/core";
+import { pushSubscriptionsRepo } from "@bandplate/db";
 import { getAppDeps, getAuthDeps } from "../server/app.js";
 import { SESSION_COOKIE_NAME, clearSessionCookie } from "../server/cookies.js";
 import { isSameOrigin } from "../server/csrf.js";
+import { pushEndpointFromForm } from "../server/pages/logout.js";
 
 if (Astro.request.method !== "POST") {
   return Astro.redirect("/");
@@ -13,6 +25,15 @@ if (Astro.request.method !== "POST") {
 const [appDeps, authDeps] = await Promise.all([getAppDeps(), getAuthDeps()]);
 
 if (isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+  const principal = Astro.locals.principal;
+  if (principal) {
+    const formData = await Astro.request.formData();
+    const pushEndpoint = pushEndpointFromForm(formData);
+    if (pushEndpoint) {
+      await pushSubscriptionsRepo.removeByEndpoint(appDeps.db, principal.memberId, pushEndpoint);
+    }
+  }
+
   const cookie = Astro.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (cookie) {
     await revokeSession(authDeps, cookie);

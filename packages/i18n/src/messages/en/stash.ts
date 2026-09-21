@@ -6,8 +6,6 @@ import { plural } from "../../plural.js";
 export const stash = {
   // --- the stash view on /takes -------------------------------------------
   pill: "Stash",
-  /** The page's own title while the drawer is open, in the title-join shape. */
-  viewTitle: (takes: string): string => `${takes} — stash`,
   // The same pill, once the stash is open: pressing it again closes the drawer
   // and puts the band's recordings back.
   pillClose: "Close stash",

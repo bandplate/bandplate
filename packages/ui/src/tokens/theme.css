@@ -101,10 +101,10 @@
      AA. Size carries the subordination; the colour token stays intact. */
   --text-note: 0.71875rem;
   --text-note--line-height: 1.45;
-  --text-eyebrow: 0.6875rem;
+  --text-eyebrow: 0.75rem;
   --text-eyebrow--line-height: 1.3;
-  --text-eyebrow--letter-spacing: 0.22em;
-  --text-eyebrow--font-weight: 900;
+  --text-eyebrow--letter-spacing: 0.12em;
+  --text-eyebrow--font-weight: 600;
   --text-chord: 0.875rem;
   --text-chord--line-height: 1.7;
   --text-machine: 0.78125rem;

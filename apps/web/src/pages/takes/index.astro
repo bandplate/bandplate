@@ -173,14 +173,10 @@ if (!viewingStash && pages.redirectTo) {
   <div class={viewingStash ? "bp-takes bp-takes--stash" : "bp-takes"}>
     <div class="bp-takes-bar">
       <h1 class="bp-page-title bp-m0 bp-takes-bar-title">
-        {/* On a phone the joined title wrapped onto two lines beside two
-            pills. There it is the drawer's own name; the page it belongs to
-            is one tap behind the cross next to it. */}
+        {/* Open, the page is the drawer, and it is called that: "Šuplík". */}
         {viewingStash ? (
           <>
-            <span class="bp-record-word">{t.stash.viewTitle(t.takes.title)}</span>
-            <span class="bp-record-word-short">{t.stash.pill}</span>{" "}
-            <span class="bp-title-count">({stashCount})</span>
+            {t.stash.pill}{" "}<span class="bp-title-count">({stashCount})</span>
           </>
         ) : (
           <>

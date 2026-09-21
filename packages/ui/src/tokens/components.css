@@ -742,10 +742,10 @@ a.bp-btn {
    fact — which is what a column head is. */
 .bp-table th {
   font-family: var(--bp-font-body);
-  font-size: 0.625rem;
-  font-weight: 900;
+  font-size: 0.6875rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.1em;
   color: var(--bp-color-muted);
   padding-bottom: 0.5rem;
 }
@@ -840,10 +840,10 @@ a.bp-btn {
   .bp-table td::before {
     content: attr(data-label);
     font-family: var(--bp-font-body);
-    font-size: 0.625rem;
-    font-weight: 900;
+    font-size: 0.6875rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.1em;
     color: var(--bp-color-muted);
     text-align: left;
     flex-shrink: 0;
@@ -4722,9 +4722,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
    word "Chorus" above them. */
 .bp-song-chart-label {
   font-family: var(--bp-font-body);
-  font-weight: 900;
-  font-size: var(--text-eyebrow, 0.6875rem);
-  letter-spacing: 0.2em;
+  font-weight: 600;
+  font-size: var(--text-eyebrow, 0.75rem);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--bp-color-muted);
   margin: 0 0 0.25rem;
@@ -4981,9 +4981,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
    for a kind an admin adds later. */
 .bp-take-way-kind {
   font-family: var(--bp-font-body);
-  font-weight: 900;
-  font-size: 0.625rem;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--bp-color-muted);
   flex: none;
@@ -5038,9 +5038,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
    still navigable by heading. */
 .bp-strip-label {
   font-family: var(--bp-font-body);
-  font-weight: 900;
-  font-size: var(--text-eyebrow, 0.6875rem);
-  letter-spacing: 0.22em;
+  font-weight: 600;
+  font-size: var(--text-eyebrow, 0.75rem);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--bp-color-muted);
   margin: 0 0 0.75rem;
@@ -6574,11 +6574,17 @@ html:has(dialog.bp-filter-sheet[open]) body {
 /* An eyebrow: a caps label above a block. The type scale's own `eyebrow`
    step, made a class because four screens were re-declaring the same five
    properties inline. */
+/* Small caps labels — this eyebrow, `.bp-kind`, table headers, the ledger
+   month, strip and chart labels — are Chivo 600 with modest tracking. They
+   were 900 at 10–11px with wide tracking, and at that size in the muted tone
+   the black strokes closed the letters up; 600 is a weight already loaded,
+   its counters stay open, and a pixel more size pays for the lighter stroke.
+   Settled 2026-09-21 on the "Eyebrow Weight" canvas (option A). */
 .bp-eyebrow {
   font-family: var(--bp-font-body);
-  font-weight: 900;
-  font-size: var(--text-eyebrow, 0.6875rem);
-  letter-spacing: 0.22em;
+  font-weight: 600;
+  font-size: var(--text-eyebrow, 0.75rem);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--bp-color-muted);
 }
@@ -6684,9 +6690,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 .bp-kind {
   font-family: var(--bp-font-body);
-  font-weight: 900;
-  font-size: 0.625rem;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--bp-color-muted);
   white-space: nowrap;
@@ -7272,9 +7278,9 @@ html:has(dialog.bp-filter-sheet[open]) body {
   display: block;
   margin-top: 0.1875rem;
   font-family: var(--bp-font-body);
-  font-weight: 900;
-  font-size: 0.59375rem;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  font-size: 0.65625rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--bp-color-muted);
 }
@@ -9397,15 +9403,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
     white-space: nowrap;
   }
 
-  /* The title's own long/short pair: not the takes bar's pills, so it takes
-     the swap on its own terms. */
-  .bp-takes-bar-title .bp-record-word {
-    display: none;
-  }
-
-  .bp-takes-bar-title .bp-record-word-short {
-    display: inline;
-  }
 }
 
 /* `.bp-pill:hover` is declared earlier in this file and would otherwise win

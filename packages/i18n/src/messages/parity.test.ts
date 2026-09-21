@@ -89,7 +89,6 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "many", args: [5] },
   ],
   "stash.recordFor": [{ label: "t", args: ["Čoudy"] }],
-  "stash.viewTitle": [{ label: "t", args: ["Nahrávky"] }],
   "stash.homeHeading": [
     { label: "one", args: [1] },
     { label: "few", args: [3] },

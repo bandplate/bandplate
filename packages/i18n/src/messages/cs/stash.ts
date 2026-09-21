@@ -28,8 +28,6 @@ const RECORDING_FORMS = {
 
 export const stash = {
   pill: "Šuplík", // en: Stash
-  // en: `${takes} — stash`
-  viewTitle: (takes: string): string => `${takes} — šuplík`,
   pillClose: "Zavřít šuplík", // en: Close stash
   viewLede: "Nahrávky, které vidíš jen ty.", // en: Recordings only you can see.
   recordIdea: "Nahrát nápad", // en: Record an idea

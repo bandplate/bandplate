@@ -263,6 +263,10 @@ const [allSongs, allInstruments] = await Promise.all([
       {isPersonal && owner && (
         <p class="bp-event-hero-title bp-m0">{t.events.recordedByLabel}: {owner.displayName}</p>
       )}
+      {/* The band's own words about the day, before anything to press: on a
+          phone the date and kind are up in the header, so this is the first
+          thing the page says. A card, the same one the take's facts sit on. */}
+      {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
       <div class="bp-event-hero-actions">
         {hasPlayable && (
           <button
@@ -282,7 +286,6 @@ const [allSongs, allInstruments] = await Promise.all([
           </button>
         )}
       </div>
-      {event.notes && <p class="bp-event-hero-notes bp-m0">{event.notes}</p>}
 
     </header>
 

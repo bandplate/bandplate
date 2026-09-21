@@ -5843,11 +5843,25 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-fg);
 }
 
+/* The event's notes on the card the take's facts and the home page's Šuplík
+   use: 6% fill, 1rem radius, the same padding. Ink, not muted: muted text
+   never sits on a fill. The measure moves to the card so the text inside
+   keeps its line length and the card does not stretch past it. */
 .bp-event-hero-notes {
+  max-width: 62ch;
+  padding: 1.125rem 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
   font-size: var(--text-prose, 1.0625rem);
   line-height: 1.55;
-  color: var(--bp-color-muted);
-  max-width: 62ch;
+  color: var(--bp-color-fg);
+}
+
+/* A step more room between the card and the buttons than the hero's own
+   0.5rem gap: a card and a row of pills that close read as one lump. Here
+   rather than as the card's margin, which `.bp-m0` on it would cancel. */
+.bp-event-hero-notes + .bp-event-hero-actions {
+  margin-top: 0.5rem;
 }
 
 .bp-event-hero-hint {

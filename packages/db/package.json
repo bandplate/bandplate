@@ -22,12 +22,12 @@
     "@bandplate/core": "workspace:*",
     "@bandplate/i18n": "workspace:*",
     "@libsql/client": "0.14.0",
-    "drizzle-orm": "0.38.4"
+    "drizzle-orm": "0.45.3"
   },
   "devDependencies": {
     "@bandplate/storage": "workspace:*",
     "@cloudflare/workers-types": "^5.20260907.1",
-    "drizzle-kit": "0.30.6",
+    "drizzle-kit": "0.31.11",
     "esbuild": "^0.24.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

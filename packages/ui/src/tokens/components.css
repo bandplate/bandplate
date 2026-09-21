@@ -5015,14 +5015,14 @@ html:has(dialog.bp-filter-sheet[open]) body {
    The definition list this replaces (`.bp-take-detail-meta`, now gone) put the
    vote in its fifth row, after Instruments, which said that casting one is the
    same kind of act as reading a duration. */
-/* Capped narrower than the shell. The shell's 72rem exists for the song page's
-   two columns of real content; this page is a column of short blocks, and at
-   full width every strip was a label at the far left with its content stranded
-   somewhere across an empty field. */
+/* The shell's full width, like every other page. It was capped at 52rem, on
+   the argument that short strips at full width strand their content across an
+   empty field; in practice it made this the one page that stopped short of
+   the edge the song and event pages reach. The controls inside keep their own
+   widths (the vote pair is content-width), so nothing stretches with it. */
 .bp-take-detail {
   display: flex;
   flex-direction: column;
-  max-width: 52rem;
 }
 
 .bp-take-detail-hero {
@@ -5043,38 +5043,12 @@ html:has(dialog.bp-filter-sheet[open]) body {
   flex: none;
 }
 
-/* The heading and the actions wrap apart when they stop fitting — at ANY
-   width, not at a chosen breakpoint: a long song title or a narrowed desktop
-   window runs out of room just as a phone does.
- *
- * `flex-wrap` alone did nothing here, which is the part worth writing down.
- * `.bp-title-row > :first-child` is `flex: 1; min-width: 0` so a heading can
- * truncate, and an item that may shrink to zero never triggers a wrap — the
- * row kept both on one line and broke "Čoudy: take 2" across three. The floor
- * below is what makes the row wrap instead.
- *
- * It is `flex-basis`, not `min-width`, and that distinction is the whole fix.
- * Flex decides where a line breaks from each item's HYPOTHETICAL size, which
- * is its basis — so a basis of `max-content` says "this heading would like
- * its natural width", and the buttons drop to the next line exactly when they
- * cannot have what is left. `min-width` stays 0, so once the heading is alone
- * on its line it still wraps its own text instead of overflowing: a song
- * title longer than a phone is wide must never push the page into a
- * horizontal scroll.
- *
- * Two things were tried first and are recorded so they are not tried again.
- * A fixed `min-width: 14rem` is only ever right for one title — at 640px the
- * heading squeezed to 243px and broke across two lines anyway, just under the
- * floor rather than over it. And `min-width: min(100%, max-content)` is not
- * CSS at all: `min()` takes lengths, not keywords, so the browser dropped the
- * declaration and the row behaved exactly as it had before. */
-.bp-take-detail-hero .bp-title-row {
-  flex-wrap: wrap;
-}
-
-.bp-take-detail-hero .bp-title-row > :first-child {
-  flex-basis: max-content;
-}
+/* No wrap rule of its own any more. The take's heading used to give way to
+   three full pills (Keeper, Reject, Edit), which could not share a row with
+   it, so the row wrapped them under the heading at any width. The ruling has
+   its own strip now and Edit is alone and small, so the row is the plain
+   `.bp-title-row` the song and event heroes use: the heading takes the width
+   and wraps its own text, Edit stays at the end. */
 
 /* The band's ruling, in the Admin strip. Keeper keeps the accent fill and
    Reject the danger one, the weights they had when they sat by the heading:
@@ -5593,15 +5567,15 @@ html:has(dialog.bp-filter-sheet[open]) body {
   color: var(--bp-color-muted);
 }
 
-/* The two sides split the strip's full width. They were content-width, so a
-   decision that is the whole point of the page rendered as two small pills
-   floating at the left of an empty band — the canvas gives each half the row,
-   which is also what makes them easy to hit on a phone. */
+/* Content-width, at the larger size. They used to split the strip's width
+   between them, which at the page's full width made two slabs half a screen
+   wide each; a decision reads as two buttons, not as a band. A floor of 7rem
+   keeps the pair level and each an easy target on a phone. */
 .bp-vote-toggle-lg .bp-vote-btn {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: none;
+  min-width: 7rem;
   min-height: 48px;
-  padding: 0.8125rem 1rem;
+  padding: 0.8125rem 1.5rem;
   font-size: 0.9375rem;
 }
 

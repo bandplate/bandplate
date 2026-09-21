@@ -8,7 +8,7 @@
 // hand-added index"), and it is also exactly the shape that destroyed
 // ~2,000 rows: D1 CASCADEs a `DROP TABLE` into every child table that
 // references it, even with `PRAGMA foreign_keys=OFF` set immediately before
-// it — that pragma is a SQLite-only safety net and D1 does not honor it for
+// it. That pragma is a SQLite-only safety net, and D1 does not honor it for
 // this. `0010_stash.sql` (already applied, already in `UNSAFE_BASELINE`
 // below) carries this exact idiom; it is safe only because every child row
 // it touched had already been accounted for by hand, which is not something
@@ -25,7 +25,7 @@ export interface UnsafeStatement {
 }
 
 const DROP_TABLE_REASON =
-  "DROP TABLE: D1 cascades a DROP TABLE into every child table that references it, even with PRAGMA foreign_keys=OFF set — this is the exact statement that deleted ~2,000 rows on 2026-09-20.";
+  "DROP TABLE: D1 cascades a DROP TABLE into every child table that references it, even with PRAGMA foreign_keys=OFF set. This is the exact statement that deleted ~2,000 rows on 2026-09-20.";
 
 const RENAME_TO_REASON =
   "ALTER TABLE ... RENAME TO: part of Drizzle's table-rebuild idiom (create __new_x, copy rows, DROP TABLE, rename back). The DROP TABLE inside that idiom is what cascades on D1.";

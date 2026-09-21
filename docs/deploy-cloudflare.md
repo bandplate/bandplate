@@ -264,8 +264,8 @@ apply with two things it doesn't have on its own:
    with `wrangler d1 export DB --remote` to
    `.data/backups/d1-<ISO timestamp>.sql` before applying anything, and
    aborts if the export fails or comes back empty. `.data/` is gitignored,
-   so this backup stays local — copy it somewhere durable if you want it
-   to survive longer than your machine.
+   so this backup stays local. Copy it somewhere durable if you want it to
+   survive longer than your machine.
 
 **Schema changes against this database are additive only:** `ADD COLUMN`,
 new tables, new indexes. That covers everything this app has needed so

@@ -286,7 +286,7 @@ Import each icon from its own path instead, which pulls in only that icon:
 import Calendar from "@lucide/astro/icons/calendar";
 ```
 
-Same rule for `lucide-preact` in island components — see `NavIcon.astro` and
+Same rule for `lucide-preact` in island components. See `NavIcon.astro` and
 `Recorder.tsx` for the pattern across both.
 
 ### A dependency Vite discovers late re-optimizes mid-session and kills every island
@@ -295,7 +295,7 @@ Vite's dependency pre-bundling runs once at startup, against whatever it can
 see from the entry points at that moment. A dependency that's only reached
 from inside a Preact island (rather than anything imported at the top level)
 can go undiscovered until the first request that actually renders that
-island — and when Vite finds it then, it re-optimizes and restarts its
+island. When Vite finds it then, it re-optimizes and restarts its
 dep-serving mid-session. Every island already on the page fails at once with
 `504 Outdated Optimize Dep`, because the module graph they were served
 against no longer matches what the server now has.

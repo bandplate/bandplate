@@ -46,7 +46,7 @@ crons = ["*/10 * * * *"]
 #
 # `database_id` here is a placeholder — a self-deployer replaces it with
 # their own D1 database's id after `wrangler d1 create bandplate` (see the
-# docs). Local `wrangler dev`/`vitest-pool-workers` never touch a real
+# docs). Local `wrangler dev`/`vitest-plugin` never touch a real
 # Cloudflare account regardless of this value.
 [[d1_databases]]
 binding = "DB"

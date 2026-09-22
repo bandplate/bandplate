@@ -4,16 +4,15 @@
 // key order included — for every schema `openapi.ts` actually calls
 // `zodToJsonSchema` with. A future implementation swap (library, Zod version,
 // refactor) must reproduce it exactly, or the contract has silently changed.
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+//
+// Imported as a JSON module, not read with `node:fs`: this file also runs
+// under the Workers pool (`vitest.workers.config.ts`), and workerd has no
+// filesystem to read it from. A JSON import keeps key order, same as
+// `JSON.parse`.
 import { describe, expect, it } from "vitest";
+import fixture from "./__fixtures__/ingest-json-schema.snapshot.json";
 import { commitTakeSchema, createEventSchema, createTakeSchema } from "./schemas.js";
 import { zodToJsonSchema } from "./zod-json-schema.js";
-
-const fixturePath = fileURLToPath(
-  new URL("./__fixtures__/ingest-json-schema.snapshot.json", import.meta.url),
-);
-const fixture = JSON.parse(readFileSync(fixturePath, "utf-8"));
 
 describe("zodToJsonSchema", () => {
   it("reproduces the published JSON Schema for every schema openapi.ts converts, byte-identical", () => {

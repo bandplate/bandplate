@@ -528,7 +528,7 @@ Worker) — locally, the `pnpm exec wrangler dev` terminal already prints it. Ru
 
 `S3Storage` against R2's own S3 endpoint is the one path that cannot be
 verified locally at all: Cloudflare's local dev tooling (Miniflare /
-`pnpm exec wrangler dev`, and `@cloudflare/vitest-pool-workers`, which is built on
+`pnpm exec wrangler dev`, and `@cloudflare/vitest-plugin`, which is built on
 it) only exposes R2 locally through the **binding** API
 (`env.BUCKET.get/put/...`, called from inside a Worker) — there is no
 local S3-compatible HTTP endpoint to sign requests against, the way real
@@ -598,8 +598,8 @@ over libSQL.
 `pnpm --filter @bandplate/api test:workers` runs this package's entire
 existing `*.test.ts` suite (auth, votes, favorites, admin, ingest,
 scopes, ...) a second time, inside workerd via
-`@cloudflare/vitest-pool-workers`, against a real D1 database (migrated
-fresh per test file by `packages/api/test/apply-migrations.ts`). It's the
+`@cloudflare/vitest-plugin`, against a real D1 database (reset and migrated
+fresh before every test by `packages/api/test/apply-migrations.ts`). It's the
 same test files the Node pool runs (`pnpm test`) — see
 `packages/api/src/test-helpers.ts`'s `resolveTestDb` for how one harness
 serves both.

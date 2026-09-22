@@ -17,32 +17,31 @@ import type { AppEnv } from "./types.js";
  * `*.test.ts` files goes through `buildTestApp` and never constructs a `Db`
  * itself — that's what lets the exact same test files run twice: once
  * under plain Vitest (in-memory libSQL, `createTestDb`) and once under
- * `@cloudflare/vitest-pool-workers` (real D1, `createD1Db` wrapping
+ * `@cloudflare/vitest-plugin` (real D1, `createD1Db` wrapping
  * `env.DB`) — see `vitest.workers.config.ts`. The D1 binding itself is
- * already migrated before any test body runs — `test/apply-migrations.ts`
- * (a `setupFiles` entry, only wired into the Workers config) calls
- * `cloudflare:test`'s own `applyD1Migrations` once per isolated-storage
- * test — so this function's only job under that pool is wrapping the
- * binding, not migrating it.
+ * already reset and migrated before every test body runs —
+ * `test/apply-migrations.ts` (a `setupFiles` entry, only wired into the
+ * Workers config) does that in a `beforeEach` — so this function's only
+ * job under that pool is wrapping the binding, not migrating it.
  *
  * Detected via the runtime check Cloudflare's own docs recommend
  * (`navigator.userAgent === "Cloudflare-Workers"` is true only inside
- * workerd); `cloudflare:test` is a virtual module that only resolves under
- * that pool, so it's imported dynamically and only on that branch — plain
- * Node/Vitest never attempts to resolve it.
+ * workerd); `cloudflare:workers` only resolves inside workerd, so it's
+ * imported dynamically and only on that branch — plain Node/Vitest never
+ * attempts to resolve it.
  */
 export async function resolveTestDb(): Promise<Db> {
   if (typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers") {
     // A non-literal specifier: TypeScript can't (and, since this module
     // only exists as a virtual module supplied by
-    // `@cloudflare/vitest-pool-workers` at test-run time, shouldn't try
-    // to) resolve `cloudflare:test` as a static import target from this
-    // package's own tsconfig.
-    const cloudflareTestSpecifier = "cloudflare:test";
-    const cloudflareTest = (await import(/* @vite-ignore */ cloudflareTestSpecifier)) as {
+    // workerd at test-run time, shouldn't try to) resolve
+    // `cloudflare:workers` as a static import target from this package's
+    // own tsconfig.
+    const cloudflareWorkersSpecifier = "cloudflare:workers";
+    const cloudflareWorkers = (await import(/* @vite-ignore */ cloudflareWorkersSpecifier)) as {
       env: { DB: unknown };
     };
-    return createD1Db(cloudflareTest.env.DB as Parameters<typeof createD1Db>[0]);
+    return createD1Db(cloudflareWorkers.env.DB as Parameters<typeof createD1Db>[0]);
   }
   return createTestDb();
 }
@@ -52,7 +51,7 @@ export const TEST_BOOTSTRAP_TOKEN = "test-bootstrap-token";
 
 /**
  * True when this test file is executing inside workerd (the
- * `@cloudflare/vitest-pool-workers` pool), false under plain Node/Vitest.
+ * `@cloudflare/vitest-plugin` pool), false under plain Node/Vitest.
  * A handful of tests use this to skip a specific assertion that's
  * impossible to satisfy under Workers for a structural reason, not a bug:
  * `InMemoryStorage` (`@bandplate/storage/testing`) proves out presigned URLs

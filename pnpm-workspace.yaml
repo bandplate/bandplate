@@ -5,3 +5,11 @@ allowBuilds:
   '@biomejs/biome': true
   esbuild: true
   sharp: true
+# One `@types/node` for the whole tree, matching the runtime floor
+# (`engines.node` >=22, CI on 22). vitest 5 no longer references Node's
+# types from its own, so packages that use `node:*` declare `@types/node`
+# directly, and two copies in one program (22 from a package, 26 from a
+# transitive `@types/*`) make `tsc` reject valid code such as
+# `ChildProcess.once`.
+overrides:
+  '@types/node': ^22.20.4

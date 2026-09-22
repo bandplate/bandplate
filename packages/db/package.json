@@ -27,10 +27,11 @@
   "devDependencies": {
     "@bandplate/storage": "workspace:*",
     "@cloudflare/workers-types": "^5.20260921.1",
+    "@types/node": "^22.20.4",
     "drizzle-kit": "0.31.11",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.28.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vitest": "^5.0.1"
   }
 }

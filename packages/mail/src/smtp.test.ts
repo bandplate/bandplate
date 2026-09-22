@@ -1,4 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+// A static import, not `await import()` inside the test: the mock below is
+// hoisted above it either way, but a dynamic import made the first test pay
+// for loading `./smtp.js` and the whole `@bandplate/core` barrel inside its
+// 5 s timeout. That was ~0.7 s on an idle machine and blew the budget when
+// `pnpm test` ran the other packages alongside. Module loading belongs to
+// collection, which the test timeout does not cover.
+import { createSmtpMailer } from "./smtp.js";
 
 const sendMail = vi.fn().mockResolvedValue(undefined);
 
@@ -14,7 +21,6 @@ describe("smtp mailer", () => {
   });
 
   it("escapes HTML-significant characters in displayName and url before interpolating into the HTML body", async () => {
-    const { createSmtpMailer } = await import("./smtp.js");
     const mailer = createSmtpMailer({
       host: "smtp.example",
       port: 587,

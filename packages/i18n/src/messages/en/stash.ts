@@ -11,12 +11,6 @@ export const stash = {
   pillClose: "Close stash",
   viewLede: "Recordings only you can see.",
   recordIdea: "Record an idea",
-  /**
-   * The same control on a phone, where the caption will not fit beside the
-   * title and the close pill. The long caption stays as the accessible name,
-   * so this is only ever read by the eye.
-   */
-  recShort: "REC",
   empty: "Your stash is empty. Record an idea and it lands here.",
   unknownSong: "Unknown song",
   /**

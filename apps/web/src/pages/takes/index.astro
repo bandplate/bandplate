@@ -239,14 +239,12 @@ if (!viewingStash && pages.redirectTo) {
       {/* In the stash, the way in to the recorder where the filters were: the
           SAME pill the song page carries, caption and all, so one affordance
           is not spelled two ways. The red dot says record where a gold mic
-          only said "audio". On a phone the caption gives way to "REC" and the
-          close pill beside it drops to its cross, which is the only way both
-          fit beside the title at 375px. */}
+          only said "audio". Captioned at every width: with the page's title
+          and the stash control up in the phone header, the bar has the room. */}
       {viewingStash ? (
         <a href="/record" class="bp-btn bp-btn-xs bp-record-btn" data-astro-reload>
           <span class="bp-record-mark" aria-hidden="true"></span>
           <span class="bp-record-word">{t.stash.recordIdea}</span>
-          <span class="bp-record-word-short" aria-hidden="true">{t.stash.recShort}</span>
         </a>
       ) : (
         <>
@@ -441,15 +439,11 @@ if (!viewingStash && pages.redirectTo) {
       </dialog>
     )}
 
-    {/* The stash is the same results column, drawn as a drawer pulled open.
-        No extra wrapper: the recess, the lip and the grip are all on this one
-        box, so the rows inside keep the flex column they already had and the
-        sheets keep their `display: contents` place in it. The grip is a
-        `::before`, not an element — it is the drawer's front edge, nothing
-        presses it, and the pill above is the control that opens and closes
-        it. */}
+    {/* The stash is the same results column as the band's takes, and the
+        same plain list: one line saying whose recordings these are, then
+        the rows. */}
     {viewingStash ? (
-      <div class="bp-search-results bp-stash-drawer">
+      <div class="bp-search-results">
         {formError && <Banner kind="error">{formError}</Banner>}
         {renamedRow && <Banner kind="success">{t.stash.renamed}</Banner>}
         <p class="bp-stash-lede bp-m0">{t.stash.viewLede}</p>

@@ -36,9 +36,6 @@ const IDENTICAL_IS_FINE = new Set<string>([
   "auth.setupTokenLabel",
   // An em dash is an em dash.
   "me.ledgerNoAnswer",
-  // "REC" is what the red dot says on every recorder anyone in this band has
-  // ever touched, in either language.
-  "stash.recShort",
   // Developer vocabulary the person reading this screen already uses: they
   // set up the server. Same word in Czech.
   "admin.colSlug",

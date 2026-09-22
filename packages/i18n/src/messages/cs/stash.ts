@@ -22,7 +22,6 @@ export const stash = {
   pillClose: "Zavřít šuplík", // en: Close stash
   viewLede: "Nahrávky, které vidíš jen ty.", // en: Recordings only you can see.
   recordIdea: "Nahrát nápad", // en: Record an idea
-  recShort: "REC", // en: REC
   empty: "Šuplík je prázdný. Nahraj nápad a objeví se tady.", // en: Your stash is empty. Record an idea and it lands here.
   unknownSong: "Neznámá píseň", // en: Unknown song
   noSongYet: "Zatím bez písně", // en: No song yet

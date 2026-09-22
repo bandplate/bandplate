@@ -5972,6 +5972,18 @@ html:has(dialog.bp-filter-sheet[open]) body {
     align-self: center;
     flex-wrap: nowrap;
   }
+
+  /* The notes card runs the page's full width, under both columns, like the
+     take's facts card; in the first column alone it stopped where the
+     buttons' column began. The buttons sit beside the date here, not under
+     the card, so they drop the step that separates the two on a phone. */
+  .bp-event-hero > .bp-event-hero-notes {
+    grid-column: 1 / -1;
+  }
+
+  .bp-event-hero-notes + .bp-event-hero-actions {
+    margin-top: 0;
+  }
 }
 
 /* Play all is a secondary button carrying the play disc: the gold marks the
@@ -9443,101 +9455,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
   }
 }
 
-/* --- the drawer -------------------------------------------------------- */
-/* "Šuplík" is a drawer, and the view is the drawer pulled open: the rows sit
-   in a recessed well instead of on the page, so the eye reads "this is
-   somewhere else" before it reads a word. The band's list is the page; this
-   one is a thing ON the page.
-
-   Three moves and no more — a recess, a lit front edge, a grip. No wood, no
-   texture, no second accent: the recorder's gold mic sits in the bar right
-   above this and the player bar sits under it, and a drawer competing with
-   either would be louder than what it contains. */
-.bp-stash-drawer {
-  position: relative;
-  gap: 0.875rem;
-  /* Clear of the grip on the lip. */
-  padding: 1.5rem 0.875rem 1.25rem;
-  border: 1px solid var(--bp-color-border);
-  /* The front edge, the one place light catches. Gold is a RULE colour in
-     both themes (it carries no text here), so this is the same hairline on
-     bone and on lacquer, mixed into the border rather than laid over it so it
-     stays a hairline and not a stripe. */
-  border-top: 2px solid color-mix(in srgb, var(--bp-color-accent-gold) 45%, var(--bp-color-border));
-  /* Square at the top, round at the bottom: it came out from under the bar. */
-  border-radius: 0 0 1.125rem 1.125rem;
-  /* The well. A tint of `--bp-color-fg` like every `--bp-fill-*`, lighter
-     than any of them: this is a ground for rows to sit on, not a control.
-
-     No shadow, and that is deliberate. Depth here would be the first box
-     shadow in the whole stylesheet, and an inner shadow tinted from `fg`
-     inverts with the theme — a dark shade under the lip on bone, a light
-     halo on lacquer, which reads RAISED. The lit lip, the square top under
-     the bar and the rounded bottom carry the drawer on their own. */
-  background: color-mix(in srgb, var(--bp-color-fg) 5%, transparent);
-}
-
-/* The grip on the lip. Decoration, and only decoration: `::before` rather
-   than an element, because nothing here can be pressed. The pill in the bar
-   above is what opens and closes the drawer, and a grip that looked like a
-   handle but did nothing would be the fake affordance the app does not do. */
-.bp-stash-drawer::before {
-  content: "";
-  position: absolute;
-  top: 0.5rem;
-  left: 50%;
-  width: 2.75rem;
-  height: 0.25rem;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: var(--bp-fill-raised);
-}
-
-/* The lede is the drawer's label, so it sits directly under the lip with a
-   hairline between it and the contents rather than floating above them as
-   one more line of page copy. */
-.bp-stash-drawer .bp-stash-lede {
-  padding-bottom: 0.875rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--bp-color-border) 70%, transparent);
-  font-size: var(--text-meta, 0.78125rem);
-}
-
-/* Pulled out from under the bar, so it hangs closer to it than a section
-   would. */
-.bp-takes--stash {
-  gap: 0.625rem;
-}
-
-@media (min-width: 640px) {
-  .bp-stash-drawer {
-    padding: 1.75rem 1.5rem 1.75rem;
-  }
-}
-
-/* The drawer slides open once on arrival: it wipes down from the lip and
-   settles. The rows keep their own `bp-row-rise` stagger inside it, which now
-   reads as the contents coming up as the drawer opens.
-
-   `clip-path` and not `overflow`, because a stash sheet opened with
-   `showModal()` lives in the top layer and is clipped by neither — and this
-   animation does not fill `forwards`, so nothing survives the 260ms. */
-@media (prefers-reduced-motion: no-preference) {
-  .bp-stash-drawer {
-    animation: bp-drawer-open 260ms var(--ease-bp, ease-out) backwards;
-  }
-}
-
-@keyframes bp-drawer-open {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-    clip-path: inset(0 0 55% 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    clip-path: inset(0 0 0 0);
-  }
+/* The stash is the plain list, like every other: its one line of copy says
+   whose recordings these are, and the rows are the rows. It was drawn as a
+   drawer pulled open (a recessed well, a gold lip, a grip, a slide-in), which
+   fought the full-width rows it contains and read as a second kind of page.
+   The line keeps the page's section step from the rows below it. */
+.bp-stash-lede {
+  margin-bottom: 0.5rem;
 }
 
 .bp-stash-lede {
@@ -9682,39 +9606,6 @@ html:has(dialog.bp-filter-sheet[open]) body {
    height reads as a mistake, so it is a plain pill in every way but its
    colour and the dot. Nothing to declare here: `.bp-btn` already carries
    the height, the padding, the radius and the type. */
-
-/* The caption and its phone-sized stand-in. Both are always in the markup;
-   which one shows is a width question, and the hidden one is hidden from the
-   eye only — the long caption remains the control's accessible name, and the
-   short one is `aria-hidden`, so a screen reader hears "Record an idea" at
-   every width rather than the letters R, E, C. */
-.bp-record-word-short {
-  display: none;
-}
-
-/* 40rem, not a phone's 26rem: the long forms need about 620px in Czech (the
-   longer language here), and between the two a phone held sideways wrapped
-   the title and both captions onto two lines each. */
-@media (max-width: 40rem) {
-  .bp-takes-bar .bp-record-btn .bp-record-word {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  /* Only the record pill shortens. "Zavřít šuplík" keeps its words: since
-     the page's title moved up into the phone header, this row has the width
-     for them, and a bare cross was the vaguer of the two. */
-  .bp-takes-bar .bp-record-btn .bp-record-word-short {
-    display: inline;
-  }
-
-}
-
 
 /* A stash row has no star, so the take row's 36px star column is empty and
    the right edge read three times the left. The column closes; the column

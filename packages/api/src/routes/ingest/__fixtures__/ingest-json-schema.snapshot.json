@@ -1,0 +1,332 @@
+{
+  "createEventSchema": {
+    "type": "object",
+    "properties": {
+      "clientRef": {
+        "type": "string",
+        "minLength": 1
+      },
+      "updateMetadata": {
+        "type": "boolean"
+      },
+      "kind": {
+        "type": "string",
+        "enum": ["rehearsal", "concert", "session"]
+      },
+      "heldAt": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO-8601 timestamp with a UTC offset"
+      },
+      "venue": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "notes": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": ["clientRef", "kind", "heldAt"]
+  },
+  "createTakeSchema": {
+    "type": "object",
+    "properties": {
+      "clientRef": {
+        "type": "string",
+        "minLength": 1
+      },
+      "eventClientRef": {
+        "type": "string",
+        "minLength": 1
+      },
+      "song": {
+        "type": "object",
+        "properties": {
+          "externalRef": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "createIfMissing": {
+            "type": "boolean"
+          }
+        },
+        "required": ["title"]
+      },
+      "recordedAt": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO-8601 timestamp with a UTC offset"
+      },
+      "durationMs": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "label": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "instruments": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "createMissingInstruments": {
+        "type": "boolean"
+      },
+      "assets": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "master"
+                },
+                "format": {
+                  "type": "string",
+                  "enum": ["opus", "mp3", "flac", "wav"]
+                },
+                "tier": {
+                  "type": "string",
+                  "enum": ["lossy", "lossless"]
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sha256": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "durationMs": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sampleRate": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "channels": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": ["kind", "format", "tier", "bytes"]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "stem"
+                },
+                "instrument": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "format": {
+                  "type": "string",
+                  "enum": ["opus", "mp3", "flac", "wav"]
+                },
+                "tier": {
+                  "type": "string",
+                  "enum": ["lossy", "lossless"]
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sha256": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "durationMs": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sampleRate": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "channels": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": ["kind", "instrument", "format", "tier", "bytes"]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "peaks"
+                },
+                "format": {
+                  "const": "json"
+                },
+                "instrument": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "tier": {
+                  "type": "string",
+                  "enum": ["lossy", "lossless"]
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sha256": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": ["kind", "format", "bytes"]
+            }
+          ]
+        },
+        "minItems": 1
+      }
+    },
+    "required": ["clientRef", "eventClientRef", "song", "recordedAt", "assets"]
+  },
+  "commitTakeSchema": {
+    "type": "object",
+    "properties": {
+      "publish": {
+        "type": "boolean"
+      }
+    }
+  }
+}

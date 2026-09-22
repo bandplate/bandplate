@@ -205,6 +205,27 @@ them at the moment of writing — and that is what `deleteInstrument` and
 The same applies to every `ON DELETE cascade` in the schema: it is
 documentation, not behaviour. Delete dependent rows explicitly.
 
+### D1 refuses more than 100 bound parameters; local libSQL takes 32,766
+
+Same shape as the foreign keys above, the other way round: here the harness
+is MORE lenient than production. `inArray(takes.id, ids)` binds one parameter
+per id, so a batch lookup keyed by a list page's rows is fine in every test
+and on the dev server, and on D1 the statement is rejected and the page is a
+500. It went unnoticed while lists stopped at 25 rows; "load more" grows them
+to 200, and `/takes?shown=100` would have been the first page to fall over.
+
+**Rule.** Any `inArray` over a caller-sized list goes through `chunk()`
+(`packages/db/src/repos/chunk.ts`), sized so the WHOLE statement stays at or
+under 100: the ids plus every other value it binds. `bandTakeCondition()`
+binds one (`'band'`), a `kind`/`status` filter binds one each, a member id
+binds one. Export the chunk's query builder and pin the size with a
+`.toSQL().params.length` test (`batch-param-limit.test.ts`); a comment
+counting parameters has been wrong before.
+
+**How to catch it.** A green run proves nothing, so watch what is bound:
+`take-context.test.ts` wraps the libSQL client's `execute` and asserts no
+statement carried more than 100 args while a 200-row page was assembled.
+
 ### A drizzle-kit table rebuild silently drops a hand-added index
 
 SQLite cannot alter a column in place, so a change like "make `takes.song_id`

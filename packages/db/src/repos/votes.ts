@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { takes, votes } from "../schema/sqlite/index.js";
+import { chunk } from "./chunk.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 
 export type Vote = typeof votes.$inferSelect;
@@ -193,12 +194,22 @@ export async function listByMemberForTakes(
   if (takeIds.length === 0) {
     return result;
   }
-  const rows = await db
+  for (const ids of chunk(takeIds, MEMBER_TAKES_CHUNK_SIZE)) {
+    const rows = await buildListByMemberForTakesChunkQuery(db, memberId, ids);
+    for (const row of rows) {
+      result.set(row.takeId, row.keeper);
+    }
+  }
+  return result;
+}
+
+/** 99: the take ids plus the member id. D1 caps a statement at 100 (see `chunk.ts`). */
+export const MEMBER_TAKES_CHUNK_SIZE = 99;
+
+/** One chunk of `listByMemberForTakes`. Exported for testing only. */
+export function buildListByMemberForTakesChunkQuery(db: Db, memberId: string, takeIds: string[]) {
+  return db
     .select({ takeId: votes.takeId, keeper: votes.keeper })
     .from(votes)
     .where(and(eq(votes.memberId, memberId), inArray(votes.takeId, takeIds)));
-  for (const row of rows) {
-    result.set(row.takeId, row.keeper);
-  }
-  return result;
 }

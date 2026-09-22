@@ -160,8 +160,33 @@ export function firstGuess(request: ListRequest): PageArgs {
   return { limit: shownFor(request), offset: 0 };
 }
 
+/**
+ * One-off confirmation flags a write redirects back with ("saved",
+ * "archived_ok", ...). They say "this just happened", so a link to more of
+ * the same list drops them, or the banner would come back with every batch.
+ * Filters (`archived=1`, `stash=1`, `unvoted=1`) are NOT here: those are the
+ * list itself.
+ */
+export const FLASH_PARAMS = [
+  "archived_ok",
+  "unarchived",
+  "song_deleted",
+  "deleted",
+  "renamed",
+  "stash_renamed",
+  "published",
+  "created",
+  "saved",
+  "dup",
+  "take_deleted",
+  "merged",
+] as const;
+
 function hrefWith(url: URL, set: Record<string, number | undefined>, hash = ""): string {
   const params = new URLSearchParams(url.search);
+  for (const name of FLASH_PARAMS) {
+    params.delete(name);
+  }
   for (const [name, value] of Object.entries(set)) {
     if (value === undefined) {
       params.delete(name);
@@ -242,7 +267,11 @@ export function listView(input: { url: URL; request: ListRequest; total: number 
       // has been read as a grown list.
       nextHref:
         remaining > 0
-          ? hrefWith(url, { [PAGE_PARAM]: undefined, [SHOWN_PARAM]: shown + pageSize }, anchor)
+          ? hrefWith(
+              url,
+              { [PAGE_PARAM]: undefined, [SHOWN_PARAM]: sanitizeShown(shown + pageSize, pageSize) },
+              anchor,
+            )
           : undefined,
       nextCount: Math.min(pageSize, remaining),
       // One batch left is what the button already does; offering "all" beside
@@ -273,7 +302,10 @@ export function listView(input: { url: URL; request: ListRequest; total: number 
     to: Math.min(page * pageSize, total),
     prevHref: page > 1 ? pageHref(page - 1) : undefined,
     nextHref: page < pageCount ? pageHref(page + 1) : undefined,
-    redirectTo: requested > pageCount ? pageHref(pageCount) : undefined,
+    // Past the end: the last real page. A `?shown=` link that arrived after
+    // the list outgrew the ceiling: the same page under its one address, so
+    // there are never two URLs for it.
+    redirectTo: requested > pageCount || request.shown !== undefined ? pageHref(page) : undefined,
   };
 }
 
@@ -319,6 +351,10 @@ export async function loadList<R>(
   const guess = firstGuess(request);
   const result = await load(guess);
   const list = listView({ url, request, total: total(result) });
+  // The page is about to redirect; the rows would be thrown away.
+  if (list.redirectTo !== undefined) {
+    return { result, list };
+  }
   if (list.args.limit === guess.limit && list.args.offset === guess.offset) {
     return { result, list };
   }

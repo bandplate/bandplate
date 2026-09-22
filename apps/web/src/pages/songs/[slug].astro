@@ -202,7 +202,8 @@ const TAKES_BEFORE_FOLD = 3;
 const foldedTakes = takes.slice(TAKES_BEFORE_FOLD);
 // A member who asked for more takes wants to see them: a grown list opens the
 // fold, or "show more" would land on a row hidden inside it.
-const foldOpen = list.mode === "more" && list.args.limit > SONG_TAKES_PER_PAGE;
+const foldOpen =
+  list.mode === "more" && list.args.limit > SONG_TAKES_PER_PAGE && list.total > SONG_TAKES_PER_PAGE;
 const metaParts = [song.musicalKey, song.tempoBpm ? t.songs.bpm(song.tempoBpm) : undefined].filter(
   Boolean,
 );

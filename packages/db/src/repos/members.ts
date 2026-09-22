@@ -3,6 +3,7 @@ import { DEFAULT_LOCALE, type Locale } from "@bandplate/i18n";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { instruments, memberInstruments, members } from "../schema/sqlite/index.js";
+import { chunk } from "./chunk.js";
 import { assertColumnCount } from "./column-order-guard.js";
 import type { Instrument } from "./instruments.js";
 
@@ -293,28 +294,44 @@ export async function listInstrumentsForMembers(
     return result;
   }
 
-  const rows = await db
-    .select({ memberId: memberInstruments.memberId, instrument: instruments })
-    .from(memberInstruments)
-    .innerJoin(instruments, eq(instruments.id, memberInstruments.instrumentId))
-    .where(inArray(memberInstruments.memberId, memberIds))
-    .orderBy(instruments.sortOrder);
-
-  for (const row of rows) {
-    const existing = result.get(row.memberId);
-    if (existing) {
-      existing.push(row.instrument);
-    } else {
-      result.set(row.memberId, [row.instrument]);
+  for (const ids of chunk(memberIds, GET_BY_IDS_CHUNK_SIZE)) {
+    const rows = await buildListInstrumentsForMembersChunkQuery(db, ids);
+    for (const row of rows) {
+      const existing = result.get(row.memberId);
+      if (existing) {
+        existing.push(row.instrument);
+      } else {
+        result.set(row.memberId, [row.instrument]);
+      }
     }
   }
   return result;
 }
 
+/** One chunk of `listInstrumentsForMembers`. Exported for testing only. */
+export function buildListInstrumentsForMembersChunkQuery(db: Db, memberIds: string[]) {
+  return db
+    .select({ memberId: memberInstruments.memberId, instrument: instruments })
+    .from(memberInstruments)
+    .innerJoin(instruments, eq(instruments.id, memberInstruments.instrumentId))
+    .where(inArray(memberInstruments.memberId, memberIds))
+    .orderBy(instruments.sortOrder);
+}
+
 /** Batch lookup — the owner names on a list of personal recordings, in one query. */
 export async function getByIds(db: Db, ids: string[]): Promise<Member[]> {
-  if (ids.length === 0) {
-    return [];
+  // Chunked: D1 caps a statement at 100 bound parameters (see `chunk.ts`),
+  // and the ids are this query's only one.
+  const rows: Member[] = [];
+  for (const part of chunk(ids, GET_BY_IDS_CHUNK_SIZE)) {
+    rows.push(...(await buildGetByIdsChunkQuery(db, part)));
   }
+  return rows;
+}
+
+export const GET_BY_IDS_CHUNK_SIZE = 100;
+
+/** One chunk of `getByIds`. Exported for testing only. */
+export function buildGetByIdsChunkQuery(db: Db, ids: string[]) {
   return db.select().from(members).where(inArray(members.id, ids));
 }

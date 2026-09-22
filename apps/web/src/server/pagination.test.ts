@@ -164,6 +164,18 @@ describe("a list that fits under the ceiling grows", () => {
     expect(v.nextHref).toBe("/takes?shown=200#dalsi-176");
   });
 
+  it("never asks for more than the ceiling, even off a batch size that does not divide it", () => {
+    // 15s: 195 shown, 5 left. 195 + 15 would be 210.
+    const v = more("?shown=195", MAX_SHOWN, 15);
+    expect(v.nextHref).toBe("/takes?shown=200#dalsi-196");
+  });
+
+  it("drops one-off confirmation flags from its links, and keeps filters", () => {
+    const v = more("?archived=1&archived_ok=1&saved=1&shown=50", 187);
+    expect(v.nextHref).toBe("/takes?archived=1&shown=75#dalsi-51");
+    expect(counter("?stash=1&renamed=abc&page=2", 225).nextHref).toBe("/takes?stash=1&page=3");
+  });
+
   // An old numbered link must still show the rows it pointed at.
   describe("an old ?page= link", () => {
     it("shows every batch up to that page", () => {
@@ -244,6 +256,18 @@ describe("a list past the ceiling pages under a counter", () => {
     expect(v.nextHref).toBe("/takes?sort=rating&page=5");
   });
 
+  // Two URLs for one page is one of them getting shared wrongly.
+  it("redirects a ?shown= link to that page's own address", () => {
+    expect(counter("?sort=rating&shown=100", 225).redirectTo).toBe("/takes?sort=rating&page=4");
+    expect(counter("?sort=rating&shown=25", 225).redirectTo).toBe("/takes?sort=rating");
+  });
+
+  it("starts one row past the ceiling", () => {
+    const v = counter("", MAX_SHOWN + 1);
+    expect(v.pageCount).toBe(Math.ceil((MAX_SHOWN + 1) / 25));
+    expect(v.args).toEqual({ limit: 25, offset: 0 });
+  });
+
   it("always has a footer", () => {
     expect(hasFooter(counter("", MAX_SHOWN + 1))).toBe(true);
   });
@@ -314,11 +338,19 @@ describe("loadList", () => {
     expect(list.mode).toBe("more");
   });
 
-  it("re-queries a ?shown= link on a list that has outgrown the ceiling", async () => {
+  it("sends a ?shown= link on a list that has outgrown the ceiling to its page, unqueried", async () => {
     const { calls, load } = fakeLoader(225);
     const { list } = await loadList(url("?shown=100"), 25, load, (r) => r.total);
-    expect(calls.at(-1)).toEqual({ limit: 25, offset: 75 });
+    expect(calls).toHaveLength(1);
     expect(list.mode).toBe("counter");
+    expect(list.redirectTo).toBe("/takes?page=4");
+  });
+
+  it("does not re-query a page it is about to redirect away from", async () => {
+    const { calls, load } = fakeLoader(225);
+    const { list } = await loadList(url("?page=99"), 25, load, (r) => r.total);
+    expect(list.redirectTo).toBe("/takes?page=9");
+    expect(calls).toHaveLength(1);
   });
 
   it("does not re-query a counter page that guessed right", async () => {
@@ -331,7 +363,7 @@ describe("loadList", () => {
 describe("labels", () => {
   it("says how far a grown list has got, in the member's language", () => {
     const labels = listMoreLabels(more("?shown=100", 187), "take", "cs");
-    expect(labels.count).toBe("Zobrazeno 100 z 187 nahrávek");
+    expect(labels.count).toBe("Zobrazeno prvních 100 nahrávek, celkem 187");
     expect(labels.more).toBe("Zobrazit dalších 25 nahrávek");
     expect(labels.all).toBe("Zobrazit všech 187 nahrávek");
   });
@@ -342,8 +374,8 @@ describe("labels", () => {
 
   it("names the counter's position for a screen reader", () => {
     const labels = pageCounterLabels(counter("?page=4", 225), "take", "cs");
-    expect(labels.nav).toBe("Stránkování, strana 4 z 9");
-    expect(labels.range).toBe("76–100 z 225 nahrávek");
+    expect(labels.nav).toBe("Stránkování: strana 4, celkem 9 stran");
+    expect(labels.range).toBe("Nahrávky 76–100, celkem 225");
     expect(labels.previous).toBe("Předchozí strana");
   });
 });

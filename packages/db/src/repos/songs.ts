@@ -11,6 +11,7 @@ import {
   takes,
 } from "../schema/sqlite/index.js";
 import * as assetsRepo from "./assets.js";
+import { chunk } from "./chunk.js";
 import { escapeLikePattern } from "./like-pattern.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 import { bandTakeCondition } from "./take-visibility.js";
@@ -211,9 +212,19 @@ export async function getById(db: Db, id: string): Promise<Song | undefined> {
  * points at, and filtering would blank the title on a live take row.
  */
 export async function getByIds(db: Db, ids: string[]): Promise<Song[]> {
-  if (ids.length === 0) {
-    return [];
+  // Chunked: D1 caps a statement at 100 bound parameters (see `chunk.ts`),
+  // and the ids are this query's only one.
+  const rows: Song[] = [];
+  for (const part of chunk(ids, GET_BY_IDS_CHUNK_SIZE)) {
+    rows.push(...(await buildGetByIdsChunkQuery(db, part)));
   }
+  return rows;
+}
+
+export const GET_BY_IDS_CHUNK_SIZE = 100;
+
+/** One chunk of `getByIds`. Exported for testing only. */
+export function buildGetByIdsChunkQuery(db: Db, ids: string[]) {
   return db.select().from(songs).where(inArray(songs.id, ids));
 }
 

@@ -2,6 +2,7 @@ import { uuidv7 } from "@bandplate/core";
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { events, takes } from "../schema/sqlite/index.js";
+import { chunk } from "./chunk.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 import { bandTakeCondition } from "./take-visibility.js";
 
@@ -119,9 +120,19 @@ export async function getByClientRef(db: Db, clientRef: string): Promise<Event |
  * resolve an event a take already points at.
  */
 export async function getByIds(db: Db, ids: string[]): Promise<Event[]> {
-  if (ids.length === 0) {
-    return [];
+  // Chunked: D1 caps a statement at 100 bound parameters (see `chunk.ts`),
+  // and the ids are this query's only one.
+  const rows: Event[] = [];
+  for (const part of chunk(ids, GET_BY_IDS_CHUNK_SIZE)) {
+    rows.push(...(await buildGetByIdsChunkQuery(db, part)));
   }
+  return rows;
+}
+
+export const GET_BY_IDS_CHUNK_SIZE = 100;
+
+/** One chunk of `getByIds`. Exported for testing only. */
+export function buildGetByIdsChunkQuery(db: Db, ids: string[]) {
   return db.select().from(events).where(inArray(events.id, ids));
 }
 

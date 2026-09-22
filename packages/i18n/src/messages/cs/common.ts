@@ -39,10 +39,15 @@ const NOUNS: Record<
 
 const n = (value: number): string => formatNumber("cs", value);
 
-/** The noun after "z 225": genitive, singular only for 1 and decimals. */
-const ofTotal = (kind: ListNoun, total: number): string => {
-  const f = NOUNS[kind];
-  return plural("cs", total, { one: f.genSg, many: f.genSg, other: f.genPl });
+// No "z 187" anywhere below. Before a numeral the preposition is "z" or
+// "ze" by how the number is SPOKEN ("ze dvou", "ze sedmnácti", "ze sta",
+// "z osmi"), which is more rule than a count line is worth. So the sentences
+// say the total with "celkem" instead, which declines nothing.
+
+/** "Nahrávky", "Akce": the plural as a heading word. */
+const heading = (kind: ListNoun): string => {
+  const pl = NOUNS[kind].pl;
+  return pl.charAt(0).toUpperCase() + pl.slice(1);
 };
 
 export const common = {
@@ -70,12 +75,16 @@ export const common = {
     shown: number;
     total: number;
   }): string => {
-    const verb = plural("cs", shown, {
-      one: NOUNS[kind].masc ? "Zobrazen" : "Zobrazena",
-      few: "Zobrazeny",
-      other: "Zobrazeno",
+    // "Zobrazeno prvních 100 nahrávek, celkem 187". The participle and
+    // "první/prvních" agree with the shown count, the noun with both.
+    const f = NOUNS[kind];
+    const first = plural("cs", shown, {
+      one: `${f.masc ? "Zobrazen" : "Zobrazena"} první ${f.sg}`,
+      few: `Zobrazeny první ${n(shown)} ${f.pl}`,
+      many: `Zobrazeno prvních ${n(shown)} ${f.genSg}`,
+      other: `Zobrazeno prvních ${n(shown)} ${f.genPl}`,
     });
-    return `${verb} ${n(shown)} z ${n(total)} ${ofTotal(kind, total)}`;
+    return `${first}, celkem ${n(total)}`;
   },
   // en: `All ${total} ${noun}`
   listAll: ({ noun: kind, total }: { noun: ListNoun; total: number }): string => {
@@ -118,10 +127,15 @@ export const common = {
     from: number;
     to: number;
     total: number;
-  }): string => `${n(from)}–${n(to)} z ${n(total)} ${ofTotal(kind, total)}`,
+  }): string => `${heading(kind)} ${n(from)}–${n(to)}, celkem ${n(total)}`,
   // en: `Pagination, page ${page} of ${pageCount}`
   listPagesNav: ({ page, pageCount }: { page: number; pageCount: number }): string =>
-    `Stránkování, strana ${n(page)} z ${n(pageCount)}`,
+    `Stránkování: strana ${n(page)}, celkem ${n(pageCount)} ${plural("cs", pageCount, {
+      one: "strana",
+      few: "strany",
+      many: "strany",
+      other: "stran",
+    })}`,
   listPrevious: "Předchozí strana", // en: Previous page
   listNext: "Další strana", // en: Next page
   listTop: "Nahoru", // en: Back to top

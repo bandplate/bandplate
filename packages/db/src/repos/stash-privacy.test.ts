@@ -257,6 +257,20 @@ const takesChecks: ChecksFor<typeof takesRepo> = {
     expect(counts.get(f.memberA)).toBe(1);
     expect(counts.get(f.memberB)).toBe(1);
   },
+  // The chunk builders behind the batch reads above: the same filter, one
+  // chunk at a time, so they get the same check.
+  buildListByEventsChunkQuery: async () => {
+    const rows = await takesRepo.buildListByEventsChunkQuery(f.db, [f.bandEvent, f.personalEvent]);
+    expectBandOnly(rows);
+  },
+  buildCountBySongsChunkQuery: async () => {
+    const rows = await takesRepo.buildCountBySongsChunkQuery(f.db, [f.sharedSong, f.stashOnlySong]);
+    expect(rows).toEqual([{ songId: f.sharedSong, value: 1 }]);
+  },
+  buildCountByEventsChunkQuery: async () => {
+    const rows = await takesRepo.buildCountByEventsChunkQuery(f.db, [f.bandEvent, f.personalEvent]);
+    expect(rows).toEqual([{ eventId: f.bandEvent, value: 1 }]);
+  },
   buildCountUnvotedByMembersChunkQuery: async () => {
     const rows = await takesRepo.buildCountUnvotedByMembersChunkQuery(f.db, [f.memberA]);
     expect(rows).toEqual([{ memberId: f.memberA, value: 1 }]);
@@ -390,6 +404,8 @@ const takesAllowed: AllowFor<typeof takesRepo> = {
   publishFromStash: "write: the stash's own publish, pinned by takes.test",
   getById: LOOKUP,
   getByIds: LOOKUP,
+  buildGetByIdsChunkQuery: LOOKUP,
+  buildListInstrumentsForTakesChunkQuery: "lookup by take ids the caller already holds",
   getByClientRef: "ingest idempotency lookup by the bridge's key; stash refs are reserved",
   listInstrumentsForTakes: "lookup by take ids the caller already holds",
   listAllBySong:
@@ -405,6 +421,7 @@ const songsAllowed: AllowFor<typeof songsRepo> = {
   getBySlug: "reads songs only",
   getById: "reads songs only",
   getByIds: "reads songs only",
+  buildGetByIdsChunkQuery: "reads songs only",
   findByTitleNorm: "reads songs only",
   findByAlias: "reads songs only",
   list: "reads songs only",
@@ -425,6 +442,7 @@ const eventsAllowed: AllowFor<typeof eventsRepo> = {
   personalEventClientRef: "pure key builder",
   getById: "lookup by id; the event page hides a personal day with no band take",
   getByIds: "lookup by the event ids of takes the caller already holds",
+  buildGetByIdsChunkQuery: "lookup by the event ids of takes the caller already holds",
   getByClientRef: "ingest idempotency lookup; the personal prefix is refused at the API",
 };
 
@@ -448,6 +466,7 @@ const assetsAllowed: AllowFor<typeof assetsRepo> = {
   resetForReupload: WRITE,
   updateAudioMeta: WRITE,
   listPlayableMastersByTakeIds: "lookup by take ids the caller already holds",
+  buildListPlayableMastersChunkQuery: "lookup by take ids the caller already holds",
   takeHasLossless: LOOKUP,
   tallyBySong:
     "admin's delete confirm: must count every file a song delete destroys, private ones included",
@@ -484,6 +503,7 @@ const votesAllowed: AllowFor<typeof votesRepo> = {
   countByMember: "the member's own votes",
   votingRecord: "aggregates the member's own votes; a private take is never votable",
   listByMemberForTakes: "lookup by take ids the caller already holds",
+  buildListByMemberForTakesChunkQuery: "lookup by take ids the caller already holds",
 };
 
 const MODULES = [

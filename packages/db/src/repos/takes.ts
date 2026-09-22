@@ -343,12 +343,27 @@ export async function remove(db: Db, id: string): Promise<void> {
   ]);
 }
 
+// D1 allows at most 100 bound parameters per statement (see `chunk.ts`), and
+// a list page can now hold 200 takes. Each batch lookup keyed by a page's take,
+// song or event ids therefore splits its id list. The size is per query, as
+// `chunk.ts` says: 100 where the ids are the only bound value, 99 where
+// `bandTakeCondition()` binds one more. Each is pinned by a `.toSQL()` test.
+export const ID_CHUNK_SIZE = 100;
+/** `inArray(ids)` plus `bandTakeCondition()`'s one bound value. */
+export const BAND_ID_CHUNK_SIZE = 99;
+
+/** One chunk of `getByIds`. Exported for testing only. */
+export function buildGetByIdsChunkQuery(db: Db, ids: string[]) {
+  return db.select().from(takes).where(inArray(takes.id, ids));
+}
+
 /** Batch lookup — avoids one round trip per row when rendering a mixed list (favorites, votes). */
 export async function getByIds(db: Db, ids: string[]): Promise<Take[]> {
-  if (ids.length === 0) {
-    return [];
+  const rows: Take[] = [];
+  for (const part of chunk(ids, ID_CHUNK_SIZE)) {
+    rows.push(...(await buildGetByIdsChunkQuery(db, part)));
   }
-  return db.select().from(takes).where(inArray(takes.id, ids));
+  return rows;
 }
 
 /**
@@ -476,23 +491,35 @@ export async function listByEvents(
     return result;
   }
 
+  // Chunked (see `ID_CHUNK_SIZE`). Every event's takes come back from exactly
+  // one chunk, so the per-event order the query sorts into survives the merge.
+  for (const ids of chunk(eventIds, BAND_ID_CHUNK_SIZE)) {
+    const rows = await buildListByEventsChunkQuery(db, ids, options);
+    for (const row of rows) {
+      const existing = result.get(row.eventId);
+      if (existing) {
+        existing.push(row);
+      } else {
+        result.set(row.eventId, [row]);
+      }
+    }
+  }
+  return result;
+}
+
+/** One chunk of `listByEvents`. Exported for testing only. */
+export function buildListByEventsChunkQuery(
+  db: Db,
+  eventIds: string[],
+  options: ListByEventOptions = {},
+) {
   const direction = options.order === "asc" ? asc(takes.recordedAt) : desc(takes.recordedAt);
   const tieBreak = options.order === "asc" ? asc(takes.id) : desc(takes.id);
-  const rows = await db
+  return db
     .select()
     .from(takes)
     .where(and(inArray(takes.eventId, eventIds), bandTakeCondition()))
     .orderBy(direction, tieBreak);
-
-  for (const row of rows) {
-    const existing = result.get(row.eventId);
-    if (existing) {
-      existing.push(row);
-    } else {
-      result.set(row.eventId, [row]);
-    }
-  }
-  return result;
 }
 
 /**
@@ -586,22 +613,30 @@ export async function listInstrumentsForTakes(
     return result;
   }
 
-  const rows = await db
+  // Chunked (see `ID_CHUNK_SIZE`). A take's instruments all come back from
+  // one chunk, so each list keeps its sort order.
+  for (const ids of chunk(takeIds, ID_CHUNK_SIZE)) {
+    const rows = await buildListInstrumentsForTakesChunkQuery(db, ids);
+    for (const row of rows) {
+      const existing = result.get(row.takeId);
+      if (existing) {
+        existing.push(row.instrument);
+      } else {
+        result.set(row.takeId, [row.instrument]);
+      }
+    }
+  }
+  return result;
+}
+
+/** One chunk of `listInstrumentsForTakes`. Exported for testing only. */
+export function buildListInstrumentsForTakesChunkQuery(db: Db, takeIds: string[]) {
+  return db
     .select({ takeId: takeInstruments.takeId, instrument: instruments })
     .from(takeInstruments)
     .innerJoin(instruments, eq(instruments.id, takeInstruments.instrumentId))
     .where(inArray(takeInstruments.takeId, takeIds))
     .orderBy(instruments.sortOrder);
-
-  for (const row of rows) {
-    const existing = result.get(row.takeId);
-    if (existing) {
-      existing.push(row.instrument);
-    } else {
-      result.set(row.takeId, [row.instrument]);
-    }
-  }
-  return result;
 }
 
 /**
@@ -818,19 +853,26 @@ export async function countBySongs(db: Db, songIds: string[]): Promise<Map<strin
   if (songIds.length === 0) {
     return result;
   }
-  const rows = await db
+  for (const ids of chunk(songIds, BAND_ID_CHUNK_SIZE)) {
+    const rows = await buildCountBySongsChunkQuery(db, ids);
+    for (const row of rows) {
+      // `songId` is nullable since 0010, but `inArray` already excluded NULL —
+      // this is the typechecker asking, not a case that happens.
+      if (row.songId !== null) {
+        result.set(row.songId, row.value);
+      }
+    }
+  }
+  return result;
+}
+
+/** One chunk of `countBySongs`. Exported for testing only. */
+export function buildCountBySongsChunkQuery(db: Db, songIds: string[]) {
+  return db
     .select({ songId: takes.songId, value: sql<number>`count(*)` })
     .from(takes)
     .where(and(inArray(takes.songId, songIds), bandTakeCondition()))
     .groupBy(takes.songId);
-  for (const row of rows) {
-    // `songId` is nullable since 0010, but `inArray` already excluded NULL —
-    // this is the typechecker asking, not a case that happens.
-    if (row.songId !== null) {
-      result.set(row.songId, row.value);
-    }
-  }
-  return result;
 }
 
 /** `countBySongs`, per event — same reason, same shape. */
@@ -839,15 +881,22 @@ export async function countByEvents(db: Db, eventIds: string[]): Promise<Map<str
   if (eventIds.length === 0) {
     return result;
   }
-  const rows = await db
+  for (const ids of chunk(eventIds, BAND_ID_CHUNK_SIZE)) {
+    const rows = await buildCountByEventsChunkQuery(db, ids);
+    for (const row of rows) {
+      result.set(row.eventId, row.value);
+    }
+  }
+  return result;
+}
+
+/** One chunk of `countByEvents`. Exported for testing only. */
+export function buildCountByEventsChunkQuery(db: Db, eventIds: string[]) {
+  return db
     .select({ eventId: takes.eventId, value: sql<number>`count(*)` })
     .from(takes)
     .where(and(inArray(takes.eventId, eventIds), bandTakeCondition()))
     .groupBy(takes.eventId);
-  for (const row of rows) {
-    result.set(row.eventId, row.value);
-  }
-  return result;
 }
 
 // D1 allows at most 100 bound parameters per statement — see `chunk.ts`.

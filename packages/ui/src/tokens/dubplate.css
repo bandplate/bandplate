@@ -186,15 +186,6 @@
      (a lacquer disc on a lacquer page reads as a hole). The label is the
      rule colour, printed paper in both themes; see `.bp-plate-label`. */
   --bp-plate-vinyl: var(--bp-lacquer);
-
-  /* ---- the stand ----
-     Home's "Na pultu" card: the one strong call to action on the page, drawn
-     as the sleeve on the bone ground. Its ink is bone in both themes, since
-     the card is dark in both. In the dark theme the ground is already that
-     dark, so the card is the sleeve let partly through (see the dark blocks).
-     `--bp-stand-muted` is muted ink on a dark fill: 9.5:1 light, 9.3:1 dark. */
-  --bp-stand: var(--bp-sleeve);
-  --bp-stand-muted: #cbb89c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -237,10 +228,6 @@
        grooves disappeared with it. In the light theme the same disc separates
        from bone on its own, so only dark needs the lift. */
     --bp-plate-vinyl: var(--bp-sleeve);
-    /* The home card: the sleeve brown, let partly through so the grooves of
-       the page run under it, and no edge. The fill alone lifts it; a groove
-       line around it read as a frame drawn on top. */
-    --bp-stand: color-mix(in srgb, var(--bp-sleeve) 80%, transparent);
   }
 }
 
@@ -279,5 +266,4 @@
 
   /* See the `prefers-color-scheme` block above. */
   --bp-plate-vinyl: var(--bp-sleeve);
-  --bp-stand: color-mix(in srgb, var(--bp-sleeve) 80%, transparent);
 }

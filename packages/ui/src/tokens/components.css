@@ -1200,7 +1200,7 @@ a.bp-btn {
   border-bottom: 1px solid var(--bp-color-border);
   /* The home card's brown, let partly through: the header reads as a band
      across the top rather than text standing on the page. The surface token,
-     not `--bp-stand`, because the light theme's stand is a dark card and
+     not the fixed sleeve, because in the light theme the sleeve is dark and
      the header's ink would vanish on it. In dark the two are the same brown. */
   background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
 }
@@ -5197,7 +5197,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   border-radius: 1rem;
   /* The home card's material: the surface brown let partly through, no
      edge. In dark this is the sleeve brown of the Na pultu card; the surface
-     token rather than `--bp-stand` so the light theme's ink stays readable. */
+     token rather than the fixed sleeve so the light theme's ink stays readable. */
   background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
   color: var(--bp-color-fg);
   text-decoration: none;
@@ -6986,26 +6986,31 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 /* --- 1. Na pultu ----------------------------------------------------- */
 
-/* The one strong call to action on the page, so the one dark card: a record
-   sleeve on the bone ground. In the dark theme the page is already that dark,
-   so the card lifts a step on a translucent sleeve brown instead (see
-   `--bp-stand`). No edge in either theme: the fill alone lifts it. */
+/* The one strong call to action on the page, on the same card every list
+   and facts card uses: the surface let partly through, the card radius, no
+   edge. It used to be a dark card in both themes, with its own ground, ink
+   and muted tone (`--bp-stand*`); in the dark theme that was already exactly
+   this surface, so the extra names only existed for the light theme's
+   exception, and they are gone. What marks it out is its accent heading and
+   the gold disc on its play button, not a second material. */
 .bp-stand {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
   padding: 1.25rem;
-  border-radius: 1.25rem;
-  background: var(--bp-stand);
-  color: var(--bp-bone);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
+  color: var(--bp-color-fg);
 }
 
+/* The accent, not the fixed gold: on the light card gold text is 2.1:1, and
+   `--bp-color-accent` is gold in dark and burnt gold in light. */
 .bp-stand-eyebrow {
   display: flex;
   align-items: center;
   gap: 0.625rem;
   margin: 0;
-  color: var(--bp-color-accent-gold);
+  color: var(--bp-color-accent);
 }
 
 .bp-stand-dot {
@@ -7013,7 +7018,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 999px;
-  background: var(--bp-color-accent-gold);
+  background: var(--bp-color-accent);
 }
 
 .bp-stand-head {
@@ -7045,7 +7050,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-stand-line {
   margin: 0;
   font-size: var(--text-ui, 0.9375rem);
-  color: var(--bp-stand-muted);
+  color: var(--bp-color-muted);
 }
 
 .bp-stand-actions {
@@ -7054,39 +7059,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
   gap: 0.625rem;
 }
 
-/* Both declared with the card in front, so they outrank `.bp-pill:hover`
-   (same specificity, earlier in this file) by specificity rather than by
-   source order. Gold on the dark card is the page's primary action; the
-   second is a quiet tint of the card's own ink. */
-/* The event page's play-all button, as is — gold disc and all — retinted
-   for the card: a secondary button's fill is a wash of the page's ink, which
-   on this dark card is no fill at all. It takes the vote pill's tone, so the
-   two read as a pair and the disc is the one gold thing. */
-.bp-stand .bp-stand-play {
-  background: color-mix(in srgb, var(--bp-bone) 12%, transparent);
-  color: var(--bp-bone);
-}
-
-.bp-stand .bp-stand-play:hover {
-  background: color-mix(in srgb, var(--bp-bone) 20%, transparent);
-}
-
+/* The buttons take their own fills: the card is an ordinary surface now, so
+   the secondary button's and the pill's washes of the page's ink read on it
+   as they do anywhere. The vote pill keeps a little more room either side. */
 .bp-stand .bp-stand-vote {
   padding-inline: 1.125rem;
-  background: color-mix(in srgb, var(--bp-bone) 12%, transparent);
-  color: var(--bp-bone);
-}
-
-.bp-stand .bp-stand-vote:hover {
-  background: color-mix(in srgb, var(--bp-bone) 20%, transparent);
-}
-
-/* The app's focus ring is the accent, which in the light theme is a dark
-   brown: on this card it would be invisible. Gold is what the card already
-   uses for "this one". */
-.bp-stand :focus-visible {
-  outline: 2px solid var(--bp-color-accent-gold);
-  outline-offset: 2px;
 }
 
 @media (min-width: 40rem) {

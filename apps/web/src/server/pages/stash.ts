@@ -1,8 +1,18 @@
 // The stash's page logic: the recorder's song list, the stash view's rows, and
 // the "Přidat k písni" page with its actions (publish, rename, delete).
 import { canPublish, type Storage } from "@bandplate/core";
-import type { Db } from "@bandplate/db";
-import { assetsRepo, eventsRepo, membersRepo, songsRepo, takesRepo } from "@bandplate/db";
+import type { Db, Read } from "@bandplate/db";
+import {
+  assetsRepo,
+  combineReads,
+  eventsRepo,
+  mapRead,
+  membersRepo,
+  readValue,
+  runRead,
+  songsRepo,
+  takesRepo,
+} from "@bandplate/db";
 import { z } from "zod";
 import type { SongOption } from "../../client/recorder-logic.js";
 import { safeAppPath } from "../safe-redirect.js";
@@ -29,10 +39,19 @@ export interface RecordableSongs {
  * itself, so search works with no signal once the page has loaded.
  */
 export async function listRecordableSongs(db: Db): Promise<RecordableSongs> {
-  const { rows } = await songsRepo.listWithStats(db, {
+  return runRead(db, listRecordableSongsRead(db));
+}
+
+/** `listRecordableSongs`, planned for the caller's batch. */
+export function listRecordableSongsRead(db: Db): Read<RecordableSongs> {
+  const read = songsRepo.buildListWithStatsRead(db, {
     sort: "title",
     page: { limit: RECORDABLE_SONGS_LIMIT, offset: 0 },
   });
+  return mapRead(read, ({ rows }) => recordableSongs(rows));
+}
+
+function recordableSongs(rows: songsRepo.SongWithStats[]): RecordableSongs {
   const recentIds = rows
     .filter((song) => song.lastPlayedAt !== null)
     .sort((a, b) => (b.lastPlayedAt ?? 0) - (a.lastPlayedAt ?? 0))
@@ -78,25 +97,32 @@ export async function getStashRows(
   options: takesRepo.StashOptions = {},
 ): Promise<StashRowData[]> {
   const rows = await takesRepo.listStash(db, memberId, options);
+  return runRead(db, stashRowsRead(db, rows));
+}
+
+/** The song, event and player of each stash take, planned as one read. */
+function stashRowsRead(db: Db, rows: takesRepo.Take[]): Read<StashRowData[]> {
   if (rows.length === 0) {
-    return [];
+    return readValue([]);
   }
-  const [songs, events, playable] = await Promise.all([
-    songsRepo.getByIds(db, takesRepo.songIdsOf(rows)),
-    eventsRepo.getByIds(db, [...new Set(rows.map((t) => t.eventId))]),
-    assetsRepo.listPlayableMastersByTakeIds(
+  const read = combineReads({
+    songs: songsRepo.buildGetByIdsRead(db, takesRepo.songIdsOf(rows)),
+    events: eventsRepo.buildGetByIdsRead(db, [...new Set(rows.map((t) => t.eventId))]),
+    playable: assetsRepo.buildListPlayableMastersByTakeIdsRead(
       db,
       rows.map((t) => t.id),
     ),
-  ]);
-  const songById = new Map(songs.map((s) => [s.id, s]));
-  const eventById = new Map(events.map((e) => [e.id, e]));
-  return rows.map((take) => ({
-    ...take,
-    song: take.songId ? songById.get(take.songId) : undefined,
-    event: eventById.get(take.eventId),
-    playableAssetId: playable.get(take.id)?.id,
-  }));
+  });
+  return mapRead(read, ({ songs, events, playable }) => {
+    const songById = new Map(songs.map((s) => [s.id, s]));
+    const eventById = new Map(events.map((e) => [e.id, e]));
+    return rows.map((take) => ({
+      ...take,
+      song: take.songId ? songById.get(take.songId) : undefined,
+      event: eventById.get(take.eventId),
+      playableAssetId: playable.get(take.id)?.id,
+    }));
+  });
 }
 
 /** Everything the stash view draws: the rows, and what each row's sheet reports. */
@@ -112,14 +138,36 @@ export interface StashView {
 }
 
 export async function getStashView(db: Db, memberId: string): Promise<StashView> {
-  const rows = await getStashRows(db, memberId);
-  const [owners, songChoices] = await Promise.all([
-    membersRepo.getByIds(db, [memberId]),
-    rows.some((row) => !row.songId)
-      ? listRecordableSongs(db).then((found) => found.songs)
-      : Promise.resolve<SongOption[]>([]),
-  ]);
-  return { rows, owner: owners[0], songChoices };
+  const found = await runRead(db, stashViewRead(db, memberId));
+  return runRead(db, stashViewRestRead(db, found));
+}
+
+/** What the stash view reads first, keyed by the member alone. */
+export interface StashViewFound {
+  takes: takesRepo.Take[];
+  owner: membersRepo.Member | undefined;
+}
+
+/**
+ * The stash view in two reads: this one, then `stashViewRestRead` with its
+ * answer. Split so `/takes` can put each in the batch it already sends.
+ */
+export function stashViewRead(db: Db, memberId: string): Read<StashViewFound> {
+  return combineReads({
+    takes: takesRepo.buildListStashRead(db, memberId),
+    owner: mapRead(membersRepo.buildGetByIdsRead(db, [memberId]), (owners) => owners[0]),
+  });
+}
+
+/** The rest of the stash view: each take's context, and songs to file a songless one under. */
+export function stashViewRestRead(db: Db, found: StashViewFound): Read<StashView> {
+  const read = combineReads({
+    rows: stashRowsRead(db, found.takes),
+    songChoices: found.takes.some((take) => !take.songId)
+      ? mapRead(listRecordableSongsRead(db), (recordable) => recordable.songs)
+      : readValue<SongOption[]>([]),
+  });
+  return mapRead(read, ({ rows, songChoices }) => ({ rows, owner: found.owner, songChoices }));
 }
 
 export interface StashItem {

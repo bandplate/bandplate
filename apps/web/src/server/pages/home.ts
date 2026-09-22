@@ -1,10 +1,15 @@
 import { describeError, logError } from "@bandplate/core";
 import {
   assetsRepo,
+  combineReads,
   type Db,
   eventsRepo,
   favoritesRepo,
+  mapRead,
   membersRepo,
+  type Read,
+  readValue,
+  runReads,
   songsRepo,
   takesRepo,
 } from "@bandplate/db";
@@ -23,7 +28,7 @@ import {
 // Recent events carry no takes: home lists EVENTS, and opening one is how you
 // reach its takes.
 import { type Locale, messages } from "@bandplate/i18n";
-import { type EventListItem, withOwnerNames } from "./events.js";
+import { type EventListItem, withOwnerNamesRead } from "./events.js";
 import { decideHomeVisit } from "./home-visit.js";
 import { attachFullContext, type TakeWithFullContext } from "./take-context.js";
 
@@ -143,57 +148,86 @@ export function pinnedKindWord(item: PinnedItem, locale: Locale): string {
 }
 
 /**
- * The member's favorites as one newest-first list. `favoritesRepo.listByMember`
- * already orders by `createdAt DESC` across all three target types, so the
- * merge is just a matter of keeping that order rather than re-sorting anything.
+ * What a page of pins has to look up about the pinned things themselves. Every
+ * one of these is keyed by the favourite rows alone.
  */
-async function getPinned(
-  db: Db,
-  memberId: string,
-): Promise<{ items: PinnedItem[]; total: number }> {
-  const { rows, total } = await favoritesRepo.listByMember(db, memberId, {
-    page: { limit: PINNED_LIMIT, offset: 0 },
+interface PinnedLookups {
+  songs: songsRepo.Song[];
+  takes: takesRepo.Take[];
+  events: eventsRepo.Event[];
+  playableByTakeId: Map<string, assetsRepo.Asset>;
+  /**
+   * A COUNT per pinned event, not its takes: the card shows a number, and
+   * this used to fetch every take row of every pinned event to call
+   * `.length` on the result.
+   */
+  takeCountByPinnedEvent: Map<string, number>;
+  /**
+   * ONE grouped count for every pinned song. This was a `Promise.all` over
+   * `listBySong` — a query per pin, each pulling every take ROW of that song
+   * across the wire so that `.length` could be read off it.
+   */
+  songTakeCount: Map<string, number>;
+}
+
+/** And what the pinned TAKES and EVENTS, once read, name in turn. */
+interface PinnedNames {
+  takeSongs: songsRepo.Song[];
+  takeEvents: eventsRepo.Event[];
+  owners: membersRepo.Member[];
+}
+
+function pinnedIds(rows: favoritesRepo.Favorite[]) {
+  return {
+    songIds: rows.filter((r) => r.targetType === "song").map((r) => r.targetId),
+    takeIds: rows.filter((r) => r.targetType === "take").map((r) => r.targetId),
+    eventIds: rows.filter((r) => r.targetType === "event").map((r) => r.targetId),
+  };
+}
+
+function pinnedLookupsRead(db: Db, rows: favoritesRepo.Favorite[]): Read<PinnedLookups> {
+  const { songIds, takeIds, eventIds } = pinnedIds(rows);
+  return combineReads({
+    songs: songsRepo.buildGetByIdsRead(db, songIds),
+    takes: takesRepo.buildGetByIdsRead(db, takeIds),
+    events: eventsRepo.buildGetByIdsRead(db, eventIds),
+    playableByTakeId: assetsRepo.buildListPlayableMastersByTakeIdsRead(db, takeIds),
+    takeCountByPinnedEvent: takesRepo.buildCountByEventsRead(db, eventIds),
+    songTakeCount: takesRepo.buildCountBySongsRead(db, songIds),
   });
-  if (rows.length === 0) {
-    return { items: [], total };
-  }
+}
 
-  const songIds = rows.filter((r) => r.targetType === "song").map((r) => r.targetId);
-  const takeIds = rows.filter((r) => r.targetType === "take").map((r) => r.targetId);
-  const eventIds = rows.filter((r) => r.targetType === "event").map((r) => r.targetId);
-
-  const [songs, takes, events, playableByTakeId, takeCountByPinnedEvent] = await Promise.all([
-    songsRepo.getByIds(db, songIds),
-    takesRepo.getByIds(db, takeIds),
-    eventsRepo.getByIds(db, eventIds),
-    assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
-    // A COUNT per pinned event, not its takes: the card shows a number, and
-    // this used to fetch every take row of every pinned event to call
-    // `.length` on the result.
-    takesRepo.countByEvents(db, eventIds),
-  ]);
-
+function pinnedNamesRead(db: Db, { takes, events }: PinnedLookups): Read<PinnedNames> {
   // A pinned take names its own song and event; both may be missing if the
   // row was pinned and the target later archived, which is why every lookup
   // below is allowed to come back undefined rather than asserted.
-  const takeSongIds = takesRepo.songIdsOf(takes);
   const takeEventIds = [...new Set(takes.map((t) => t.eventId).filter((id) => id !== null))];
-  const [takeSongs, takeEvents, songTakeCount] = await Promise.all([
-    songsRepo.getByIds(db, takeSongIds),
-    eventsRepo.getByIds(db, takeEventIds as string[]),
-    // ONE grouped count for every pinned song. This was a `Promise.all` over
-    // `listBySong` — a query per pin, each pulling every take ROW of that song
-    // across the wire so that `.length` could be read off it.
-    takesRepo.countBySongs(db, songIds),
-  ]);
-
   // Whose each personal take and personal event is: one read for all of them.
   const ownerIds = [
     ...new Set(
       [...takes, ...events].map((x) => x.ownerMemberId).filter((id): id is string => Boolean(id)),
     ),
   ];
-  const owners = ownerIds.length > 0 ? await membersRepo.getByIds(db, ownerIds) : [];
+  return combineReads({
+    takeSongs: songsRepo.buildGetByIdsRead(db, takesRepo.songIdsOf(takes)),
+    takeEvents: eventsRepo.buildGetByIdsRead(db, takeEventIds),
+    owners: membersRepo.buildGetByIdsRead(db, ownerIds),
+  });
+}
+
+/**
+ * The member's favorites as one newest-first list. `favoritesRepo.listByMember`
+ * already orders by `createdAt DESC` across all three target types, so the
+ * merge is just a matter of keeping that order rather than re-sorting anything.
+ */
+function assemblePinned(
+  memberId: string,
+  rows: favoritesRepo.Favorite[],
+  lookups: PinnedLookups,
+  names: PinnedNames,
+): PinnedItem[] {
+  const { songs, takes, events, playableByTakeId, takeCountByPinnedEvent, songTakeCount } = lookups;
+  const { takeSongs, takeEvents, owners } = names;
   const ownerNameById = new Map(owners.map((m) => [m.id, m.displayName]));
   const ownerName = (id: string | null) => (id ? (ownerNameById.get(id) ?? null) : null);
 
@@ -243,7 +277,7 @@ async function getPinned(
       }
     }
   }
-  return { items, total };
+  return items;
 }
 
 /** One new take in the lead event, as the play-all queue needs it. */
@@ -279,74 +313,84 @@ export interface StashCard {
   latestSong: songsRepo.Song | undefined;
 }
 
+interface StandFound {
+  event: eventsRepo.Event | undefined;
+  takes: takesRepo.Take[];
+  takeCount: number;
+  unvotedCount: number;
+}
+
 /**
- * The lead event and its new takes, or undefined when nothing is new. Plain
- * reads rather than one clever one: pick the event, then list its new takes,
- * count them, and count the unvoted among them. Each stays under D1's
- * parameter cap however many takes arrived.
+ * The lead event and its new takes. Plain reads rather than one clever one:
+ * pick the event, list its new takes, count them, and count the unvoted among
+ * them. Each stays under D1's parameter cap however many takes arrived.
+ *
+ * All four name the event by the query that picks it rather than by its id,
+ * so they go out together instead of waiting for the id to come back. They
+ * share a batch, which is one transaction, so all four agree on which event
+ * that is.
  */
-async function getOnTheStand(
-  db: Db,
-  memberId: string,
-  since: number,
-): Promise<OnTheStand | undefined> {
-  const eventId = await takesRepo.newestEventWithTakesPublishedSince(db, since);
-  if (!eventId) {
-    return undefined;
-  }
-  const [event, takes, takeCount, unvotedCount] = await Promise.all([
-    eventsRepo.getById(db, eventId),
-    takesRepo.listPublishedSinceInEvent(db, eventId, since),
-    takesRepo.countPublishedSinceInEvent(db, eventId, since),
-    takesRepo.countUnvotedPublishedSinceInEvent(db, memberId, eventId, since),
-  ]);
+function onTheStandRead(db: Db, memberId: string, since: number): Read<StandFound> {
+  const newest = takesRepo.buildNewestEventWithTakesPublishedSinceQuery(db, since);
+  return combineReads({
+    event: eventsRepo.buildGetByIdRead(db, newest),
+    takes: takesRepo.buildListPublishedSinceInEventRead(db, newest, since),
+    takeCount: takesRepo.buildCountPublishedSinceInEventRead(db, newest, since),
+    unvotedCount: takesRepo.buildCountUnvotedPublishedSinceInEventRead(db, memberId, newest, since),
+  });
+}
+
+/** The new takes' songs and players, or undefined when nothing is new. */
+function onTheStandSongsRead(db: Db, found: StandFound): Read<OnTheStand | undefined> {
+  const { event, takes, takeCount, unvotedCount } = found;
   if (!event || takes.length === 0) {
-    return undefined;
+    return readValue(undefined);
   }
-  const [songs, playable] = await Promise.all([
-    songsRepo.getByIds(db, takesRepo.songIdsOf(takes)),
-    assetsRepo.listPlayableMastersByTakeIds(
+  const read = combineReads({
+    songs: songsRepo.buildGetByIdsRead(db, takesRepo.songIdsOf(takes)),
+    playable: assetsRepo.buildListPlayableMastersByTakeIdsRead(
       db,
       takes.map((t) => t.id),
     ),
-  ]);
-  const songById = new Map(songs.map((s) => [s.id, s]));
-  return {
-    event,
-    takes: takes.map((take) => ({
-      take,
-      song: take.songId ? songById.get(take.songId) : undefined,
-      playableAssetId: playable.get(take.id)?.id,
-    })),
-    takeCount,
-    unvotedCount,
-  };
+  });
+  return mapRead(read, ({ songs, playable }) => {
+    const songById = new Map(songs.map((s) => [s.id, s]));
+    return {
+      event,
+      takes: takes.map((take) => ({
+        take,
+        song: take.songId ? songById.get(take.songId) : undefined,
+        playableAssetId: playable.get(take.id)?.id,
+      })),
+      takeCount,
+      unvotedCount,
+    };
+  });
 }
 
-async function getStashCard(db: Db, memberId: string): Promise<StashCard | undefined> {
-  const [count, latest] = await Promise.all([
-    takesRepo.countStash(db, memberId),
-    takesRepo.latestStash(db, memberId),
-  ]);
+function stashCard(
+  count: number,
+  latest: takesRepo.Take | undefined,
+  latestSong: songsRepo.Song | undefined,
+): StashCard | undefined {
   if (count === 0 || !latest) {
     return undefined;
   }
-  const latestSong = latest.songId ? await songsRepo.getById(db, latest.songId) : undefined;
   return { count, latest, latestSong };
 }
 
 /**
- * Reads the member's visit columns and decides what this load means: the
- * moment "new" is measured from, and the write that records the load. The
- * write is handed back rather than awaited here, so it runs alongside the
- * page's reads instead of in front of them.
+ * Decides what this load means from the member's visit columns: the moment
+ * "new" is measured from, and the write that records the load. The write is
+ * handed back rather than awaited here, so it runs alongside the page's reads
+ * instead of in front of them.
  */
-async function readVisit(
+function decideVisit(
   db: Db,
   memberId: string,
+  member: membersRepo.Member | undefined,
   now: number,
-): Promise<{ since: number; record: () => Promise<void> }> {
-  const member = await membersRepo.getById(db, memberId);
+): { since: number; record: () => Promise<void> } {
   const decision = decideHomeVisit(
     {
       lastSeenAt: member?.homeLastSeenAt ?? null,
@@ -399,24 +443,62 @@ export interface HomeData {
   stash: StashCard | undefined;
 }
 
+/**
+ * Home in three round trips, each a single batch, whatever the member has
+ * pinned or missed. Every read goes out as early as what it is keyed by
+ * allows (on D1 each round trip is a network hop, and the page waits on the
+ * hops in sequence, not on the rows):
+ *
+ *   1. what needs only the member and the clock: their visit columns, their
+ *      pins, the ledger, their stash
+ *   2. what those answered: the new takes since the visit, the pinned things
+ *      themselves, the ledger's owners, the stash's song. The visit write goes
+ *      out alongside, on its own so its failure stays its own
+ *   3. what the pinned takes and the new takes name in turn
+ */
 export async function getHomeData(
   db: Db,
   memberId: string,
   now: number = Date.now(),
 ): Promise<HomeData> {
-  const visit = await readVisit(db, memberId, now);
-  const [onTheStand, pinned, recentEvents, stash] = await Promise.all([
-    getOnTheStand(db, memberId, visit.since),
-    getPinned(db, memberId),
-    eventsRepo.listRecentWithTakeCounts(db, { limit: RECENT_EVENTS_LIMIT }),
-    getStashCard(db, memberId),
+  const first = await runReads(db, {
+    member: membersRepo.buildGetByIdRead(db, memberId),
+    favorites: favoritesRepo.buildListByMemberRead(db, memberId, {
+      page: { limit: PINNED_LIMIT, offset: 0 },
+    }),
+    recentEvents: eventsRepo.buildListRecentWithTakeCountsRead(db, { limit: RECENT_EVENTS_LIMIT }),
+    stashCount: takesRepo.buildCountStashRead(db, memberId),
+    stashLatest: takesRepo.buildLatestStashRead(db, memberId),
+  });
+  const visit = decideVisit(db, memberId, first.member, now);
+  const pins = first.favorites.rows;
+  const latestSongId = first.stashLatest?.songId;
+
+  const [second] = await Promise.all([
+    runReads(db, {
+      stand: onTheStandRead(db, memberId, visit.since),
+      pinned: pins.length > 0 ? pinnedLookupsRead(db, pins) : readValue(undefined),
+      recentEvents: withOwnerNamesRead(db, first.recentEvents.rows),
+      latestSong: latestSongId
+        ? mapRead(songsRepo.buildGetByIdsRead(db, [latestSongId]), (songs) => songs[0])
+        : readValue(undefined),
+    }),
     visit.record(),
   ]);
+
+  const third = await runReads(db, {
+    onTheStand: onTheStandSongsRead(db, second.stand),
+    pinnedNames: second.pinned ? pinnedNamesRead(db, second.pinned) : readValue(undefined),
+  });
+
   return {
-    onTheStand,
-    pinned: pinned.items,
-    pinnedTotal: pinned.total,
-    recentEvents: await withOwnerNames(db, recentEvents.rows),
-    stash,
+    onTheStand: third.onTheStand,
+    pinned:
+      second.pinned && third.pinnedNames
+        ? assemblePinned(memberId, pins, second.pinned, third.pinnedNames)
+        : [],
+    pinnedTotal: first.favorites.total,
+    recentEvents: second.recentEvents,
+    stash: stashCard(first.stashCount, first.stashLatest, second.latestSong),
   };
 }

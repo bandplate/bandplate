@@ -226,6 +226,25 @@ counting parameters has been wrong before.
 `take-context.test.ts` wraps the libSQL client's `execute` and asserts no
 statement carried more than 100 args while a 200-row page was assembled.
 
+### In a D1 batch, two result columns with the same name become one
+
+Pages send their reads as one `db.batch` (`packages/db/src/read.ts`), because
+every D1 call from the Worker is a network round trip. Inside a batch D1
+returns each row as an OBJECT keyed by column name, and Drizzle turns it back
+into an array with `Object.keys`. A statement whose result has two columns of
+the same name (`select().from(votes).innerJoin(takes, ...)` has two
+`created_at`) keeps one of them, and every field after it maps off by one.
+libSQL returns arrays and gets it right, and so does D1 outside a batch, so
+the query works everywhere except in production's batch.
+
+**Rule.** A batched statement selects one table's columns (a join is fine when
+it selects only one side, like `select({ take: takes })`), or aliases. To
+fetch votes with their takes, `/me` asks for the takes by a subquery of the
+vote page's ids instead of joining.
+
+**How to catch it.** `createTestDb`'s client refuses a batch whose result
+repeats a column name, so any test that runs the read fails here first.
+
 ### A drizzle-kit table rebuild silently drops a hand-added index
 
 SQLite cannot alter a column in place, so a change like "make `takes.song_id`

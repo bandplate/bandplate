@@ -14,9 +14,11 @@ import {
   notInArray,
   or,
   type SQL,
+  type SQLWrapper,
   sql,
 } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { combineReads, type Read, readAll, readOne, runRead } from "../read.js";
 import {
   assets,
   events,
@@ -359,11 +361,15 @@ export function buildGetByIdsChunkQuery(db: Db, ids: string[]) {
 
 /** Batch lookup — avoids one round trip per row when rendering a mixed list (favorites, votes). */
 export async function getByIds(db: Db, ids: string[]): Promise<Take[]> {
-  const rows: Take[] = [];
-  for (const part of chunk(ids, ID_CHUNK_SIZE)) {
-    rows.push(...(await buildGetByIdsChunkQuery(db, part)));
-  }
-  return rows;
+  return runRead(db, buildGetByIdsRead(db, ids));
+}
+
+/** `getByIds`, planned: every chunk goes out in the caller's one batch. */
+export function buildGetByIdsRead(db: Db, ids: string[]): Read<Take[]> {
+  return readAll(
+    chunk(ids, ID_CHUNK_SIZE).map((part) => buildGetByIdsChunkQuery(db, part)),
+    (parts) => parts.flat(),
+  );
 }
 
 /**
@@ -608,25 +614,31 @@ export async function listInstrumentsForTakes(
   db: Db,
   takeIds: string[],
 ): Promise<Map<string, Instrument[]>> {
-  const result = new Map<string, Instrument[]>();
-  if (takeIds.length === 0) {
-    return result;
-  }
+  return runRead(db, buildListInstrumentsForTakesRead(db, takeIds));
+}
 
+/** `listInstrumentsForTakes`, planned for the caller's batch. */
+export function buildListInstrumentsForTakesRead(
+  db: Db,
+  takeIds: string[],
+): Read<Map<string, Instrument[]>> {
   // Chunked (see `ID_CHUNK_SIZE`). A take's instruments all come back from
   // one chunk, so each list keeps its sort order.
-  for (const ids of chunk(takeIds, ID_CHUNK_SIZE)) {
-    const rows = await buildListInstrumentsForTakesChunkQuery(db, ids);
-    for (const row of rows) {
-      const existing = result.get(row.takeId);
-      if (existing) {
-        existing.push(row.instrument);
-      } else {
-        result.set(row.takeId, [row.instrument]);
+  return readAll(
+    chunk(takeIds, ID_CHUNK_SIZE).map((ids) => buildListInstrumentsForTakesChunkQuery(db, ids)),
+    (parts) => {
+      const result = new Map<string, Instrument[]>();
+      for (const row of parts.flat()) {
+        const existing = result.get(row.takeId);
+        if (existing) {
+          existing.push(row.instrument);
+        } else {
+          result.set(row.takeId, [row.instrument]);
+        }
       }
-    }
-  }
-  return result;
+      return result;
+    },
+  );
 }
 
 /** One chunk of `listInstrumentsForTakes`. Exported for testing only. */
@@ -656,12 +668,21 @@ export async function listUnvotedByMember(
   memberId: string,
   options: ListUnvotedByMemberOptions = {},
 ): Promise<Take[]> {
+  return runRead(db, buildListUnvotedByMemberRead(db, memberId, options));
+}
+
+/** `listUnvotedByMember`, planned for the caller's batch. */
+export function buildListUnvotedByMemberRead(
+  db: Db,
+  memberId: string,
+  options: ListUnvotedByMemberOptions = {},
+): Read<Take[]> {
   const votedTakeIds = db
     .select({ takeId: votes.takeId })
     .from(votes)
     .where(eq(votes.memberId, memberId));
 
-  return (
+  return readOne(
     db
       .select()
       .from(takes)
@@ -671,7 +692,8 @@ export async function listUnvotedByMember(
       // See `listBySong`'s comment on `desc(takes.id)` as a deterministic
       // tie-break for takes sharing a `recordedAt`.
       .orderBy(desc(takes.recordedAt), desc(takes.id))
-      .limit(options.limit ?? DEFAULT_TAKE_LIST_CAP)
+      .limit(options.limit ?? DEFAULT_TAKE_LIST_CAP),
+    (rows) => rows,
   );
 }
 
@@ -792,6 +814,15 @@ export async function search(
   filters: SearchFilters = {},
   options: SearchOptions = {},
 ): Promise<SearchResult> {
+  return runRead(db, buildSearchRead(db, filters, options));
+}
+
+/** `search`, planned: the page and its count, for the caller's batch. */
+export function buildSearchRead(
+  db: Db,
+  filters: SearchFilters = {},
+  options: SearchOptions = {},
+): Read<SearchResult> {
   const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
   const offset = options.page?.offset ?? 0;
   const conditions = searchConditions(db, filters);
@@ -808,18 +839,18 @@ export async function search(
       ? [desc(takes.keeperVotes), desc(takes.ratingScore), desc(takes.recordedAt), desc(takes.id)]
       : [desc(takes.recordedAt), desc(takes.id)];
 
-  const [rows, totals] = await Promise.all([
-    db
-      .select()
-      .from(takes)
-      .where(where)
-      .orderBy(...orderBy)
-      .limit(limit)
-      .offset(offset),
-    db.select({ value: sql<number>`count(*)` }).from(takes).where(where),
-  ]);
-
-  return { rows, total: totals[0]?.value ?? 0 };
+  const page = db
+    .select()
+    .from(takes)
+    .where(where)
+    .orderBy(...orderBy)
+    .limit(limit)
+    .offset(offset);
+  const count = db.select({ value: sql<number>`count(*)` }).from(takes).where(where);
+  return combineReads({
+    rows: readOne(page, (rows) => rows),
+    total: readOne(count, (rows) => rows[0]?.value ?? 0),
+  });
 }
 
 /** How many takes exist of one song — the count, without the rows. */
@@ -849,21 +880,25 @@ export async function countByEvent(db: Db, eventId: string): Promise<number> {
  * Callers dedupe `songIds` themselves, matching `listInstrumentsForTakes`.
  */
 export async function countBySongs(db: Db, songIds: string[]): Promise<Map<string, number>> {
-  const result = new Map<string, number>();
-  if (songIds.length === 0) {
-    return result;
-  }
-  for (const ids of chunk(songIds, BAND_ID_CHUNK_SIZE)) {
-    const rows = await buildCountBySongsChunkQuery(db, ids);
-    for (const row of rows) {
-      // `songId` is nullable since 0010, but `inArray` already excluded NULL —
-      // this is the typechecker asking, not a case that happens.
-      if (row.songId !== null) {
-        result.set(row.songId, row.value);
+  return runRead(db, buildCountBySongsRead(db, songIds));
+}
+
+/** `countBySongs`, planned for the caller's batch. */
+export function buildCountBySongsRead(db: Db, songIds: string[]): Read<Map<string, number>> {
+  return readAll(
+    chunk(songIds, BAND_ID_CHUNK_SIZE).map((ids) => buildCountBySongsChunkQuery(db, ids)),
+    (parts) => {
+      const result = new Map<string, number>();
+      for (const row of parts.flat()) {
+        // `songId` is nullable since 0010, but `inArray` already excluded NULL —
+        // this is the typechecker asking, not a case that happens.
+        if (row.songId !== null) {
+          result.set(row.songId, row.value);
+        }
       }
-    }
-  }
-  return result;
+      return result;
+    },
+  );
 }
 
 /** One chunk of `countBySongs`. Exported for testing only. */
@@ -877,17 +912,15 @@ export function buildCountBySongsChunkQuery(db: Db, songIds: string[]) {
 
 /** `countBySongs`, per event — same reason, same shape. */
 export async function countByEvents(db: Db, eventIds: string[]): Promise<Map<string, number>> {
-  const result = new Map<string, number>();
-  if (eventIds.length === 0) {
-    return result;
-  }
-  for (const ids of chunk(eventIds, BAND_ID_CHUNK_SIZE)) {
-    const rows = await buildCountByEventsChunkQuery(db, ids);
-    for (const row of rows) {
-      result.set(row.eventId, row.value);
-    }
-  }
-  return result;
+  return runRead(db, buildCountByEventsRead(db, eventIds));
+}
+
+/** `countByEvents`, planned for the caller's batch. */
+export function buildCountByEventsRead(db: Db, eventIds: string[]): Read<Map<string, number>> {
+  return readAll(
+    chunk(eventIds, BAND_ID_CHUNK_SIZE).map((ids) => buildCountByEventsChunkQuery(db, ids)),
+    (parts) => new Map(parts.flat().map((row) => [row.eventId, row.value])),
+  );
 }
 
 /** One chunk of `countByEvents`. Exported for testing only. */
@@ -984,12 +1017,24 @@ export async function listStash(
   memberId: string,
   options: StashOptions = {},
 ): Promise<Take[]> {
-  return db
-    .select()
-    .from(takes)
-    .where(and(...stashConditions(memberId, options)))
-    .orderBy(desc(takes.recordedAt), desc(takes.id))
-    .limit(DEFAULT_TAKE_LIST_CAP);
+  return runRead(db, buildListStashRead(db, memberId, options));
+}
+
+/** `listStash`, planned for the caller's batch. */
+export function buildListStashRead(
+  db: Db,
+  memberId: string,
+  options: StashOptions = {},
+): Read<Take[]> {
+  return readOne(
+    db
+      .select()
+      .from(takes)
+      .where(and(...stashConditions(memberId, options)))
+      .orderBy(desc(takes.recordedAt), desc(takes.id))
+      .limit(DEFAULT_TAKE_LIST_CAP),
+    (rows) => rows,
+  );
 }
 
 export async function countStash(
@@ -997,11 +1042,22 @@ export async function countStash(
   memberId: string,
   options: StashOptions = {},
 ): Promise<number> {
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(takes)
-    .where(and(...stashConditions(memberId, options)));
-  return rows[0]?.value ?? 0;
+  return runRead(db, buildCountStashRead(db, memberId, options));
+}
+
+/** `countStash`, planned for the caller's batch. */
+export function buildCountStashRead(
+  db: Db,
+  memberId: string,
+  options: StashOptions = {},
+): Read<number> {
+  return readOne(
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(takes)
+      .where(and(...stashConditions(memberId, options))),
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 /**
@@ -1009,13 +1065,20 @@ export async function countStash(
  * home's stash card names it. Same conditions and order as `listStash`, one row.
  */
 export async function latestStash(db: Db, memberId: string): Promise<Take | undefined> {
-  const [row] = await db
-    .select()
-    .from(takes)
-    .where(and(...stashConditions(memberId, {})))
-    .orderBy(desc(takes.recordedAt), desc(takes.id))
-    .limit(1);
-  return row;
+  return runRead(db, buildLatestStashRead(db, memberId));
+}
+
+/** `latestStash`, planned for the caller's batch. */
+export function buildLatestStashRead(db: Db, memberId: string): Read<Take | undefined> {
+  return readOne(
+    db
+      .select()
+      .from(takes)
+      .where(and(...stashConditions(memberId, {})))
+      .orderBy(desc(takes.recordedAt), desc(takes.id))
+      .limit(1),
+    (rows) => rows[0],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1046,7 +1109,18 @@ export async function newestEventWithTakesPublishedSince(
   db: Db,
   since: number,
 ): Promise<string | undefined> {
-  const [row] = await db
+  const [row] = await buildNewestEventWithTakesPublishedSinceQuery(db, since);
+  return row?.eventId;
+}
+
+/**
+ * `newestEventWithTakesPublishedSince`'s query, unrun. It selects one column
+ * and at most one row, so it also works as the `eventId` of the reads below
+ * (a scalar subquery): home asks for "the newest event's new takes" in the
+ * same batch that finds the event, instead of waiting for the id first.
+ */
+export function buildNewestEventWithTakesPublishedSinceQuery(db: Db, since: number) {
+  return db
     .select({ eventId: events.id })
     .from(takes)
     .innerJoin(events, eq(events.id, takes.eventId))
@@ -1054,8 +1128,14 @@ export async function newestEventWithTakesPublishedSince(
     .groupBy(events.id)
     .orderBy(desc(events.heldAt), desc(events.id))
     .limit(1);
-  return row?.eventId;
 }
+
+/**
+ * An event id, or a query that yields one (see
+ * `buildNewestEventWithTakesPublishedSinceQuery`). A query with no row
+ * compares as NULL, which matches no take, the same as an unknown id.
+ */
+export type EventIdRef = string | SQLWrapper;
 
 /** One event's takes published after `since`, in recorded order (the event page's order). */
 export async function listPublishedSinceInEvent(
@@ -1063,14 +1143,25 @@ export async function listPublishedSinceInEvent(
   eventId: string,
   since: number,
 ): Promise<Take[]> {
-  const rows = await db
-    .select({ take: takes })
-    .from(takes)
-    .innerJoin(events, eq(events.id, takes.eventId))
-    .where(and(eq(takes.eventId, eventId), ...publishedSinceConditions(since)))
-    .orderBy(asc(takes.recordedAt), asc(takes.id))
-    .limit(DEFAULT_TAKE_LIST_CAP);
-  return rows.map((row) => row.take);
+  return runRead(db, buildListPublishedSinceInEventRead(db, eventId, since));
+}
+
+/** `listPublishedSinceInEvent`, planned for the caller's batch. */
+export function buildListPublishedSinceInEventRead(
+  db: Db,
+  eventId: EventIdRef,
+  since: number,
+): Read<Take[]> {
+  return readOne(
+    db
+      .select({ take: takes })
+      .from(takes)
+      .innerJoin(events, eq(events.id, takes.eventId))
+      .where(and(eq(takes.eventId, eventId), ...publishedSinceConditions(since)))
+      .orderBy(asc(takes.recordedAt), asc(takes.id))
+      .limit(DEFAULT_TAKE_LIST_CAP),
+    (rows) => rows.map((row) => row.take),
+  );
 }
 
 /**
@@ -1082,12 +1173,23 @@ export async function countPublishedSinceInEvent(
   eventId: string,
   since: number,
 ): Promise<number> {
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(takes)
-    .innerJoin(events, eq(events.id, takes.eventId))
-    .where(and(eq(takes.eventId, eventId), ...publishedSinceConditions(since)));
-  return rows[0]?.value ?? 0;
+  return runRead(db, buildCountPublishedSinceInEventRead(db, eventId, since));
+}
+
+/** `countPublishedSinceInEvent`, planned for the caller's batch. */
+export function buildCountPublishedSinceInEventRead(
+  db: Db,
+  eventId: EventIdRef,
+  since: number,
+): Read<number> {
+  return readOne(
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(takes)
+      .innerJoin(events, eq(events.id, takes.eventId))
+      .where(and(eq(takes.eventId, eventId), ...publishedSinceConditions(since))),
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 /**
@@ -1103,24 +1205,36 @@ export async function countUnvotedPublishedSinceInEvent(
   eventId: string,
   since: number,
 ): Promise<number> {
+  return runRead(db, buildCountUnvotedPublishedSinceInEventRead(db, memberId, eventId, since));
+}
+
+/** `countUnvotedPublishedSinceInEvent`, planned for the caller's batch. */
+export function buildCountUnvotedPublishedSinceInEventRead(
+  db: Db,
+  memberId: string,
+  eventId: EventIdRef,
+  since: number,
+): Read<number> {
   const votedTakeIds = db
     .select({ takeId: votes.takeId })
     .from(votes)
     .where(eq(votes.memberId, memberId));
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(takes)
-    .innerJoin(events, eq(events.id, takes.eventId))
-    .where(
-      and(
-        eq(takes.eventId, eventId),
-        ...publishedSinceConditions(since),
-        eq(takes.state, "published"),
-        votableCondition(),
-        notInArray(takes.id, votedTakeIds),
+  return readOne(
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(takes)
+      .innerJoin(events, eq(events.id, takes.eventId))
+      .where(
+        and(
+          eq(takes.eventId, eventId),
+          ...publishedSinceConditions(since),
+          eq(takes.state, "published"),
+          votableCondition(),
+          notInArray(takes.id, votedTakeIds),
+        ),
       ),
-    );
-  return rows[0]?.value ?? 0;
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 /**

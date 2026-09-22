@@ -5,6 +5,7 @@
 // real parameter count (`.toSQL()`), since a size is only safe relative to the
 // other values the same statement binds. See docs/frontend-traps.md.
 import { describe, expect, it } from "vitest";
+import type { Read } from "../read.js";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as assetsRepo from "./assets.js";
 import * as eventsRepo from "./events.js";
@@ -126,5 +127,68 @@ describe("a full chunk stays within D1's 100 bound parameters", async () => {
     });
     const wanted = [...ids(250), song.id];
     expect((await songsRepo.getByIds(db, wanted)).map((s) => s.id)).toEqual([song.id]);
+  });
+});
+
+// The planned forms (`build...Read`) that pages send as one batch: a lookup
+// longer than one chunk becomes several statements in that batch, each within
+// the cap, and a read that names its event by a subquery binds the subquery's
+// values too.
+describe("every statement of a planned read stays within D1's 100 bound parameters", async () => {
+  const db = await createTestDb();
+  const many = ids(250);
+  const newest = takesRepo.buildNewestEventWithTakesPublishedSinceQuery(db, 0);
+
+  const cases: [string, Read<unknown>, number][] = [
+    ["takesRepo.buildGetByIdsRead", takesRepo.buildGetByIdsRead(db, many), 3],
+    [
+      "takesRepo.buildListInstrumentsForTakesRead",
+      takesRepo.buildListInstrumentsForTakesRead(db, many),
+      3,
+    ],
+    ["takesRepo.buildCountBySongsRead", takesRepo.buildCountBySongsRead(db, many), 3],
+    ["takesRepo.buildCountByEventsRead", takesRepo.buildCountByEventsRead(db, many), 3],
+    [
+      "assetsRepo.buildListPlayableMastersByTakeIdsRead",
+      assetsRepo.buildListPlayableMastersByTakeIdsRead(db, many),
+      3,
+    ],
+    [
+      "votesRepo.buildListByMemberForTakesRead",
+      votesRepo.buildListByMemberForTakesRead(db, "member-1", many),
+      3,
+    ],
+    ["songsRepo.buildGetByIdsRead", songsRepo.buildGetByIdsRead(db, many), 3],
+    ["eventsRepo.buildGetByIdsRead", eventsRepo.buildGetByIdsRead(db, many), 3],
+    ["membersRepo.buildGetByIdsRead", membersRepo.buildGetByIdsRead(db, many), 3],
+    ["eventsRepo.buildGetByIdRead (newest event)", eventsRepo.buildGetByIdRead(db, newest), 1],
+    [
+      "takesRepo.buildListPublishedSinceInEventRead (newest event)",
+      takesRepo.buildListPublishedSinceInEventRead(db, newest, 0),
+      1,
+    ],
+    [
+      "takesRepo.buildCountPublishedSinceInEventRead (newest event)",
+      takesRepo.buildCountPublishedSinceInEventRead(db, newest, 0),
+      1,
+    ],
+    [
+      "takesRepo.buildCountUnvotedPublishedSinceInEventRead (newest event)",
+      takesRepo.buildCountUnvotedPublishedSinceInEventRead(db, "member-1", newest, 0),
+      1,
+    ],
+    [
+      "votesRepo.buildTakesOfMemberPageRead",
+      votesRepo.buildTakesOfMemberPageRead(db, "member-1", { page: { limit: 200, offset: 0 } }),
+      1,
+    ],
+  ];
+
+  it.each(cases)("%s", (_name, read, statements) => {
+    expect(read.statements).toHaveLength(statements);
+    for (const statement of read.statements) {
+      const built = (statement as unknown as { toSQL(): { params: unknown[] } }).toSQL();
+      expect(built.params.length).toBeLessThanOrEqual(D1_MAX_PARAMS);
+    }
   });
 });

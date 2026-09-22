@@ -13,9 +13,21 @@
 // There is no RATING filter either. "75% keeper or better" asks a member to
 // think in percentages about a tally of at most seven votes, and the keeper
 // badge already says the thing they actually wanted to find.
-import type { Db, PageArgs } from "@bandplate/db";
-import { favoritesRepo, takesRepo } from "@bandplate/db";
-import { attachFullContext, type TakeWithFullContext } from "./take-context.js";
+import type { Db, PageArgs, Read } from "@bandplate/db";
+import {
+  combineReads,
+  favoritesRepo,
+  instrumentsRepo,
+  mapRead,
+  readValue,
+  runRead,
+  runReads,
+  songsRepo,
+  takesRepo,
+} from "@bandplate/db";
+import { type ListView, loadList } from "../pagination.js";
+import { type StashView, stashViewRead, stashViewRestRead } from "./stash.js";
+import { buildFullContextRead, type TakeWithFullContext } from "./take-context.js";
 
 export interface SearchQuery {
   /**
@@ -197,13 +209,128 @@ export async function searchTakes(
   /** The clock, for resolving a relative window. See `SearchQuery.since`. */
   now: number,
 ): Promise<SearchTakesResult> {
-  const [{ rows, total }, favoriteTakeIds] = await Promise.all([
-    takesRepo.search(db, toFilters(query, memberId, now), { sort: query.sort, page }),
-    favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
-  ]);
-  const withContext = await attachFullContext(db, rows, memberId);
-  return {
+  const found = await runRead(db, searchFoundRead(db, query, memberId, page, now));
+  return runRead(db, searchResultsRead(db, found, memberId));
+}
+
+/** What the search reads first: the page of takes, its total, and which takes are pinned. */
+interface SearchFound {
+  rows: takesRepo.Take[];
+  total: number;
+  favoriteTakeIds: Set<string>;
+}
+
+function searchFoundRead(
+  db: Db,
+  query: SearchQuery,
+  memberId: string,
+  page: PageArgs,
+  now: number,
+): Read<SearchFound> {
+  const read = combineReads({
+    found: takesRepo.buildSearchRead(db, toFilters(query, memberId, now), {
+      sort: query.sort,
+      page,
+    }),
+    favoriteTakeIds: favoritesRepo.buildListTargetIdsByMemberRead(db, memberId, "take"),
+  });
+  return mapRead(read, ({ found, favoriteTakeIds }) => ({ ...found, favoriteTakeIds }));
+}
+
+/** The found takes with their context: the second of the search's two reads. */
+function searchResultsRead(
+  db: Db,
+  { rows, total, favoriteTakeIds }: SearchFound,
+  memberId: string,
+): Read<SearchTakesResult> {
+  return mapRead(buildFullContextRead(db, rows, memberId), (withContext) => ({
     results: withContext.map((take) => ({ ...take, favorited: favoriteTakeIds.has(take.id) })),
     total,
+  }));
+}
+
+const NO_SEARCH: SearchFound = { rows: [], total: 0, favoriteTakeIds: new Set() };
+
+const NO_STASH: StashView = { rows: [], owner: undefined, songChoices: [] };
+
+export interface TakesPageData {
+  search: SearchTakesResult;
+  list: ListView;
+  /** The instrument filter's options. */
+  instruments: instrumentsRepo.Instrument[];
+  /**
+   * The song picker's options. A band's repertoire is tens of songs, so the
+   * whole list is one cheap query and a plain `<select>` — no autocomplete, no
+   * script, and it works with JS off like every other control here.
+   */
+  songs: songsRepo.Song[];
+  stashCount: number;
+  /** Empty unless the stash is the list being shown. */
+  stash: StashView;
+}
+
+/**
+ * Everything `/takes` reads, in two round trips: one batch for all that
+ * needs only the request (the page of takes and its total, the filter
+ * options, the stash), one for what those returned (the takes' context,
+ * the stash rows' context).
+ *
+ * `loadList` may ask for the takes a second time, when the URL guessed the
+ * wrong window (an old `?page=` link on a list that now grows). That second
+ * ask carries only the search, so it costs two more round trips, never the
+ * whole page again.
+ *
+ * The stash is a different list, not a filter on this one: nothing below the
+ * bar is searched while it is open.
+ */
+export async function getTakesPageData(
+  db: Db,
+  request: { url: URL; query: SearchQuery; viewingStash: boolean; memberId: string; now: number },
+): Promise<TakesPageData> {
+  const { url, query, viewingStash, memberId, now } = request;
+  const restOfPage = combineReads({
+    instruments: instrumentsRepo.buildListRead(db),
+    songs: songsRepo.buildListRead(db),
+    stashCount: takesRepo.buildCountStashRead(db, memberId),
+    stash: viewingStash ? stashViewRead(db, memberId) : readValue(undefined),
+  });
+  type RestOfPage = typeof restOfPage extends Read<infer T> ? T : never;
+
+  let rest: RestOfPage | undefined;
+  let stash = NO_STASH;
+  const { result: search, list } = await loadList(
+    url,
+    TAKES_PER_PAGE,
+    async (page) => {
+      const first = await runReads(db, {
+        search: viewingStash
+          ? readValue(NO_SEARCH)
+          : searchFoundRead(db, query, memberId, page, now),
+        rest: rest ? readValue(rest) : restOfPage,
+      });
+      const firstAsk = rest === undefined;
+      rest = first.rest;
+      const second = await runReads(db, {
+        results: searchResultsRead(db, first.search, memberId),
+        stash:
+          firstAsk && first.rest.stash
+            ? stashViewRestRead(db, first.rest.stash)
+            : readValue(undefined),
+      });
+      stash = second.stash ?? stash;
+      return second.results;
+    },
+    (found) => found.total,
+  );
+  if (!rest) {
+    throw new Error("loadList returned without loading");
+  }
+  return {
+    search,
+    list,
+    instruments: rest.instruments,
+    songs: rest.songs,
+    stashCount: rest.stashCount,
+    stash,
   };
 }

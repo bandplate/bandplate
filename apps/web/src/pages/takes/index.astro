@@ -1,5 +1,4 @@
 ---
-import { instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 // The takes archive: every take the band has, narrowed by song, instrument,
 // date, rating and "not voted by me".
 //
@@ -39,16 +38,14 @@ import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { pageRoster } from "../../server/instrument-roster.js";
 import {
+  getTakesPageData,
   hasAnyFilter,
   hasRecordedFilter,
   parseSearchQuery,
   RECORDED_WINDOWS,
-  type SearchTakesResult,
-  searchTakes,
-  TAKES_PER_PAGE,
 } from "../../server/pages/search.js";
-import { applyStashWrite, getStashView } from "../../server/pages/stash.js";
-import { loadList, moreAnchorId } from "../../server/pagination.js";
+import { applyStashWrite } from "../../server/pages/stash.js";
+import { moreAnchorId } from "../../server/pagination.js";
 import { withQuery } from "../../server/safe-redirect.js";
 
 const principal = Astro.locals.principal;
@@ -122,28 +119,17 @@ const deletedTakeId = viewingStash
   : undefined;
 const filtersApplied = hasAnyFilter(query) || query.sort !== "recent";
 
-const [{ result: search, list }, instruments, songs, stashCount, stash] = await Promise.all([
-  // The stash is a different list, not a filter on this one: nothing below the
-  // bar is searched while it is open.
-  loadList(
-    Astro.url,
-    TAKES_PER_PAGE,
-    (takesPage) =>
-      viewingStash
-        ? Promise.resolve<SearchTakesResult>({ results: [], total: 0 })
-        : searchTakes(appDeps.db, query, principal.memberId, takesPage, appDeps.clock.now()),
-    (found) => found.total,
-  ),
-  instrumentsRepo.list(appDeps.db),
-  // The picker's options. A band's repertoire is tens of songs, so the whole
-  // list is one cheap query and a plain `<select>` — no autocomplete, no
-  // script, and it works with JS off like every other control here.
-  songsRepo.list(appDeps.db),
-  takesRepo.countStash(appDeps.db, principal.memberId),
-  viewingStash
-    ? getStashView(appDeps.db, principal.memberId)
-    : Promise.resolve({ rows: [], owner: undefined, songChoices: [] }),
-]);
+// The stash is a different list, not a filter on this one: nothing below the
+// bar is searched while it is open. Everything here is read in two round
+// trips; see `getTakesPageData`.
+const { search, list, instruments, songs, stashCount, stash } = await getTakesPageData(appDeps.db, {
+  url: Astro.url,
+  query,
+  viewingStash,
+  memberId: principal.memberId,
+  now: appDeps.clock.now(),
+});
+
 const { results, total } = search;
 const stashRows = stash.rows;
 // `?renamed=` names the recording, so the banner is about the one that was

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "../client.js";
+import { runRead } from "../read.js";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as assetsRepo from "./assets.js";
 import * as eventsRepo from "./events.js";
@@ -317,6 +318,95 @@ const takesChecks: ChecksFor<typeof takesRepo> = {
     const latest = await takesRepo.latestStash(f.db, f.memberB);
     expect(f.stashIds).toContain(latest?.id);
   },
+  // The planned (`build...Read`) forms that pages batch. Each is the same SQL
+  // its function above runs, and gets the same check through `runRead`, so a
+  // filter dropped from the builder cannot hide behind the function's check.
+  buildListUnvotedByMemberRead: async () => {
+    for (const member of [f.memberA, f.memberB]) {
+      expectBandOnly(await runRead(f.db, takesRepo.buildListUnvotedByMemberRead(f.db, member)));
+    }
+  },
+  buildSearchRead: async () => {
+    for (const filters of [{}, { songId: f.stashOnlySong }, { unvotedByMemberId: f.memberB }]) {
+      const result = await runRead(f.db, takesRepo.buildSearchRead(f.db, filters));
+      expect(result.rows.filter((row) => f.stashIds.includes(row.id))).toEqual([]);
+      expect(result.total).toBe(result.rows.length);
+    }
+    expectBandOnly((await runRead(f.db, takesRepo.buildSearchRead(f.db, {}))).rows);
+  },
+  buildCountBySongsRead: async () => {
+    const counts = await runRead(
+      f.db,
+      takesRepo.buildCountBySongsRead(f.db, [f.sharedSong, f.stashOnlySong]),
+    );
+    expect([...counts]).toEqual([[f.sharedSong, 1]]);
+  },
+  buildCountByEventsRead: async () => {
+    const counts = await runRead(
+      f.db,
+      takesRepo.buildCountByEventsRead(f.db, [f.bandEvent, f.personalEvent]),
+    );
+    expect([...counts]).toEqual([[f.bandEvent, 1]]);
+  },
+  buildNewestEventWithTakesPublishedSinceQuery: async () => {
+    const rows = await takesRepo.buildNewestEventWithTakesPublishedSinceQuery(f.db, 0);
+    expect(rows).toEqual([{ eventId: f.bandEvent }]);
+  },
+  // These three also take the newest-event query itself as the event, which
+  // is how home asks: that form gets the same check.
+  buildListPublishedSinceInEventRead: async () => {
+    const newest = takesRepo.buildNewestEventWithTakesPublishedSinceQuery(f.db, 0);
+    for (const event of [f.bandEvent, newest]) {
+      expectBandOnly(
+        await runRead(f.db, takesRepo.buildListPublishedSinceInEventRead(f.db, event, 0)),
+      );
+    }
+    expect(
+      await runRead(f.db, takesRepo.buildListPublishedSinceInEventRead(f.db, f.personalEvent, 0)),
+    ).toEqual([]);
+  },
+  buildCountPublishedSinceInEventRead: async () => {
+    const newest = takesRepo.buildNewestEventWithTakesPublishedSinceQuery(f.db, 0);
+    for (const event of [f.bandEvent, newest]) {
+      expect(
+        await runRead(f.db, takesRepo.buildCountPublishedSinceInEventRead(f.db, event, 0)),
+      ).toBe(1);
+    }
+    expect(
+      await runRead(f.db, takesRepo.buildCountPublishedSinceInEventRead(f.db, f.personalEvent, 0)),
+    ).toBe(0);
+  },
+  buildCountUnvotedPublishedSinceInEventRead: async () => {
+    const newest = takesRepo.buildNewestEventWithTakesPublishedSinceQuery(f.db, 0);
+    for (const member of [f.memberA, f.memberB]) {
+      for (const event of [f.bandEvent, newest]) {
+        const read = takesRepo.buildCountUnvotedPublishedSinceInEventRead(f.db, member, event, 0);
+        expect(await runRead(f.db, read)).toBe(1);
+      }
+      const personal = takesRepo.buildCountUnvotedPublishedSinceInEventRead(
+        f.db,
+        member,
+        f.personalEvent,
+        0,
+      );
+      expect(await runRead(f.db, personal)).toBe(0);
+    }
+  },
+  buildListStashRead: async () => {
+    expect(await runRead(f.db, takesRepo.buildListStashRead(f.db, f.memberA))).toEqual([]);
+    expect(ids(await runRead(f.db, takesRepo.buildListStashRead(f.db, f.memberB)))).toEqual(
+      [...f.stashIds].sort(),
+    );
+  },
+  buildCountStashRead: async () => {
+    expect(await runRead(f.db, takesRepo.buildCountStashRead(f.db, f.memberA))).toBe(0);
+    expect(await runRead(f.db, takesRepo.buildCountStashRead(f.db, f.memberB))).toBe(3);
+  },
+  buildLatestStashRead: async () => {
+    expect(await runRead(f.db, takesRepo.buildLatestStashRead(f.db, f.memberA))).toBeUndefined();
+    const latest = await runRead(f.db, takesRepo.buildLatestStashRead(f.db, f.memberB));
+    expect(f.stashIds).toContain(latest?.id);
+  },
 };
 
 const songsChecks: ChecksFor<typeof songsRepo> = {
@@ -340,6 +430,13 @@ const songsChecks: ChecksFor<typeof songsRepo> = {
   count: async () => {
     expect(await songsRepo.count(f.db, { instrumentIds: [f.bass] })).toBe(1);
   },
+  buildListWithStatsRead: async () => {
+    const { rows, total } = await runRead(f.db, songsRepo.buildListWithStatsRead(f.db));
+    expect(total).toBe(2);
+    expect(rows.find((row) => row.id === f.sharedSong)?.takeCount).toBe(1);
+    expect(rows.find((row) => row.id === f.stashOnlySong)?.takeCount).toBe(0);
+    expect(rows.find((row) => row.id === f.stashOnlySong)?.lastPlayedAt).toBeNull();
+  },
 };
 
 const eventsChecks: ChecksFor<typeof eventsRepo> = {
@@ -348,6 +445,11 @@ const eventsChecks: ChecksFor<typeof eventsRepo> = {
     expect(ids(await eventsRepo.listRecent(f.db, { includeArchived: true }))).toEqual([
       f.bandEvent,
     ]);
+  },
+  buildListRecentWithTakeCountsRead: async () => {
+    const all = await runRead(f.db, eventsRepo.buildListRecentWithTakeCountsRead(f.db));
+    expect(all.rows.map((row) => [row.id, row.takeCount])).toEqual([[f.bandEvent, 1]]);
+    expect(all.total).toBe(1);
   },
   listRecentWithTakeCounts: async () => {
     const all = await eventsRepo.listRecentWithTakeCounts(f.db);
@@ -405,7 +507,9 @@ const takesAllowed: AllowFor<typeof takesRepo> = {
   getById: LOOKUP,
   getByIds: LOOKUP,
   buildGetByIdsChunkQuery: LOOKUP,
+  buildGetByIdsRead: LOOKUP,
   buildListInstrumentsForTakesChunkQuery: "lookup by take ids the caller already holds",
+  buildListInstrumentsForTakesRead: "lookup by take ids the caller already holds",
   getByClientRef: "ingest idempotency lookup by the bridge's key; stash refs are reserved",
   listInstrumentsForTakes: "lookup by take ids the caller already holds",
   listAllBySong:
@@ -422,6 +526,8 @@ const songsAllowed: AllowFor<typeof songsRepo> = {
   getById: "reads songs only",
   getByIds: "reads songs only",
   buildGetByIdsChunkQuery: "reads songs only",
+  buildGetByIdsRead: "reads songs only",
+  buildListRead: "reads songs only",
   findByTitleNorm: "reads songs only",
   findByAlias: "reads songs only",
   list: "reads songs only",
@@ -443,6 +549,9 @@ const eventsAllowed: AllowFor<typeof eventsRepo> = {
   getById: "lookup by id; the event page hides a personal day with no band take",
   getByIds: "lookup by the event ids of takes the caller already holds",
   buildGetByIdsChunkQuery: "lookup by the event ids of takes the caller already holds",
+  buildGetByIdsRead: "lookup by the event ids of takes the caller already holds",
+  buildGetByIdRead:
+    "lookup by id; home names it only by the newest-event query, which is checked in takesRepo",
   getByClientRef: "ingest idempotency lookup; the personal prefix is refused at the API",
 };
 
@@ -467,6 +576,7 @@ const assetsAllowed: AllowFor<typeof assetsRepo> = {
   updateAudioMeta: WRITE,
   listPlayableMastersByTakeIds: "lookup by take ids the caller already holds",
   buildListPlayableMastersChunkQuery: "lookup by take ids the caller already holds",
+  buildListPlayableMastersByTakeIdsRead: "lookup by take ids the caller already holds",
   takeHasLossless: LOOKUP,
   tallyBySong:
     "admin's delete confirm: must count every file a song delete destroys, private ones included",
@@ -496,6 +606,7 @@ const instrumentsAllowed: AllowFor<typeof instrumentsRepo> = {
   buildDeleteCollidingAssetsChunkQuery: WRITE,
   buildDeleteDuplicateMembersChunkQuery: WRITE,
   buildDeleteDuplicateTakesChunkQuery: WRITE,
+  buildListRead: "reads instruments only",
 };
 
 const votesAllowed: AllowFor<typeof votesRepo> = {
@@ -508,6 +619,11 @@ const votesAllowed: AllowFor<typeof votesRepo> = {
   votingRecord: "aggregates the member's own votes; a private take is never votable",
   listByMemberForTakes: "lookup by take ids the caller already holds",
   buildListByMemberForTakesChunkQuery: "lookup by take ids the caller already holds",
+  buildListByMemberForTakesRead: "lookup by take ids the caller already holds",
+  buildListByMemberRead: "the member's own votes; a private take is never votable (isVotable)",
+  buildTakesOfMemberPageRead:
+    "the takes the member's own votes point at, as listByMember's page does; a private take is never votable",
+  buildVotingRecordRead: "aggregates the member's own votes; a private take is never votable",
 };
 
 const MODULES = [

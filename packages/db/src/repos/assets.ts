@@ -1,6 +1,7 @@
 import { uuidv7 } from "@bandplate/core";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { type Read, readAll, runRead } from "../read.js";
 import { assets, takes } from "../schema/sqlite/index.js";
 import { chunk } from "./chunk.js";
 import type { TakeVisibility } from "./takes.js";
@@ -242,23 +243,29 @@ export async function listPlayableMastersByTakeIds(
   db: Db,
   takeIds: string[],
 ): Promise<Map<string, Asset>> {
-  const result = new Map<string, Asset>();
-  if (takeIds.length === 0) {
-    return result;
-  }
+  return runRead(db, buildListPlayableMastersByTakeIdsRead(db, takeIds));
+}
 
+/** `listPlayableMastersByTakeIds`, planned for the caller's batch. */
+export function buildListPlayableMastersByTakeIdsRead(
+  db: Db,
+  takeIds: string[],
+): Read<Map<string, Asset>> {
   // Chunked for D1's 100-parameter cap (see `chunk.ts`). A take's assets all
   // come back from one chunk, so the lossy-first choice is unaffected.
-  for (const ids of chunk(takeIds, PLAYABLE_CHUNK_SIZE)) {
-    const rows = await buildListPlayableMastersChunkQuery(db, ids);
-    for (const row of rows) {
-      const existing = result.get(row.takeId);
-      if (!existing || (existing.tier !== "lossy" && row.tier === "lossy")) {
-        result.set(row.takeId, row);
+  return readAll(
+    chunk(takeIds, PLAYABLE_CHUNK_SIZE).map((ids) => buildListPlayableMastersChunkQuery(db, ids)),
+    (parts) => {
+      const result = new Map<string, Asset>();
+      for (const row of parts.flat()) {
+        const existing = result.get(row.takeId);
+        if (!existing || (existing.tier !== "lossy" && row.tier === "lossy")) {
+          result.set(row.takeId, row);
+        }
       }
-    }
-  }
-  return result;
+      return result;
+    },
+  );
 }
 
 /** 98: the id list plus `kind = 'master'` and `status = 'ready'`. */

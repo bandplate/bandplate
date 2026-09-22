@@ -2,6 +2,7 @@
 // Must run unmodified on Cloudflare Workers (increment 7).
 export * from "./client.js";
 export * from "./database-url.js";
+export * from "./read.js";
 export * as assetsRepo from "./repos/assets.js";
 export * as authSessionsRepo from "./repos/auth-sessions.js";
 export * as eventsRepo from "./repos/events.js";

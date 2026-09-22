@@ -4,9 +4,12 @@ import {
   eventsRepo,
   favoritesRepo,
   type instrumentsRepo,
+  mapRead,
   membersRepo,
   type PageArgs,
   type Paged,
+  type Read,
+  runRead,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -31,15 +34,24 @@ export async function withOwnerNames(
   db: Db,
   events: eventsRepo.EventWithTakeCount[],
 ): Promise<EventListItem[]> {
+  return runRead(db, withOwnerNamesRead(db, events));
+}
+
+/** `withOwnerNames`, planned for the caller's batch. */
+export function withOwnerNamesRead(
+  db: Db,
+  events: eventsRepo.EventWithTakeCount[],
+): Read<EventListItem[]> {
   const ownerIds = [
     ...new Set(events.map((e) => e.ownerMemberId).filter((id): id is string => Boolean(id))),
   ];
-  const owners = ownerIds.length > 0 ? await membersRepo.getByIds(db, ownerIds) : [];
-  const nameById = new Map(owners.map((m) => [m.id, m.displayName]));
-  return events.map((event) => ({
-    ...event,
-    ownerName: event.ownerMemberId ? (nameById.get(event.ownerMemberId) ?? null) : null,
-  }));
+  return mapRead(membersRepo.buildGetByIdsRead(db, ownerIds), (owners) => {
+    const nameById = new Map(owners.map((m) => [m.id, m.displayName]));
+    return events.map((event) => ({
+      ...event,
+      ownerName: event.ownerMemberId ? (nameById.get(event.ownerMemberId) ?? null) : null,
+    }));
+  });
 }
 
 /** The kinds the archive has a pill for. A personal event has none. */

@@ -1,5 +1,13 @@
 import type { Db, instrumentsRepo, PageArgs } from "@bandplate/db";
-import { membersRepo, takesRepo, votesRepo } from "@bandplate/db";
+import {
+  membersRepo,
+  notificationPrefsRepo,
+  readValue,
+  runRead,
+  runReads,
+  takesRepo,
+  votesRepo,
+} from "@bandplate/db";
 // `/me` — the signed-in member's own page: who they are, and what they have
 // done. Not a shelf: home already IS the shelf of exactly the things this page
 // used to list again under Songs / Events / Takes, and rendering the same rows
@@ -18,7 +26,7 @@ import { membersRepo, takesRepo, votesRepo } from "@bandplate/db";
 // includes archived instruments on purpose, so a member who plays one the
 // band has since dropped still sees it here.
 import { isLocale, type Locale } from "@bandplate/i18n";
-import { attachFullContext, type TakeWithFullContext } from "./take-context.js";
+import { buildFullContextRead, type TakeWithFullContext } from "./take-context.js";
 
 export interface VoteWithTake {
   vote: votesRepo.Vote;
@@ -49,6 +57,16 @@ export interface MeData {
    */
   keeperCount: number;
   agreementPct: number | null;
+  /**
+   * The member's push toggles, when the caller asked for them (the page does
+   * only where push is configured). Read here rather than by the page so they
+   * ride in the same batch as everything else.
+   */
+  notificationPrefs: notificationPrefsRepo.NotificationPrefs | undefined;
+}
+
+export interface MeDataOptions {
+  withNotificationPrefs?: boolean;
 }
 
 /**
@@ -59,41 +77,41 @@ export interface MeData {
  */
 export const VOTES_PER_PAGE = 20;
 
-async function getVotes(
-  db: Db,
-  memberId: string,
-  page: PageArgs,
-): Promise<{ votes: VoteWithTake[]; total: number }> {
-  const { rows: voteRows, total } = await votesRepo.listByMember(db, memberId, { page });
-  const votes = voteRows;
-  const takeIds = votes.map((v) => v.takeId);
-  const takes = await takesRepo.getByIds(db, takeIds);
-  const withContext = await attachFullContext(db, takes, memberId);
-  const byTakeId = new Map(withContext.map((t) => [t.id, t]));
-  return { votes: votes.map((vote) => ({ vote, take: byTakeId.get(vote.takeId) })), total };
-}
-
+/**
+ * Two round trips, each one batch. The first asks everything keyed by the
+ * member alone, including the takes behind this page of votes (by the page's
+ * own subquery, so it does not wait for the votes to come back). The second
+ * is those takes' context.
+ */
 export async function getMeData(
   db: Db,
   memberId: string,
   votesPage: PageArgs = { limit: VOTES_PER_PAGE, offset: 0 },
+  options: MeDataOptions = {},
 ): Promise<MeData | undefined> {
-  const member = await membersRepo.getById(db, memberId);
+  const found = await runReads(db, {
+    member: membersRepo.buildGetByIdRead(db, memberId),
+    instruments: membersRepo.buildListInstrumentsForMemberRead(db, memberId),
+    votes: votesRepo.buildListByMemberRead(db, memberId, { page: votesPage }),
+    voteTakes: votesRepo.buildTakesOfMemberPageRead(db, memberId, { page: votesPage }),
+    unvoted: takesRepo.buildListUnvotedByMemberRead(db, memberId),
+    record: votesRepo.buildVotingRecordRead(db, memberId),
+    notificationPrefs: options.withNotificationPrefs
+      ? notificationPrefsRepo.buildGetRead(db, memberId)
+      : readValue(undefined),
+  });
+  const { member, instruments, votes, unvoted, record } = found;
   if (!member) {
     return undefined;
   }
 
-  const [instruments, votes, unvoted, record] = await Promise.all([
-    membersRepo.listInstrumentsForMember(db, memberId),
-    getVotes(db, memberId, votesPage),
-    takesRepo.listUnvotedByMember(db, memberId),
-    votesRepo.votingRecord(db, memberId),
-  ]);
+  const withContext = await runRead(db, buildFullContextRead(db, found.voteTakes, memberId));
+  const byTakeId = new Map(withContext.map((t) => [t.id, t]));
 
   return {
     member,
     instruments,
-    votes: votes.votes,
+    votes: votes.rows.map((vote) => ({ vote, take: byTakeId.get(vote.takeId) })),
     voteTotal: votes.total,
     unvotedCount: unvoted.length,
     keeperCount: record.keepers,
@@ -102,6 +120,7 @@ export async function getMeData(
     // with the data rather than with the markup.
     agreementPct:
       record.resolved === 0 ? null : Math.round((record.agreed / record.resolved) * 100),
+    notificationPrefs: found.notificationPrefs,
   };
 }
 

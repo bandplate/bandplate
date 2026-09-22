@@ -2,6 +2,7 @@ import { uuidv7 } from "@bandplate/core";
 import { DEFAULT_LOCALE, type Locale } from "@bandplate/i18n";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { type Read, readAll, readOne, runRead } from "../read.js";
 import { instruments, memberInstruments, members } from "../schema/sqlite/index.js";
 import { chunk } from "./chunk.js";
 import { assertColumnCount } from "./column-order-guard.js";
@@ -63,8 +64,12 @@ export async function getByEmail(db: Db, email: string): Promise<Member | undefi
 }
 
 export async function getById(db: Db, id: string): Promise<Member | undefined> {
-  const [row] = await db.select().from(members).where(eq(members.id, id)).limit(1);
-  return row;
+  return runRead(db, buildGetByIdRead(db, id));
+}
+
+/** `getById`, planned for the caller's batch. */
+export function buildGetByIdRead(db: Db, id: string): Read<Member | undefined> {
+  return readOne(db.select().from(members).where(eq(members.id, id)).limit(1), (rows) => rows[0]);
 }
 
 export async function list(db: Db): Promise<Member[]> {
@@ -270,13 +275,20 @@ export async function setInstruments(
  * `takesRepo.listInstrumentsForTakes` does for takes.
  */
 export async function listInstrumentsForMember(db: Db, memberId: string): Promise<Instrument[]> {
-  const rows = await db
-    .select({ instrument: instruments })
-    .from(memberInstruments)
-    .innerJoin(instruments, eq(instruments.id, memberInstruments.instrumentId))
-    .where(eq(memberInstruments.memberId, memberId))
-    .orderBy(instruments.sortOrder);
-  return rows.map((row) => row.instrument);
+  return runRead(db, buildListInstrumentsForMemberRead(db, memberId));
+}
+
+/** `listInstrumentsForMember`, planned for the caller's batch. */
+export function buildListInstrumentsForMemberRead(db: Db, memberId: string): Read<Instrument[]> {
+  return readOne(
+    db
+      .select({ instrument: instruments })
+      .from(memberInstruments)
+      .innerJoin(instruments, eq(instruments.id, memberInstruments.instrumentId))
+      .where(eq(memberInstruments.memberId, memberId))
+      .orderBy(instruments.sortOrder),
+    (rows) => rows.map((row) => row.instrument),
+  );
 }
 
 /**
@@ -320,13 +332,17 @@ export function buildListInstrumentsForMembersChunkQuery(db: Db, memberIds: stri
 
 /** Batch lookup — the owner names on a list of personal recordings, in one query. */
 export async function getByIds(db: Db, ids: string[]): Promise<Member[]> {
+  return runRead(db, buildGetByIdsRead(db, ids));
+}
+
+/** `getByIds`, planned: every chunk goes out in the caller's one batch. */
+export function buildGetByIdsRead(db: Db, ids: string[]): Read<Member[]> {
   // Chunked: D1 caps a statement at 100 bound parameters (see `chunk.ts`),
   // and the ids are this query's only one.
-  const rows: Member[] = [];
-  for (const part of chunk(ids, GET_BY_IDS_CHUNK_SIZE)) {
-    rows.push(...(await buildGetByIdsChunkQuery(db, part)));
-  }
-  return rows;
+  return readAll(
+    chunk(ids, GET_BY_IDS_CHUNK_SIZE).map((part) => buildGetByIdsChunkQuery(db, part)),
+    (parts) => parts.flat(),
+  );
 }
 
 export const GET_BY_IDS_CHUNK_SIZE = 100;

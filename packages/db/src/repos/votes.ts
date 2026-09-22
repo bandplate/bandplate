@@ -1,8 +1,10 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { combineReads, type Read, readAll, readOne, runRead } from "../read.js";
 import { takes, votes } from "../schema/sqlite/index.js";
 import { chunk } from "./chunk.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
+import type { Take } from "./takes.js";
 
 export type Vote = typeof votes.$inferSelect;
 
@@ -112,28 +114,73 @@ export async function listByMember(
   memberId: string,
   options: ListByMemberOptions = {},
 ): Promise<Paged<Vote>> {
-  const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
-  const offset = options.page?.offset ?? 0;
-  const [rows, total] = await Promise.all([
-    db
-      .select()
-      .from(votes)
-      .where(eq(votes.memberId, memberId))
-      .orderBy(desc(votes.updatedAt), desc(votes.takeId))
-      .limit(limit)
-      .offset(offset),
-    countByMember(db, memberId),
-  ]);
-  return { rows, total };
+  return runRead(db, buildListByMemberRead(db, memberId, options));
+}
+
+/** The order `listByMember` pages in. */
+const MEMBER_VOTE_ORDER = [desc(votes.updatedAt), desc(votes.takeId)];
+
+function pageOf(options: ListByMemberOptions): PageArgs {
+  return { limit: options.page?.limit ?? DEFAULT_PAGE_SIZE, offset: options.page?.offset ?? 0 };
+}
+
+/** `listByMember`, planned: the page and its count, for the caller's batch. */
+export function buildListByMemberRead(
+  db: Db,
+  memberId: string,
+  options: ListByMemberOptions = {},
+): Read<Paged<Vote>> {
+  const { limit, offset } = pageOf(options);
+  return combineReads({
+    rows: readOne(
+      db
+        .select()
+        .from(votes)
+        .where(eq(votes.memberId, memberId))
+        .orderBy(...MEMBER_VOTE_ORDER)
+        .limit(limit)
+        .offset(offset),
+      (rows) => rows,
+    ),
+    total: countByMemberRead(db, memberId),
+  });
+}
+
+/**
+ * The takes behind the same page of `listByMember`, in the same batch: the
+ * page's take ids as a subquery rather than a list the caller waits for.
+ * `/me` shows each vote with its take, and without this the take lookup is a
+ * round trip of its own that can only start once the votes are back.
+ *
+ * In no particular order; the caller matches them to its votes by id. A vote
+ * whose take is gone simply has no row here.
+ */
+export function buildTakesOfMemberPageRead(
+  db: Db,
+  memberId: string,
+  options: ListByMemberOptions = {},
+): Read<Take[]> {
+  const { limit, offset } = pageOf(options);
+  const pageTakeIds = db
+    .select({ takeId: votes.takeId })
+    .from(votes)
+    .where(eq(votes.memberId, memberId))
+    .orderBy(...MEMBER_VOTE_ORDER)
+    .limit(limit)
+    .offset(offset);
+  return readOne(db.select().from(takes).where(inArray(takes.id, pageTakeIds)), (rows) => rows);
 }
 
 /** How many votes one member has cast — the count, without the rows. */
 export async function countByMember(db: Db, memberId: string): Promise<number> {
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(votes)
-    .where(eq(votes.memberId, memberId));
-  return rows[0]?.value ?? 0;
+  return runRead(db, countByMemberRead(db, memberId));
+}
+
+function countByMemberRead(db: Db, memberId: string): Read<number> {
+  return readOne(
+    db.select({ value: sql<number>`count(*)` }).from(votes).where(eq(votes.memberId, memberId)),
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 /**
@@ -158,25 +205,34 @@ export interface VotingRecord {
 }
 
 export async function votingRecord(db: Db, memberId: string): Promise<VotingRecord> {
-  const rows = await db
-    .select({
-      keepers: sql<number>`sum(case when ${votes.keeper} then 1 else 0 end)`,
-      resolved: sql<number>`sum(case when ${takes.state} in ('keeper', 'rejected') then 1 else 0 end)`,
-      agreed: sql<number>`sum(case
+  return runRead(db, buildVotingRecordRead(db, memberId));
+}
+
+/** `votingRecord`, planned for the caller's batch. */
+export function buildVotingRecordRead(db: Db, memberId: string): Read<VotingRecord> {
+  return readOne(
+    db
+      .select({
+        keepers: sql<number>`sum(case when ${votes.keeper} then 1 else 0 end)`,
+        resolved: sql<number>`sum(case when ${takes.state} in ('keeper', 'rejected') then 1 else 0 end)`,
+        agreed: sql<number>`sum(case
         when ${takes.state} = 'keeper' and ${votes.keeper} then 1
         when ${takes.state} = 'rejected' and not ${votes.keeper} then 1
         else 0 end)`,
-    })
-    .from(votes)
-    .innerJoin(takes, eq(takes.id, votes.takeId))
-    .where(eq(votes.memberId, memberId));
-  const row = rows[0];
-  // `sum()` over no rows is NULL, not 0.
-  return {
-    keepers: row?.keepers ?? 0,
-    agreed: row?.agreed ?? 0,
-    resolved: row?.resolved ?? 0,
-  };
+      })
+      .from(votes)
+      .innerJoin(takes, eq(takes.id, votes.takeId))
+      .where(eq(votes.memberId, memberId)),
+    (rows) => {
+      const row = rows[0];
+      // `sum()` over no rows is NULL, not 0.
+      return {
+        keepers: row?.keepers ?? 0,
+        agreed: row?.agreed ?? 0,
+        resolved: row?.resolved ?? 0,
+      };
+    },
+  );
 }
 
 /**
@@ -190,17 +246,21 @@ export async function listByMemberForTakes(
   memberId: string,
   takeIds: string[],
 ): Promise<Map<string, boolean>> {
-  const result = new Map<string, boolean>();
-  if (takeIds.length === 0) {
-    return result;
-  }
-  for (const ids of chunk(takeIds, MEMBER_TAKES_CHUNK_SIZE)) {
-    const rows = await buildListByMemberForTakesChunkQuery(db, memberId, ids);
-    for (const row of rows) {
-      result.set(row.takeId, row.keeper);
-    }
-  }
-  return result;
+  return runRead(db, buildListByMemberForTakesRead(db, memberId, takeIds));
+}
+
+/** `listByMemberForTakes`, planned for the caller's batch. */
+export function buildListByMemberForTakesRead(
+  db: Db,
+  memberId: string,
+  takeIds: string[],
+): Read<Map<string, boolean>> {
+  return readAll(
+    chunk(takeIds, MEMBER_TAKES_CHUNK_SIZE).map((ids) =>
+      buildListByMemberForTakesChunkQuery(db, memberId, ids),
+    ),
+    (parts) => new Map(parts.flat().map((row) => [row.takeId, row.keeper])),
+  );
 }
 
 /** 99: the take ids plus the member id. D1 caps a statement at 100 (see `chunk.ts`). */

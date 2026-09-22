@@ -34,7 +34,6 @@
 //
 // Deliberately NOT here: favourites. Home is already the shelf of exactly
 // those, and listing them twice is what this page was being cured of.
-import { notificationPrefsRepo } from "@bandplate/db";
 import {
   formatLongDate,
   formatShortDate,
@@ -113,29 +112,37 @@ const themeChoice = readThemeCookie(Astro.cookies);
 const themeLabels = { light: t.me.themeLight, dark: t.me.themeDark, system: t.me.themeSystem };
 
 const languageSaved = Astro.url.searchParams.get("saved") === "1";
+// The Notifications section only exists where push is actually configured —
+// no VAPID keys, no section, same rule the install section follows. Reading
+// the member's prefs is skipped entirely in that case: there's nothing for
+// them to describe. Where it is, the prefs ride in `getMeData`'s first batch.
+const webConfig = await getWebConfig();
 const { result: data, list } = await loadList(
   Astro.url,
   VOTES_PER_PAGE,
-  (votesPage) => getMeData(appDeps.db, principal.memberId, votesPage),
+  (votesPage) =>
+    getMeData(appDeps.db, principal.memberId, votesPage, {
+      withNotificationPrefs: Boolean(webConfig.push),
+    }),
   (found) => found?.voteTotal ?? 0,
 );
 if (!data) {
   return new Response("Not found.", { status: 404 });
 }
 
-const { member, instruments, votes, voteTotal, unvotedCount, keeperCount, agreementPct } = data;
+const {
+  member,
+  instruments,
+  votes,
+  voteTotal,
+  unvotedCount,
+  keeperCount,
+  agreementPct,
+  notificationPrefs,
+} = data;
 if (list.redirectTo) {
   return Astro.redirect(list.redirectTo);
 }
-
-// The Notifications section only exists where push is actually configured —
-// no VAPID keys, no section, same rule the install section follows. Reading
-// the member's prefs is skipped entirely in that case: there's nothing for
-// them to describe.
-const webConfig = await getWebConfig();
-const notificationPrefs = webConfig.push
-  ? await notificationPrefsRepo.get(appDeps.db, principal.memberId)
-  : undefined;
 
 // Initials for the identity disc — first letters of the first two words, which
 // handles "František Voráč" and a single-word stage name alike.

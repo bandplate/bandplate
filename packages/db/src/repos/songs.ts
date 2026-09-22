@@ -1,6 +1,7 @@
 import { normalizeTitle, uuidv7 } from "@bandplate/core";
 import { and, desc, eq, inArray, isNotNull, isNull, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { combineReads, type Read, readAll, readOne, runRead } from "../read.js";
 import {
   favorites,
   instruments,
@@ -212,13 +213,17 @@ export async function getById(db: Db, id: string): Promise<Song | undefined> {
  * points at, and filtering would blank the title on a live take row.
  */
 export async function getByIds(db: Db, ids: string[]): Promise<Song[]> {
+  return runRead(db, buildGetByIdsRead(db, ids));
+}
+
+/** `getByIds`, planned: every chunk goes out in the caller's one batch. */
+export function buildGetByIdsRead(db: Db, ids: string[]): Read<Song[]> {
   // Chunked: D1 caps a statement at 100 bound parameters (see `chunk.ts`),
   // and the ids are this query's only one.
-  const rows: Song[] = [];
-  for (const part of chunk(ids, GET_BY_IDS_CHUNK_SIZE)) {
-    rows.push(...(await buildGetByIdsChunkQuery(db, part)));
-  }
-  return rows;
+  return readAll(
+    chunk(ids, GET_BY_IDS_CHUNK_SIZE).map((part) => buildGetByIdsChunkQuery(db, part)),
+    (parts) => parts.flat(),
+  );
 }
 
 export const GET_BY_IDS_CHUNK_SIZE = 100;
@@ -251,11 +256,19 @@ export interface ListSongsOptions {
 
 /** Alphabetical by normalized title — SQLite row order is not contractual otherwise. */
 export async function list(db: Db, options: ListSongsOptions = {}): Promise<Song[]> {
-  return db
-    .select()
-    .from(songs)
-    .where(options.includeArchived ? undefined : isNull(songs.archivedAt))
-    .orderBy(songs.titleNorm);
+  return runRead(db, buildListRead(db, options));
+}
+
+/** `list`, planned for the caller's batch. */
+export function buildListRead(db: Db, options: ListSongsOptions = {}): Read<Song[]> {
+  return readOne(
+    db
+      .select()
+      .from(songs)
+      .where(options.includeArchived ? undefined : isNull(songs.archivedAt))
+      .orderBy(songs.titleNorm),
+    (rows) => rows,
+  );
 }
 
 export interface SongWithStats extends Song {
@@ -322,12 +335,18 @@ function songConditions(db: Db, options: ListWithStatsOptions): SQL[] {
 
 /** How many songs match — the library's total, and the Archived pill's badge. */
 export async function count(db: Db, options: ListWithStatsOptions = {}): Promise<number> {
+  return runRead(db, countRead(db, options));
+}
+
+function countRead(db: Db, options: ListWithStatsOptions): Read<number> {
   const conditions = songConditions(db, options);
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(songs)
-    .where(conditions.length > 0 ? and(...conditions) : undefined);
-  return rows[0]?.value ?? 0;
+  return readOne(
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(songs)
+      .where(conditions.length > 0 ? and(...conditions) : undefined),
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 /**
@@ -341,6 +360,14 @@ export async function listWithStats(
   db: Db,
   options: ListWithStatsOptions = {},
 ): Promise<Paged<SongWithStats>> {
+  return runRead(db, buildListWithStatsRead(db, options));
+}
+
+/** `listWithStats`, planned: the page and its count, for the caller's batch. */
+export function buildListWithStatsRead(
+  db: Db,
+  options: ListWithStatsOptions = {},
+): Read<Paged<SongWithStats>> {
   const conditions = songConditions(db, options);
   const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
   const offset = options.page?.offset ?? 0;
@@ -368,31 +395,30 @@ export async function listWithStats(
   // `and()` of an empty list is `undefined`, which `.where()` treats as no
   // filter — so one query builder covers every combination of search,
   // instrument and archived filters.
-  const [rows, total] = await Promise.all([
-    db
-      .select({
-        song: songs,
-        takeCount: sql<number>`count(${takes.id})`,
-        lastPlayedAt: sql<number | null>`max(${takes.recordedAt})`,
-      })
-      .from(songs)
-      .leftJoin(takes, and(eq(takes.songId, songs.id), bandTakeCondition()))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .groupBy(songs.id)
-      .orderBy(...orderBy)
-      .limit(limit)
-      .offset(offset),
-    count(db, options),
-  ]);
-
-  return {
-    rows: rows.map((row) => ({
-      ...row.song,
-      takeCount: row.takeCount,
-      lastPlayedAt: row.lastPlayedAt,
-    })),
-    total,
-  };
+  return combineReads({
+    rows: readOne(
+      db
+        .select({
+          song: songs,
+          takeCount: sql<number>`count(${takes.id})`,
+          lastPlayedAt: sql<number | null>`max(${takes.recordedAt})`,
+        })
+        .from(songs)
+        .leftJoin(takes, and(eq(takes.songId, songs.id), bandTakeCondition()))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .groupBy(songs.id)
+        .orderBy(...orderBy)
+        .limit(limit)
+        .offset(offset),
+      (rows) =>
+        rows.map((row) => ({
+          ...row.song,
+          takeCount: row.takeCount,
+          lastPlayedAt: row.lastPlayedAt,
+        })),
+    ),
+    total: countRead(db, options),
+  });
 }
 
 /** Every known alias of a song (manual or ingest-created), in no particular order. */

@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { type Read, readOne, runRead } from "../read.js";
 import { notificationPrefs } from "../schema/sqlite/index.js";
 import { chunk } from "./chunk.js";
 
@@ -25,16 +26,23 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
  * nothing was ever turned off.
  */
 export async function get(db: Db, memberId: string): Promise<NotificationPrefs> {
-  const [row] = await db
-    .select({
-      newTakes: notificationPrefs.newTakes,
-      weeklyUnvoted: notificationPrefs.weeklyUnvoted,
-      songChanges: notificationPrefs.songChanges,
-    })
-    .from(notificationPrefs)
-    .where(eq(notificationPrefs.memberId, memberId))
-    .limit(1);
-  return row ?? DEFAULT_NOTIFICATION_PREFS;
+  return runRead(db, buildGetRead(db, memberId));
+}
+
+/** `get`, planned for the caller's batch. */
+export function buildGetRead(db: Db, memberId: string): Read<NotificationPrefs> {
+  return readOne(
+    db
+      .select({
+        newTakes: notificationPrefs.newTakes,
+        weeklyUnvoted: notificationPrefs.weeklyUnvoted,
+        songChanges: notificationPrefs.songChanges,
+      })
+      .from(notificationPrefs)
+      .where(eq(notificationPrefs.memberId, memberId))
+      .limit(1),
+    (rows) => rows[0] ?? DEFAULT_NOTIFICATION_PREFS,
+  );
 }
 
 /** Upsert — `/me`'s three checkboxes write the whole set every time, never one column at a time. */

@@ -1,5 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { combineReads, type Read, readOne, runRead } from "../read.js";
 import { favorites } from "../schema/sqlite/index.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 
@@ -79,28 +80,45 @@ export async function listByMember(
   memberId: string,
   options: ListByMemberOptions = {},
 ): Promise<Paged<Favorite>> {
+  return runRead(db, buildListByMemberRead(db, memberId, options));
+}
+
+/** `listByMember`, planned: the page and its count, for the caller's batch. */
+export function buildListByMemberRead(
+  db: Db,
+  memberId: string,
+  options: ListByMemberOptions = {},
+): Read<Paged<Favorite>> {
   const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
   const offset = options.page?.offset ?? 0;
-  const [rows, total] = await Promise.all([
-    db
-      .select()
-      .from(favorites)
-      .where(eq(favorites.memberId, memberId))
-      .orderBy(desc(favorites.createdAt), desc(favorites.targetType), desc(favorites.targetId))
-      .limit(limit)
-      .offset(offset),
-    countByMember(db, memberId),
-  ]);
-  return { rows, total };
+  return combineReads({
+    rows: readOne(
+      db
+        .select()
+        .from(favorites)
+        .where(eq(favorites.memberId, memberId))
+        .orderBy(desc(favorites.createdAt), desc(favorites.targetType), desc(favorites.targetId))
+        .limit(limit)
+        .offset(offset),
+      (rows) => rows,
+    ),
+    total: countByMemberRead(db, memberId),
+  });
 }
 
 /** How many things one member has pinned — the count, without the rows. */
 export async function countByMember(db: Db, memberId: string): Promise<number> {
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(favorites)
-    .where(eq(favorites.memberId, memberId));
-  return rows[0]?.value ?? 0;
+  return runRead(db, countByMemberRead(db, memberId));
+}
+
+function countByMemberRead(db: Db, memberId: string): Read<number> {
+  return readOne(
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(favorites)
+      .where(eq(favorites.memberId, memberId)),
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 export async function isFavorited(
@@ -172,9 +190,20 @@ export async function listTargetIdsByMember(
   memberId: string,
   targetType: FavoriteTargetType,
 ): Promise<Set<string>> {
-  const rows = await db
-    .select({ targetId: favorites.targetId })
-    .from(favorites)
-    .where(and(eq(favorites.memberId, memberId), eq(favorites.targetType, targetType)));
-  return new Set(rows.map((r) => r.targetId));
+  return runRead(db, buildListTargetIdsByMemberRead(db, memberId, targetType));
+}
+
+/** `listTargetIdsByMember`, planned for the caller's batch. */
+export function buildListTargetIdsByMemberRead(
+  db: Db,
+  memberId: string,
+  targetType: FavoriteTargetType,
+): Read<Set<string>> {
+  return readOne(
+    db
+      .select({ targetId: favorites.targetId })
+      .from(favorites)
+      .where(and(eq(favorites.memberId, memberId), eq(favorites.targetType, targetType))),
+    (rows) => new Set(rows.map((r) => r.targetId)),
+  );
 }

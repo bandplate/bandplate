@@ -1,6 +1,20 @@
 import { uuidv7 } from "@bandplate/core";
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  type SQL,
+  type SQLWrapper,
+  sql,
+} from "drizzle-orm";
 import type { Db } from "../client.js";
+import { combineReads, type Read, readAll, readOne, runRead } from "../read.js";
 import { events, takes } from "../schema/sqlite/index.js";
 import { chunk } from "./chunk.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
@@ -95,8 +109,16 @@ export async function setClientRef(
  * do filter.
  */
 export async function getById(db: Db, id: string): Promise<Event | undefined> {
-  const [row] = await db.select().from(events).where(eq(events.id, id)).limit(1);
-  return row;
+  return runRead(db, buildGetByIdRead(db, id));
+}
+
+/**
+ * `getById`, planned for the caller's batch. The id may be a query that
+ * yields one (`takesRepo.buildNewestEventWithTakesPublishedSinceQuery`), so a
+ * page can read an event in the same batch that decides which event it is.
+ */
+export function buildGetByIdRead(db: Db, id: string | SQLWrapper): Read<Event | undefined> {
+  return readOne(db.select().from(events).where(eq(events.id, id)).limit(1), (rows) => rows[0]);
 }
 
 /**
@@ -120,13 +142,17 @@ export async function getByClientRef(db: Db, clientRef: string): Promise<Event |
  * resolve an event a take already points at.
  */
 export async function getByIds(db: Db, ids: string[]): Promise<Event[]> {
+  return runRead(db, buildGetByIdsRead(db, ids));
+}
+
+/** `getByIds`, planned: every chunk goes out in the caller's one batch. */
+export function buildGetByIdsRead(db: Db, ids: string[]): Read<Event[]> {
   // Chunked: D1 caps a statement at 100 bound parameters (see `chunk.ts`),
   // and the ids are this query's only one.
-  const rows: Event[] = [];
-  for (const part of chunk(ids, GET_BY_IDS_CHUNK_SIZE)) {
-    rows.push(...(await buildGetByIdsChunkQuery(db, part)));
-  }
-  return rows;
+  return readAll(
+    chunk(ids, GET_BY_IDS_CHUNK_SIZE).map((part) => buildGetByIdsChunkQuery(db, part)),
+    (parts) => parts.flat(),
+  );
 }
 
 export const GET_BY_IDS_CHUNK_SIZE = 100;
@@ -224,12 +250,18 @@ export async function count(
   db: Db,
   options: ListRecentWithTakeCountsOptions = {},
 ): Promise<number> {
+  return runRead(db, countRead(db, options));
+}
+
+function countRead(db: Db, options: ListRecentWithTakeCountsOptions): Read<number> {
   const conditions = eventConditions(options);
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(events)
-    .where(and(...conditions));
-  return rows[0]?.value ?? 0;
+  return readOne(
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(events)
+      .where(and(...conditions)),
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 /**
@@ -244,6 +276,14 @@ export async function listRecentWithTakeCounts(
   db: Db,
   options: ListRecentWithTakeCountsOptions = {},
 ): Promise<Paged<EventWithTakeCount>> {
+  return runRead(db, buildListRecentWithTakeCountsRead(db, options));
+}
+
+/** `listRecentWithTakeCounts`, planned: the page and its count, for the caller's batch. */
+export function buildListRecentWithTakeCountsRead(
+  db: Db,
+  options: ListRecentWithTakeCountsOptions = {},
+): Read<Paged<EventWithTakeCount>> {
   // Conditions collected into a list and combined with `and()` rather than
   // branching per combination: with a kind filter and an archived filter that
   // would already be four near-identical query builders. `and()` of an empty
@@ -251,24 +291,23 @@ export async function listRecentWithTakeCounts(
   const conditions = eventConditions(options);
   const limit = options.page?.limit ?? options.limit ?? DEFAULT_PAGE_SIZE;
   const offset = options.page?.offset ?? 0;
-  const [rows, total] = await Promise.all([
-    db
-      .select({ event: events, takeCount: sql<number>`count(${takes.id})` })
-      .from(events)
-      .leftJoin(takes, and(eq(takes.eventId, events.id), bandTakeCondition()))
-      .where(and(...conditions))
-      .groupBy(events.id)
-      // See `listRecent` for why `id` is here — this is the archive's paged
-      // query, so a non-contractual order for same-day events is not cosmetic.
-      .orderBy(desc(events.heldAt), desc(events.id))
-      .limit(limit)
-      .offset(offset),
-    count(db, options),
-  ]);
-  return {
-    rows: rows.map((row) => ({ ...row.event, takeCount: row.takeCount })),
-    total,
-  };
+  return combineReads({
+    rows: readOne(
+      db
+        .select({ event: events, takeCount: sql<number>`count(${takes.id})` })
+        .from(events)
+        .leftJoin(takes, and(eq(takes.eventId, events.id), bandTakeCondition()))
+        .where(and(...conditions))
+        .groupBy(events.id)
+        // See `listRecent` for why `id` is here — this is the archive's paged
+        // query, so a non-contractual order for same-day events is not cosmetic.
+        .orderBy(desc(events.heldAt), desc(events.id))
+        .limit(limit)
+        .offset(offset),
+      (rows) => rows.map((row) => ({ ...row.event, takeCount: row.takeCount })),
+    ),
+    total: countRead(db, options),
+  });
 }
 
 /** One day, in epoch milliseconds. */

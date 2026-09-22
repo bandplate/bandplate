@@ -1,6 +1,7 @@
 import { uuidv7 } from "@bandplate/core";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { type Read, readOne, runRead } from "../read.js";
 import {
   assets,
   instrumentAliases,
@@ -51,14 +52,19 @@ export interface ListInstrumentsOptions {
 
 /** List instruments, excluding archived ones by default. */
 export async function list(db: Db, options: ListInstrumentsOptions = {}): Promise<Instrument[]> {
-  if (options.includeArchived) {
-    return db.select().from(instruments).orderBy(instruments.sortOrder);
-  }
-  return db
-    .select()
-    .from(instruments)
-    .where(isNull(instruments.archivedAt))
-    .orderBy(instruments.sortOrder);
+  return runRead(db, buildListRead(db, options));
+}
+
+/** `list`, planned for the caller's batch. */
+export function buildListRead(db: Db, options: ListInstrumentsOptions = {}): Read<Instrument[]> {
+  return readOne(
+    db
+      .select()
+      .from(instruments)
+      .where(options.includeArchived ? undefined : isNull(instruments.archivedAt))
+      .orderBy(instruments.sortOrder),
+    (rows) => rows,
+  );
 }
 
 export async function archive(db: Db, id: string, archivedAt: number): Promise<void> {

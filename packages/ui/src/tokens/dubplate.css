@@ -76,19 +76,13 @@
   --bp-flare: #d94a1f;
   --bp-yard: #6f9a2e;
 
-  /* The auth screens' left half — the plate field. Theme-INDEPENDENT, and
-     declared once here rather than in each theme block: a record is not a
-     light object, exactly as `--bp-plate-vinyl` already is dark on the light
-     ground. Its own foreground pair exists because `--bp-color-fg` on this
-     field would be ink on lacquer in the light theme. */
-  --bp-auth-field: #1b1008;
-  --bp-auth-field-glow: #34210f;
-  --bp-auth-field-fg: #f2e8d8;
-  --bp-auth-field-muted: #a9917a;
+  /* The palette is deduplicated: every colour here is one a reader can tell
+     from its neighbours. The sign-in field, home's plates and its stand card
+     used to carry near-copies of lacquer, sleeve, groove, bone and dust (ΔE
+     under 3, indistinguishable side by side); they use these directly now. */
 
   --bp-card: #fbf5e9;
   --bp-rule: #ddd0ba;
-  --bp-ink: #1c0f06;
   --bp-clay: #6d5947;
   --bp-burnt: #7a4e05;
   --bp-rust: #9c2f10;
@@ -111,7 +105,8 @@
   --bp-color-bg: var(--bp-bone);
   --bp-color-surface: var(--bp-card);
   --bp-color-border: var(--bp-rule);
-  --bp-color-fg: var(--bp-ink);
+  /* Lacquer, not a separate ink: #1c0f06 sat ΔE 3.1 from it. 16.9:1 on bone. */
+  --bp-color-fg: var(--bp-lacquer);
   --bp-color-muted: var(--bp-clay);
 
   --bp-color-accent: var(--bp-burnt);
@@ -186,23 +181,19 @@
   --bp-track-none: var(--bp-clay);
 
   /* ---- the plate ----
-     Home draws pinned things as dubplates. The LABEL is fixed across themes:
-     it is printed paper, and a bone label on a bone page would have nothing
-     between it and the ground. The VINYL is not — see the dark blocks below.
-     Both are named rather than inlined so a brand swap can restyle the object
-     without touching component CSS. */
-  --bp-plate-vinyl: #17100a;
-  --bp-plate-label-bone: #e8dcc6;
+     Home draws pinned things as dubplates. The vinyl is a role, not a colour
+     of its own: lacquer on the bone ground, the sleeve on the lacquer one
+     (a lacquer disc on a lacquer page reads as a hole). The label is the
+     rule colour, printed paper in both themes; see `.bp-plate-label`. */
+  --bp-plate-vinyl: var(--bp-lacquer);
 
   /* ---- the stand ----
      Home's "Na pultu" card: the one strong call to action on the page, drawn
-     as a dark sleeve on the bone ground. Its ink is fixed for the same reason
-     the plate label's is: the card is dark in both themes. In the dark theme
-     the ground is already that dark, so the card lifts a step and takes an
-     edge (see the dark blocks). Muted ink on the card: 9.5:1 light, 9.3:1 dark. */
-  --bp-stand: #1c120b;
-  --bp-stand-edge: transparent;
-  --bp-stand-fg: #efe3cf;
+     as the sleeve on the bone ground. Its ink is bone in both themes, since
+     the card is dark in both. In the dark theme the ground is already that
+     dark, so the card is the sleeve let partly through (see the dark blocks).
+     `--bp-stand-muted` is muted ink on a dark fill: 9.5:1 light, 9.3:1 dark. */
+  --bp-stand: var(--bp-sleeve);
   --bp-stand-muted: #cbb89c;
 }
 
@@ -245,12 +236,11 @@
        against #150c07 the plate read as a hole rather than an object, and its
        grooves disappeared with it. In the light theme the same disc separates
        from bone on its own, so only dark needs the lift. */
-    --bp-plate-vinyl: #2a1a0e;
+    --bp-plate-vinyl: var(--bp-sleeve);
     /* The home card: the sleeve brown, let partly through so the grooves of
        the page run under it, and no edge. The fill alone lifts it; a groove
        line around it read as a frame drawn on top. */
     --bp-stand: color-mix(in srgb, var(--bp-sleeve) 80%, transparent);
-    --bp-stand-edge: transparent;
   }
 }
 
@@ -288,7 +278,6 @@
   --bp-track-none: var(--bp-dust);
 
   /* See the `prefers-color-scheme` block above. */
-  --bp-plate-vinyl: #2a1a0e;
+  --bp-plate-vinyl: var(--bp-sleeve);
   --bp-stand: color-mix(in srgb, var(--bp-sleeve) 80%, transparent);
-  --bp-stand-edge: transparent;
 }

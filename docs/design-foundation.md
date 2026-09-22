@@ -141,7 +141,7 @@ Dark is the authored theme; light is a real counterpart, not a stretch.
 | `--bp-color-bg` | `#F2E8D8` bone | — |
 | `--bp-color-surface` | `#FBF5E9` | — |
 | `--bp-color-border` | `#DDD0BA` | — |
-| `--bp-color-fg` | `#1C0F06` | 16.4:1 |
+| `--bp-color-fg` | `#150C07` lacquer | 16.9:1 |
 | `--bp-color-muted` | `#6D5947` | 5.4:1 |
 | `--bp-color-accent` | `#7A4E05` burnt gold | 5.9:1 |
 | `--bp-color-danger` | `#9C2F10` | 6.5:1 |

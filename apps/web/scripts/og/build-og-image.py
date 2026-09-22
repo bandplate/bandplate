@@ -42,12 +42,12 @@ from textpath import text_path  # noqa: E402
 W, H = 1200, 630
 
 # --- tokens, lifted verbatim from packages/ui/src/tokens/dubplate.css ---
-FIELD = "#1b1008"  # --bp-auth-field
-FIELD_GLOW = "#34210f"  # --bp-auth-field-glow
-VINYL = "#17100a"  # --bp-plate-vinyl
+FIELD = "#150c07"  # --bp-lacquer (the sign-in field)
+FIELD_GLOW = "#3a2413"  # --bp-groove (its glow)
+VINYL = "#150c07"  # --bp-plate-vinyl in light: --bp-lacquer
 GOLD = "#f6aa1c"  # --bp-gold
-BONE = "#f2e8d8"  # --bp-bone / --bp-auth-field-fg
-DUST = "#a9917a"  # --bp-auth-field-muted
+BONE = "#f2e8d8"  # --bp-bone
+DUST = "#a9917a"  # --bp-dust
 
 # Every circle shares ONE centre, as `.bp-auth-plate` does — so the drawing
 # stays concentric and the composition is moved by editing two numbers.

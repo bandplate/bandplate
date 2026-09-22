@@ -44,7 +44,7 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-const INK = "#1c0f06";
+const INK = "#150c07"; // --bp-lacquer, the light theme's text
 const MUTED = "#6d5947";
 const RULE = "#ddd0ba";
 /** `--bp-burnt`, the LIGHT theme's accent — this message is always light. */

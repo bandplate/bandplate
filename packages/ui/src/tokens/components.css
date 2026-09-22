@@ -3940,10 +3940,10 @@ html:has(dialog.bp-filter-sheet[open]) body {
      so the light comes from the record rather than from a corner. */
   background: radial-gradient(
       70% 150% at var(--bp-auth-glow-x, 76%) var(--bp-auth-glow-y, 130%),
-      var(--bp-auth-field-glow),
+      var(--bp-groove),
       transparent 70%
-    ), var(--bp-auth-field);
-  color: var(--bp-auth-field-fg);
+    ), var(--bp-lacquer);
+  color: var(--bp-bone);
 }
 
 /* The plate: a ring, the grooved disc, its label and the spindle hole. All
@@ -3980,7 +3980,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   height: 15.625rem;
   background: repeating-radial-gradient(
       circle at 50% 50%,
-      color-mix(in srgb, var(--bp-auth-field-fg) 7%, transparent) 0 1px,
+      color-mix(in srgb, var(--bp-bone) 7%, transparent) 0 1px,
       transparent 1px 6px
     ), var(--bp-plate-vinyl);
 }
@@ -3994,7 +3994,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
 .bp-auth-plate-spindle {
   width: 0.75rem;
   height: 0.75rem;
-  background: var(--bp-auth-field);
+  background: var(--bp-lacquer);
 }
 
 .bp-auth-wordmark {
@@ -4020,7 +4020,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
   max-width: 30ch;
   font-size: var(--text-note, 0.875rem);
   line-height: 1.6;
-  color: var(--bp-auth-field-muted);
+  color: var(--bp-dust);
 }
 
 .bp-auth-pane {
@@ -6988,18 +6988,16 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 /* The one strong call to action on the page, so the one dark card: a record
    sleeve on the bone ground. In the dark theme the page is already that dark,
-   so the card lifts a step on a translucent sleeve brown instead, with no
-   edge (see `--bp-stand`). The border stays declared for the light theme's
-   transparent one. */
+   so the card lifts a step on a translucent sleeve brown instead (see
+   `--bp-stand`). No edge in either theme: the fill alone lifts it. */
 .bp-stand {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
   padding: 1.25rem;
-  border: 1px solid var(--bp-stand-edge);
   border-radius: 1.25rem;
   background: var(--bp-stand);
-  color: var(--bp-stand-fg);
+  color: var(--bp-bone);
 }
 
 .bp-stand-eyebrow {
@@ -7065,22 +7063,22 @@ html:has(dialog.bp-filter-sheet[open]) body {
    on this dark card is no fill at all. It takes the vote pill's tone, so the
    two read as a pair and the disc is the one gold thing. */
 .bp-stand .bp-stand-play {
-  background: color-mix(in srgb, var(--bp-stand-fg) 12%, transparent);
-  color: var(--bp-stand-fg);
+  background: color-mix(in srgb, var(--bp-bone) 12%, transparent);
+  color: var(--bp-bone);
 }
 
 .bp-stand .bp-stand-play:hover {
-  background: color-mix(in srgb, var(--bp-stand-fg) 20%, transparent);
+  background: color-mix(in srgb, var(--bp-bone) 20%, transparent);
 }
 
 .bp-stand .bp-stand-vote {
   padding-inline: 1.125rem;
-  background: color-mix(in srgb, var(--bp-stand-fg) 12%, transparent);
-  color: var(--bp-stand-fg);
+  background: color-mix(in srgb, var(--bp-bone) 12%, transparent);
+  color: var(--bp-bone);
 }
 
 .bp-stand .bp-stand-vote:hover {
-  background: color-mix(in srgb, var(--bp-stand-fg) 20%, transparent);
+  background: color-mix(in srgb, var(--bp-bone) 20%, transparent);
 }
 
 /* The app's focus ring is the accent, which in the light theme is a dark
@@ -7273,7 +7271,7 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 .bp-plate--container .bp-plate-label {
-  background: var(--bp-plate-label-bone);
+  background: var(--bp-rule);
 }
 
 /* The spindle hole, scaled to the plate rather than fixed at 5px — on a 128px

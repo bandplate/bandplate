@@ -149,6 +149,23 @@ export function shouldUploadNow(
   return ownedBy(item, currentMemberId) && shouldSync(item);
 }
 
+/**
+ * Which member `StashPendingList` draws its local rows as: the live member
+ * `stash-sync.ts` keeps in step with the cross-tab signal, once it has a
+ * value, or the page's own server-rendered prop before that.
+ *
+ * `live` being `undefined` ("not set yet — `startStashSync` has not run, or
+ * has not been told anything since") is a DIFFERENT answer from `null`
+ * ("nobody is signed in, for real — a sign-out signalled from another tab").
+ * Only the first falls back to the prop; the second must win, or a member
+ * switch signalled from another tab would keep the old member's rows on
+ * screen. This is exactly the bug the `currentMember` store's own comment
+ * (`stash-store.ts`) warns against.
+ */
+export function effectiveMember(live: string | null | undefined, prop: string): string | null {
+  return live === undefined ? prop : live;
+}
+
 export type Failure = { network: true } | { status: number };
 export type FailureKind = "retry" | "give-up";
 

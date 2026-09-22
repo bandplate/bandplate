@@ -60,6 +60,27 @@ function setCurrentMember(memberId: string | null): void {
   currentMember.set(memberId);
 }
 
+/**
+ * Stops THIS tab's own runner and hides its rows the moment sign-out begins.
+ * Called from `AppLayout.astro`'s sign-out handler, alongside
+ * `broadcastMemberSignal(null)` — that call tells every OTHER open tab, but
+ * writing `localStorage` fires no `storage` event in the tab that wrote it,
+ * so this tab needs its own direct call to the same effect.
+ *
+ * This is not redundant: confirmed by hand that the sign-out redirect to
+ * `/login` is a `<ClientRouter />` SOFT navigation (a `window` sentinel set
+ * before clicking "Odhlásit se" was still there after), not a full reload —
+ * `AuthLayout` renders no `<ClientRouter />` of its own, but the listener
+ * this page's script registered on `document` stays attached regardless, so
+ * this module's state survives the swap intact. Without this call, a member
+ * who signs out and back in as someone else IN THE SAME TAB would keep
+ * uploading and drawing the first member's queue until some other event (a
+ * navigation, `online`) happened to run.
+ */
+export function stopSyncingLocally(): void {
+  setCurrentMember(null);
+}
+
 class HttpFailure extends Error {
   constructor(
     readonly request: SyncRequest,
@@ -208,6 +229,18 @@ async function syncOne(item: PendingStashItem): Promise<void> {
         return;
       }
     }
+    // Re-checked again, not just at the top of this function: a `storage`
+    // signal can land between the create response above and the PUT below —
+    // the take now exists under the ORIGINAL member (the server already
+    // guaranteed that), but uploading its bytes now would still be this
+    // session doing work as a member it no longer is. Stopping here, rather
+    // than letting the PUT run and the server's `verify` step (or a future
+    // check) refuse it, means the original member never sees a `lastError`
+    // for a mismatch that was never theirs to see — the item just waits.
+    if (!shouldUploadNow(current, currentMemberId)) {
+      await save({ ...current, status: "waiting" });
+      return;
+    }
     await uploadMaster(current);
     await finish(current);
   } catch (err) {
@@ -348,7 +381,19 @@ export function startStashSync(memberId: string | null): void {
       return;
     }
     setCurrentMember(next);
-    void refreshPendingStash();
+    if (next) {
+      // Somebody signed in, in another tab, while this one stayed open: THIS
+      // member's own queued items (left untouched under whoever was signed
+      // in before) start uploading now rather than waiting for a navigation
+      // or the `online` event. `syncPendingStash` refreshes the drawn list
+      // itself (via `runOnce`), so there is no separate `refreshPendingStash`
+      // call in this branch.
+      void syncPendingStash();
+    } else {
+      // Nobody is signed in now: nothing of this device's queue is this
+      // session's to touch, only to stop drawing.
+      void refreshPendingStash();
+    }
   });
   // A navigation is the moment the server gets to say where every recording
   // now lives, so it is where a handed-over row's render ends. `before-swap`

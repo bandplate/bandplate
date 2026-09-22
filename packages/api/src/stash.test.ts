@@ -235,6 +235,25 @@ describe("POST /stash/takes", () => {
     ).toBeUndefined();
   });
 
+  it("files a create with no memberId under the session, same as before this field existed", async () => {
+    // A tab still running the bundle from BEFORE this task, across a deploy:
+    // its queued item has no `memberId` field at all. Rejecting it (422) would
+    // make the client's own `classifyFailure` give up and mark the recording
+    // `failed` forever — worse than the bug this task fixes. The field is a
+    // backstop for a race this session can observe; an old client that never
+    // knew of it files exactly as it always did, under the session's own
+    // member.
+    const testApp = await build();
+    const song = await seedSong(testApp);
+    const { cookie, memberId } = await signIn(testApp, "robin");
+    const body = stashBody(song.id, "irrelevant") as Record<string, unknown>;
+    delete body.memberId;
+    const res = await post(testApp, "/stash/takes", cookie, body);
+    expect(res.status).toBe(201);
+    const take = await takesRepo.getByClientRef(testApp.db, "stash:0192f5b8-local-recording");
+    expect(take?.ownerMemberId).toBe(memberId);
+  });
+
   it("422s a body missing what it still needs", async () => {
     // No song is fine since the stash migration; no clientRef and no recordedAt never are —
     // one is the idempotency key, the other is when it happened.

@@ -31,8 +31,16 @@ const createStashTakeSchema = z.object({
    * does not match the session that is about to own the take, the create is
    * refused rather than filing someone else's private recording under
    * whoever is signed in now.
+   *
+   * Nullish, not required: a tab still running the bundle from before this
+   * field existed (a stale service worker, a cached bundle across a deploy)
+   * sends a body without it. Rejecting that with 422 would make the OLD
+   * client's own `classifyFailure` give up and mark the recording `failed`
+   * forever — the exact loss this task exists to prevent, just moved one
+   * field over. Missing means "no opinion", and the create files under the
+   * session the same way it always did, before this field existed.
    */
-  memberId: z.string().trim().min(1),
+  memberId: z.string().trim().min(1).nullish(),
   // Optional: a recording can reach the stash before its member has decided
   // what song it is. A song NAMED still has to exist (404 below).
   songId: z.string().trim().min(1).nullish(),
@@ -60,7 +68,7 @@ export function registerStashRoutes(router: GuardedRouter, deps: StashRouteDeps)
     }
     const input = parsed.data;
 
-    if (input.memberId !== memberId) {
+    if (input.memberId != null && input.memberId !== memberId) {
       return errorResponse(
         c,
         403,

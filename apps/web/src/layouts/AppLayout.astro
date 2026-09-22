@@ -417,6 +417,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
   // must never depend on push working.
   import { broadcastMemberSignal } from "../client/member-signal.js";
   import { endpointFieldValue } from "../client/push-logout.js";
+  import { stopSyncingLocally } from "../client/stash-sync.js";
 
   async function resolveAndSubmit(form: HTMLFormElement) {
     const field = form.elements.namedItem("pushEndpoint");
@@ -459,6 +460,13 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
       // a tab that stays open through the sign-out would keep drawing and
       // syncing the old member's stash until it happens to navigate again.
       broadcastMemberSignal(null);
+      // `broadcastMemberSignal` above reaches every OTHER tab; it fires no
+      // `storage` event in THIS one (writing `localStorage` never does, in
+      // the tab that wrote it). The redirect to `/login` is itself a soft
+      // `<ClientRouter />` navigation (confirmed by hand: this page's module
+      // state survives it), so without this call this tab would keep
+      // believing the member who just signed out is still signed in.
+      stopSyncingLocally();
       resolveAndSubmit(form);
     },
     { capture: true },

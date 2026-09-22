@@ -3,6 +3,7 @@ import {
   afterFailure,
   canRetryByHand,
   classifyFailure,
+  effectiveMember,
   localStashRows,
   newPendingItem,
   nextSyncStep,
@@ -313,6 +314,28 @@ describe("shouldUploadNow", () => {
   it("a legacy recording with no member never uploads, whoever is signed in", () => {
     const { memberId: _gone, ...legacy } = item({ status: "waiting" });
     expect(shouldUploadNow(legacy as PendingSummary, "m-a")).toBe(false);
+  });
+});
+
+describe("effectiveMember", () => {
+  // Which member `StashPendingList` draws its rows as: the store `stash-sync.ts`
+  // keeps live (`liveMemberId`) once it has a value, or the page's own
+  // server-rendered prop before that. `undefined` and `null` are NOT the same
+  // answer — `undefined` is "the store has not been set yet, use the prop",
+  // `null` is "nobody is signed in, for real" (a sign-out signal from another
+  // tab), and falling back to the prop for `null` is the bug this function
+  // exists to avoid: it would keep drawing the old member's rows after a
+  // switch signalled from another tab.
+  it("falls back to the server-rendered prop while the live store is unset", () => {
+    expect(effectiveMember(undefined, "m-prop")).toBe("m-prop");
+  });
+
+  it("trusts a real null from the live store over the prop", () => {
+    expect(effectiveMember(null, "m-prop")).toBeNull();
+  });
+
+  it("trusts a real member id from the live store over the prop", () => {
+    expect(effectiveMember("m-live", "m-prop")).toBe("m-live");
   });
 });
 

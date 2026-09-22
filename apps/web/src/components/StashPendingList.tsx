@@ -53,6 +53,7 @@ import {
 } from "../client/stash-sync.js";
 import {
   canRetryByHand,
+  effectiveMember,
   type LocalStashRow,
   localPlayId,
   localStashRows,
@@ -164,13 +165,12 @@ export default function StashPendingList({
   const synced = useStore(syncedStash);
   // `startStashSync` sets this before any island hydrates, on every full
   // load; the `memberId` prop is the fallback for the sliver of time (if
-  // any) before that, and for a document with no script. `undefined` is
-  // "not set yet" — `null` is a real answer ("nobody signed in", from a
-  // sign-out signal) and must NOT fall back to the stale prop, or a member
-  // switch signalled from another tab would keep showing the old member's
-  // rows. See `currentMember`'s own comment in `stash-store.ts`.
+  // any) before that, and for a document with no script. The undefined-vs-null
+  // distinction that makes this safe is `effectiveMember`'s own doc comment
+  // in `stash-sync-logic.js`; see `currentMember`'s comment in
+  // `stash-store.ts` for why collapsing the two was the actual bug.
   const liveMemberId = useStore(currentMember);
-  const effectiveMemberId = liveMemberId === undefined ? memberId : liveMemberId;
+  const effectiveMemberId = effectiveMember(liveMemberId, memberId);
   // The server cannot see IndexedDB, so it renders as if nothing were pending.
   // The first render in the browser has to say the same, or hydration finds
   // rows the server never sent (the sync runner has usually filled the store

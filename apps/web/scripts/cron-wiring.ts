@@ -73,6 +73,43 @@ function hasScheduledProperty(objectSource: string): boolean {
   return /(^|[{,\n])\s*(async\s+)?scheduled\s*[:(]/.test(objectSource);
 }
 
+/**
+ * Is Workers Logs actually on in the generated wrangler.json? A production
+ * `wrangler.toml` missing `[observability]` (or with `enabled` anything but
+ * `true`) builds and deploys cleanly, and every structured
+ * `console.error(JSON.stringify({...}))` this app emits (see
+ * `packages/core/src/log-error.ts`) goes nowhere — Cloudflare's dashboard
+ * Logs tab stays empty with no error at deploy or runtime. The build hook
+ * that calls this treats that as a failed build, not a silent gap.
+ */
+export function checkObservability(wranglerJson: unknown): CronWiring {
+  const fix =
+    "Add `[observability]` with `enabled = true` to wrangler.toml (see wrangler.toml.example).";
+  if (typeof wranglerJson !== "object" || wranglerJson === null) {
+    return {
+      ok: false,
+      reason: `wrangler.toml has no readable \`[observability]\` section. ${fix}`,
+    };
+  }
+  const observability = (wranglerJson as { observability?: unknown }).observability;
+  if (typeof observability !== "object" || observability === null) {
+    return {
+      ok: false,
+      reason: `wrangler.toml has no \`[observability]\` section, so Workers Logs stays off silently. ${fix}`,
+    };
+  }
+  const enabled = (observability as { enabled?: unknown }).enabled;
+  if (enabled !== true) {
+    return {
+      ok: false,
+      reason:
+        `wrangler.toml's \`[observability]\` section does not set \`enabled = true\` ` +
+        `(got ${JSON.stringify(enabled)}), so Workers Logs stays off silently. ${fix}`,
+    };
+  }
+  return { ok: true };
+}
+
 export function checkCronWiring(input: {
   crons: readonly string[];
   entrySource: string;

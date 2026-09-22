@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { checkCronWiring, cronsOf, defaultExportObject } from "./cron-wiring.js";
+import {
+  checkCronWiring,
+  checkObservability,
+  cronsOf,
+  defaultExportObject,
+} from "./cron-wiring.js";
 
 // Trimmed from real `dist/server/entry.mjs` output (@astrojs/cloudflare
 // 14.3.2, Rolldown): ours with `main = "./src/worker.ts"`, and the stock one
@@ -98,5 +103,35 @@ describe("checkCronWiring", () => {
     if (!result.ok) {
       expect(result.reason).toContain("could not be found");
     }
+  });
+});
+
+describe("checkObservability", () => {
+  it("passes when observability.enabled is true", () => {
+    expect(checkObservability({ observability: { enabled: true } })).toEqual({ ok: true });
+  });
+
+  it("fails when observability is missing entirely", () => {
+    const result = checkObservability({});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toContain("observability");
+      expect(result.reason).toContain("[observability]");
+    }
+  });
+
+  it("fails when observability.enabled is false", () => {
+    const result = checkObservability({ observability: { enabled: false } });
+    expect(result.ok).toBe(false);
+  });
+
+  it("fails when observability.enabled is missing or not a boolean true", () => {
+    expect(checkObservability({ observability: {} }).ok).toBe(false);
+    expect(checkObservability({ observability: { enabled: "true" } }).ok).toBe(false);
+  });
+
+  it("fails on a non-object wrangler.json", () => {
+    expect(checkObservability(null).ok).toBe(false);
+    expect(checkObservability("nope").ok).toBe(false);
   });
 });

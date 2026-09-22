@@ -4,7 +4,7 @@ import node from "@astrojs/node";
 import preact from "@astrojs/preact";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
-import { checkCronWiring, cronsOf } from "./scripts/cron-wiring.ts";
+import { checkCronWiring, checkObservability, cronsOf } from "./scripts/cron-wiring.ts";
 
 // Load `.env` into `process.env`, not just `import.meta.env`.
 //
@@ -93,7 +93,10 @@ export default defineConfig({
     preact({ compat: true }),
     // Fails the Cloudflare build when `wrangler.toml` declares a cron but the
     // built Worker has no `scheduled` handler, which is what a missing
-    // `main` gives you, silently. See `scripts/cron-wiring.ts` for the decision and why.
+    // `main` gives you, silently — and when the generated wrangler.json has
+    // no `[observability] enabled = true`, which leaves Workers Logs off
+    // with no error anywhere. See `scripts/cron-wiring.ts` for the decisions
+    // and why.
     adapterKind === "cloudflare" && {
       name: "bandplate-cron-wiring",
       hooks: {
@@ -105,9 +108,13 @@ export default defineConfig({
             await readFile(new URL("wrangler.json", serverDir), "utf-8"),
           );
           const entrySource = await readFile(new URL("entry.mjs", serverDir), "utf-8");
-          const result = checkCronWiring({ crons: cronsOf(wranglerJson), entrySource });
-          if (!result.ok) {
-            throw new Error(result.reason);
+          const cronResult = checkCronWiring({ crons: cronsOf(wranglerJson), entrySource });
+          if (!cronResult.ok) {
+            throw new Error(cronResult.reason);
+          }
+          const observabilityResult = checkObservability(wranglerJson);
+          if (!observabilityResult.ok) {
+            throw new Error(observabilityResult.reason);
           }
         },
       },

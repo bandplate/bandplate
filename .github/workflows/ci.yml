@@ -43,8 +43,30 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Not exercised by `pnpm test` (that's Node-profile-only, no
+      # `vitest-pool-workers`) — runs @bandplate/api's suite against the
+      # real Workers runtime (Miniflare) instead of Node's. Passes today;
+      # catches anything that only breaks under the Workers pool.
+      - name: Test (Workers runtime)
+        run: pnpm --filter @bandplate/api test:workers
+
       - name: Build
         run: pnpm build
+
+      # The default `pnpm build` above only builds the Node profile — it
+      # never touches `astro.config.mjs`'s cloudflare-only build hook (the
+      # cron-wiring and observability checks, see
+      # `apps/web/scripts/cron-wiring.ts`) or anything else gated on
+      # `BANDPLATE_ADAPTER=cloudflare`. Without this step, a break in
+      # either check first surfaces in the `deploy` job, against the real
+      # account, rather than here. `wrangler.toml.example` (not a secret)
+      # is enough: this step never runs `wrangler deploy`, only `astro
+      # build`, so it needs no real Cloudflare credentials.
+      - name: Build (Cloudflare profile)
+        working-directory: apps/web
+        run: |
+          cp wrangler.toml.example wrangler.toml
+          BANDPLATE_ADAPTER=cloudflare pnpm exec astro build
 
   deploy:
     needs: build

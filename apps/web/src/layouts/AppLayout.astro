@@ -483,4 +483,23 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
     },
     { capture: true },
   );
+
+  // If `form.requestSubmit()` above never completes as a real navigation —
+  // the POST fails, the tab is closed and bfcache-restored, a soft
+  // `<ClientRouter />` swap lands on a page that persists this form — the
+  // form is left with `data-push-checked="1"` set and never cleared. The
+  // submit listener's loop guard then treats the NEXT sign-out click as
+  // the re-submission it's guarding against, skips `resolveAndSubmit`
+  // entirely, and the device's push subscription never gets unsubscribed.
+  // Clearing the flag whenever the page is (re)shown — a fresh
+  // `astro:after-swap` (soft navigation restores this same DOM) or
+  // `pageshow` (bfcache restore, including `event.persisted === true`) —
+  // means a second press always re-runs the real check.
+  function resetPushCheckedGuard() {
+    for (const form of document.querySelectorAll<HTMLFormElement>("[data-signout-form]")) {
+      delete form.dataset.pushChecked;
+    }
+  }
+  document.addEventListener("astro:after-swap", resetPushCheckedGuard);
+  window.addEventListener("pageshow", resetPushCheckedGuard);
 </script>

@@ -200,25 +200,39 @@ const takesChecks: ChecksFor<typeof takesRepo> = {
     expectBandOnly(await takesRepo.listUnvotedByMember(f.db, f.memberB));
   },
   search: async () => {
-    const cases: takesRepo.SearchFilters[] = [
-      {},
-      { search: "stash idea" },
-      { search: "shared" },
-      { songId: f.stashOnlySong },
-      { songId: f.sharedSong },
-      { instrumentIds: [f.bass] },
-      { states: ["published"] },
-      { dateFrom: STASH_DAY },
-      { minRating: 0 },
-      { unvotedByMemberId: f.memberA },
-      { unvotedByMemberId: f.memberB },
+    // `matchesBand: true` cases are built to match the band take (same
+    // song/instrument/state/rating floor as the seeded fixture, or no
+    // filter at all) — asserting `expectBandOnly` on them is what stops
+    // this check from passing on a `search` that silently returns nothing
+    // for everyone: without it, a leak-only assertion is satisfied just as
+    // well by a broken filter that matches zero rows as by a correct one.
+    // `matchesBand: false` cases are built to match NEITHER take (a
+    // stash-only song, a date floor only the stash recordings clear) —
+    // there the empty result is the whole point, not a gap in coverage.
+    const cases: { filters: takesRepo.SearchFilters; matchesBand: boolean }[] = [
+      { filters: {}, matchesBand: true },
+      { filters: { search: "stash idea" }, matchesBand: false },
+      { filters: { search: "shared" }, matchesBand: true },
+      { filters: { songId: f.stashOnlySong }, matchesBand: false },
+      { filters: { songId: f.sharedSong }, matchesBand: true },
+      { filters: { instrumentIds: [f.bass] }, matchesBand: true },
+      { filters: { states: ["published"] }, matchesBand: true },
+      { filters: { dateFrom: STASH_DAY }, matchesBand: false },
+      { filters: { minRating: 0 }, matchesBand: true },
+      { filters: { unvotedByMemberId: f.memberA }, matchesBand: true },
+      { filters: { unvotedByMemberId: f.memberB }, matchesBand: true },
     ];
-    for (const filters of cases) {
+    for (const { filters, matchesBand } of cases) {
       for (const sort of ["recent", "rating"] as const) {
         const result = await takesRepo.search(f.db, filters, { sort });
         const leaked = result.rows.filter((row) => f.stashIds.includes(row.id));
         expect(leaked, JSON.stringify(filters)).toEqual([]);
         expect(result.total, JSON.stringify(filters)).toBe(result.rows.length);
+        if (matchesBand) {
+          expectBandOnly(result.rows);
+        } else {
+          expect(result.rows, JSON.stringify(filters)).toEqual([]);
+        }
       }
     }
   },

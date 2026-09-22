@@ -16,6 +16,15 @@ import { takes } from "../schema/sqlite/index.js";
  * no view mixes the two. A member sees their stash through the stash views and
  * the band's takes everywhere else. Resolving ONE take by id is a different
  * question, answered in JS by `takesRepo.isVisibleTo`.
+ *
+ * One documented exception: the votable/notify filter (`takes.ts`'s
+ * `votableCondition`, `notifications.ts`'s pending-batch queries) uses
+ * `owner_member_id IS NULL` rather than `bandTakeCondition()`. That is
+ * equivalent, not a separate rule, and relies on one invariant holding:
+ * a private take always has an owner. So `owner_member_id IS NULL` already
+ * implies `visibility = 'band'`, and the shorter condition is what lets
+ * those queries reuse the same column across an index rather than adding a
+ * second predicate.
  */
 
 /**

@@ -18,8 +18,10 @@ afternoon looked fine in the HTML and were absent from the DOM.
 ## Design system
 
 The code is the source of truth: `packages/ui/src/tokens/dubplate.css` (the
-palette and the roles), `theme.css` (the type scale) and `components.css`.
-There is also a Claude Design System artifact built from them, **"Bandplate —
+palette and the roles), `theme.css` (the type scale), and the per-component
+rules in `packages/ui/src/tokens/components/` — `components.css` itself is
+just the ordered `@import` list into that directory, not where a rule
+lives. There is also a Claude Design System artifact built from them, **"Bandplate —
 Dubplate"** (<https://claude.ai/artifact/RZMkRozzyQpdgCL6pfknpi>), with the
 tokens, the brand book and previews of the real components. It is the
 maintainer's and private: the link opens only for those it is shared with.

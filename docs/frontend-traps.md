@@ -263,13 +263,17 @@ upload panel) keeps the problem.
 `takes.visibility = 'private'` is filtered in SQL by every listing, count and
 aggregate, each using one of the two conditions in
 `packages/db/src/repos/take-visibility.ts` (`bandTakeCondition`,
-`stashTakeCondition`). `stash-privacy.test.ts` calls every exported read of
-the repos that touch `takes`, and fails on a new export until someone
-classifies it, so a new listing cannot ship unchecked. Every lookup BY ID asks
-`takesRepo.isVisibleTo` instead, and that half has no such guard: a new route
-or loader that resolves a take by id and skips that call leaks somebody's
-stash, and nothing else will fail. Grep for `takesRepo.getById(` in the change
-and check each one.
+`stashTakeCondition`) — with one documented exception: the votable/notify
+filter (`takes.ts`'s `votableCondition`, the pending-batch queries in
+`notifications.ts`) uses `owner_member_id IS NULL` instead, which is
+equivalent only because a private take always has an owner — see
+`take-visibility.ts`'s module comment. `stash-privacy.test.ts` calls every
+exported read of the repos that touch `takes`, and fails on a new export
+until someone classifies it, so a new listing cannot ship unchecked. Every
+lookup BY ID asks `takesRepo.isVisibleTo` instead, and that half has no such
+guard: a new route or loader that resolves a take by id and skips that call
+leaks somebody's stash, and nothing else will fail. Grep for
+`takesRepo.getById(` in the change and check each one.
 
 ---
 

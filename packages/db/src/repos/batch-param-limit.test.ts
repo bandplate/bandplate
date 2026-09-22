@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as assetsRepo from "./assets.js";
 import * as eventsRepo from "./events.js";
+import * as instrumentsRepo from "./instruments.js";
 import * as membersRepo from "./members.js";
 import * as songsRepo from "./songs.js";
 import * as takesRepo from "./takes.js";
@@ -71,6 +72,41 @@ describe("a full chunk stays within D1's 100 bound parameters", async () => {
         membersRepo.buildListInstrumentsForMembersChunkQuery(
           db,
           ids(membersRepo.GET_BY_IDS_CHUNK_SIZE),
+        ),
+    ],
+    [
+      "instrumentsRepo.mergeInto (colliding charts)",
+      () =>
+        instrumentsRepo.buildDeleteCollidingChartsChunkQuery(
+          db,
+          "source-id",
+          ids(instrumentsRepo.MERGE_CHART_CHUNK_SIZE),
+        ),
+    ],
+    [
+      "instrumentsRepo.mergeInto (colliding assets)",
+      () =>
+        instrumentsRepo.buildDeleteCollidingAssetsChunkQuery(
+          db,
+          ids(instrumentsRepo.MERGE_ASSET_CHUNK_SIZE),
+        ),
+    ],
+    [
+      "instrumentsRepo.mergeInto (duplicate members)",
+      () =>
+        instrumentsRepo.buildDeleteDuplicateMembersChunkQuery(
+          db,
+          "source-id",
+          ids(instrumentsRepo.MERGE_MEMBER_CHUNK_SIZE),
+        ),
+    ],
+    [
+      "instrumentsRepo.mergeInto (duplicate takes)",
+      () =>
+        instrumentsRepo.buildDeleteDuplicateTakesChunkQuery(
+          db,
+          "source-id",
+          ids(instrumentsRepo.MERGE_TAKE_CHUNK_SIZE),
         ),
     ],
   ];

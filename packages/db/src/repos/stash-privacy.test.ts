@@ -492,6 +492,10 @@ const instrumentsAllowed: AllowFor<typeof instrumentsRepo> = {
   planMerge:
     "admin's merge plan: must count every row a merge moves or loses, private takes included",
   mergeInto: WRITE,
+  buildDeleteCollidingChartsChunkQuery: WRITE,
+  buildDeleteCollidingAssetsChunkQuery: WRITE,
+  buildDeleteDuplicateMembersChunkQuery: WRITE,
+  buildDeleteDuplicateTakesChunkQuery: WRITE,
 };
 
 const votesAllowed: AllowFor<typeof votesRepo> = {

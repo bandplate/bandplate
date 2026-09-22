@@ -9,6 +9,7 @@ import {
   songInstrumentNotes,
   takeInstruments,
 } from "../schema/sqlite/index.js";
+import { chunk } from "./chunk.js";
 
 export type Instrument = typeof instruments.$inferSelect;
 
@@ -394,6 +395,65 @@ export async function planMerge(db: Db, sourceId: string, targetId: string): Pro
  * the next ingest run meets the old slug, finds nothing, and re-creates the
  * instrument that was just merged away.
  */
+// D1 allows at most 100 bound parameters per statement (see `chunk.ts`). A
+// merge's colliding/duplicate lists are sized by the SOURCE instrument's
+// usage — a take id list, a member id list — which is caller-sized and can
+// pass 100 on a heavily used instrument, so each delete below chunks its
+// list. 99 where the chunk's statement also binds `sourceId` via `eq(...)`
+// alongside the `inArray(...)`; 100 where the id list is the statement's
+// only bound value. Each is pinned by a `.toSQL()` test in
+// `batch-param-limit.test.ts`.
+/** `inArray(songId)` plus `eq(instrumentId, sourceId)`. */
+export const MERGE_CHART_CHUNK_SIZE = 99;
+/** `inArray(id)` alone. */
+export const MERGE_ASSET_CHUNK_SIZE = 100;
+/** `inArray(memberId)` plus `eq(instrumentId, sourceId)`. */
+export const MERGE_MEMBER_CHUNK_SIZE = 99;
+/** `inArray(takeId)` plus `eq(instrumentId, sourceId)`. */
+export const MERGE_TAKE_CHUNK_SIZE = 99;
+
+/** One chunk of the colliding-chart delete in `mergeInto`. Exported for testing only. */
+export function buildDeleteCollidingChartsChunkQuery(db: Db, sourceId: string, songIds: string[]) {
+  return db
+    .delete(songInstrumentNotes)
+    .where(
+      and(
+        eq(songInstrumentNotes.instrumentId, sourceId),
+        inArray(songInstrumentNotes.songId, songIds),
+      ),
+    );
+}
+
+/** One chunk of the colliding-asset delete in `mergeInto`. Exported for testing only. */
+export function buildDeleteCollidingAssetsChunkQuery(db: Db, assetIds: string[]) {
+  return db.delete(assets).where(inArray(assets.id, assetIds));
+}
+
+/** One chunk of the duplicate-member delete in `mergeInto`. Exported for testing only. */
+export function buildDeleteDuplicateMembersChunkQuery(
+  db: Db,
+  sourceId: string,
+  memberIds: string[],
+) {
+  return db
+    .delete(memberInstruments)
+    .where(
+      and(
+        eq(memberInstruments.instrumentId, sourceId),
+        inArray(memberInstruments.memberId, memberIds),
+      ),
+    );
+}
+
+/** One chunk of the duplicate-take delete in `mergeInto`. Exported for testing only. */
+export function buildDeleteDuplicateTakesChunkQuery(db: Db, sourceId: string, takeIds: string[]) {
+  return db
+    .delete(takeInstruments)
+    .where(
+      and(eq(takeInstruments.instrumentId, sourceId), inArray(takeInstruments.takeId, takeIds)),
+    );
+}
+
 export async function mergeInto(
   db: Db,
   sourceId: string,
@@ -434,45 +494,22 @@ export async function mergeInto(
   const statements: BatchStatement[] = [];
 
   // 1. The rows that cannot survive, gone first — so nothing below can land
-  //    on a slot they still occupy.
-  if (collidingSongs.size > 0) {
-    statements.push(
-      db
-        .delete(songInstrumentNotes)
-        .where(
-          and(
-            eq(songInstrumentNotes.instrumentId, sourceId),
-            inArray(songInstrumentNotes.songId, [...collidingSongs]),
-          ),
-        ),
-    );
+  //    on a slot they still occupy. Each list is chunked (see the size
+  //    constants above): a heavily-used instrument can carry well past 100
+  //    colliding songs, assets, members or takes, and D1 would reject a
+  //    single statement built from the whole list. Still all one `db.batch`
+  //    call below, so the extra statements stay in the same transaction.
+  for (const ids of chunk([...collidingSongs], MERGE_CHART_CHUNK_SIZE)) {
+    statements.push(buildDeleteCollidingChartsChunkQuery(db, sourceId, ids));
   }
-  if (collidingAssets.size > 0) {
-    statements.push(db.delete(assets).where(inArray(assets.id, [...collidingAssets])));
+  for (const ids of chunk([...collidingAssets], MERGE_ASSET_CHUNK_SIZE)) {
+    statements.push(buildDeleteCollidingAssetsChunkQuery(db, ids));
   }
-  if (targetMembers.length > 0) {
-    statements.push(
-      db
-        .delete(memberInstruments)
-        .where(
-          and(
-            eq(memberInstruments.instrumentId, sourceId),
-            inArray(memberInstruments.memberId, targetMembers),
-          ),
-        ),
-    );
+  for (const ids of chunk(targetMembers, MERGE_MEMBER_CHUNK_SIZE)) {
+    statements.push(buildDeleteDuplicateMembersChunkQuery(db, sourceId, ids));
   }
-  if (targetTakes.length > 0) {
-    statements.push(
-      db
-        .delete(takeInstruments)
-        .where(
-          and(
-            eq(takeInstruments.instrumentId, sourceId),
-            inArray(takeInstruments.takeId, targetTakes),
-          ),
-        ),
-    );
+  for (const ids of chunk(targetTakes, MERGE_TAKE_CHUNK_SIZE)) {
+    statements.push(buildDeleteDuplicateTakesChunkQuery(db, sourceId, ids));
   }
 
   // 2. Everything left over moves across.

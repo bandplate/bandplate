@@ -15,6 +15,26 @@ it cannot show what the parser kept or what CSS accepted. Check the parsed DOM
 (`DOMParser`, or the running page) and the computed style. Two bugs in one
 afternoon looked fine in the HTML and were absent from the DOM.
 
+## Design system
+
+The code is the source of truth: `packages/ui/src/tokens/dubplate.css` (the
+palette and the roles), `theme.css` (the type scale) and `components.css`.
+There is also a Claude Design System artifact built from them, **"Bandplate —
+Dubplate"** (<https://claude.ai/artifact/RZMkRozzyQpdgCL6pfknpi>), with the
+tokens, the brand book and previews of the real components. It is the
+maintainer's and private: the link opens only for those it is shared with.
+Where it opens, use it for design canvases instead of copying hexes by hand.
+
+It does not update itself. When a change touches the tokens or a component's
+look, say so, so it can be re-synced; a system that has drifted from the code
+is worse than none.
+
+Two rules that the last clean-up bought: **one name per colour** (a palette
+value says what a colour is, a `--bp-color-*` role says what it is for, and a
+feature does not mint a near-copy of an existing colour), and **two button
+sizes** (`bp-btn-sm` 44px in a page's body, `bp-btn-xs` 32px in the header
+tier; there is no separate pill).
+
 ## Writing copy (and Czech especially)
 
 **The em dash is not a clause splice.** An LLM reaches for `—` to weld two

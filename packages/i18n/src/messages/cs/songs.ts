@@ -118,7 +118,16 @@ export const songs = {
   takesHeading: "Nahrávky", // en: Takes
   // en: No takes of this one yet — record a rehearsal and it'll show up here.
   takesEmpty: "Zatím žádná nahrávka. Nahraj zkoušku a objeví se tady.",
-  showMore: (count: number): string => `Zobrazit dalších ${count}`, // en: `Show ${count} more`
+  // en: `Show ${count} more take(s)`. Accusative after "zobrazit", and
+  // "další" agrees with the noun: další nahrávku, další 3 nahrávky, dalších
+  // 5 nahrávek.
+  showMoreTakes: (count: number): string =>
+    plural("cs", count, {
+      one: "Zobrazit další nahrávku",
+      few: `Zobrazit další ${count} nahrávky`,
+      many: `Zobrazit dalších ${count} nahrávky`,
+      other: `Zobrazit dalších ${count} nahrávek`,
+    }),
   showFewer: "Zobrazit méně", // en: Show fewer
 
   archiveConfirmTitle: (title: string): string => `Archivovat ${title}?`, // en: `Archive ${title}?`

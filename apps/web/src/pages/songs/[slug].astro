@@ -645,8 +645,7 @@ const lineUp = pageRoster(
                 <details class="bp-take-fold">
                   <summary class="bp-take-fold-toggle">
                     <span class="bp-take-fold-open">
-                      Show {foldedTakes.length} more{" "}
-                      {foldedTakes.length === 1 ? "take" : "takes"}
+                      {t.songs.showMoreTakes(foldedTakes.length)}
                     </span>
                     <span class="bp-take-fold-close">{t.songs.showFewer}</span>
                   </summary>

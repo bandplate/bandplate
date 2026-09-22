@@ -99,7 +99,9 @@ export const songs = {
 
   takesHeading: "Takes",
   takesEmpty: "No takes of this one yet — record a rehearsal and it'll show up here.",
-  showMore: (count: number): string => `Show ${count} more`,
+  /** The fold under a song's first takes. */
+  showMoreTakes: (count: number): string =>
+    `Show ${count} more ${plural("en", count, { one: "take", other: "takes" })}`,
   showFewer: "Show fewer",
 
   archiveConfirmTitle: (title: string): string => `Archive ${title}?`,

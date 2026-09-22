@@ -252,7 +252,11 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "songs.unarchiveConfirmTitle": [{ label: "t", args: ["Čoudy"] }],
   "songs.archiveConfirmTitle": [{ label: "t", args: ["Čoudy"] }],
   "songs.deleteConfirmTitle": [{ label: "t", args: ["Čoudy"] }],
-  "songs.showMore": [{ label: "n", args: [4] }],
+  "songs.showMoreTakes": [
+    { label: "one", args: [1] },
+    { label: "few", args: [3] },
+    { label: "other", args: [7] },
+  ],
   "songs.archiveConsequence": [
     { label: "none", args: [{ takeCount: 0 }] },
     { label: "one", args: [{ takeCount: 1 }] },

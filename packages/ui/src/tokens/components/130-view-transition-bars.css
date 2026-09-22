@@ -53,7 +53,13 @@
   text-overflow: ellipsis;
 }
 
+/* `max-width: 100%` is what makes the ellipsis fire. Inside the meta button
+   the column is `align-items: flex-start`, so each line takes its text's own
+   width, and a `nowrap` line's own width is ALL of its text: nothing clipped,
+   and on a phone the source ran on under the close button. The title line
+   carries the same cap for the same reason. */
 .bp-player-subtitle {
+  max-width: 100%;
   color: var(--bp-color-muted);
   font-size: 0.8125rem;
   white-space: nowrap;

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initialRecorderState, type RecorderPhase, reduceRecorder } from "./recorder-logic.js";
 import {
-  canChangeSong,
   durationAtStop,
   hasUnsavedRecording,
   isCapturing,
@@ -107,18 +106,6 @@ describe("openConfirm", () => {
   it("shows nothing anywhere else, whatever was asked", () => {
     expect(openConfirm("recording", true)).toBeNull();
     expect(openConfirm("pick", true)).toBeNull();
-  });
-});
-
-describe("canChangeSong", () => {
-  it("offers the picker from an armed stage with a library to pick from", () => {
-    expect(canChangeSong({ phase: "armed", songCount: 2, songOnLink: false })).toBe(true);
-  });
-
-  it("does not when the song came with the link, or there is only one", () => {
-    expect(canChangeSong({ phase: "armed", songCount: 2, songOnLink: true })).toBe(false);
-    expect(canChangeSong({ phase: "armed", songCount: 1, songOnLink: false })).toBe(false);
-    expect(canChangeSong({ phase: "error", songCount: 5, songOnLink: false })).toBe(false);
   });
 });
 

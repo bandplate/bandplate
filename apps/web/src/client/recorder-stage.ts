@@ -89,18 +89,6 @@ export function openConfirm(phase: RecorderPhase, leaveAsked: boolean): "discard
 }
 
 /**
- * Whether the armed stage offers a way back to the picker: only when the song
- * was not handed over with the link, and there is more than one to choose.
- */
-export function canChangeSong(input: {
-  phase: RecorderPhase;
-  songCount: number;
-  songOnLink: boolean;
-}): boolean {
-  return input.phase === "armed" && input.songCount > 1 && !input.songOnLink;
-}
-
-/**
  * "Zatím bez písně" is drawn pressed once it is the ANSWER. `songId: null`
  * alone also means nobody has answered yet, and drawing it pressed on first
  * paint would claim a choice the member never made.

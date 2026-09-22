@@ -28,7 +28,6 @@ import {
   waveformBars,
 } from "../client/recorder-logic.js";
 import {
-  canChangeSong,
   durationAtStop,
   hasUnsavedRecording,
   isCapturing,
@@ -815,19 +814,6 @@ export default function Recorder({
           <p class="bp-field-error bp-m0" role="alert">
             {errorText[state.error]}
           </p>
-        )}
-        {canChangeSong({
-          phase: state.phase,
-          songCount: songs.length,
-          songOnLink: Boolean(preselectedSongId),
-        }) && (
-          <button
-            type="button"
-            class="bp-btn bp-btn-secondary bp-btn-sm"
-            onClick={() => dispatch({ type: "change-song" })}
-          >
-            {t.pickTitle}
-          </button>
         )}
       </div>
       <p class="bp-rec-note bp-m0">{t.screenNote}</p>

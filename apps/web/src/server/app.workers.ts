@@ -33,6 +33,7 @@ import {
   loadWorkersConfig,
   type WorkersRuntimeConfig,
 } from "./config.worker.js";
+import { loginRequestLogLine } from "./login-log.js";
 
 type ApiApp = ReturnType<typeof createApp>;
 
@@ -103,15 +104,15 @@ async function buildWorkersRuntime(env: CloudflareEnv): Promise<Runtime> {
     // Only `bootstrapAdmin`'s confirmation email uses this — it is the one
     // message with no link of its own to take an origin from.
     appOrigin: config.appOrigin,
-    // Same as the Node profile — see `AuthDeps.onLoginRequest`. On Workers
-    // this reaches `wrangler tail` rather than a terminal, which is the only
-    // place an operator can see which of the two outcomes happened.
-    onLoginRequest: (email, outcome) => {
-      console.log(
-        outcome === "sent"
-          ? `[login] link sent to ${email}`
-          : `[login] no link sent — ${email} is not an active member (the page says the same either way)`,
-      );
+    // See `AuthDeps.onLoginRequest`. On Workers this reaches `wrangler
+    // tail` AND, once `[observability]` is on, Cloudflare's persisted
+    // Workers Logs — visible to every account member for as long as
+    // Cloudflare retains them, not just whoever happens to be tailing.
+    // Unlike the Node profile (`app.ts`, console reaches only the
+    // operator's own terminal), this callback deliberately does not log
+    // the address — see `login-log.ts`.
+    onLoginRequest: (_email, outcome) => {
+      console.log(loginRequestLogLine(outcome));
     },
   };
   const app = createApp(deps);

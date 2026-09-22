@@ -7,7 +7,9 @@
 name = "bandplate"
 # The Worker's entry: the adapter's stock `fetch` plus the `scheduled`
 # handler the cron below calls. Leave this out and the build falls back to
-# the stock entry, the site still works, and the cron silently does nothing.
+# the stock entry, which has no `scheduled` handler — the build's
+# cron-wiring check (see `scripts/cron-wiring.ts`) catches that and fails
+# the build rather than shipping a cron that silently does nothing.
 main = "./src/worker.ts"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]

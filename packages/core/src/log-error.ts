@@ -134,12 +134,24 @@ export function logError(input: LogErrorInput): void {
 }
 
 /**
+ * Drizzle 0.45's `DrizzleQueryError` builds its `message` as
+ * `` `Failed query: ${query}\nparams: ${params}` `` — `params` is the bound
+ * values array's `.toString()`, which can hold anything the query was
+ * called with: a member's email, a bootstrap token, whatever. That line
+ * (from the first `\nparams: ` onward) is the only place a query's bound
+ * values reach the message, so stripping it is enough to keep them out of
+ * the log record without touching the query text itself, which is safe —
+ * it is `?`-parameterized SQL, never the values.
+ */
+const DRIZZLE_PARAMS_LINE = /\nparams: [\s\S]*$/;
+
+/**
  * Pulls a message/stack pair out of an unknown `catch` value, the way
  * every call site used to do inline with `String(err)`. Never throws.
  */
 export function describeError(err: unknown): { message: string; stack?: string } {
   if (err instanceof Error) {
-    return { message: err.message, stack: err.stack };
+    return { message: err.message.replace(DRIZZLE_PARAMS_LINE, ""), stack: err.stack };
   }
   return { message: String(err) };
 }

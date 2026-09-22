@@ -143,6 +143,30 @@ describe("describeError", () => {
     expect(describeError("plain string")).toEqual({ message: "plain string" });
     expect(describeError(42)).toEqual({ message: "42" });
   });
+
+  it("strips the params line Drizzle 0.45's DrizzleQueryError puts in message", () => {
+    // Shape of drizzle-orm's DrizzleQueryError message:
+    // `Failed query: ${query}\nparams: ${params}` — params is the bound
+    // values array's `.toString()`, which can hold a member's email, a
+    // token, anything a query was called with.
+    const err = new Error(
+      "Failed query: select * from members where email = ?\nparams: alice@example.com",
+    );
+    const { message } = describeError(err);
+    expect(message).toBe("Failed query: select * from members where email = ?");
+    expect(message).not.toContain("alice@example.com");
+    expect(message).not.toContain("params:");
+  });
+
+  it("leaves a message with no params line untouched", () => {
+    const err = new Error("some ordinary failure");
+    expect(describeError(err).message).toBe("some ordinary failure");
+  });
+
+  it("only strips a params line, not the word 'params' appearing elsewhere", () => {
+    const err = new Error("failed to parse params object");
+    expect(describeError(err).message).toBe("failed to parse params object");
+  });
 });
 
 describe("logError", () => {

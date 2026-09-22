@@ -352,9 +352,15 @@ public assets; without it wrangler reads `wrangler.toml` directly, and an
 old one that still says `[assets] directory = "dist"` would upload the
 whole server bundle as static files.
 
-The same build also fails, on purpose, when `wrangler.toml` declares a
-cron but the built Worker has no `scheduled` handler (a missing `main`
-does exactly that, silently): see `apps/web/scripts/cron-wiring.ts`.
+The same build also fails, on purpose, in two cases that would otherwise
+ship silently broken: when `wrangler.toml` declares a cron but the built
+Worker has no `scheduled` handler (a missing `main` does exactly that),
+and when the generated `wrangler.json` has no `[observability] enabled =
+true` (Workers Logs off, with nothing at deploy or runtime to say so). See
+`apps/web/scripts/cron-wiring.ts` for both checks.
+
+Enabling `[observability]` has its own privacy cost — see the note under
+"6. Gated deploys from CI" below.
 
 ## 6. Gated deploys from CI
 
@@ -382,19 +388,31 @@ The job needs three repository secrets:
   apps/web/wrangler.toml`) before the migrations check and build run. It
   must be the **whole** file, including the `[observability]` block
   (`enabled = true`, `head_sampling_rate = ...`) — a `WRANGLER_TOML` secret
-  copied from an older local file that predates that block will deploy
-  successfully but silently ship without Workers Logs/observability
-  configured.
+  copied from an older local file that predates that block now fails the
+  build's `checkObservability` step (see `apps/web/scripts/cron-wiring.ts`)
+  rather than shipping without Workers Logs.
 
   **Upgrading a `WRANGLER_TOML` (or local `wrangler.toml`) from before the
   Astro 7 upgrade:** two lines change, both already in
   `wrangler.toml.example`. `main` becomes `"./src/worker.ts"` (it was
   `"dist/_worker.js/index.js"`), and `[assets]` loses its
   `directory = "dist"` line, keeping only `binding = "ASSETS"`. The build
-  fails on the old `main`, since that file no longer exists. Leave `main`
-  out entirely and the build succeeds with the adapter's stock entry,
-  which has no `scheduled` handler: the site works and the notification
-  cron silently does nothing.
+  fails on the old `main`, since that file no longer exists, and fails the
+  same way if `main` is left out entirely: the adapter's stock entry has
+  no `scheduled` handler, and the build's cron-wiring check refuses to
+  ship a cron that would silently do nothing.
+
+  **Workers Logs and the sign-in link:** with `[observability]` on,
+  Cloudflare's own invocation logs record the full request URL for every
+  request the Worker serves — including a GET to `/login/<token>`, the
+  single-use sign-in link. If an email scanner (a corporate security
+  gateway, an inbox provider's link-prefetcher) opens that link before the
+  member does, the token itself sits in Cloudflare's dashboard, readable
+  by anyone with access to the account, until it expires or is used. This
+  is why who has access to the Cloudflare account matters as much as who
+  has access to the mailbox — see `packages/core/src/log-error.ts` for
+  what this app's own structured logging deliberately keeps out of that
+  same log store (route tokens, query params, request bodies).
 
 If `CLOUDFLARE_API_TOKEN` is unset (a fork, or a repo that hasn't been set
 up for production deploys yet), the job's first step prints `deploy

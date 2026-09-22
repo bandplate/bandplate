@@ -4,7 +4,9 @@
 // `main = "./src/worker.ts"` (see `wrangler.toml.example` and
 // `docs/deploy-cloudflare.md`). Leave `main` out and the adapter falls back
 // to its stock entry, which has no `scheduled` handler, so the cron below
-// would fire into nothing.
+// would fire into nothing — the build's `bandplate-cron-wiring` hook (see
+// `scripts/cron-wiring.ts`) catches that and fails the build rather than
+// letting it happen silently.
 //
 // The stock entry (`@astrojs/cloudflare/entrypoints/server`) is exactly
 // `export default { fetch: handle }`, with `handle` from

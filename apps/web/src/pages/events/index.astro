@@ -213,7 +213,7 @@ function archivedHref(): string {
         KIND_OPTIONS.map((option) => {
           const on = selected.includes(option.value);
           return (
-            <a href={toggleHref(option.value)} class="bp-pill" aria-pressed={on ? "true" : "false"}>
+            <a href={toggleHref(option.value)} class="bp-btn bp-btn-quiet bp-btn-xs" aria-pressed={on ? "true" : "false"}>
               {option.label}
             </a>
           );
@@ -223,7 +223,7 @@ function archivedHref(): string {
         (archivedCount > 0 || viewingArchive) && (
           <a
             href={archivedHref()}
-            class="bp-pill bp-pill--set-apart"
+            class="bp-btn bp-btn-quiet bp-btn-xs bp-btn--set-apart"
             aria-pressed={viewingArchive ? "true" : "false"}
           >
             {t.events.archived}

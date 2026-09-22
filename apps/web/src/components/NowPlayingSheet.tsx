@@ -152,7 +152,7 @@ export function NowPlayingSheet(props: NowPlayingSheetProps) {
                   <button
                     key={source.assetId}
                     type="button"
-                    class={`bp-pill${selected ? " is-active" : ""}`}
+                    class={`bp-btn bp-btn-quiet bp-btn-sm${selected ? " is-active" : ""}`}
                     aria-pressed={selected ? "true" : "false"}
                     {...{ [AUDIO_SOURCE_ATTR]: "" }}
                     data-take-id={track.takeId}

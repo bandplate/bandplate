@@ -359,7 +359,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
           one control, always in the same place, rather than the same
           "record" affordance risking two spellings of itself on one page. */}
       <div class="bp-pills bp-song-record">
-        <a href={`/record?song=${song.slug}`} class="bp-pill bp-pill--action bp-record-btn bp-pill--record" data-astro-reload>
+        <a href={`/record?song=${song.slug}`} class="bp-btn bp-btn-sm bp-record-btn" data-astro-reload>
           <span class="bp-record-mark" aria-hidden="true"></span>
           {t.stash.recordIdea}
         </a>
@@ -404,9 +404,9 @@ function eventOptionLabel(event: eventsRepo.Event): string {
             <legend class="bp-eyebrow">{t.takes.instrumentsHeading}</legend>
             <div class="bp-pills">
               {allInstruments.map((instrument) => (
-                <label class="bp-pill-check">
+                <label class="bp-btn-check">
                   <input type="checkbox" name="instrumentIds" value={instrument.id} />
-                  <span class="bp-pill">{instrument.label}</span>
+                  <span class="bp-btn bp-btn-quiet bp-btn-xs">{instrument.label}</span>
                 </label>
               ))}
             </div>

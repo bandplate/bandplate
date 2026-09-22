@@ -265,7 +265,7 @@ function archivedHref(): string {
         SORT_OPTIONS.map((option) => (
           <a
             href={sortHref(option.value)}
-            class="bp-pill"
+            class="bp-btn bp-btn-quiet bp-btn-xs"
             aria-pressed={sort === option.value ? "true" : "false"}
           >
             {option.label}
@@ -279,7 +279,7 @@ function archivedHref(): string {
         (archivedCount > 0 || viewingArchive) && (
           <a
             href={archivedHref()}
-            class="bp-pill bp-pill--set-apart"
+            class="bp-btn bp-btn-quiet bp-btn-xs bp-btn--set-apart"
             aria-pressed={viewingArchive ? "true" : "false"}
           >
             {t.songs.archived}

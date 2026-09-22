@@ -276,14 +276,14 @@ const mailFailed = Astro.url.searchParams.get("nomail") === "1";
                           <legend class="bp-eyebrow">{ta.colInstruments}</legend>
                           <div class="bp-pills">
                             {allInstruments.map((instrument) => (
-                              <label class="bp-pill-check">
+                              <label class="bp-btn-check">
                                 <input
                                   type="checkbox"
                                   name="instrumentIds"
                                   value={instrument.id}
                                   checked={member.instrumentIds.includes(instrument.id)}
                                 />
-                                <span class="bp-pill">
+                                <span class="bp-btn bp-btn-quiet bp-btn-xs">
                                   {instrument.label}
                                   {instrument.archivedAt !== null ? " (archived)" : ""}
                                 </span>

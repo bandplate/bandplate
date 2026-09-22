@@ -437,7 +437,7 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments, loca
                   <div class="bp-uploader-controls">
                     <div class="bp-pills">
                       {(["master", "stem"] as AssetKind[]).map((kind) => (
-                        <label class="bp-pill-check" key={kind}>
+                        <label class="bp-btn-check" key={kind}>
                           <input
                             type="radio"
                             name={`kind-${item.id}`}
@@ -445,7 +445,9 @@ export default function AssetUploader({ takeId, takeHasMaster, instruments, loca
                             disabled={item.phase !== "queued" && item.phase !== "slot-occupied"}
                             onChange={() => dispatch(item.id, { type: "kind", kind })}
                           />
-                          <span class="bp-pill">{kind === "master" ? "Master" : "Stem"}</span>
+                          <span class="bp-btn bp-btn-quiet bp-btn-xs">
+                            {kind === "master" ? "Master" : "Stem"}
+                          </span>
                         </label>
                       ))}
                     </div>

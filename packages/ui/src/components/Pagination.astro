@@ -3,10 +3,10 @@ import ChevronLeft from "@lucide/astro/icons/chevron-left";
 import ChevronRight from "@lucide/astro/icons/chevron-right";
 // The control under every listing that can grow.
 //
-// It is built from `.bp-pill`, which already carried an
-// `[aria-current="page"]` rule before anything paged — the filter pills and
-// the page numbers are the same object (a small, pressable, pill-shaped
-// choice among a row of them), and giving pagination its own near-identical
+// It is built from the quiet xs button (`.bp-btn-quiet`), whose
+// `[aria-current="page"]` state the filters already use: the filters and
+// the page numbers are the same object (a small, pressable choice among a
+// row of them), and giving pagination its own near-identical
 // vocabulary would have been a second thing to keep in step with the first.
 //
 // --- Links, not buttons -------------------------------------------------
@@ -103,7 +103,7 @@ const { pageCount, prevHref, nextHref, items, labels } = Astro.props;
 
       <div class="bp-pagination-row">
         {prevHref ? (
-          <a class="bp-pill bp-pagination-step" href={prevHref} rel="prev">
+          <a class="bp-btn bp-btn-quiet bp-btn-xs bp-pagination-step" href={prevHref} rel="prev">
             <ChevronLeft size={16} aria-hidden="true" stroke-width={2.2} />
             <span class="bp-pagination-step-word">{labels.previous}</span>
           </a>
@@ -112,7 +112,7 @@ const { pageCount, prevHref, nextHref, items, labels } = Astro.props;
              every number along with it makes the row jump under a thumb that
              is already moving toward one. `aria-hidden` because "unavailable
              previous page" is noise a screen reader does not need. */
-          <span class="bp-pill bp-pagination-step bp-pagination-step--off" aria-hidden="true">
+          <span class="bp-btn bp-btn-quiet bp-btn-xs bp-pagination-step bp-pagination-step--off" aria-hidden="true">
             <ChevronLeft size={16} stroke-width={2.2} />
             <span class="bp-pagination-step-word">{labels.previous}</span>
           </span>
@@ -135,7 +135,7 @@ const { pageCount, prevHref, nextHref, items, labels } = Astro.props;
             ) : (
               <li>
                 <a
-                  class="bp-pill bp-pagination-page"
+                  class="bp-btn bp-btn-quiet bp-btn-xs bp-pagination-page"
                   href={item.href}
                   aria-current={item.current ? "page" : undefined}
                   aria-label={item.page === undefined ? undefined : labels.page(item.page)}
@@ -148,12 +148,12 @@ const { pageCount, prevHref, nextHref, items, labels } = Astro.props;
         </ol>
 
         {nextHref ? (
-          <a class="bp-pill bp-pagination-step" href={nextHref} rel="next">
+          <a class="bp-btn bp-btn-quiet bp-btn-xs bp-pagination-step" href={nextHref} rel="next">
             <span class="bp-pagination-step-word">{labels.next}</span>
             <ChevronRight size={16} aria-hidden="true" stroke-width={2.2} />
           </a>
         ) : (
-          <span class="bp-pill bp-pagination-step bp-pagination-step--off" aria-hidden="true">
+          <span class="bp-btn bp-btn-quiet bp-btn-xs bp-pagination-step bp-pagination-step--off" aria-hidden="true">
             <span class="bp-pagination-step-word">{labels.next}</span>
             <ChevronRight size={16} stroke-width={2.2} />
           </span>

@@ -9,7 +9,7 @@ import { messages } from "@bandplate/i18n";
 // actually specific to admin is this — the page's title and the row of
 // sections beneath it.
 //
-// The pills are the `.bp-pill` the events archive uses, carrying
+// The sections are the quiet xs buttons the events archive filters with, carrying
 // `aria-current="page"` rather than `aria-pressed`. Same shape, different
 // verb: these navigate, they do not toggle, and a pressed toggle that is
 // really a link is the kind of control nobody can predict.
@@ -52,7 +52,7 @@ const sections = [
       sections.map((section) => (
         <a
           href={section.href}
-          class="bp-pill"
+          class="bp-btn bp-btn-quiet bp-btn-xs"
           aria-current={section.key === current ? "page" : undefined}
         >
           {section.label}

@@ -331,9 +331,9 @@ const [allSongs, allInstruments] = await Promise.all([
             <legend class="bp-eyebrow">{t.events.instrumentsHeading}</legend>
             <div class="bp-pills">
               {allInstruments.map((instrument) => (
-                <label class="bp-pill-check">
+                <label class="bp-btn-check">
                   <input type="checkbox" name="instrumentIds" value={instrument.id} />
-                  <span class="bp-pill">{instrument.label}</span>
+                  <span class="bp-btn bp-btn-quiet bp-btn-xs">{instrument.label}</span>
                 </label>
               ))}
             </div>

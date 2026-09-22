@@ -162,7 +162,7 @@ const stashCard = stash
                     the event, which lists exactly these takes; each one's
                     vote is on its own page, one tap from there. */}
                 {stand.unvoted > 0 && (
-                  <a href={`/events/${stand.id}`} class="bp-pill bp-pill--action bp-stand-vote">
+                  <a href={`/events/${stand.id}`} class="bp-btn bp-btn-secondary bp-btn-sm bp-stand-vote">
                     {t.home.voteCount(stand.unvoted)}
                   </a>
                 )}
@@ -231,13 +231,13 @@ const stashCard = stash
                   <p class="bp-stash-card-meta">{stashCard.when}</p>
                 </div>
                 <div class="bp-pills">
-                  <a href="/takes?stash=1" class="bp-pill bp-pill--action">
+                  <a href="/takes?stash=1" class="bp-btn bp-btn-quiet bp-btn-sm">
                     <Inbox size={16} aria-hidden="true" />
                     {t.stash.openStash}
                   </a>
                   <a
                     href="/record"
-                    class="bp-pill bp-pill--action bp-record-btn bp-pill--record"
+                    class="bp-btn bp-btn-sm bp-record-btn"
                     data-astro-reload
                   >
                     <span class="bp-record-mark" aria-hidden="true" />

@@ -181,14 +181,14 @@ if (!viewingStash && pages.redirectTo) {
     href={viewingStash ? "/takes" : "/takes?stash=1"}
     class={
       viewingStash
-        ? "bp-pill bp-pill--action bp-pill--xs bp-pill--stash-close"
-        : "bp-pill bp-pill--action bp-pill--xs"
+        ? "bp-btn bp-btn-quiet bp-btn-xs"
+        : "bp-btn bp-btn-quiet bp-btn-xs"
     }
     aria-pressed={viewingStash ? "true" : "false"}
   >
     <Inbox size={14} aria-hidden="true" />
     {viewingStash ? <span class="bp-record-word">{t.stash.pillClose}</span> : t.stash.pill}
-    {!viewingStash && stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
+    {!viewingStash && stashCount > 0 && <span class="bp-btn-count">{stashCount}</span>}
   </a>
   <div class={viewingStash ? "bp-takes bp-takes--stash" : "bp-takes"}>
     <div class="bp-takes-bar">
@@ -217,8 +217,8 @@ if (!viewingStash && pages.redirectTo) {
         href={viewingStash ? "/takes" : "/takes?stash=1"}
         class={
           viewingStash
-            ? "bp-pill bp-pill--action bp-pill--xs bp-pill--stash-close bp-titled-action"
-            : "bp-pill bp-pill--action bp-pill--xs bp-titled-action"
+            ? "bp-btn bp-btn-quiet bp-btn-xs bp-titled-action"
+            : "bp-btn bp-btn-quiet bp-btn-xs bp-titled-action"
         }
         aria-pressed={viewingStash ? "true" : "false"}
       >
@@ -234,7 +234,7 @@ if (!viewingStash && pages.redirectTo) {
           </>
         )}
         {/* Open, the count is in the title ("Šuplík (1)"), not on the way out. */}
-        {!viewingStash && stashCount > 0 && <span class="bp-pill-count">{stashCount}</span>}
+        {!viewingStash && stashCount > 0 && <span class="bp-btn-count">{stashCount}</span>}
       </a>
       {/* In the stash, the way in to the recorder where the filters were: the
           SAME pill the song page carries, caption and all, so one affordance
@@ -243,7 +243,7 @@ if (!viewingStash && pages.redirectTo) {
           close pill beside it drops to its cross, which is the only way both
           fit beside the title at 375px. */}
       {viewingStash ? (
-        <a href="/record" class="bp-pill bp-pill--action bp-pill--xs bp-record-btn bp-pill--record" data-astro-reload>
+        <a href="/record" class="bp-btn bp-btn-xs bp-record-btn" data-astro-reload>
           <span class="bp-record-mark" aria-hidden="true"></span>
           <span class="bp-record-word">{t.stash.recordIdea}</span>
           <span class="bp-record-word-short" aria-hidden="true">{t.stash.recShort}</span>
@@ -325,7 +325,7 @@ if (!viewingStash && pages.redirectTo) {
               </legend>
               <div class="bp-pills">
                 {instruments.map((instrument) => (
-                  <label class="bp-pill-check">
+                  <label class="bp-btn-check">
                     <input
                       type="checkbox"
                       id={`search-instrument-${instrument.id}`}
@@ -333,7 +333,7 @@ if (!viewingStash && pages.redirectTo) {
                       value={instrument.id}
                       checked={query.instrumentIds.includes(instrument.id)}
                     />
-                    <span class="bp-pill">{instrument.label}</span>
+                    <span class="bp-btn bp-btn-quiet bp-btn-xs">{instrument.label}</span>
                   </label>
                 ))}
               </div>
@@ -351,19 +351,19 @@ if (!viewingStash && pages.redirectTo) {
             <fieldset class="bp-filter-group">
               <legend class="bp-eyebrow bp-filter-legend">{t.takes.recordedLegend}</legend>
               <div class="bp-pills">
-                <label class="bp-pill-check">
+                <label class="bp-btn-check">
                   <input
                     type="radio"
                     name="since"
                     value=""
                     checked={!query.since && !usingExactDates}
                   />
-                  <span class="bp-pill">{t.takes.anyTime}</span>
+                  <span class="bp-btn bp-btn-quiet bp-btn-xs">{t.takes.anyTime}</span>
                 </label>
                 {Object.entries(RECORDED_WINDOWS).map(([value, { labelKey }]) => (
-                  <label class="bp-pill-check">
+                  <label class="bp-btn-check">
                     <input type="radio" name="since" value={value} checked={query.since === value} />
-                    <span class="bp-pill">{t.takes[labelKey]}</span>
+                    <span class="bp-btn bp-btn-quiet bp-btn-xs">{t.takes[labelKey]}</span>
                   </label>
                 ))}
               </div>
@@ -402,7 +402,7 @@ if (!viewingStash && pages.redirectTo) {
             <fieldset class="bp-filter-group">
               <legend class="bp-eyebrow bp-filter-legend">{t.takes.yoursLegend}</legend>
               <div class="bp-pills">
-                <label class="bp-pill-check">
+                <label class="bp-btn-check">
                   <input
                     type="checkbox"
                     id="search-unvoted"
@@ -410,7 +410,7 @@ if (!viewingStash && pages.redirectTo) {
                     value="1"
                     checked={query.unvotedOnly}
                   />
-                  <span class="bp-pill">{t.takes.notVotedByMe}</span>
+                  <span class="bp-btn bp-btn-quiet bp-btn-xs">{t.takes.notVotedByMe}</span>
                 </label>
               </div>
             </fieldset>

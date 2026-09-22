@@ -43,7 +43,7 @@ import { currentTrack, playQueue } from "../client/player-store.js";
 import { stashName, stashNote } from "../client/stash-display.js";
 import { stashSheetId } from "../client/stash-sheet-ids.js";
 import { createStashSheets, type StashSheets } from "../client/stash-sheets.js";
-import { pendingStash, syncedStash } from "../client/stash-store.js";
+import { currentMember, pendingStash, syncedStash } from "../client/stash-store.js";
 import {
   discardPending,
   discardPendingForTake,
@@ -62,8 +62,16 @@ import {
 interface Props {
   locale: Locale;
   /**
-   * The signed-in member. A shared browser holds other members' recordings
-   * too; those are not drawn, so they cannot be discarded from here either.
+   * The signed-in member, AS OF THIS PAGE'S OWN SERVER RENDER. A shared
+   * browser holds other members' recordings too; those are not drawn, so
+   * they cannot be discarded from here either.
+   *
+   * Only the fallback for the render before `stash-sync.ts`'s own
+   * `currentMember` store has a value (effectively never, in practice — see
+   * below) and for a document with no script at all. The live render always
+   * prefers that store: `<ClientRouter />` never unmounts this island, and a
+   * member switch signalled from another tab (`member-signal.ts`) must hide
+   * the old member's rows here without this tab navigating.
    */
   memberId: string;
   /** The server rows on this page — a recording already among them is not drawn twice. */
@@ -154,6 +162,15 @@ export default function StashPendingList({
   const player = playerMessages(lc);
   const pending = useStore(pendingStash);
   const synced = useStore(syncedStash);
+  // `startStashSync` sets this before any island hydrates, on every full
+  // load; the `memberId` prop is the fallback for the sliver of time (if
+  // any) before that, and for a document with no script. `undefined` is
+  // "not set yet" — `null` is a real answer ("nobody signed in", from a
+  // sign-out signal) and must NOT fall back to the stale prop, or a member
+  // switch signalled from another tab would keep showing the old member's
+  // rows. See `currentMember`'s own comment in `stash-store.ts`.
+  const liveMemberId = useStore(currentMember);
+  const effectiveMemberId = liveMemberId === undefined ? memberId : liveMemberId;
   // The server cannot see IndexedDB, so it renders as if nothing were pending.
   // The first render in the browser has to say the same, or hydration finds
   // rows the server never sent (the sync runner has usually filled the store
@@ -221,7 +238,7 @@ export default function StashPendingList({
     ? localStashRows(
         pending,
         synced.map((item) => item.row),
-        memberId,
+        effectiveMemberId,
         new Set(serverTakeIds),
         new Set(deletedTakeId ? [deletedTakeId] : []),
       )

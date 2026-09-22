@@ -9,6 +9,23 @@ import type { PendingSummary } from "./stash-sync-logic.js";
 export const pendingStash = atom<PendingSummary[]>([]);
 
 /**
+ * Who `stash-sync.ts` currently believes is signed in — `undefined` until
+ * `startStashSync` has run once, then `null` or a member id, kept live by the
+ * cross-tab member signal (see `member-signal.ts`).
+ *
+ * `undefined` is its own state, DELIBERATELY distinct from `null` ("nobody is
+ * signed in", a real answer once a sign-out signal has landed): a shared
+ * browser's pending list island is handed the signed-in member as a
+ * server-rendered prop, which is only as fresh as this tab's last navigation,
+ * and `StashPendingList` falls back to that prop only while this store has
+ * never been set. Collapsing the two into one `null` was the bug this comment
+ * replaces — `liveMemberId ?? prop` treated "signed out" exactly like
+ * "unknown yet" and fell back to the stale prop, which is precisely the
+ * member switch this store exists to catch.
+ */
+export const currentMember = atom<string | null | undefined>(undefined);
+
+/**
  * One recording the server now has, handed over at the moment its local copy
  * was deleted.
  *

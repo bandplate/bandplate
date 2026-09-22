@@ -415,6 +415,7 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
   // member stuck: whatever throws (no service worker, a revoked permission,
   // `unsubscribe()` rejecting), the `finally` still submits. Signing out
   // must never depend on push working.
+  import { broadcastMemberSignal } from "../client/member-signal.js";
   import { endpointFieldValue } from "../client/push-logout.js";
 
   async function resolveAndSubmit(form: HTMLFormElement) {
@@ -451,6 +452,13 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
         return; // the re-submission below — let it go through for real
       }
       event.preventDefault();
+      // Tell every OTHER open tab "nobody's signed in" right now, not once
+      // this tab's own next page finishes loading. `<ClientRouter />` may
+      // turn the submission below into a soft navigation, which never
+      // re-runs `startStashSync` (see the script above) — so without this,
+      // a tab that stays open through the sign-out would keep drawing and
+      // syncing the old member's stash until it happens to navigate again.
+      broadcastMemberSignal(null);
       resolveAndSubmit(form);
     },
     { capture: true },

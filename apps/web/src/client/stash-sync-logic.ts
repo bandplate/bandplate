@@ -127,6 +127,28 @@ export function shouldSync(item: Pick<PendingSummary, "status">): boolean {
   return item.status !== "failed";
 }
 
+/**
+ * The upload rule: whether THIS attempt, right now, may go up as the
+ * signed-in member.
+ *
+ * Every other check in this module (`shouldSync`, `ownPending`) runs once,
+ * when a sync starts or a list is drawn. This one is meant to be re-run
+ * immediately before each network call, with `currentMemberId` read fresh —
+ * because a shared browser's member can change mid-run: tab 1 is looping
+ * through tab 1's own list when a `storage` signal from tab 2's sign-out (and
+ * sign back in as someone else) updates who is signed in. A recording that
+ * was tab 1's to upload a moment ago is not, once that happens, and this is
+ * the last check standing between it and going up under the wrong name — the
+ * server's own check on `POST /stash/takes` is the backstop for the request
+ * already in flight when the signal arrives.
+ */
+export function shouldUploadNow(
+  item: Pick<PendingSummary, "memberId" | "status">,
+  currentMemberId: string | null | undefined,
+): boolean {
+  return ownedBy(item, currentMemberId) && shouldSync(item);
+}
+
 export type Failure = { network: true } | { status: number };
 export type FailureKind = "retry" | "give-up";
 

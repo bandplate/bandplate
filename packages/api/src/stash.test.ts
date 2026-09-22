@@ -76,9 +76,10 @@ async function seedSong(testApp: TestApp) {
   });
 }
 
-function stashBody(songId: string | null, over: Record<string, unknown> = {}) {
+function stashBody(songId: string | null, memberId: string, over: Record<string, unknown> = {}) {
   return {
     clientRef: "0192f5b8-local-recording",
+    memberId,
     songId,
     label: "bridge idea",
     recordedAt: 1_700_000_000_000,
@@ -118,7 +119,7 @@ describe("POST /stash/takes", () => {
     const song = await seedSong(testApp);
     const { cookie, memberId } = await signIn(testApp, "robin");
 
-    const res = await post(testApp, "/stash/takes", cookie, stashBody(song.id));
+    const res = await post(testApp, "/stash/takes", cookie, stashBody(song.id, memberId));
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.created).toBe(true);
@@ -135,9 +136,11 @@ describe("POST /stash/takes", () => {
   it("answers a retry with the same take, 200 instead of 201", async () => {
     const testApp = await build();
     const song = await seedSong(testApp);
-    const { cookie } = await signIn(testApp, "robin");
-    const first = await (await post(testApp, "/stash/takes", cookie, stashBody(song.id))).json();
-    const retry = await post(testApp, "/stash/takes", cookie, stashBody(song.id));
+    const { cookie, memberId } = await signIn(testApp, "robin");
+    const first = await (
+      await post(testApp, "/stash/takes", cookie, stashBody(song.id, memberId))
+    ).json();
+    const retry = await post(testApp, "/stash/takes", cookie, stashBody(song.id, memberId));
     expect(retry.status).toBe(200);
     const body = await retry.json();
     expect(body.takeId).toBe(first.takeId);
@@ -147,10 +150,14 @@ describe("POST /stash/takes", () => {
   it("reports masterReady once the recording has landed", async () => {
     const testApp = await build();
     const song = await seedSong(testApp);
-    const { cookie } = await signIn(testApp, "robin");
-    const first = await (await post(testApp, "/stash/takes", cookie, stashBody(song.id))).json();
+    const { cookie, memberId } = await signIn(testApp, "robin");
+    const first = await (
+      await post(testApp, "/stash/takes", cookie, stashBody(song.id, memberId))
+    ).json();
     await readyMaster(testApp, first.takeId);
-    const retry = await (await post(testApp, "/stash/takes", cookie, stashBody(song.id))).json();
+    const retry = await (
+      await post(testApp, "/stash/takes", cookie, stashBody(song.id, memberId))
+    ).json();
     expect(retry.masterReady).toBe(true);
   });
 
@@ -160,7 +167,7 @@ describe("POST /stash/takes", () => {
     const testApp = await build();
     const { cookie, memberId } = await signIn(testApp, "robin");
 
-    const body = stashBody(null);
+    const body = stashBody(null, memberId);
     body.songId = undefined as unknown as string;
     const res = await post(testApp, "/stash/takes", cookie, body);
     expect(res.status).toBe(201);
@@ -176,8 +183,8 @@ describe("POST /stash/takes", () => {
 
   it("takes an explicit null song the same way", async () => {
     const testApp = await build();
-    const { cookie } = await signIn(testApp, "robin");
-    const res = await post(testApp, "/stash/takes", cookie, stashBody(null));
+    const { cookie, memberId } = await signIn(testApp, "robin");
+    const res = await post(testApp, "/stash/takes", cookie, stashBody(null, memberId));
     expect(res.status).toBe(201);
     const take = await takesRepo.getById(testApp.db, (await res.json()).takeId);
     expect(take?.songId).toBeNull();
@@ -185,8 +192,8 @@ describe("POST /stash/takes", () => {
 
   it("404s a song that does not exist", async () => {
     const testApp = await build();
-    const { cookie } = await signIn(testApp, "robin");
-    const res = await post(testApp, "/stash/takes", cookie, stashBody("nope"));
+    const { cookie, memberId } = await signIn(testApp, "robin");
+    const res = await post(testApp, "/stash/takes", cookie, stashBody("nope", memberId));
     expect(res.status).toBe(404);
     expect((await res.json()).error.code).toBe("song_not_found");
   });
@@ -196,10 +203,36 @@ describe("POST /stash/takes", () => {
     const song = await seedSong(testApp);
     const robin = await signIn(testApp, "robin");
     const sam = await signIn(testApp, "sam");
-    await post(testApp, "/stash/takes", robin.cookie, stashBody(song.id));
-    const res = await post(testApp, "/stash/takes", sam.cookie, stashBody(song.id));
+    await post(testApp, "/stash/takes", robin.cookie, stashBody(song.id, robin.memberId));
+    const res = await post(testApp, "/stash/takes", sam.cookie, stashBody(song.id, sam.memberId));
     expect(res.status).toBe(409);
     expect((await res.json()).error.code).toBe("client_ref_taken");
+  });
+
+  it("403s a create whose queued memberId does not match the signed-in member", async () => {
+    // The exact bug this task is for: a recording made under A, still queued
+    // when the browser's session cookie now names B (A signed out, B signed
+    // in, in another tab). The server is the one guarantee that matters —
+    // whatever the client believes, this must never create B's take from A's
+    // recording.
+    const testApp = await build();
+    const song = await seedSong(testApp);
+    const robin = await signIn(testApp, "robin");
+    const sam = await signIn(testApp, "sam");
+    const res = await post(
+      testApp,
+      "/stash/takes",
+      // sam's cookie (the session this request actually authenticates as)…
+      sam.cookie,
+      // …but the recording is tagged as robin's.
+      stashBody(song.id, robin.memberId),
+    );
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("member_mismatch");
+    // Never created — not under sam, and not under robin either.
+    expect(
+      await takesRepo.getByClientRef(testApp.db, "stash:0192f5b8-local-recording"),
+    ).toBeUndefined();
   });
 
   it("422s a body missing what it still needs", async () => {
@@ -223,7 +256,7 @@ describe("POST /stash/takes", () => {
     const res = await testApp.app.request("/stash/takes", {
       method: "POST",
       headers: { ...jsonHeaders, authorization: `Bearer ${created.rawToken}` },
-      body: JSON.stringify(stashBody(song.id)),
+      body: JSON.stringify(stashBody(song.id, "irrelevant")),
     });
     expect(res.status).toBe(403);
   });
@@ -235,7 +268,7 @@ describe("a private take is its owner's alone", () => {
     const robin = await signIn(testApp, "robin");
     const sam = await signIn(testApp, "sam");
     const { takeId } = await (
-      await post(testApp, "/stash/takes", robin.cookie, stashBody(song.id))
+      await post(testApp, "/stash/takes", robin.cookie, stashBody(song.id, robin.memberId))
     ).json();
     return { robin, sam, takeId: takeId as string };
   }

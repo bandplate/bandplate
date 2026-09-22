@@ -11,8 +11,9 @@
 // runner works only on the signed-in member's (`ownPending`): another
 // member's are not uploaded, not listed and not discarded, and a record from
 // before the member was stored belongs to no one and is left alone.
+import { broadcastMemberSignal, onMemberSignal } from "./member-signal.js";
 import { deletePending, getPending, listPending, putPending } from "./stash-db.js";
-import { pendingStash, syncedStash } from "./stash-store.js";
+import { currentMember, pendingStash, syncedStash } from "./stash-store.js";
 import {
   afterFailure,
   canRetryByHand,
@@ -24,7 +25,7 @@ import {
   pendingForTake,
   retryItem,
   type SyncRequest,
-  shouldSync,
+  shouldUploadNow,
   summarize,
   syncedForRender,
 } from "./stash-sync-logic.js";
@@ -49,15 +50,29 @@ async function listOwnPending(): Promise<PendingStashItem[]> {
   return ownPending(await listPending(), currentMemberId);
 }
 
+/**
+ * The one place `currentMemberId` changes. Keeps `currentMember` (the store
+ * `StashPendingList` reads) in step with it, so a member switch signalled
+ * from another tab hides the old member's rows in this one without a reload.
+ */
+function setCurrentMember(memberId: string | null): void {
+  currentMemberId = memberId;
+  currentMember.set(memberId);
+}
+
 class HttpFailure extends Error {
   constructor(
     readonly request: SyncRequest,
     readonly status: number,
+    readonly code: string | null,
     message: string,
   ) {
     super(message);
   }
 }
+
+/** The server's answer to a create whose queued memberId is not the caller's own. See `syncOne`. */
+const MEMBER_MISMATCH_CODE = "member_mismatch";
 
 async function postJson(url: string, body: unknown): Promise<Response> {
   return fetch(url, {
@@ -70,7 +85,12 @@ async function postJson(url: string, body: unknown): Promise<Response> {
 
 async function failureOf(request: SyncRequest, res: Response): Promise<HttpFailure> {
   const body = await res.json().catch(() => null);
-  return new HttpFailure(request, res.status, body?.error?.message ?? `HTTP ${res.status}`);
+  return new HttpFailure(
+    request,
+    res.status,
+    typeof body?.error?.code === "string" ? body.error.code : null,
+    body?.error?.message ?? `HTTP ${res.status}`,
+  );
 }
 
 export async function refreshPendingStash(): Promise<void> {
@@ -125,7 +145,7 @@ async function uploadMaster(item: PendingStashItem): Promise<void> {
   // fetch, not XHR: nobody watches a progress bar for a background retry.
   const put = await fetch(slot.url, { method: "PUT", headers: slot.headers, body: item.blob });
   if (!put.ok) {
-    throw new HttpFailure("put", put.status, `The bucket answered ${put.status}.`);
+    throw new HttpFailure("put", put.status, null, `The bucket answered ${put.status}.`);
   }
 
   const verified = await postJson(`/api/assets/${slot.assetId}/verify`, {
@@ -153,12 +173,25 @@ async function finish(item: PendingStashItem): Promise<void> {
 }
 
 async function syncOne(item: PendingStashItem): Promise<void> {
+  // The last check before a byte moves: `currentMemberId` is read fresh HERE,
+  // not just when `runOnce` fetched the list a moment ago. A `storage` signal
+  // from another tab's sign-out (and sign back in as someone else) can land
+  // between those two moments, and this is what keeps the recording queued
+  // instead of uploading it as whoever is signed in now.
+  if (!shouldUploadNow(item, currentMemberId)) {
+    return;
+  }
   let current: PendingStashItem = { ...item, status: "syncing" };
   await save(current);
   try {
     if (nextSyncStep(current) === "create") {
       const res = await postJson("/api/stash/takes", {
         clientRef: current.localId,
+        // The server derives WHO from the session, never from this — it is
+        // sent only so the server can refuse a create whose queued member
+        // does not match the session that is about to own it. See the
+        // `member_mismatch` handling below.
+        memberId: current.memberId,
         songId: current.songId,
         label: current.label,
         recordedAt: current.recordedAt,
@@ -178,6 +211,14 @@ async function syncOne(item: PendingStashItem): Promise<void> {
     await uploadMaster(current);
     await finish(current);
   } catch (err) {
+    if (err instanceof HttpFailure && err.code === MEMBER_MISMATCH_CODE) {
+      // Not this session's recording after all — the create above was
+      // already answered by whoever the cookie now names, and refused. Leave
+      // it exactly as it was: queued, no error shown, no attempt counted.
+      // It goes up once its own member signs back in on this device.
+      await save({ ...current, status: "waiting" });
+      return;
+    }
     const failure =
       err instanceof HttpFailure ? { status: err.status } : { network: true as const };
     const message = err instanceof Error ? err.message : String(err);
@@ -197,9 +238,7 @@ async function runOnce(): Promise<void> {
   }
   pendingStash.set(items.map(summarize));
   for (const item of items) {
-    if (shouldSync(item)) {
-      await syncOne(item);
-    }
+    await syncOne(item);
   }
   await refreshPendingStash();
 }
@@ -294,7 +333,23 @@ export function startStashSync(memberId: string | null): void {
     return;
   }
   started = true;
-  currentMemberId = memberId || null;
+  setCurrentMember(memberId || null);
+  // Every OTHER open tab hears this — including one that is about to load
+  // and would otherwise only learn it from ITS OWN startStashSync call, which
+  // is too late for tabs that never navigate again. Writing this tab's own
+  // localStorage fires no `storage` event here, only in the others.
+  broadcastMemberSignal(currentMemberId);
+  // The cross-tab half of a member switch: another tab's sign-out or sign-in
+  // updates `currentMemberId` here, without this tab navigating at all. The
+  // next `syncOne` re-checks it (see there) before touching the network, and
+  // `refreshPendingStash` re-filters what is drawn immediately.
+  onMemberSignal((next) => {
+    if (next === currentMemberId) {
+      return;
+    }
+    setCurrentMember(next);
+    void refreshPendingStash();
+  });
   // A navigation is the moment the server gets to say where every recording
   // now lives, so it is where a handed-over row's render ends. `before-swap`
   // rather than `page-load`: it fires on navigations only (never on the first

@@ -21,6 +21,18 @@ export interface StashRouteDeps {
 
 const createStashTakeSchema = z.object({
   clientRef: z.string().trim().min(8).max(100),
+  /**
+   * Who the BROWSER thinks recorded this — never who it is filed under (that
+   * is always the session's own `viewerMemberId`, below). A shared device's
+   * offline queue can hold one member's recording past a sign-out and
+   * another member's sign-in, and the queue only learns of that switch
+   * through a same-origin signal that can race the network (see
+   * `member-signal.ts`). This field is the backstop for that race: if it
+   * does not match the session that is about to own the take, the create is
+   * refused rather than filing someone else's private recording under
+   * whoever is signed in now.
+   */
+  memberId: z.string().trim().min(1),
   // Optional: a recording can reach the stash before its member has decided
   // what song it is. A song NAMED still has to exist (404 below).
   songId: z.string().trim().min(1).nullish(),
@@ -47,6 +59,15 @@ export function registerStashRoutes(router: GuardedRouter, deps: StashRouteDeps)
       );
     }
     const input = parsed.data;
+
+    if (input.memberId !== memberId) {
+      return errorResponse(
+        c,
+        403,
+        "member_mismatch",
+        "This recording belongs to a different member on this device.",
+      );
+    }
 
     const result = await createStashTake(deps.db, deps.clock.now(), memberId, {
       clientRef: input.clientRef,

@@ -12,6 +12,7 @@ import {
   pendingForTake,
   retryItem,
   shouldSync,
+  shouldUploadNow,
   summarize,
   syncedForRender,
 } from "./stash-sync-logic.js";
@@ -286,6 +287,32 @@ describe("a shared browser: each member's own queue", () => {
     // member's row either.
     const theirsDone = { ...theirs, takeId: "t-b" };
     expect(localStashRows([], [theirsDone], "m-a", new Set())).toEqual([]);
+  });
+});
+
+describe("shouldUploadNow", () => {
+  // The decision the sync runner makes immediately before EVERY upload
+  // attempt, not just once when the run started: a tab signed in as A can
+  // still be mid-loop when another tab signs out and in as B (a `storage`
+  // signal updates `currentMemberId` between iterations). Re-reading the
+  // current member here, at the last possible moment, is what keeps a
+  // recording made under A from ever going up as B.
+  it("uploads a waiting recording that is still the current member's", () => {
+    expect(shouldUploadNow(item({ memberId: "m-a", status: "waiting" }), "m-a")).toBe(true);
+  });
+
+  it("never uploads once the signed-in member has changed underneath it", () => {
+    expect(shouldUploadNow(item({ memberId: "m-a", status: "waiting" }), "m-b")).toBe(false);
+    expect(shouldUploadNow(item({ memberId: "m-a", status: "waiting" }), null)).toBe(false);
+  });
+
+  it("still refuses a recording that has been given up on, even if it is the current member's", () => {
+    expect(shouldUploadNow(item({ memberId: "m-a", status: "failed" }), "m-a")).toBe(false);
+  });
+
+  it("a legacy recording with no member never uploads, whoever is signed in", () => {
+    const { memberId: _gone, ...legacy } = item({ status: "waiting" });
+    expect(shouldUploadNow(legacy as PendingSummary, "m-a")).toBe(false);
   });
 });
 

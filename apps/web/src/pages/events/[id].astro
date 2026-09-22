@@ -1,15 +1,13 @@
 ---
 import { hasAllScopes } from "@bandplate/core";
-import { instrumentsRepo, songsRepo } from "@bandplate/db";
 // One event: kind, date, venue, notes, and the takes recorded that day in
 // recorded order (not newest-first — `getEventDetail` asks
 // `takesRepo.listByEvent` for `{ order: "asc" }`, reconstructing what
 // actually happened during the session).
 //
-// Measured before deciding on Server Islands: this page's whole query (the
-// event plus every take that day, with instruments and songs batch-fetched)
-// ran at ~0.5-0.7ms against seeded data — see task-5-report.md. Nothing
-// here is deferred.
+// Every read is `getEventPageData`'s: two round trips, one batch keyed by
+// the event id and one keyed by what it returned (see
+// `server/pages/events.ts`). Nothing here is deferred.
 import { formatLongDate, messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
@@ -25,14 +23,12 @@ import { eventLabel, factsLine } from "../../server/format.js";
 import { pageRoster } from "../../server/instrument-roster.js";
 import {
   archiveEventConsequence,
-  EVENT_TAKES_PER_PAGE,
   type EventField,
-  findSameDayEvents,
-  getEventDetail,
+  getEventPageData,
   updateEvent,
 } from "../../server/pages/events.js";
 import { createTake, type TakeField } from "../../server/pages/takes.js";
-import { loadList, moreAnchorId } from "../../server/pagination.js";
+import { moreAnchorId } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -88,12 +84,11 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const { result: detail, list } = await loadList(
-  Astro.url,
-  EVENT_TAKES_PER_PAGE,
-  (takesPage) => getEventDetail(appDeps.db, id, principal.memberId, takesPage),
-  (found) => found?.takeTotal ?? 0,
-);
+const { detail, list, sameDay, allSongs, allInstruments } = await getEventPageData(appDeps.db, {
+  url: Astro.url,
+  id,
+  memberId: principal.memberId,
+});
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
@@ -147,12 +142,8 @@ const justMerged = Astro.url.searchParams.get("merged") === "1";
 // The duplicate this app cannot prevent, offered a repair. Shown to anyone —
 // the split is worth knowing about — but only an admin gets the merge link,
 // because it archives an event.
-// Never for a personal event: it has no duplicates to repair.
-const sameDay = isPersonal ? [] : await findSameDayEvents(appDeps.db, event);
-const [allSongs, allInstruments] = await Promise.all([
-  songsRepo.list(appDeps.db),
-  instrumentsRepo.list(appDeps.db),
-]);
+// Never for a personal event: it has no duplicates to repair, and
+// `sameDay` comes back empty for one.
 
 // One line-up for every row in the list, so the glyphs line up into
 // columns; see `server/instrument-roster.ts`.

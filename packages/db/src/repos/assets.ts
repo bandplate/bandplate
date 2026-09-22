@@ -1,7 +1,7 @@
 import { uuidv7 } from "@bandplate/core";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, type SQLWrapper, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
-import { type Read, readAll, runRead } from "../read.js";
+import { type Read, readAll, readOne, runRead } from "../read.js";
 import { assets, takes } from "../schema/sqlite/index.js";
 import { chunk } from "./chunk.js";
 import type { TakeVisibility } from "./takes.js";
@@ -313,15 +313,25 @@ export interface AssetTally {
  * never be too small.
  */
 export async function tallyBySong(db: Db, songId: string): Promise<AssetTally> {
-  const rows = await db
-    .select({
-      files: sql<number>`count(${assets.id})`,
-      bytes: sql<number>`coalesce(sum(${assets.bytes}), 0)`,
-    })
-    .from(assets)
-    .innerJoin(takes, eq(takes.id, assets.takeId))
-    .where(eq(takes.songId, songId));
-  return { files: rows[0]?.files ?? 0, bytes: rows[0]?.bytes ?? 0 };
+  return runRead(db, buildTallyBySongRead(db, songId));
+}
+
+/**
+ * `tallyBySong`, planned for the caller's batch. The id may be a query that
+ * yields it (`songsRepo.buildIdBySlugQuery`).
+ */
+export function buildTallyBySongRead(db: Db, songId: string | SQLWrapper): Read<AssetTally> {
+  return readOne(
+    db
+      .select({
+        files: sql<number>`count(${assets.id})`,
+        bytes: sql<number>`coalesce(sum(${assets.bytes}), 0)`,
+      })
+      .from(assets)
+      .innerJoin(takes, eq(takes.id, assets.takeId))
+      .where(eq(takes.songId, songId)),
+    (rows) => ({ files: rows[0]?.files ?? 0, bytes: rows[0]?.bytes ?? 0 }),
+  );
 }
 
 /** `tallyBySong`, for one take. */

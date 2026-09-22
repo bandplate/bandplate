@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, type SQLWrapper, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { combineReads, type Read, readOne, runRead } from "../read.js";
 import { favorites } from "../schema/sqlite/index.js";
@@ -127,18 +127,34 @@ export async function isFavorited(
   targetType: FavoriteTargetType,
   targetId: string,
 ): Promise<boolean> {
-  const rows = await db
-    .select({ memberId: favorites.memberId })
-    .from(favorites)
-    .where(
-      and(
-        eq(favorites.memberId, memberId),
-        eq(favorites.targetType, targetType),
-        eq(favorites.targetId, targetId),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
+  return runRead(db, buildIsFavoritedRead(db, memberId, targetType, targetId));
+}
+
+/**
+ * `isFavorited`, planned for the caller's batch. The target may be a query
+ * that yields its id (`songsRepo.buildIdBySlugQuery`), so a page can ask in
+ * the batch that finds the target.
+ */
+export function buildIsFavoritedRead(
+  db: Db,
+  memberId: string,
+  targetType: FavoriteTargetType,
+  targetId: string | SQLWrapper,
+): Read<boolean> {
+  return readOne(
+    db
+      .select({ memberId: favorites.memberId })
+      .from(favorites)
+      .where(
+        and(
+          eq(favorites.memberId, memberId),
+          eq(favorites.targetType, targetType),
+          eq(favorites.targetId, targetId),
+        ),
+      )
+      .limit(1),
+    (rows) => rows.length > 0,
+  );
 }
 
 export interface ToggleFavoriteInput {

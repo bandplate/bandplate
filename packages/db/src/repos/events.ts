@@ -180,6 +180,11 @@ export interface ListRecentOptions {
  * reasoning, same fix, as `takesRepo.listBySong`.
  */
 export async function listRecent(db: Db, options: ListRecentOptions = {}): Promise<Event[]> {
+  return runRead(db, buildListRecentRead(db, options));
+}
+
+/** `listRecent`, planned for the caller's batch. */
+export function buildListRecentRead(db: Db, options: ListRecentOptions = {}): Read<Event[]> {
   // Never a personal event: this is the picker a member files a band take
   // under, and somebody's stash day is not an event anyone else adds to.
   const conditions: SQL[] = [ne(events.kind, "personal")];
@@ -191,10 +196,7 @@ export async function listRecent(db: Db, options: ListRecentOptions = {}): Promi
     .from(events)
     .where(and(...conditions))
     .orderBy(desc(events.heldAt), desc(events.id));
-  if (options.limit !== undefined) {
-    return query.limit(options.limit);
-  }
-  return query;
+  return readOne(options.limit !== undefined ? query.limit(options.limit) : query, (rows) => rows);
 }
 
 export interface EventWithTakeCount extends Event {
@@ -331,6 +333,16 @@ export async function listOnDay(
   dayStart: number,
   options: { includeArchived?: boolean } = {},
 ): Promise<Event[]> {
+  return runRead(db, buildListOnDayRead(db, kind, dayStart, options));
+}
+
+/** `listOnDay`, planned for the caller's batch. */
+export function buildListOnDayRead(
+  db: Db,
+  kind: EventKind,
+  dayStart: number,
+  options: { includeArchived?: boolean } = {},
+): Read<Event[]> {
   const conditions: SQL[] = [
     eq(events.kind, kind),
     gte(events.heldAt, dayStart),
@@ -339,11 +351,14 @@ export async function listOnDay(
   if (!options.includeArchived) {
     conditions.push(isNull(events.archivedAt));
   }
-  return db
-    .select()
-    .from(events)
-    .where(and(...conditions))
-    .orderBy(desc(events.heldAt), desc(events.id));
+  return readOne(
+    db
+      .select()
+      .from(events)
+      .where(and(...conditions))
+      .orderBy(desc(events.heldAt), desc(events.id)),
+    (rows) => rows,
+  );
 }
 
 /**

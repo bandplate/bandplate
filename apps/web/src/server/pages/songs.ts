@@ -8,14 +8,20 @@ import {
 } from "@bandplate/core";
 import {
   assetsRepo,
+  combineReads,
   type Db,
   eventsRepo,
   favoritesRepo,
-  type instrumentsRepo,
+  instrumentsRepo,
+  mapRead,
   membersRepo,
   notificationsRepo,
   type PageArgs,
   type Paged,
+  type Read,
+  readValue,
+  runRead,
+  runReads,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -41,7 +47,8 @@ import {
 // phone it pushed the songs themselves below the fold.
 import { formatBytes, type Locale, messages } from "@bandplate/i18n";
 import { z } from "zod";
-import { getStashRows, type StashRowData } from "./stash.js";
+import { type ListView, loadList } from "../pagination.js";
+import { type StashRowData, stashRowsRead } from "./stash.js";
 
 export type SongListItem = songsRepo.SongWithStats;
 
@@ -143,31 +150,52 @@ export interface SongDetail {
 export const SONG_TAKES_PER_PAGE = 15;
 
 /**
- * Everything `/songs/[slug]` renders in one call: the song, its aliases and
- * per-instrument notes, and every take (newest first) with the instruments
- * and event each one needs to render — all batch-fetched (one query per
- * kind of data, not one per take) rather than N+1.
+ * What the song page reads keyed by the slug alone. Everything here names the
+ * song by `songsRepo.buildIdBySlugQuery` rather than by its id, so it goes
+ * out in the batch that finds the song instead of waiting for the id to come
+ * back. A batch is one transaction, so all of it agrees on which song that is.
  */
-export async function getSongDetail(
+interface SongFound {
+  song: songsRepo.Song | undefined;
+  aliases: songsRepo.SongAlias[];
+  instrumentNotes: songsRepo.InstrumentNote[];
+  songFavorited: boolean;
+  /** This member's own stash recordings of the song, before their context. */
+  stashTakes: takesRepo.Take[];
+  favoriteTakeIds: Set<string>;
+}
+
+function songFoundRead(db: Db, slug: string, memberId: string): Read<SongFound> {
+  const songId = songsRepo.buildIdBySlugQuery(db, slug);
+  return combineReads({
+    song: songsRepo.buildGetBySlugRead(db, slug),
+    aliases: songsRepo.buildListAliasesRead(db, songId),
+    instrumentNotes: songsRepo.buildListInstrumentNotesRead(db, songId),
+    songFavorited: favoritesRepo.buildIsFavoritedRead(db, memberId, "song", songId),
+    stashTakes: takesRepo.buildListStashRead(db, memberId, { songId }),
+    favoriteTakeIds: favoritesRepo.buildListTargetIdsByMemberRead(db, memberId, "take"),
+  });
+}
+
+/** One page of the song's takes and their total, also named by the slug. */
+function songTakesRead(db: Db, slug: string, page: PageArgs): Read<Paged<takesRepo.Take>> {
+  return takesRepo.buildListBySongRead(db, songsRepo.buildIdBySlugQuery(db, slug), { page });
+}
+
+/**
+ * The second batch: what the page of takes needs to render (instruments,
+ * events, players, this member's votes, whose each personal recording is)
+ * and the stash rows' own context, which is keyed by the first batch too.
+ */
+function songDetailRead(
   db: Db,
-  slug: string,
   memberId: string,
-  takesPage: PageArgs = { limit: SONG_TAKES_PER_PAGE, offset: 0 },
-): Promise<SongDetail | undefined> {
-  const song = await songsRepo.getBySlug(db, slug);
-  if (!song) {
-    return undefined;
-  }
-
-  const [aliases, instrumentNotes, pagedTakes, songFavorited, stashRows] = await Promise.all([
-    songsRepo.listAliases(db, song.id),
-    songsRepo.listInstrumentNotes(db, song.id),
-    takesRepo.listBySong(db, song.id, { page: takesPage }),
-    favoritesRepo.isFavorited(db, memberId, "song", song.id),
-    getStashRows(db, memberId, { songId: song.id }),
-  ]);
-  const takes = pagedTakes.rows;
-
+  song: songsRepo.Song,
+  found: SongFound,
+  paged: Paged<takesRepo.Take>,
+  stashRows: Read<StashRowData[]>,
+): Read<SongDetail> {
+  const takes = paged.rows;
   const takeIds = takes.map((t) => t.id);
   const eventIds = [...new Set(takes.map((t) => t.eventId))];
   const ownerIds = [
@@ -179,35 +207,144 @@ export async function getSongDetail(
       memberId,
     ]),
   ];
-  const [instrumentsByTake, events, playableByTakeId, myVoteByTakeId, favoriteTakeIds, owners] =
-    await Promise.all([
-      takesRepo.listInstrumentsForTakes(db, takeIds),
-      eventsRepo.getByIds(db, eventIds),
-      assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
-      votesRepo.listByMemberForTakes(db, memberId, takeIds),
-      favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
-      membersRepo.getByIds(db, ownerIds),
-    ]);
-  const eventById = new Map(events.map((e) => [e.id, e]));
-  const ownerNameById = new Map(owners.map((m) => [m.id, m.displayName]));
-
-  return {
-    song,
-    songFavorited,
-    aliases,
-    instrumentNotes,
-    takeTotal: pagedTakes.total,
+  const read = combineReads({
+    instrumentsByTake: takesRepo.buildListInstrumentsForTakesRead(db, takeIds),
+    events: eventsRepo.buildGetByIdsRead(db, eventIds),
+    playableByTakeId: assetsRepo.buildListPlayableMastersByTakeIdsRead(db, takeIds),
+    myVoteByTakeId: votesRepo.buildListByMemberForTakesRead(db, memberId, takeIds),
+    owners: membersRepo.buildGetByIdsRead(db, ownerIds),
     stashRows,
-    stashOwnerName: ownerNameById.get(memberId),
-    takes: takes.map((take) => ({
-      ...take,
-      instruments: instrumentsByTake.get(take.id) ?? [],
-      event: eventById.get(take.eventId),
-      playableAssetId: playableByTakeId.get(take.id)?.id,
-      myVote: myVoteByTakeId.get(take.id),
-      favorited: favoriteTakeIds.has(take.id),
-      ownerName: take.ownerMemberId ? (ownerNameById.get(take.ownerMemberId) ?? null) : null,
-    })),
+  });
+  return mapRead(read, (context) => {
+    const eventById = new Map(context.events.map((e) => [e.id, e]));
+    const ownerNameById = new Map(context.owners.map((m) => [m.id, m.displayName]));
+    return {
+      song,
+      songFavorited: found.songFavorited,
+      aliases: found.aliases,
+      instrumentNotes: found.instrumentNotes,
+      takeTotal: paged.total,
+      stashRows: context.stashRows,
+      stashOwnerName: ownerNameById.get(memberId),
+      takes: takes.map((take) => ({
+        ...take,
+        instruments: context.instrumentsByTake.get(take.id) ?? [],
+        event: eventById.get(take.eventId),
+        playableAssetId: context.playableByTakeId.get(take.id)?.id,
+        myVote: context.myVoteByTakeId.get(take.id),
+        favorited: found.favoriteTakeIds.has(take.id),
+        ownerName: take.ownerMemberId ? (ownerNameById.get(take.ownerMemberId) ?? null) : null,
+      })),
+    };
+  });
+}
+
+/**
+ * The song, its aliases and per-instrument notes, and one page of takes
+ * (newest first) with the instruments and event each one needs to render,
+ * in two round trips: one batch keyed by the slug, one keyed by what it
+ * returned. `getSongPageData` is the page's own loader; this is the detail
+ * alone.
+ */
+export async function getSongDetail(
+  db: Db,
+  slug: string,
+  memberId: string,
+  takesPage: PageArgs = { limit: SONG_TAKES_PER_PAGE, offset: 0 },
+): Promise<SongDetail | undefined> {
+  const { found, paged } = await runReads(db, {
+    found: songFoundRead(db, slug, memberId),
+    paged: songTakesRead(db, slug, takesPage),
+  });
+  if (!found.song) {
+    return undefined;
+  }
+  return runRead(
+    db,
+    songDetailRead(db, memberId, found.song, found, paged, stashRowsRead(db, found.stashTakes)),
+  );
+}
+
+/** How many events the take sheet's picker offers, newest first. */
+const TAKE_SHEET_EVENTS = 100;
+
+const NO_TALLY: assetsRepo.AssetTally = { files: 0, bytes: 0 };
+
+export interface SongPageData {
+  /** Undefined is a 404. */
+  detail: SongDetail | undefined;
+  list: ListView;
+  /**
+   * What a permanent delete would take with it, for the admin's confirm.
+   * Zero unless asked for (`withTally`): nobody else can reach that confirm.
+   *
+   * ONE aggregate over every take of the song, not a walk of the takes on
+   * screen: those are a page, and a tally of the visible fifteen would
+   * understate what a delete destroys, the one number on a destructive
+   * confirm that must never read low.
+   */
+  tally: assetsRepo.AssetTally;
+  /** The take sheet's event picker. */
+  allEvents: eventsRepo.Event[];
+  /** The take sheet's instruments, and the roster the take rows line up on. */
+  allInstruments: instrumentsRepo.Instrument[];
+}
+
+/**
+ * Everything `/songs/[slug]` reads, in two round trips: one batch for all
+ * that needs only the request (the song and everything keyed by it, named by
+ * its slug; the page of takes; the take sheet's pickers; the admin's tally),
+ * one for what those returned (the takes' context, the stash rows' context).
+ *
+ * `loadList` may ask for the takes a second time, when the URL guessed the
+ * wrong window. The takes' context waits until the window is settled, so
+ * that second ask is one more round trip carrying only the page of takes.
+ */
+export async function getSongPageData(
+  db: Db,
+  request: { url: URL; slug: string; memberId: string; withTally: boolean },
+): Promise<SongPageData> {
+  const { url, slug, memberId, withTally } = request;
+  const restOfPage = combineReads({
+    found: songFoundRead(db, slug, memberId),
+    allEvents: eventsRepo.buildListRecentRead(db, { limit: TAKE_SHEET_EVENTS }),
+    allInstruments: instrumentsRepo.buildListRead(db),
+    tally: withTally
+      ? assetsRepo.buildTallyBySongRead(db, songsRepo.buildIdBySlugQuery(db, slug))
+      : readValue(NO_TALLY),
+  });
+  type RestOfPage = typeof restOfPage extends Read<infer T> ? T : never;
+
+  let rest: RestOfPage | undefined;
+  const { result: paged, list } = await loadList(
+    url,
+    SONG_TAKES_PER_PAGE,
+    async (page) => {
+      const first = await runReads(db, {
+        paged: songTakesRead(db, slug, page),
+        rest: rest ? readValue(rest) : restOfPage,
+      });
+      rest = first.rest;
+      return first.paged;
+    },
+    (found) => found.total,
+  );
+  if (!rest) {
+    throw new Error("loadList returned without loading");
+  }
+  const { found } = rest;
+  const detail = found.song
+    ? await runRead(
+        db,
+        songDetailRead(db, memberId, found.song, found, paged, stashRowsRead(db, found.stashTakes)),
+      )
+    : undefined;
+  return {
+    detail,
+    list,
+    tally: rest.tally,
+    allEvents: rest.allEvents,
+    allInstruments: rest.allInstruments,
   };
 }
 

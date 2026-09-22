@@ -198,8 +198,23 @@ export async function update(db: Db, id: string, input: UpdateSongInput): Promis
  * filter because it is a browse surface.
  */
 export async function getBySlug(db: Db, slug: string): Promise<Song | undefined> {
-  const [row] = await db.select().from(songs).where(eq(songs.slug, slug)).limit(1);
-  return row;
+  return runRead(db, buildGetBySlugRead(db, slug));
+}
+
+/** `getBySlug`, planned for the caller's batch. */
+export function buildGetBySlugRead(db: Db, slug: string): Read<Song | undefined> {
+  return readOne(db.select().from(songs).where(eq(songs.slug, slug)).limit(1), (rows) => rows[0]);
+}
+
+/**
+ * The id of the song at `slug`, as a query rather than a value: one column,
+ * at most one row, so it works as the `songId` of the song page's other reads
+ * (a scalar subquery). The page reads the song and everything keyed by it in
+ * ONE batch instead of waiting for the id first. No song compares as NULL,
+ * which matches nothing.
+ */
+export function buildIdBySlugQuery(db: Db, slug: string) {
+  return db.select({ id: songs.id }).from(songs).where(eq(songs.slug, slug)).limit(1);
 }
 
 export async function getById(db: Db, id: string): Promise<Song | undefined> {
@@ -423,7 +438,15 @@ export function buildListWithStatsRead(
 
 /** Every known alias of a song (manual or ingest-created), in no particular order. */
 export async function listAliases(db: Db, songId: string): Promise<SongAlias[]> {
-  return db.select().from(songAliases).where(eq(songAliases.songId, songId));
+  return runRead(db, buildListAliasesRead(db, songId));
+}
+
+/** `listAliases`, planned. The id may be `buildIdBySlugQuery`. */
+export function buildListAliasesRead(db: Db, songId: takesRepo.SongIdRef): Read<SongAlias[]> {
+  return readOne(
+    db.select().from(songAliases).where(eq(songAliases.songId, songId)),
+    (rows) => rows,
+  );
 }
 
 export interface InstrumentNote {
@@ -435,20 +458,29 @@ export interface InstrumentNote {
 
 /** Per-instrument playing notes for a song, ordered by the instrument's sort order. */
 export async function listInstrumentNotes(db: Db, songId: string): Promise<InstrumentNote[]> {
-  const rows = await db
-    .select({
-      instrumentId: songInstrumentNotes.instrumentId,
-      instrumentLabel: instruments.label,
-      body: songInstrumentNotes.body,
-      updatedAt: songInstrumentNotes.updatedAt,
-      sortOrder: instruments.sortOrder,
-    })
-    .from(songInstrumentNotes)
-    .innerJoin(instruments, eq(instruments.id, songInstrumentNotes.instrumentId))
-    .where(eq(songInstrumentNotes.songId, songId))
-    .orderBy(instruments.sortOrder);
+  return runRead(db, buildListInstrumentNotesRead(db, songId));
+}
 
-  return rows.map(({ sortOrder: _sortOrder, ...rest }) => rest);
+/** `listInstrumentNotes`, planned. The id may be `buildIdBySlugQuery`. */
+export function buildListInstrumentNotesRead(
+  db: Db,
+  songId: takesRepo.SongIdRef,
+): Read<InstrumentNote[]> {
+  return readOne(
+    db
+      .select({
+        instrumentId: songInstrumentNotes.instrumentId,
+        instrumentLabel: instruments.label,
+        body: songInstrumentNotes.body,
+        updatedAt: songInstrumentNotes.updatedAt,
+        sortOrder: instruments.sortOrder,
+      })
+      .from(songInstrumentNotes)
+      .innerJoin(instruments, eq(instruments.id, songInstrumentNotes.instrumentId))
+      .where(eq(songInstrumentNotes.songId, songId))
+      .orderBy(instruments.sortOrder),
+    (rows) => rows.map(({ sortOrder: _sortOrder, ...rest }) => rest),
+  );
 }
 
 /** Upserts a per-instrument playing note for a song (composite PK: song + instrument). */

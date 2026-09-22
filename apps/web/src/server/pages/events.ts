@@ -1,15 +1,18 @@
 import {
   assetsRepo,
+  combineReads,
   type Db,
   eventsRepo,
   favoritesRepo,
-  type instrumentsRepo,
+  instrumentsRepo,
   mapRead,
   membersRepo,
   type PageArgs,
   type Paged,
   type Read,
+  readValue,
   runRead,
+  runReads,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -20,6 +23,7 @@ import {
 // `@bandplate/core`.
 import { type Locale, messages } from "@bandplate/i18n";
 import { z } from "zod";
+import { type ListView, loadList } from "../pagination.js";
 
 export interface EventListItem extends eventsRepo.EventWithTakeCount {
   /** Whose day this is, for a personal event. Null on a band event. */
@@ -134,11 +138,85 @@ export interface EventDetail {
  */
 export const EVENT_TAKES_PER_PAGE = 30;
 
+/** What the event page reads keyed by the event id alone, the page of takes aside. */
+interface EventFound {
+  event: eventsRepo.Event | undefined;
+  eventFavorited: boolean;
+  favoriteTakeIds: Set<string>;
+}
+
+function eventFoundRead(db: Db, id: string, memberId: string): Read<EventFound> {
+  return combineReads({
+    event: eventsRepo.buildGetByIdRead(db, id),
+    eventFavorited: favoritesRepo.buildIsFavoritedRead(db, memberId, "event", id),
+    favoriteTakeIds: favoritesRepo.buildListTargetIdsByMemberRead(db, memberId, "take"),
+  });
+}
+
+/** One page of the event's takes, in recorded order, and their total. */
+function eventTakesRead(db: Db, id: string, page: PageArgs): Read<Paged<takesRepo.Take>> {
+  return takesRepo.buildListByEventRead(db, id, { order: "asc", page });
+}
+
+/**
+ * A personal event with no band take is somebody's stash day, and does not
+ * exist for anyone — its owner included, who has the stash for that.
+ */
+function eventExists(
+  event: eventsRepo.Event | undefined,
+  paged: Paged<takesRepo.Take>,
+): event is eventsRepo.Event {
+  return event !== undefined && !(event.kind === "personal" && paged.total === 0);
+}
+
+/**
+ * The second batch: what the page of takes needs to render (instruments,
+ * songs, players, this member's votes) and whose day a personal event is.
+ */
+function eventDetailRead(
+  db: Db,
+  memberId: string,
+  event: eventsRepo.Event,
+  found: EventFound,
+  paged: Paged<takesRepo.Take>,
+): Read<EventDetail> {
+  const takes = paged.rows;
+  const takeIds = takes.map((t) => t.id);
+  const read = combineReads({
+    instrumentsByTake: takesRepo.buildListInstrumentsForTakesRead(db, takeIds),
+    songs: songsRepo.buildGetByIdsRead(db, takesRepo.songIdsOf(takes)),
+    playableByTakeId: assetsRepo.buildListPlayableMastersByTakeIdsRead(db, takeIds),
+    myVoteByTakeId: votesRepo.buildListByMemberForTakesRead(db, memberId, takeIds),
+    owner: event.ownerMemberId
+      ? mapRead(membersRepo.buildGetByIdsRead(db, [event.ownerMemberId]), (owners) => owners[0])
+      : readValue(undefined),
+  });
+  return mapRead(read, (context) => {
+    const songById = new Map(context.songs.map((s) => [s.id, s]));
+    return {
+      event,
+      eventFavorited: found.eventFavorited,
+      owner: context.owner,
+      takeTotal: paged.total,
+      takes: takes.map((take) => ({
+        ...take,
+        instruments: context.instrumentsByTake.get(take.id) ?? [],
+        song: take.songId ? songById.get(take.songId) : undefined,
+        playableAssetId: context.playableByTakeId.get(take.id)?.id,
+        myVote: context.myVoteByTakeId.get(take.id),
+        favorited: found.favoriteTakeIds.has(take.id),
+      })),
+    };
+  });
+}
+
 /**
  * Everything `/events/[id]` renders: the event plus every take recorded
  * that day IN RECORDED ORDER (not newest-first — this is the one place
  * that ordering differs, since it's reconstructing what happened during a
- * single session), each with its song and instruments batch-fetched.
+ * single session), each with its song and instruments batch-fetched, in two
+ * round trips. `getEventPageData` is the page's own loader; this is the
+ * detail alone.
  */
 export async function getEventDetail(
   db: Db,
@@ -146,48 +224,78 @@ export async function getEventDetail(
   memberId: string,
   takesPage: PageArgs = { limit: EVENT_TAKES_PER_PAGE, offset: 0 },
 ): Promise<EventDetail | undefined> {
-  const event = await eventsRepo.getById(db, id);
-  if (!event) {
+  const { found, paged } = await runReads(db, {
+    found: eventFoundRead(db, id, memberId),
+    paged: eventTakesRead(db, id, takesPage),
+  });
+  if (!eventExists(found.event, paged)) {
     return undefined;
   }
+  return runRead(db, eventDetailRead(db, memberId, found.event, found, paged));
+}
 
-  const [pagedTakes, eventFavorited] = await Promise.all([
-    takesRepo.listByEvent(db, event.id, { order: "asc", page: takesPage }),
-    favoritesRepo.isFavorited(db, memberId, "event", event.id),
-  ]);
-  // A personal event with no band take is somebody's stash day, and does not
-  // exist for anyone — its owner included, who has the stash for that.
-  if (event.kind === "personal" && pagedTakes.total === 0) {
-    return undefined;
+export interface EventPageData {
+  /** Undefined is a 404. */
+  detail: EventDetail | undefined;
+  list: ListView;
+  /** Any OTHER event of the same kind on the same day: see `findSameDayEvents`. */
+  sameDay: eventsRepo.Event[];
+  /** The take sheet's song picker. */
+  allSongs: songsRepo.Song[];
+  /** The take sheet's instruments, and the roster the take rows line up on. */
+  allInstruments: instrumentsRepo.Instrument[];
+}
+
+/**
+ * Everything `/events/[id]` reads, in two round trips: one batch for all
+ * that needs only the request (the event, the page of its takes, the take
+ * sheet's pickers), one for what those returned (the takes' context, the
+ * owner of a personal day, the same-day duplicates).
+ *
+ * `loadList` may ask for the takes a second time, when the URL guessed the
+ * wrong window. The takes' context waits until the window is settled, so
+ * that second ask is one more round trip carrying only the page of takes.
+ */
+export async function getEventPageData(
+  db: Db,
+  request: { url: URL; id: string; memberId: string },
+): Promise<EventPageData> {
+  const { url, id, memberId } = request;
+  const restOfPage = combineReads({
+    found: eventFoundRead(db, id, memberId),
+    allSongs: songsRepo.buildListRead(db),
+    allInstruments: instrumentsRepo.buildListRead(db),
+  });
+  type RestOfPage = typeof restOfPage extends Read<infer T> ? T : never;
+
+  let rest: RestOfPage | undefined;
+  const { result: paged, list } = await loadList(
+    url,
+    EVENT_TAKES_PER_PAGE,
+    async (page) => {
+      const first = await runReads(db, {
+        paged: eventTakesRead(db, id, page),
+        rest: rest ? readValue(rest) : restOfPage,
+      });
+      rest = first.rest;
+      return first.paged;
+    },
+    // Zero for a missing event and for a hidden personal day alike: the
+    // count is of band takes, and neither has any.
+    (found) => found.total,
+  );
+  if (!rest) {
+    throw new Error("loadList returned without loading");
   }
-  const [owner] = event.ownerMemberId ? await membersRepo.getByIds(db, [event.ownerMemberId]) : [];
-  const takes = pagedTakes.rows;
-  const takeIds = takes.map((t) => t.id);
-  const songIds = takesRepo.songIdsOf(takes);
-  const [instrumentsByTake, songs, playableByTakeId, myVoteByTakeId, favoriteTakeIds] =
-    await Promise.all([
-      takesRepo.listInstrumentsForTakes(db, takeIds),
-      songsRepo.getByIds(db, songIds),
-      assetsRepo.listPlayableMastersByTakeIds(db, takeIds),
-      votesRepo.listByMemberForTakes(db, memberId, takeIds),
-      favoritesRepo.listTargetIdsByMember(db, memberId, "take"),
-    ]);
-  const songById = new Map(songs.map((s) => [s.id, s]));
-
-  return {
-    event,
-    eventFavorited,
-    owner,
-    takeTotal: pagedTakes.total,
-    takes: takes.map((take) => ({
-      ...take,
-      instruments: instrumentsByTake.get(take.id) ?? [],
-      song: take.songId ? songById.get(take.songId) : undefined,
-      playableAssetId: playableByTakeId.get(take.id)?.id,
-      myVote: myVoteByTakeId.get(take.id),
-      favorited: favoriteTakeIds.has(take.id),
-    })),
-  };
+  const { found, allSongs, allInstruments } = rest;
+  if (!eventExists(found.event, paged)) {
+    return { detail: undefined, list, sameDay: [], allSongs, allInstruments };
+  }
+  const { detail, sameDay } = await runReads(db, {
+    detail: eventDetailRead(db, memberId, found.event, found, paged),
+    sameDay: sameDayEventsRead(db, found.event),
+  });
+  return { detail, list, sameDay, allSongs, allInstruments };
 }
 
 // ---------------------------------------------------------------------------
@@ -442,14 +550,20 @@ export async function findSameDayEvents(
   db: Db,
   event: eventsRepo.Event,
 ): Promise<eventsRepo.Event[]> {
+  return runRead(db, sameDayEventsRead(db, event));
+}
+
+/** `findSameDayEvents`, planned for the caller's batch. */
+function sameDayEventsRead(db: Db, event: eventsRepo.Event): Read<eventsRepo.Event[]> {
   // A personal event is one member's day: another member's on the same date
   // is not a duplicate of it, and neither is merged (see `mergeEvents`).
   if (event.kind === "personal") {
-    return [];
+    return readValue([]);
   }
   const dayStart = new Date(event.heldAt);
   dayStart.setHours(0, 0, 0, 0);
   const start = dayStart.getTime();
-  const sameDay = await eventsRepo.listOnDay(db, event.kind, start);
-  return sameDay.filter((e) => e.id !== event.id);
+  return mapRead(eventsRepo.buildListOnDayRead(db, event.kind, start), (sameDay) =>
+    sameDay.filter((e) => e.id !== event.id),
+  );
 }

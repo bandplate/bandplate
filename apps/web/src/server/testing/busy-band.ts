@@ -33,6 +33,12 @@ export interface BusyBand {
   lastSeenAt: number;
   /** "Now" for every loader, well past the visit gap. */
   now: number;
+  /** The four band events, oldest first. */
+  bandEventIds: string[];
+  /** Another member's personal day, with a published recording of theirs in it. */
+  personalEventId: string;
+  /** Whose personal day that is. */
+  personalOwnerId: string;
 }
 
 export interface BusyBandOptions {
@@ -264,5 +270,75 @@ export async function seedBusyBand(options: BusyBandOptions = {}): Promise<BusyB
     }
   }
 
-  return { db, memberId: member.id, lastSeenAt, now };
+  return {
+    db,
+    memberId: member.id,
+    lastSeenAt,
+    now,
+    bandEventIds: bandEvents.map((event) => event.id),
+    personalEventId: baraDay.id,
+    personalOwnerId: bara.id,
+  };
+}
+
+/** What `dressDetailPages` added, for the tests that load those pages. */
+export interface DressedDetailPages {
+  /** A song with aliases, a note, a folded take list, another member's recording and the member's own stash. */
+  songSlug: string;
+  /** The newest band event, which now has a same-day twin. */
+  bandEventId: string;
+}
+
+/**
+ * Fills in what only the song and event pages read, on top of `seedBusyBand`
+ * and without changing anything the other pages count: "Song 2" gets an
+ * alias, a playing note and a fourth take (another member's recording, filed
+ * on their personal day, so its row names its owner), and the newest band
+ * event gets a second rehearsal on the same day.
+ *
+ * "Song 2" already has three band takes (one pinned, some voted) and the
+ * member's own stash recording of it.
+ */
+export async function dressDetailPages(band: BusyBand): Promise<DressedDetailPages> {
+  const { db } = band;
+  const song = await songsRepo.getBySlug(db, "song-2");
+  const [instrument] = await instrumentsRepo.list(db);
+  const newest = await eventsRepo.getById(db, band.bandEventIds[3] ?? "");
+  if (!song || !instrument || !newest) {
+    throw new Error("seedBusyBand changed shape");
+  }
+  await songsRepo.addAlias(db, song.id, "Píseň dva", "manual");
+  await songsRepo.setInstrumentNote(db, song.id, instrument.id, "Refrén o oktávu výš.", band.now);
+  const theirs = await takesRepo.create(db, {
+    songId: song.id,
+    eventId: band.personalEventId,
+    ownerMemberId: band.personalOwnerId,
+    recordedAt: newest.heldAt + 5 * HOUR,
+    instrumentIds: [instrument.id],
+    createdAt: newest.heldAt,
+    updatedAt: newest.heldAt,
+  });
+  await takesRepo.setStateWithPublishedAt(db, theirs.id, "published", band.now, band.now);
+  await assetsRepo.createMany(db, [
+    {
+      takeId: theirs.id,
+      kind: "master",
+      tier: "lossy",
+      format: "opus",
+      storageKey: `takes/${theirs.id}/master/lossy.opus`,
+      contentType: "audio/opus",
+      bytes: 1000,
+      status: "ready",
+      createdAt: band.now,
+      readyAt: band.now,
+    },
+  ]);
+  await eventsRepo.create(db, {
+    kind: newest.kind,
+    heldAt: newest.heldAt,
+    title: "Druhá zkouška",
+    createdAt: band.now,
+    updatedAt: band.now,
+  });
+  return { songSlug: song.slug, bandEventId: newest.id };
 }

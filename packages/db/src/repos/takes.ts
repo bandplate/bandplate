@@ -407,19 +407,37 @@ export async function listBySong(
   songId: string,
   options: ListBySongOptions = {},
 ): Promise<Paged<Take>> {
+  return runRead(db, buildListBySongRead(db, songId, options));
+}
+
+/**
+ * A song id, or a query that yields one (`songsRepo.buildIdBySlugQuery`), so
+ * the song page can read a song's takes in the same batch that finds the song.
+ * A query with no row compares as NULL, which matches no take.
+ */
+export type SongIdRef = string | SQLWrapper;
+
+/** `listBySong`, planned: the page and its count, for the caller's batch. */
+export function buildListBySongRead(
+  db: Db,
+  songId: SongIdRef,
+  options: ListBySongOptions = {},
+): Read<Paged<Take>> {
   const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
   const offset = options.page?.offset ?? 0;
-  const [rows, total] = await Promise.all([
-    db
-      .select()
-      .from(takes)
-      .where(and(eq(takes.songId, songId), bandTakeCondition()))
-      .orderBy(...TAKE_LIST_ORDER)
-      .limit(limit)
-      .offset(offset),
-    countBySong(db, songId),
-  ]);
-  return { rows, total };
+  return combineReads({
+    rows: readOne(
+      db
+        .select()
+        .from(takes)
+        .where(and(eq(takes.songId, songId), bandTakeCondition()))
+        .orderBy(...TAKE_LIST_ORDER)
+        .limit(limit)
+        .offset(offset),
+      (rows) => rows,
+    ),
+    total: countBySongRead(db, songId),
+  });
 }
 
 /**
@@ -457,6 +475,15 @@ export async function listByEvent(
   eventId: string,
   options: ListByEventOptions = {},
 ): Promise<Paged<Take>> {
+  return runRead(db, buildListByEventRead(db, eventId, options));
+}
+
+/** `listByEvent`, planned: the page and its count, for the caller's batch. */
+export function buildListByEventRead(
+  db: Db,
+  eventId: EventIdRef,
+  options: ListByEventOptions = {},
+): Read<Paged<Take>> {
   const direction = options.order === "asc" ? asc(takes.recordedAt) : desc(takes.recordedAt);
   // `id` follows the direction of the primary key rather than always
   // descending: under `asc` the tie-break has to agree with "earliest first",
@@ -465,17 +492,19 @@ export async function listByEvent(
   const tieBreak = options.order === "asc" ? asc(takes.id) : desc(takes.id);
   const limit = options.page?.limit ?? DEFAULT_PAGE_SIZE;
   const offset = options.page?.offset ?? 0;
-  const [rows, total] = await Promise.all([
-    db
-      .select()
-      .from(takes)
-      .where(and(eq(takes.eventId, eventId), bandTakeCondition()))
-      .orderBy(direction, tieBreak)
-      .limit(limit)
-      .offset(offset),
-    countByEvent(db, eventId),
-  ]);
-  return { rows, total };
+  return combineReads({
+    rows: readOne(
+      db
+        .select()
+        .from(takes)
+        .where(and(eq(takes.eventId, eventId), bandTakeCondition()))
+        .orderBy(direction, tieBreak)
+        .limit(limit)
+        .offset(offset),
+      (rows) => rows,
+    ),
+    total: countByEventRead(db, eventId),
+  });
 }
 
 /**
@@ -855,20 +884,32 @@ export function buildSearchRead(
 
 /** How many takes exist of one song — the count, without the rows. */
 export async function countBySong(db: Db, songId: string): Promise<number> {
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(takes)
-    .where(and(eq(takes.songId, songId), bandTakeCondition()));
-  return rows[0]?.value ?? 0;
+  return runRead(db, countBySongRead(db, songId));
+}
+
+function countBySongRead(db: Db, songId: SongIdRef): Read<number> {
+  return readOne(
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(takes)
+      .where(and(eq(takes.songId, songId), bandTakeCondition())),
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 /** How many takes were recorded at one event — the count, without the rows. */
 export async function countByEvent(db: Db, eventId: string): Promise<number> {
-  const rows = await db
-    .select({ value: sql<number>`count(*)` })
-    .from(takes)
-    .where(and(eq(takes.eventId, eventId), bandTakeCondition()));
-  return rows[0]?.value ?? 0;
+  return runRead(db, countByEventRead(db, eventId));
+}
+
+function countByEventRead(db: Db, eventId: EventIdRef): Read<number> {
+  return readOne(
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(takes)
+      .where(and(eq(takes.eventId, eventId), bandTakeCondition())),
+    (rows) => rows[0]?.value ?? 0,
+  );
 }
 
 /**
@@ -995,8 +1036,12 @@ export async function countUnvotedByMembers(
 // ---------------------------------------------------------------------------
 
 export interface StashOptions {
-  /** Only this song's — the song page's "Ve tvém šuplíku: N". */
-  songId?: string;
+  /**
+   * Only this song's — the song page's "Ve tvém šuplíku: N". May be a query
+   * that yields the id (see `SongIdRef`): the song page reads its stash
+   * section in the same batch that finds the song.
+   */
+  songId?: SongIdRef;
 }
 
 function stashConditions(memberId: string, options: StashOptions): SQL[] {

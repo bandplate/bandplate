@@ -1,16 +1,14 @@
 ---
 import { hasAllScopes } from "@bandplate/core";
-import { assetsRepo, eventsRepo, instrumentsRepo } from "@bandplate/db";
+import type { eventsRepo } from "@bandplate/db";
 // The song page. Its metadata, chord progression, lyrics, per-instrument
 // notes, known aliases, and every take newest first (each linking to its
 // event) — see TakeRow.astro for why that link is separate from the take's
 // own link to `/takes/[id]`.
 //
-// Measured against seeded data before deciding: `getSongDetail` (song +
-// aliases + instrument notes + up to 8 takes with their instruments and
-// events, all batch-fetched) runs in ~0.5-1.3ms locally — nowhere near the
-// ~150ms bar for a Server Island, so nothing on this page is deferred. See
-// task-5-report.md for the full measurement.
+// Every read is `getSongPageData`'s: two round trips, one batch keyed by the
+// slug and one keyed by what it returned (see `server/pages/songs.ts`).
+// Nothing on this page is deferred.
 import { messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
@@ -29,14 +27,14 @@ import { pageRoster } from "../../server/instrument-roster.js";
 import {
   archiveSongConsequence,
   deleteSongConsequence,
-  getSongDetail,
+  getSongPageData,
   SONG_TAKES_PER_PAGE,
   type SongField,
   updateSong,
 } from "../../server/pages/songs.js";
 import { applyStashWrite } from "../../server/pages/stash.js";
 import { createTake, type TakeField } from "../../server/pages/takes.js";
-import { loadList, moreAnchorId } from "../../server/pagination.js";
+import { moreAnchorId } from "../../server/pagination.js";
 import { withQuery } from "../../server/safe-redirect.js";
 import { songToRows } from "../../server/song-chart-rows.js";
 import { buildSongChart, KNOWN_SECTION_WORDS } from "../../server/song-text.js";
@@ -153,12 +151,15 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const { result: detail, list } = await loadList(
-  Astro.url,
-  SONG_TAKES_PER_PAGE,
-  (takesPage) => getSongDetail(appDeps.db, slug, principal.memberId, takesPage),
-  (found) => found?.takeTotal ?? 0,
-);
+const canArchive = hasAllScopes(principal, ["members:admin"]);
+// The admin's delete confirm counts what a delete would take with it; see
+// `SongPageData.tally`. Nobody else can reach the page it warns about.
+const { detail, list, tally, allEvents, allInstruments } = await getSongPageData(appDeps.db, {
+  url: Astro.url,
+  slug,
+  memberId: principal.memberId,
+  withTally: canArchive,
+});
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
@@ -228,30 +229,16 @@ const rowsResult = songToRows(song.chordProgression, song.lyrics);
 const chartRows = rowsResult.kind === "rows" ? rowsResult.rows : [];
 const chartIsFreeform = rowsResult.kind === "freeform";
 
-const canArchive = hasAllScopes(principal, ["members:admin"]);
 const isArchived = song.archivedAt !== null;
 const justCreated = Astro.url.searchParams.get("created") === "1";
 const justSaved = Astro.url.searchParams.get("saved") === "1";
 
-// What a permanent delete would take with it, counted for the confirm. Only
-// for an admin — nobody else can reach the page it warns about.
-//
-// ONE aggregate query over every take of the song, not a walk of the takes on
-// screen: those are a page now, and a tally of the visible fifteen would have
-// understated what a delete destroys — the one number on a destructive confirm
-// that must never read low.
-const tally = canArchive
-  ? await assetsRepo.tallyBySong(appDeps.db, song.id)
-  : { files: 0, bytes: 0 };
+// What a permanent delete would take with it, counted for the confirm.
 const songFileCount = tally.files;
 const songByteTotal = tally.bytes;
 
 // The take sheet's pickers. Newest event first, which is nearly always the one
 // being added to, so it is also the default.
-const [allEvents, allInstruments] = await Promise.all([
-  eventsRepo.listRecent(appDeps.db, { limit: 100 }),
-  instrumentsRepo.list(appDeps.db),
-]);
 const defaultEvent = allEvents[0];
 const takeDateValue = (() => {
   const d = new Date(defaultEvent ? defaultEvent.heldAt : Date.now());

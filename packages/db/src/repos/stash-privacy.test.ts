@@ -397,6 +397,39 @@ const takesChecks: ChecksFor<typeof takesRepo> = {
     expect(ids(await runRead(f.db, takesRepo.buildListStashRead(f.db, f.memberB)))).toEqual(
       [...f.stashIds].sort(),
     );
+    // The song page names the song by its slug's query: the same scoping.
+    const songId = songsRepo.buildIdBySlugQuery(f.db, "shared-song");
+    const mine = await runRead(f.db, takesRepo.buildListStashRead(f.db, f.memberB, { songId }));
+    expect(ids(mine)).toEqual([f.stashOnShared]);
+    const theirs = await runRead(f.db, takesRepo.buildListStashRead(f.db, f.memberA, { songId }));
+    expect(theirs).toEqual([]);
+  },
+  // The song and event pages' page-and-count reads, by id and (for the song
+  // page) by the slug's query.
+  buildListBySongRead: async () => {
+    for (const song of [f.sharedSong, songsRepo.buildIdBySlugQuery(f.db, "shared-song")]) {
+      const shared = await runRead(f.db, takesRepo.buildListBySongRead(f.db, song));
+      expectBandOnly(shared.rows);
+      expect(shared.total).toBe(1);
+    }
+    for (const song of [f.stashOnlySong, songsRepo.buildIdBySlugQuery(f.db, "stash-idea")]) {
+      expect(await runRead(f.db, takesRepo.buildListBySongRead(f.db, song))).toEqual({
+        rows: [],
+        total: 0,
+      });
+    }
+  },
+  buildListByEventRead: async () => {
+    for (const order of ["asc", "desc"] as const) {
+      const band = await runRead(
+        f.db,
+        takesRepo.buildListByEventRead(f.db, f.bandEvent, { order }),
+      );
+      expectBandOnly(band.rows);
+      expect(band.total).toBe(1);
+      const personal = takesRepo.buildListByEventRead(f.db, f.personalEvent, { order });
+      expect(await runRead(f.db, personal)).toEqual({ rows: [], total: 0 });
+    }
   },
   buildCountStashRead: async () => {
     expect(await runRead(f.db, takesRepo.buildCountStashRead(f.db, f.memberA))).toBe(0);
@@ -446,6 +479,12 @@ const eventsChecks: ChecksFor<typeof eventsRepo> = {
       f.bandEvent,
     ]);
   },
+  buildListRecentRead: async () => {
+    for (const options of [{}, { includeArchived: true }, { limit: 100 }]) {
+      const rows = await runRead(f.db, eventsRepo.buildListRecentRead(f.db, options));
+      expect(ids(rows)).toEqual([f.bandEvent]);
+    }
+  },
   buildListRecentWithTakeCountsRead: async () => {
     const all = await runRead(f.db, eventsRepo.buildListRecentWithTakeCountsRead(f.db));
     expect(all.rows.map((row) => [row.id, row.takeCount])).toEqual([[f.bandEvent, 1]]);
@@ -469,6 +508,13 @@ const eventsChecks: ChecksFor<typeof eventsRepo> = {
     const dayStart = Date.UTC(2026, 8, 20);
     for (const kind of ["rehearsal", "concert", "session"] as const) {
       const rows = await eventsRepo.listOnDay(f.db, kind, dayStart, { includeArchived: true });
+      expect(rows.map((row) => row.id)).not.toContain(f.personalEvent);
+    }
+  },
+  buildListOnDayRead: async () => {
+    const dayStart = Date.UTC(2026, 8, 20);
+    for (const kind of ["rehearsal", "concert", "session"] as const) {
+      const rows = await runRead(f.db, eventsRepo.buildListOnDayRead(f.db, kind, dayStart));
       expect(rows.map((row) => row.id)).not.toContain(f.personalEvent);
     }
   },
@@ -528,6 +574,10 @@ const songsAllowed: AllowFor<typeof songsRepo> = {
   buildGetByIdsChunkQuery: "reads songs only",
   buildGetByIdsRead: "reads songs only",
   buildListRead: "reads songs only",
+  buildGetBySlugRead: "reads songs only",
+  buildIdBySlugQuery: "reads songs only",
+  buildListAliasesRead: "reads song aliases only",
+  buildListInstrumentNotesRead: "reads song notes only",
   findByTitleNorm: "reads songs only",
   findByAlias: "reads songs only",
   list: "reads songs only",
@@ -579,6 +629,8 @@ const assetsAllowed: AllowFor<typeof assetsRepo> = {
   buildListPlayableMastersByTakeIdsRead: "lookup by take ids the caller already holds",
   takeHasLossless: LOOKUP,
   tallyBySong:
+    "admin's delete confirm: must count every file a song delete destroys, private ones included",
+  buildTallyBySongRead:
     "admin's delete confirm: must count every file a song delete destroys, private ones included",
   tallyByTake: LOOKUP,
   getByIdWithTakeAccess: "returns the visibility facts the audio route hands to isVisibleTo",

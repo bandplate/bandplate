@@ -101,7 +101,7 @@ export async function getStashRows(
 }
 
 /** The song, event and player of each stash take, planned as one read. */
-function stashRowsRead(db: Db, rows: takesRepo.Take[]): Read<StashRowData[]> {
+export function stashRowsRead(db: Db, rows: takesRepo.Take[]): Read<StashRowData[]> {
   if (rows.length === 0) {
     return readValue([]);
   }

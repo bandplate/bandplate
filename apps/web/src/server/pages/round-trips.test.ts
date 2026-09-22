@@ -1,4 +1,5 @@
-// What home, `/me` and `/takes` cost in database ROUND TRIPS.
+// What home, `/me`, `/takes` and the song and event pages cost in database
+// ROUND TRIPS.
 //
 // On Workers every D1 call is a network hop, and production showed home at
 // 150–350 ms of wall time on 20–50 ms of CPU: the page was waiting on hops,
@@ -15,17 +16,26 @@
 //   /takes               12 / 2  →  2 / 2
 //   /takes, re-asked     15 / 3  →  3 / 3
 //   /takes?stash=1       10 / 3  →  2 / 2
+//   /songs/[slug]        16 / 5  →  2 / 2   (17 / 6 before for an admin)
+//   /songs/[slug], re-asked
+//                        26 / 9  →  3 / 3
+//   /events/[id]         12 / 5  →  2 / 2   (band event or personal day)
 //
 // "Re-asked" is a URL whose first guess at the window was wrong, so
-// `loadList` runs the listing's query a second time.
+// `loadList` runs the listing's query a second time. The song and event
+// counts include the reads their `.astro` pages used to make themselves (the
+// take sheet's pickers, the admin's tally, the same-day duplicates), which
+// the loaders now carry; they are on `dressDetailPages`'s additions.
 import { membersRepo } from "@bandplate/db";
 import { describe, expect, it } from "vitest";
 import { loadList } from "../pagination.js";
-import { seedBusyBand } from "../testing/busy-band.js";
+import { dressDetailPages, seedBusyBand } from "../testing/busy-band.js";
 import { countRoundTrips, type RoundTrips } from "../testing/round-trips.js";
+import { getEventPageData } from "./events.js";
 import { getHomeData } from "./home.js";
 import { getMeData, VOTES_PER_PAGE } from "./me.js";
 import { getTakesPageData, parseSearchQuery } from "./search.js";
+import { getSongPageData } from "./songs.js";
 
 /** Every statement also stays inside D1's 100 bound parameters. */
 function expectWithin(roundTrips: RoundTrips, limit: { total: number; depth: number }) {
@@ -171,5 +181,154 @@ describe("/takes", () => {
     // 130 extra takes and half of the band's 16 have a player; the personal one does not.
     expect(result.search.results.filter((take) => take.playableAssetId)).toHaveLength(138);
     expect(result.search.results.filter((take) => take.instruments.length > 0)).toHaveLength(147);
+  });
+});
+
+describe("/songs/[slug]", () => {
+  const load = (
+    band: Awaited<ReturnType<typeof seedBusyBand>>,
+    slug: string,
+    href: string,
+    withTally = false,
+  ) =>
+    getSongPageData(band.db, {
+      url: new URL(href, "http://band.test"),
+      slug,
+      memberId: band.memberId,
+      withTally,
+    });
+
+  it("reads in two batches, the pickers and the stash section included", async () => {
+    const band = await seedBusyBand();
+    const { songSlug } = await dressDetailPages(band);
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, songSlug, `/songs/${songSlug}`),
+    );
+    expectWithin(roundTrips, { total: 2, depth: 2 });
+    expect(roundTrips.trips.filter((t) => t.kind === "batch")).toHaveLength(2);
+
+    // The seed reaches every section, so a cheap page is not an empty one.
+    const detail = result.detail;
+    expect(detail?.takes).toHaveLength(4);
+    expect(detail?.takeTotal).toBe(4);
+    expect(detail?.aliases).toHaveLength(1);
+    expect(detail?.instrumentNotes).toHaveLength(1);
+    expect(detail?.stashRows).toHaveLength(1);
+    expect(detail?.stashRows[0]?.playableAssetId).toBeDefined();
+    expect(detail?.stashOwnerName).toBe("Anna Nováková");
+    expect(detail?.takes.map((take) => take.ownerName)).toContain("Bára");
+    expect(detail?.takes.filter((take) => take.favorited)).toHaveLength(1);
+    expect(detail?.takes.filter((take) => take.myVote !== undefined).length).toBeGreaterThan(0);
+    expect(detail?.takes.every((take) => take.instruments.length > 0)).toBe(true);
+    expect(result.allInstruments).toHaveLength(3);
+    expect(result.allEvents).toHaveLength(5);
+    expect(result.tally).toEqual({ files: 0, bytes: 0 });
+  });
+
+  it("counts the admin's tally in the same first batch", async () => {
+    const band = await seedBusyBand();
+    const { songSlug } = await dressDetailPages(band);
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, songSlug, `/songs/${songSlug}`, true),
+    );
+    expectWithin(roundTrips, { total: 2, depth: 2 });
+    // Two band takes with a master, one of another member's, and the stash one.
+    expect(result.tally).toEqual({ files: 4, bytes: 4000 });
+  });
+
+  it("stays within three when the list has to be asked for again", async () => {
+    const band = await seedBusyBand();
+    const { songSlug } = await dressDetailPages(band);
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, songSlug, `/songs/${songSlug}?page=2`),
+    );
+    expectWithin(roundTrips, { total: 3, depth: 3 });
+    expect(result.detail?.takes).toHaveLength(4);
+  });
+
+  it("answers an unknown slug in one batch", async () => {
+    const band = await seedBusyBand();
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, "no-such-song", "/songs/no-such-song"),
+    );
+    expectWithin(roundTrips, { total: 1, depth: 1 });
+    expect(result.detail).toBeUndefined();
+  });
+
+  it("keeps a fully grown page to two batches, chunks and all", async () => {
+    // 133 takes of "Song 4" on one page: every lookup keyed by take ids
+    // splits into two statements, and both go out in the same batch.
+    const band = await seedBusyBand({ extraTakes: 130 });
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, "song-4", "/songs/song-4?shown=200"),
+    );
+    expectWithin(roundTrips, { total: 2, depth: 2 });
+    expect(result.detail?.takes).toHaveLength(133);
+    expect(result.detail?.takes.every((take) => take.instruments.length > 0)).toBe(true);
+  });
+});
+
+describe("/events/[id]", () => {
+  const load = (band: Awaited<ReturnType<typeof seedBusyBand>>, id: string, query = "") =>
+    getEventPageData(band.db, {
+      url: new URL(`/events/${id}${query}`, "http://band.test"),
+      id,
+      memberId: band.memberId,
+    });
+
+  it("reads a band event in two batches, the same-day twin included", async () => {
+    const band = await seedBusyBand();
+    const { bandEventId } = await dressDetailPages(band);
+    const { result, roundTrips } = await countRoundTrips(band.db, () => load(band, bandEventId));
+    expectWithin(roundTrips, { total: 2, depth: 2 });
+    expect(roundTrips.trips.filter((t) => t.kind === "batch")).toHaveLength(2);
+    expect(result.detail?.takes).toHaveLength(4);
+    expect(result.detail?.takes.filter((take) => take.myVote !== undefined)).toHaveLength(2);
+    expect(result.detail?.takes.every((take) => take.song !== undefined)).toBe(true);
+    expect(result.detail?.owner).toBeUndefined();
+    expect(result.sameDay).toHaveLength(1);
+    expect(result.allSongs).toHaveLength(5);
+    expect(result.allInstruments).toHaveLength(3);
+  });
+
+  it("reads another member's personal day in two batches, its owner included", async () => {
+    const band = await seedBusyBand();
+    await dressDetailPages(band);
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, band.personalEventId),
+    );
+    expectWithin(roundTrips, { total: 2, depth: 2 });
+    expect(result.detail?.owner?.displayName).toBe("Bára");
+    expect(result.detail?.takes).toHaveLength(2);
+    expect(result.sameDay).toEqual([]);
+  });
+
+  it("stays within three when the list has to be asked for again", async () => {
+    const band = await seedBusyBand();
+    const { bandEventId } = await dressDetailPages(band);
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, bandEventId, "?page=2"),
+    );
+    expectWithin(roundTrips, { total: 3, depth: 3 });
+    expect(result.detail?.takes).toHaveLength(4);
+  });
+
+  it("answers an unknown id in one batch", async () => {
+    const band = await seedBusyBand();
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, "00000000-0000-0000-0000-000000000000"),
+    );
+    expectWithin(roundTrips, { total: 1, depth: 1 });
+    expect(result.detail).toBeUndefined();
+  });
+
+  it("keeps a fully grown page to two batches, chunks and all", async () => {
+    const band = await seedBusyBand({ extraTakes: 130 });
+    const [oldest] = band.bandEventIds;
+    const { result, roundTrips } = await countRoundTrips(band.db, () =>
+      load(band, oldest ?? "", "?shown=200"),
+    );
+    expectWithin(roundTrips, { total: 2, depth: 2 });
+    expect(result.detail?.takes).toHaveLength(134);
   });
 });

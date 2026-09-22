@@ -9,6 +9,7 @@ import type { Read } from "../read.js";
 import { createTestDb } from "../testing/create-test-db.js";
 import * as assetsRepo from "./assets.js";
 import * as eventsRepo from "./events.js";
+import * as favoritesRepo from "./favorites.js";
 import * as instrumentsRepo from "./instruments.js";
 import * as membersRepo from "./members.js";
 import * as songsRepo from "./songs.js";
@@ -138,6 +139,8 @@ describe("every statement of a planned read stays within D1's 100 bound paramete
   const db = await createTestDb();
   const many = ids(250);
   const newest = takesRepo.buildNewestEventWithTakesPublishedSinceQuery(db, 0);
+  const songBySlug = songsRepo.buildIdBySlugQuery(db, "a-song");
+  const page = { limit: 200, offset: 0 };
 
   const cases: [string, Read<unknown>, number][] = [
     ["takesRepo.buildGetByIdsRead", takesRepo.buildGetByIdsRead(db, many), 3],
@@ -182,6 +185,39 @@ describe("every statement of a planned read stays within D1's 100 bound paramete
       votesRepo.buildTakesOfMemberPageRead(db, "member-1", { page: { limit: 200, offset: 0 } }),
       1,
     ],
+    // The song and event pages' first batch: keyed by the slug's query or the
+    // event id, never by a list, so one statement each (two for a page and
+    // its count) whatever the page size.
+    ["songsRepo.buildGetBySlugRead", songsRepo.buildGetBySlugRead(db, "a-song"), 1],
+    ["songsRepo.buildListAliasesRead (slug)", songsRepo.buildListAliasesRead(db, songBySlug), 1],
+    [
+      "songsRepo.buildListInstrumentNotesRead (slug)",
+      songsRepo.buildListInstrumentNotesRead(db, songBySlug),
+      1,
+    ],
+    [
+      "takesRepo.buildListBySongRead (slug)",
+      takesRepo.buildListBySongRead(db, songBySlug, { page }),
+      2,
+    ],
+    [
+      "takesRepo.buildListStashRead (slug)",
+      takesRepo.buildListStashRead(db, "member-1", { songId: songBySlug }),
+      1,
+    ],
+    [
+      "favoritesRepo.buildIsFavoritedRead (slug)",
+      favoritesRepo.buildIsFavoritedRead(db, "member-1", "song", songBySlug),
+      1,
+    ],
+    ["assetsRepo.buildTallyBySongRead (slug)", assetsRepo.buildTallyBySongRead(db, songBySlug), 1],
+    [
+      "takesRepo.buildListByEventRead",
+      takesRepo.buildListByEventRead(db, "event-1", { order: "asc", page }),
+      2,
+    ],
+    ["eventsRepo.buildListRecentRead", eventsRepo.buildListRecentRead(db, { limit: 100 }), 1],
+    ["eventsRepo.buildListOnDayRead", eventsRepo.buildListOnDayRead(db, "rehearsal", 0), 1],
   ];
 
   it.each(cases)("%s", (_name, read, statements) => {

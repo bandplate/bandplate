@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type RosterInstrument, rosterSlots } from "./instrument-roster.js";
+import { pageRoster, type RosterInstrument, rosterSlots } from "./instrument-roster.js";
 
 const inst = (id: string, icon: string | null = id, isStub = false): RosterInstrument => ({
   id,
@@ -39,30 +39,33 @@ describe("rosterSlots", () => {
     ]);
   });
 
-  it("leaves stubs out unless the take has them", () => {
-    const stub = inst("mystery", null, true);
-    expect(shape(rosterSlots([...ROSTER, stub], [drums], mark))).toHaveLength(4);
-    expect(shape(rosterSlots([...ROSTER, stub], [stub], mark))).toContain("mystery+");
-  });
-
   it("collapses instruments that share a glyph into one slot", () => {
     const liveBass = { ...inst("live-bass"), icon: "bass" };
     const slots = rosterSlots([drums, bass, liveBass], [liveBass], mark);
     expect(shape(slots)).toEqual(["drums-", "live-bass+"]);
     expect(slots[1]?.labels).toEqual(["LIVE-BASS"]);
   });
+});
 
-  it("drops absent slots from the end first when over the cap", () => {
-    const big = ["a", "b", "c", "d", "e"].map((id) => inst(id));
-    expect(shape(rosterSlots(big, [big[4] as RosterInstrument], mark, 3))).toEqual([
-      "a-",
-      "b-",
-      "e+",
-    ]);
+describe("pageRoster", () => {
+  const at = (id: string, sortOrder: number, isStub = false) => ({
+    ...inst(id, id, isStub),
+    sortOrder,
+  });
+  const d = at("drums", 0);
+  const b = at("bass", 1);
+  const tb = at("trombone", 6);
+  const stub = at("mystery", 9, true);
+
+  it("adds an archived instrument a listed take uses, in sort order, for every row", () => {
+    const roster = pageRoster([d, b], [[d], [b, tb]]);
+    expect(roster.map((i) => i.id)).toEqual(["drums", "bass", "trombone"]);
+    // Every row then draws the same three slots, present or not.
+    expect(shape(rosterSlots(roster, [d], mark))).toEqual(["drums+", "bass-", "trombone-"]);
   });
 
-  it("never drops a present slot, even over the cap", () => {
-    const big = ["a", "b", "c"].map((id) => inst(id));
-    expect(shape(rosterSlots(big, big, mark, 2))).toEqual(["a+", "b+", "c+"]);
+  it("keeps a stub only when a listed take uses it", () => {
+    expect(pageRoster([d, stub], [[d]]).map((i) => i.id)).toEqual(["drums"]);
+    expect(pageRoster([d, stub], [[d], [stub]]).map((i) => i.id)).toEqual(["drums", "mystery"]);
   });
 });

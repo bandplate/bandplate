@@ -9,11 +9,14 @@
 // way it does for a mixer's lanes, and an absence reads as a gap instead of
 // something to count.
 //
-// The roster is the admin's active instrument list, in its sort order.
-// Stubs (created by a bridge for a track name it did not recognise) are left
-// out unless the take has one; they are not part of the band until an admin
-// names them. An instrument the take has but the roster does not (archived
-// since) is appended as present, so nothing recorded ever disappears.
+// The roster is built once per LIST (`pageRoster`), not per row: the
+// admin's active instruments in their sort order, plus anything a take on
+// the page has that the active list does not (an archived instrument, a
+// stub a bridge created for a track name it did not recognise). Built per
+// row, a take with the archived trombone drew seven slots under rows of six,
+// and the columns stopped lining up, which is the whole point. Stubs that no
+// take on the page uses are left out: they are not part of the band until an
+// admin names them.
 //
 // Instruments that share a glyph collapse to one slot, the same rule
 // `InstrumentSet` applies to a plain set: the admin chose the same drawing,
@@ -35,16 +38,11 @@ export interface RosterSlot<T extends RosterInstrument> {
   labels: string[];
 }
 
-/** More slots than this and the absent ones drop off the end first. */
-export const MAX_ROSTER_SLOTS = 8;
-
 export function rosterSlots<T extends RosterInstrument>(
   roster: readonly T[],
   onTake: readonly T[],
   markOf: (instrument: T) => string,
-  max: number = MAX_ROSTER_SLOTS,
 ): RosterSlot<T>[] {
-  const takeIds = new Set(onTake.map((i) => i.id));
   const takeMarks = new Map<string, T[]>();
   for (const instrument of onTake) {
     const key = markOf(instrument);
@@ -53,9 +51,6 @@ export function rosterSlots<T extends RosterInstrument>(
 
   const slots = new Map<string, RosterSlot<T>>();
   for (const instrument of roster) {
-    if (instrument.isStub && !takeIds.has(instrument.id)) {
-      continue;
-    }
     const key = markOf(instrument);
     const existing = slots.get(key);
     if (existing) {
@@ -81,19 +76,29 @@ export function rosterSlots<T extends RosterInstrument>(
     }
   }
 
-  const all = [...slots.values()];
-  let overflow = all.length - max;
-  if (overflow <= 0) {
-    return all;
-  }
-  const kept: RosterSlot<T>[] = [];
-  for (let i = all.length - 1; i >= 0; i--) {
-    const slot = all[i] as RosterSlot<T>;
-    if (overflow > 0 && !slot.present) {
-      overflow--;
-      continue;
+  // No cap: dropping absent slots per row would give rows different widths,
+  // the very thing the roster exists to prevent.
+  return [...slots.values()];
+}
+
+/**
+ * One roster for every row of a list: the active instruments (minus stubs no
+ * take here uses), then whatever else the listed takes carry, in sort order.
+ */
+export function pageRoster<T extends RosterInstrument & { sortOrder: number }>(
+  active: readonly T[],
+  takes: readonly (readonly T[])[],
+): T[] {
+  const used = new Map<string, T>();
+  for (const instruments of takes) {
+    for (const instrument of instruments) {
+      used.set(instrument.id, instrument);
     }
-    kept.unshift(slot);
   }
-  return kept;
+  const activeIds = new Set(active.map((i) => i.id));
+  const roster = active.filter((i) => !i.isStub || used.has(i.id));
+  const extra = [...used.values()]
+    .filter((i) => !activeIds.has(i.id))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  return [...roster, ...extra].sort((a, b) => a.sortOrder - b.sortOrder);
 }

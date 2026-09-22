@@ -25,6 +25,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { eventLabel, factsLine, formatShortDate } from "../../server/format.js";
+import { pageRoster } from "../../server/instrument-roster.js";
 import {
   archiveSongConsequence,
   deleteSongConsequence,
@@ -260,6 +261,13 @@ function eventOptionLabel(event: eventsRepo.Event): string {
   const name = eventLabel({ title: event.title ?? null, venue: event.venue ?? null });
   return name ? `${name} — ${formatShortDate(event.heldAt)}` : formatShortDate(event.heldAt);
 }
+
+// One line-up for every row in the list, so the glyphs line up into
+// columns; see `server/instrument-roster.ts`.
+const lineUp = pageRoster(
+  allInstruments,
+  takes.map((take) => take.instruments),
+);
 ---
 
 <AppLayout
@@ -620,7 +628,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
               {takes.slice(0, TAKES_BEFORE_FOLD).map((take) => (
                 <TakeRow
                   take={take}
-                  roster={allInstruments}
+                  roster={lineUp}
                   instruments={take.instruments}
                   context={{ kind: "song", event: take.event }}
                   playableAssetId={take.playableAssetId}
@@ -646,7 +654,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                     {foldedTakes.map((take) => (
                       <TakeRow
                         take={take}
-                        roster={allInstruments}
+                        roster={lineUp}
                         instruments={take.instruments}
                         context={{ kind: "song", event: take.event }}
                         playableAssetId={take.playableAssetId}

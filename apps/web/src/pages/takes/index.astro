@@ -37,6 +37,7 @@ import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
+import { pageRoster } from "../../server/instrument-roster.js";
 import {
   hasAnyFilter,
   hasRecordedFilter,
@@ -169,6 +170,13 @@ if (!viewingStash && pages.redirectTo) {
 // The real count, not a hedge. This read `${results.length}+ takes` when the
 // old hard cap truncated — "200+" said nothing a member could act on, and was
 // indistinguishable from an archive that held exactly 200.
+
+// One line-up for every row in the list, so the glyphs line up into
+// columns; see `server/instrument-roster.ts`.
+const lineUp = pageRoster(
+  instruments,
+  results.map((take) => take.instruments),
+);
 ---
 
 <AppLayout title={t.takes.title} headerTitle={viewingStash ? t.stash.pill : t.takes.title}
@@ -498,7 +506,7 @@ if (!viewingStash && pages.redirectTo) {
               {results.map((take) => (
                 <TakeRow
                   take={take}
-                  roster={instruments}
+                  roster={lineUp}
                   instruments={take.instruments}
                   context={{ kind: "full", song: take.song, event: take.event }}
                   playableAssetId={take.playableAssetId}

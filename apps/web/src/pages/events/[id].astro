@@ -22,6 +22,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { eventLabel, factsLine } from "../../server/format.js";
+import { pageRoster } from "../../server/instrument-roster.js";
 import {
   archiveEventConsequence,
   EVENT_TAKES_PER_PAGE,
@@ -154,6 +155,13 @@ const [allSongs, allInstruments] = await Promise.all([
   songsRepo.list(appDeps.db),
   instrumentsRepo.list(appDeps.db),
 ]);
+
+// One line-up for every row in the list, so the glyphs line up into
+// columns; see `server/instrument-roster.ts`.
+const lineUp = pageRoster(
+  allInstruments,
+  takes.map((take) => take.instruments),
+);
 ---
 
 <AppLayout
@@ -442,7 +450,7 @@ const [allSongs, allInstruments] = await Promise.all([
             {takes.map((take) => (
               <TakeRow
                 take={take}
-                roster={allInstruments}
+                roster={lineUp}
                 instruments={take.instruments}
                 context={{ kind: "event", song: take.song, eventKind: event.kind }}
                 playableAssetId={take.playableAssetId}

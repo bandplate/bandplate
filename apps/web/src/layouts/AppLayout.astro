@@ -466,7 +466,19 @@ const tabItems: readonly { key: NavKey; label: string; href: string }[] = isAdmi
       // `<ClientRouter />` navigation (confirmed by hand: this page's module
       // state survives it), so without this call this tab would keep
       // believing the member who just signed out is still signed in.
-      stopSyncingLocally();
+      try {
+        // Same invariant as `resolveAndSubmit`'s own `try`/`finally` below:
+        // nothing on this path may block sign-out. `setCurrentMember` ends in
+        // a nanostores `atom.set`, which RE-THROWS if any subscriber's own
+        // callback throws — an exception here, uncaught, would skip
+        // `resolveAndSubmit(form)` entirely and leave the member stuck signed
+        // in on screen. Losing the local reset is no worse than not having
+        // made this call at all; the cross-tab signal and the server check
+        // are still the real guarantees.
+        stopSyncingLocally();
+      } catch {
+        // See above — deliberately swallowed.
+      }
       resolveAndSubmit(form);
     },
     { capture: true },

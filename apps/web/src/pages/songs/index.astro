@@ -16,10 +16,10 @@ import { favoritesRepo } from "@bandplate/db";
 import { formatShortDate, messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
-import Pagination from "@bandplate/ui/components/Pagination.astro";
 import Plus from "@lucide/astro/icons/plus";
 import Search from "@lucide/astro/icons/search";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
+import ListFooter from "../../components/ListFooter.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -33,7 +33,7 @@ import {
   SONGS_PER_PAGE,
   type SongField,
 } from "../../server/pages/songs.js";
-import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
+import { loadList, moreAnchorId } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -85,17 +85,20 @@ if (Astro.request.method === "POST") {
 const query = parseSongsListQuery(Astro.url.searchParams);
 const canArchive = hasAllScopes(principal, ["members:admin"]);
 
-const { page, args: songsPage } = pageRequest(Astro.url.searchParams, SONGS_PER_PAGE);
-const [songs, favoriteSongIds, archivedCount] = await Promise.all([
-  listSongsForLibrary(appDeps.db, query, songsPage),
+const [{ result: songs, list }, favoriteSongIds, archivedCount] = await Promise.all([
+  loadList(
+    Astro.url,
+    SONGS_PER_PAGE,
+    (songsPage) => listSongsForLibrary(appDeps.db, query, songsPage),
+    (found) => found.total,
+  ),
   favoritesRepo.listTargetIdsByMember(appDeps.db, principal.memberId, "song"),
   countArchivedSongs(appDeps.db),
 ]);
-const pages = pageView({ url: Astro.url, page, perPage: SONGS_PER_PAGE, total: songs.total });
 // A link to a page that has since fallen off the end lands on the last real
 // one, filters intact, rather than on a blank library.
-if (pages.redirectTo) {
-  return Astro.redirect(pages.redirectTo);
+if (list.redirectTo) {
+  return Astro.redirect(list.redirectTo);
 }
 
 const justArchived = Astro.url.searchParams.get("archived_ok") === "1";
@@ -305,8 +308,11 @@ function archivedHref(): string {
         </div>
       ) : (
         <div class="bp-song-list">
-          {songs.rows.map((song) => (
+          {songs.rows.map((song, i) => (
             <div class="bp-song-row">
+              {moreAnchorId(list, i) && (
+                <span class="bp-list-anchor" id={moreAnchorId(list, i)} aria-hidden="true" />
+              )}
               <a href={`/songs/${song.slug}`} class="bp-song-row-link">
                 <span class="bp-song-row-main">
                   <span class={`bp-song-title ${song.isStub ? "bp-song-title-stub" : ""}`}>
@@ -343,7 +349,7 @@ function archivedHref(): string {
       )
     }
 
-    <Pagination {...pages} labels={paginationLabels(pages, "song")} />
+    <ListFooter list={list} noun="song" />
   </div>
 </AppLayout>
 

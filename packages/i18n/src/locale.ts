@@ -14,8 +14,8 @@
 // impossible instead.
 //
 // `packages/ui` deliberately does NOT depend on this. Its entire user-facing
-// vocabulary is seven strings, which it now takes as props — see
-// `Pagination.astro`'s `PaginationLabels`. The brand layer stays a brand
+// vocabulary is a handful of strings, which it takes as props: see
+// `ListMore.astro` and `PageCounter.astro`. The brand layer stays a brand
 // layer.
 
 /**

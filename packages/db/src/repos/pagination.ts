@@ -59,11 +59,15 @@ export interface Paged<T> {
 export const DEFAULT_PAGE_SIZE = 25;
 
 /**
- * The ceiling on `perPage`, enforced at the repo boundary rather than trusted
- * from the caller — `?perPage=100000` is a URL anyone can type, and every
- * listing here is reachable by GET.
+ * The ceiling on `perPage`, enforced at the web layer's `toPageArgs` rather
+ * than trusted from the caller: `?shown=100000` is a URL anyone can type, and
+ * every listing here is reachable by GET.
+ *
+ * 200 because that is how far a "load more" list grows before it pages
+ * instead (`MAX_SHOWN` in `apps/web/src/server/pagination.ts`, pinned to this
+ * by a test there).
  */
-export const MAX_PAGE_SIZE = 100;
+export const MAX_PAGE_SIZE = 200;
 
 /** Clamps a requested page size into `1..MAX_PAGE_SIZE`. */
 export function clampPageSize(requested: number, fallback: number): number {

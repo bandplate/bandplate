@@ -43,11 +43,11 @@ import {
   messages,
 } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
-import Pagination from "@bandplate/ui/components/Pagination.astro";
 import Check from "@lucide/astro/icons/check";
 import { isThemeChoice, THEMES } from "../../client/theme.js";
 import InstallHint from "../../components/InstallHint.tsx";
 import InstrumentSet from "../../components/InstrumentSet.astro";
+import ListFooter from "../../components/ListFooter.astro";
 import NotificationSettings from "../../components/NotificationSettings.tsx";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps, getWebConfig } from "../../server/app.js";
@@ -55,7 +55,7 @@ import { readThemeCookie, setLocaleCookie, setThemeCookie } from "../../server/c
 import { isSameOrigin } from "../../server/csrf.js";
 
 import { getMeData, setLocaleFromForm, VOTES_PER_PAGE } from "../../server/pages/me.js";
-import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
+import { loadList, moreAnchorId } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -113,16 +113,19 @@ const themeChoice = readThemeCookie(Astro.cookies);
 const themeLabels = { light: t.me.themeLight, dark: t.me.themeDark, system: t.me.themeSystem };
 
 const languageSaved = Astro.url.searchParams.get("saved") === "1";
-const { page, args: votesPage } = pageRequest(Astro.url.searchParams, VOTES_PER_PAGE);
-const data = await getMeData(appDeps.db, principal.memberId, votesPage);
+const { result: data, list } = await loadList(
+  Astro.url,
+  VOTES_PER_PAGE,
+  (votesPage) => getMeData(appDeps.db, principal.memberId, votesPage),
+  (found) => found?.voteTotal ?? 0,
+);
 if (!data) {
   return new Response("Not found.", { status: 404 });
 }
 
 const { member, instruments, votes, voteTotal, unvotedCount, keeperCount, agreementPct } = data;
-const pages = pageView({ url: Astro.url, page, perPage: VOTES_PER_PAGE, total: voteTotal });
-if (pages.redirectTo) {
-  return Astro.redirect(pages.redirectTo);
+if (list.redirectTo) {
+  return Astro.redirect(list.redirectTo);
 }
 
 // The Notifications section only exists where push is actually configured —
@@ -349,8 +352,11 @@ const initials = member.displayName
           </div>
         ) : (
           <ul class="bp-vote-list">
-            {votes.map(({ vote, take }) => (
+            {votes.map(({ vote, take }, i) => (
               <li class="bp-vote-row">
+                {moreAnchorId(list, i) && (
+                  <span class="bp-list-anchor" id={moreAnchorId(list, i)} aria-hidden="true" />
+                )}
                 <div class="bp-vote-row-main">
                   {take ? (
                     <a
@@ -385,7 +391,7 @@ const initials = member.displayName
           </ul>
         )
       }
-      <Pagination {...pages} labels={paginationLabels(pages, "vote")} />
+      <ListFooter list={list} noun="vote" />
     </section>
 
 

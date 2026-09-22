@@ -23,7 +23,7 @@ export {
 } from "./locale.js";
 export { adminMessages } from "./messages/admin.js";
 export { authMessages } from "./messages/auth.js";
-export { commonMessages } from "./messages/common.js";
+export { commonMessages, type ListNoun } from "./messages/common.js";
 export { eventsMessages } from "./messages/events.js";
 export { homeMessages } from "./messages/home.js";
 export { type Messages, messages } from "./messages/index.js";

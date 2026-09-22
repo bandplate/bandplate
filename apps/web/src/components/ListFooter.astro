@@ -1,0 +1,42 @@
+---
+// The footer under every listing that can grow: "load more" or the page
+// counter, whichever `listView` decided, in the member's language. Nothing at
+// all for a list that fits in its first batch.
+import type { ListNoun } from "@bandplate/i18n";
+import ListMore from "@bandplate/ui/components/ListMore.astro";
+import PageCounter from "@bandplate/ui/components/PageCounter.astro";
+import {
+  hasFooter,
+  type ListView,
+  listMoreLabels,
+  pageCounterLabels,
+} from "../server/pagination.js";
+
+export interface Props {
+  list: ListView;
+  /** What the list counts, for the sentences. */
+  noun: ListNoun;
+}
+
+const { list, noun } = Astro.props;
+const locale = Astro.locals.locale;
+---
+
+{
+  hasFooter(list) &&
+    (list.mode === "more" ? (
+      <ListMore
+        nextHref={list.nextHref}
+        allHref={list.allHref}
+        labels={listMoreLabels(list, noun, locale)}
+      />
+    ) : (
+      <PageCounter
+        page={list.page}
+        pageCount={list.pageCount}
+        prevHref={list.prevHref}
+        nextHref={list.nextHref}
+        labels={pageCounterLabels(list, noun, locale)}
+      />
+    ))
+}

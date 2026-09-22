@@ -26,10 +26,10 @@ import { instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 // submit button applies the filters.
 import { messages } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
-import Pagination from "@bandplate/ui/components/Pagination.astro";
 import Inbox from "@lucide/astro/icons/inbox";
 import ListFilter from "@lucide/astro/icons/list-filter";
 import X from "@lucide/astro/icons/x";
+import ListFooter from "../../components/ListFooter.astro";
 import StashItemSheet from "../../components/StashItemSheet.astro";
 import StashPendingList from "../../components/StashPendingList.tsx";
 import StashRow from "../../components/StashRow.astro";
@@ -48,7 +48,7 @@ import {
   TAKES_PER_PAGE,
 } from "../../server/pages/search.js";
 import { applyStashWrite, getStashView } from "../../server/pages/stash.js";
-import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
+import { loadList, moreAnchorId } from "../../server/pagination.js";
 import { withQuery } from "../../server/safe-redirect.js";
 
 const principal = Astro.locals.principal;
@@ -122,13 +122,18 @@ const deletedTakeId = viewingStash
   : undefined;
 const filtersApplied = hasAnyFilter(query) || query.sort !== "recent";
 
-const { page, args: takesPage } = pageRequest(Astro.url.searchParams, TAKES_PER_PAGE);
-const [{ results, total }, instruments, songs, stashCount, stash] = await Promise.all([
+const [{ result: search, list }, instruments, songs, stashCount, stash] = await Promise.all([
   // The stash is a different list, not a filter on this one: nothing below the
   // bar is searched while it is open.
-  viewingStash
-    ? Promise.resolve<SearchTakesResult>({ results: [], total: 0 })
-    : searchTakes(appDeps.db, query, principal.memberId, takesPage, appDeps.clock.now()),
+  loadList(
+    Astro.url,
+    TAKES_PER_PAGE,
+    (takesPage) =>
+      viewingStash
+        ? Promise.resolve<SearchTakesResult>({ results: [], total: 0 })
+        : searchTakes(appDeps.db, query, principal.memberId, takesPage, appDeps.clock.now()),
+    (found) => found.total,
+  ),
   instrumentsRepo.list(appDeps.db),
   // The picker's options. A band's repertoire is tens of songs, so the whole
   // list is one cheap query and a plain `<select>` — no autocomplete, no
@@ -139,6 +144,7 @@ const [{ results, total }, instruments, songs, stashCount, stash] = await Promis
     ? getStashView(appDeps.db, principal.memberId)
     : Promise.resolve({ rows: [], owner: undefined, songChoices: [] }),
 ]);
+const { results, total } = search;
 const stashRows = stash.rows;
 // `?renamed=` names the recording, so the banner is about the one that was
 // renamed rather than about "something on this page".
@@ -160,11 +166,10 @@ const activeFilterCount = [
 // implying they still have to fill something in.
 const usingExactDates = Boolean(query.dateFrom) || Boolean(query.dateTo);
 
-const pages = pageView({ url: Astro.url, page, perPage: TAKES_PER_PAGE, total });
 // A filtered link whose page has since fallen off the end lands on the last
 // real one rather than on an empty result set that looks like a bad filter.
-if (!viewingStash && pages.redirectTo) {
-  return Astro.redirect(pages.redirectTo);
+if (!viewingStash && list.redirectTo) {
+  return Astro.redirect(list.redirectTo);
 }
 
 // The real count, not a hedge. This read `${results.length}+ takes` when the
@@ -503,8 +508,9 @@ const lineUp = pageRoster(
             </div>
           ) : (
             <div class="bp-take-list bp-take-list--wide" data-play-queue>
-              {results.map((take) => (
+              {results.map((take, i) => (
                 <TakeRow
+                  anchorId={moreAnchorId(list, i)}
                   take={take}
                   roster={lineUp}
                   instruments={take.instruments}
@@ -518,7 +524,7 @@ const lineUp = pageRoster(
           )
         }
 
-        <Pagination {...pages} labels={paginationLabels(pages, "take")} />
+        <ListFooter list={list} noun="take" />
       </div>
     )}
   </div>

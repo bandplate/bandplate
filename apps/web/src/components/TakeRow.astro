@@ -133,6 +133,11 @@ export interface Props {
    * down a list. See `InstrumentSet`'s `roster`.
    */
   roster?: instrumentsRepo.Instrument[];
+  /**
+   * Where a "show more" link lands, when this row is the first of a batch.
+   * See `moreAnchorId` in `server/pagination.ts`.
+   */
+  anchorId?: string | undefined;
 }
 
 const {
@@ -143,6 +148,7 @@ const {
   playableAssetId,
   ownerName = null,
   roster,
+  anchorId,
 } = Astro.props;
 
 const locale = Astro.locals.locale;
@@ -198,6 +204,7 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
 ---
 
 <div class="bp-take-row">
+  {anchorId && <span class="bp-list-anchor" id={anchorId} aria-hidden="true" />}
   <div class="bp-take-row-lead">
     <slot name="leading">
     {

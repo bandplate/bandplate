@@ -1,0 +1,96 @@
+---
+import ChevronLeft from "@lucide/astro/icons/chevron-left";
+import ChevronRight from "@lucide/astro/icons/chevron-right";
+import ChevronUp from "@lucide/astro/icons/chevron-up";
+// The end of a list too long to grow: which rows these are, a "‹ 4 / 9 ›"
+// counter, and a way back to the top.
+//
+// One design at every width. The numbered row it replaces was two designs
+// (numbers on a desktop, a sentence on a phone), and nobody jumps to page 7
+// of a rehearsal archive anyway: the lists that reach this counter are the
+// long ones, read from the newest end.
+//
+// --- Links, not buttons -------------------------------------------------
+//
+// A page is an ADDRESS: shareable, bookmarkable, opens in a new tab on a
+// middle click, and works with no JS at all.
+//
+// --- The capsule never changes width --------------------------------------
+//
+// On the first and last page the dead arrow is still drawn, inert: an arrow
+// that appears on page 2 would shift the counter under a thumb that is
+// already moving toward it. `aria-hidden`, because "unavailable previous
+// page" is noise a screen reader does not need; the nav's own name already
+// says "page 1 of 9".
+//
+// Every word comes from the caller, as with every component in this package.
+export interface PageCounterLabels {
+  /** "76–100 of 225 takes". */
+  range: string;
+  /** The nav's accessible name, "Pagination, page 4 of 9". */
+  nav: string;
+  /** Accessible names of the two arrows. */
+  previous: string;
+  next: string;
+  /** The link back to the top of the page. */
+  top: string;
+}
+
+export interface Props {
+  page: number;
+  pageCount: number;
+  prevHref?: string | undefined;
+  nextHref?: string | undefined;
+  /** Where "back to top" goes. The layout's `<main id="main">` by default. */
+  topHref?: string;
+  labels: PageCounterLabels;
+}
+
+const { page, pageCount, prevHref, nextHref, topHref = "#main", labels } = Astro.props;
+// One string, not `/ {pageCount}` in the template: Astro drops the whitespace
+// between neighbouring expressions on one line.
+const ofPages = `/ ${pageCount}`;
+// The page number is given room for as many digits as the last page has, so
+// "9 / 12" and "10 / 12" draw the same width: see the CSS.
+const digits = `--bp-page-digits: ${String(pageCount).length}`;
+---
+
+<nav class="bp-page-counter" aria-label={labels.nav}>
+  <p class="bp-page-counter-range bp-m0">{labels.range}</p>
+
+  <div class="bp-page-counter-capsule">
+    {
+      prevHref ? (
+        <a class="bp-page-counter-step" href={prevHref} rel="prev" aria-label={labels.previous}>
+          <ChevronLeft size={18} aria-hidden="true" stroke-width={2.4} />
+        </a>
+      ) : (
+        <span class="bp-page-counter-step bp-page-counter-step--off" aria-hidden="true">
+          <ChevronLeft size={18} stroke-width={2.4} />
+        </span>
+      )
+    }
+    {/* A picture of the nav's name, so hidden from assistive tech: it
+        already heard "page 4 of 9". */}
+    <span class="bp-page-counter-here" aria-hidden="true">
+      <span class="bp-page-counter-page" style={digits}>{page}</span>
+      <span class="bp-page-counter-of">{ofPages}</span>
+    </span>
+    {
+      nextHref ? (
+        <a class="bp-page-counter-step" href={nextHref} rel="next" aria-label={labels.next}>
+          <ChevronRight size={18} aria-hidden="true" stroke-width={2.4} />
+        </a>
+      ) : (
+        <span class="bp-page-counter-step bp-page-counter-step--off" aria-hidden="true">
+          <ChevronRight size={18} stroke-width={2.4} />
+        </span>
+      )
+    }
+  </div>
+
+  <a class="bp-list-quiet-link bp-page-counter-top" href={topHref}>
+    <ChevronUp size={14} aria-hidden="true" stroke-width={2.4} />
+    {labels.top}
+  </a>
+</nav>

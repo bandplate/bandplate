@@ -1,0 +1,58 @@
+---
+// The end of a list that grows: how far it has got, one button for one more
+// batch, and a quiet link to the rest when more than one batch is left.
+//
+// --- Links, not buttons -------------------------------------------------
+//
+// Each is an `<a href>` asking the server for more rows (`?shown=50`), not a
+// script appending them. The grown list is an ADDRESS: it survives a reload,
+// a back button and a shared link, and it works with no JS at all, like every
+// other control here. The link's hash lands the page on the first new row, so
+// growing the list does not throw you back to the top; the row carries the
+// anchor, see `moreAnchorId` in `apps/web/src/server/pagination.ts`.
+//
+// --- What it draws when -------------------------------------------------
+//
+// The caller decides whether there is a footer at all (a list that fits in
+// its first batch has none). Given one: the count line always; the button
+// while anything is left; the "all" link only when it would do something the
+// button does not.
+//
+// Every word comes from the caller, as with every component in this package:
+// `packages/ui` has no locale, and Czech declines the noun in each of these
+// three sentences differently.
+export interface ListMoreLabels {
+  /** "Showing 100 of 187 takes", or "All 187 takes" once nothing is left. */
+  count: string;
+  /** "Show 25 more takes". */
+  more: string;
+  /** "Show all 187 takes". */
+  all: string;
+}
+
+export interface Props {
+  nextHref?: string | undefined;
+  allHref?: string | undefined;
+  labels: ListMoreLabels;
+}
+
+const { nextHref, allHref, labels } = Astro.props;
+---
+
+<div class="bp-list-more">
+  <p class="bp-list-more-count bp-m0">{labels.count}</p>
+  {
+    nextHref && (
+      <a class="bp-btn bp-btn-quiet bp-btn-sm bp-list-more-next" href={nextHref}>
+        {labels.more}
+      </a>
+    )
+  }
+  {
+    allHref && (
+      <a class="bp-list-quiet-link" href={allHref}>
+        {labels.all}
+      </a>
+    )
+  }
+</div>

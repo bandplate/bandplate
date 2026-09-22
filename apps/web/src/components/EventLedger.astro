@@ -33,10 +33,21 @@ export interface Props {
   /** Renders a footer button when set — home's "All events". */
   footerHref?: string;
   footerLabel?: string;
+  /**
+   * The "show more" anchor for the row at each index, if it has one. See
+   * `moreAnchorId` in `server/pagination.ts`.
+   */
+  anchorFor?: (index: number) => string | undefined;
 }
 
 const t = messages(Astro.locals.locale);
-const { events, favoritedIds, footerHref, footerLabel = t.events.allEvents } = Astro.props;
+const {
+  events,
+  favoritedIds,
+  footerHref,
+  footerLabel = t.events.allEvents,
+  anchorFor,
+} = Astro.props;
 
 // The month abbreviation follows the reader's language like every other date.
 //
@@ -63,6 +74,7 @@ const rows = events.map((event) => {
   {
     rows.map(({ event, day, month, venue, kind }, i) => (
       <div class={`bp-ledger-row${i === 0 ? " bp-ledger-row--latest" : ""}`}>
+        {anchorFor?.(i) && <span class="bp-list-anchor" id={anchorFor(i)} aria-hidden="true" />}
         <a href={`/events/${event.id}`} class="bp-ledger-link">
           <span class="bp-ledger-date">
             <span class="bp-ledger-day">{day}</span>

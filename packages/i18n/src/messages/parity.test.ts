@@ -161,6 +161,32 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "home.voteCount": [{ label: "n", args: [2] }],
   "home.stashLatestWhen": [{ label: "parts", args: [{ date: "21. 9. 2026", length: "0:47" }] }],
   "common.editingSheet": [{ label: "n", args: ["Čoudy"] }],
+  // Every noun, and every Czech plural class the footer can meet.
+  "common.listShowing": [
+    { label: "take", args: [{ noun: "take", shown: 100, total: 187 }] },
+    { label: "vote-one", args: [{ noun: "vote", shown: 1, total: 1 }] },
+    { label: "song-few", args: [{ noun: "song", shown: 3, total: 4 }] },
+  ],
+  "common.listAll": [
+    { label: "take", args: [{ noun: "take", total: 187 }] },
+    { label: "event-few", args: [{ noun: "event", total: 3 }] },
+    { label: "song-one", args: [{ noun: "song", total: 1 }] },
+  ],
+  "common.listMore": [
+    { label: "one", args: [{ noun: "take", count: 1 }] },
+    { label: "few", args: [{ noun: "song", count: 3 }] },
+    { label: "other", args: [{ noun: "event", count: 25 }] },
+    { label: "vote", args: [{ noun: "vote", count: 20 }] },
+  ],
+  "common.listShowAll": [
+    { label: "other", args: [{ noun: "take", total: 187 }] },
+    { label: "few", args: [{ noun: "vote", total: 4 }] },
+  ],
+  "common.listRange": [
+    { label: "other", args: [{ noun: "take", from: 76, to: 100, total: 225 }] },
+    { label: "big", args: [{ noun: "event", from: 1201, to: 1220, total: 1234 }] },
+  ],
+  "common.listPagesNav": [{ label: "n", args: [{ page: 4, pageCount: 9 }] }],
   "voting.favoriteAdd": [{ label: "n", args: ["Čoudy"] }],
   "voting.favoriteRemove": [{ label: "n", args: ["Čoudy"] }],
   "islands.chartUnnamedSection": [{ label: "i", args: [3] }],

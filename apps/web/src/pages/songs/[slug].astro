@@ -14,9 +14,9 @@ import { assetsRepo, eventsRepo, instrumentsRepo } from "@bandplate/db";
 import { messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
-import Pagination from "@bandplate/ui/components/Pagination.astro";
 import ChartEditor from "../../components/ChartEditor.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
+import ListFooter from "../../components/ListFooter.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import StashItemSheet from "../../components/StashItemSheet.astro";
 import StashRow from "../../components/StashRow.astro";
@@ -36,7 +36,7 @@ import {
 } from "../../server/pages/songs.js";
 import { applyStashWrite } from "../../server/pages/stash.js";
 import { createTake, type TakeField } from "../../server/pages/takes.js";
-import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
+import { loadList, moreAnchorId } from "../../server/pagination.js";
 import { withQuery } from "../../server/safe-redirect.js";
 import { songToRows } from "../../server/song-chart-rows.js";
 import { buildSongChart, KNOWN_SECTION_WORDS } from "../../server/song-text.js";
@@ -153,8 +153,12 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const { page, args: takesPage } = pageRequest(Astro.url.searchParams, SONG_TAKES_PER_PAGE);
-const detail = await getSongDetail(appDeps.db, slug, principal.memberId, takesPage);
+const { result: detail, list } = await loadList(
+  Astro.url,
+  SONG_TAKES_PER_PAGE,
+  (takesPage) => getSongDetail(appDeps.db, slug, principal.memberId, takesPage),
+  (found) => found?.takeTotal ?? 0,
+);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
@@ -181,14 +185,8 @@ const stashRenamedRow = stashJustRenamed
 // same confirmation `/takes/[id]?published=1` shows, said here instead
 // because `returnTo` sent the member back to the song rather than the take.
 const justPublished = Astro.url.searchParams.get("published") === "1";
-const pages = pageView({
-  url: Astro.url,
-  page,
-  perPage: SONG_TAKES_PER_PAGE,
-  total: takeTotal,
-});
-if (pages.redirectTo) {
-  return Astro.redirect(pages.redirectTo);
+if (list.redirectTo) {
+  return Astro.redirect(list.redirectTo);
 }
 
 /**
@@ -202,6 +200,9 @@ if (pages.redirectTo) {
  */
 const TAKES_BEFORE_FOLD = 3;
 const foldedTakes = takes.slice(TAKES_BEFORE_FOLD);
+// A member who asked for more takes wants to see them: a grown list opens the
+// fold, or "show more" would land on a row hidden inside it.
+const foldOpen = list.mode === "more" && list.args.limit > SONG_TAKES_PER_PAGE;
 const metaParts = [song.musicalKey, song.tempoBpm ? t.songs.bpm(song.tempoBpm) : undefined].filter(
   Boolean,
 );
@@ -625,8 +626,9 @@ const lineUp = pageRoster(
             </div>
           ) : (
             <div class="bp-take-list" data-play-queue>
-              {takes.slice(0, TAKES_BEFORE_FOLD).map((take) => (
+              {takes.slice(0, TAKES_BEFORE_FOLD).map((take, i) => (
                 <TakeRow
+                  anchorId={moreAnchorId(list, i)}
                   take={take}
                   roster={lineUp}
                   instruments={take.instruments}
@@ -642,7 +644,7 @@ const lineUp = pageRoster(
                    readable would be the first thing here that didn't.
                    `name` is deliberately absent: this is not an accordion,
                    nothing else closes when it opens. */
-                <details class="bp-take-fold">
+                <details class="bp-take-fold" open={foldOpen}>
                   <summary class="bp-take-fold-toggle">
                     <span class="bp-take-fold-open">
                       {t.songs.showMoreTakes(foldedTakes.length)}
@@ -650,8 +652,9 @@ const lineUp = pageRoster(
                     <span class="bp-take-fold-close">{t.songs.showFewer}</span>
                   </summary>
                   <div class="bp-take-list">
-                    {foldedTakes.map((take) => (
+                    {foldedTakes.map((take, i) => (
                       <TakeRow
+                        anchorId={moreAnchorId(list, TAKES_BEFORE_FOLD + i)}
                         take={take}
                         roster={lineUp}
                         instruments={take.instruments}
@@ -664,7 +667,7 @@ const lineUp = pageRoster(
                   </div>
                 </details>
               )}
-              <Pagination {...pages} labels={paginationLabels(pages, "take")} />
+              <ListFooter list={list} noun="take" />
             </div>
           )
         }

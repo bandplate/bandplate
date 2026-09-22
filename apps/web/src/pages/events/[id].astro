@@ -13,9 +13,9 @@ import { instrumentsRepo, songsRepo } from "@bandplate/db";
 import { formatLongDate, messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
-import Pagination from "@bandplate/ui/components/Pagination.astro";
 import Play from "@lucide/astro/icons/play";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
+import ListFooter from "../../components/ListFooter.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -32,7 +32,7 @@ import {
   updateEvent,
 } from "../../server/pages/events.js";
 import { createTake, type TakeField } from "../../server/pages/takes.js";
-import { pageRequest, pageView, paginationLabels } from "../../server/pagination.js";
+import { loadList, moreAnchorId } from "../../server/pagination.js";
 
 const principal = Astro.locals.principal;
 if (!principal) {
@@ -88,8 +88,12 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const { page, args: takesPage } = pageRequest(Astro.url.searchParams, EVENT_TAKES_PER_PAGE);
-const detail = await getEventDetail(appDeps.db, id, principal.memberId, takesPage);
+const { result: detail, list } = await loadList(
+  Astro.url,
+  EVENT_TAKES_PER_PAGE,
+  (takesPage) => getEventDetail(appDeps.db, id, principal.memberId, takesPage),
+  (found) => found?.takeTotal ?? 0,
+);
 if (!detail) {
   return new Response("Not found.", { status: 404 });
 }
@@ -97,14 +101,8 @@ if (!detail) {
 const { event, eventFavorited, takes, takeTotal, owner } = detail;
 /** Somebody's own stash day, not the band's event — no edit, no merge, no add-take. */
 const isPersonal = event.kind === "personal";
-const pages = pageView({
-  url: Astro.url,
-  page,
-  perPage: EVENT_TAKES_PER_PAGE,
-  total: takeTotal,
-});
-if (pages.redirectTo) {
-  return Astro.redirect(pages.redirectTo);
+if (list.redirectTo) {
+  return Astro.redirect(list.redirectTo);
 }
 // `eventKindLabel`, not a ternary of its own. This page said "Concert" while
 // every take row, the ledger and the take page said "live" for the same event
@@ -447,8 +445,9 @@ const lineUp = pageRoster(
           </div>
         ) : (
           <div class="bp-take-list bp-take-list--wide" id="event-takes" data-play-queue>
-            {takes.map((take) => (
+            {takes.map((take, i) => (
               <TakeRow
+                anchorId={moreAnchorId(list, i)}
                 take={take}
                 roster={lineUp}
                 instruments={take.instruments}
@@ -461,7 +460,7 @@ const lineUp = pageRoster(
         )
       }
 
-      <Pagination {...pages} labels={paginationLabels(pages, "take")} />
+      <ListFooter list={list} noun="take" />
     </section>
   </div>
 </AppLayout>

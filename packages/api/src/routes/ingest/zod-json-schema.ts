@@ -1,137 +1,82 @@
-// A small, deliberately narrow Zod -> JSON Schema converter — just enough
-// to walk the shapes actually used by `./schemas.ts` (object/string/
-// number/boolean/enum/literal/array/optional/nullable/default/
-// discriminated-union). Not a general-purpose library: adding a
-// dependency (`zod-to-openapi` or similar) for this one document felt like
-// more supply-chain surface than the contract's promise actually needs —
-// "generated from the same Zod schemas that validate requests" is
-// satisfied by walking the real `ZodType` objects, whatever the walker's
-// own size. Falls back to `{}` (accept-anything) for any construct this
-// file doesn't recognize, rather than throwing — a slightly-loose OpenAPI
-// document beats a 500 on `/openapi.json`.
+// JSON Schema for the ingest contract's request bodies (`docs/ingest-contract-v1.md`,
+// `./schemas.ts`), built by `zod-to-json-schema` — an established, Zod-3-compatible
+// library — rather than by walking Zod's private `_def` shape by hand. That hand-walk
+// used to live here and broke silently on a Zod internals change; the library's public
+// contract is what does the walking now.
+//
+// The library's own output isn't byte-identical to what this file used to publish, so
+// `normalize` below trims it down to match. `zod-json-schema.test.ts` pins the exact
+// result against `__fixtures__/ingest-json-schema.snapshot.json` — the published
+// contract, captured before this file changed — so a normalization step that drifts
+// fails loudly instead of silently.
 import type { ZodTypeAny } from "zod";
+import { zodToJsonSchema as convert } from "zod-to-json-schema";
 
 // biome-ignore lint/suspicious/noExplicitAny: JSON Schema is inherently a loosely-typed recursive structure
 export type JsonSchema = Record<string, any>;
 
-function unwrap(schema: ZodTypeAny): { inner: ZodTypeAny; optional: boolean; nullable: boolean } {
-  let inner = schema;
-  let optional = false;
-  let nullable = false;
-  // biome-ignore lint/suspicious/noExplicitAny: walking Zod's internal `_def` shape
-  let def = (inner as any)._def;
-  while (
-    def.typeName === "ZodOptional" ||
-    def.typeName === "ZodNullable" ||
-    def.typeName === "ZodDefault" ||
-    def.typeName === "ZodEffects"
-  ) {
-    if (def.typeName === "ZodEffects") {
-      // A `.refine()`. The refinement itself has no JSON Schema (it is a
-      // predicate, not a shape), but the string underneath it does — without
-      // this, `clientRef` would document as accept-anything, which is exactly
-      // the opposite of what the refinement says.
-      inner = def.schema;
-    } else if (def.typeName === "ZodOptional") {
-      optional = true;
-      inner = def.innerType;
-    } else if (def.typeName === "ZodNullable") {
-      nullable = true;
-      inner = def.innerType;
-    } else {
-      // ZodDefault: still "optional" from a caller's perspective (has a default).
-      optional = true;
-      inner = def.innerType;
-    }
-    // biome-ignore lint/suspicious/noExplicitAny: same as above
-    def = (inner as any)._def;
+function isPlainObject(value: unknown): value is JsonSchema {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNullType(value: unknown): boolean {
+  return isPlainObject(value) && value.type === "null" && Object.keys(value).length === 1;
+}
+
+/**
+ * Trims `zod-to-json-schema`'s output down to what this file has always published:
+ *
+ * - `default` is dropped. A field's optionality is already conveyed by its absence
+ *   from `required`; the default VALUE was never part of the published schema.
+ * - `additionalProperties: false` is dropped. This document has never claimed
+ *   objects are closed to unknown properties.
+ * - `exclusiveMinimum` folds into `minimum` at the same value. `.positive()` is
+ *   technically "> 0", but the contract has always published ">= 0" here (the old
+ *   hand-walker treated every Zod "min" check as inclusive); preserving that is this
+ *   task's whole point, not a chance to silently tighten a published document.
+ * - a bare `const` never carries a redundant `type` alongside it.
+ * - `anyOf` becomes `oneOf` for an actual union (plain or discriminated) — this file
+ *   has always published "exactly one of these shapes" as `oneOf`. An `anyOf` paired
+ *   with a `{ type: "null" }` member is a nullable field, not a union, and stays
+ *   `anyOf` untouched.
+ */
+function normalize(node: unknown): unknown {
+  if (Array.isArray(node)) {
+    return node.map(normalize);
   }
-  return { inner, optional, nullable };
+  if (!isPlainObject(node)) {
+    return node;
+  }
+
+  const result: JsonSchema = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "default") {
+      continue;
+    }
+    if (key === "additionalProperties" && value === false) {
+      continue;
+    }
+    if (key === "type" && "const" in node) {
+      continue;
+    }
+    if (key === "exclusiveMinimum" && typeof value === "number") {
+      result.minimum = value;
+      continue;
+    }
+    result[key] = normalize(value);
+  }
+
+  const anyOf = result.anyOf;
+  if (Array.isArray(anyOf) && !anyOf.some(isNullType)) {
+    result.oneOf = anyOf;
+    delete result.anyOf;
+  }
+
+  return result;
 }
 
 export function zodToJsonSchema(schema: ZodTypeAny): JsonSchema {
-  const { inner, nullable } = unwrap(schema);
-  // biome-ignore lint/suspicious/noExplicitAny: walking Zod's internal `_def` shape
-  const def = (inner as any)._def;
-  const base = zodInnerToJsonSchema(inner, def);
-  if (nullable) {
-    return { anyOf: [base, { type: "null" }] };
-  }
-  return base;
-}
-
-// biome-ignore lint/suspicious/noExplicitAny: `_def`'s shape is Zod-internal and varies by typeName
-function zodInnerToJsonSchema(_inner: ZodTypeAny, def: any): JsonSchema {
-  switch (def.typeName) {
-    case "ZodObject": {
-      const shape = def.shape();
-      const properties: JsonSchema = {};
-      const required: string[] = [];
-      for (const [key, value] of Object.entries(shape)) {
-        // biome-ignore lint/suspicious/noExplicitAny: shape values are ZodTypeAny at runtime
-        const propSchema = value as any;
-        const { optional } = unwrap(propSchema);
-        properties[key] = zodToJsonSchema(propSchema);
-        if (!optional) {
-          required.push(key);
-        }
-      }
-      const result: JsonSchema = { type: "object", properties };
-      if (required.length > 0) {
-        result.required = required;
-      }
-      return result;
-    }
-    case "ZodString": {
-      const result: JsonSchema = { type: "string" };
-      for (const check of def.checks ?? []) {
-        if (check.kind === "min") {
-          result.minLength = check.value;
-        } else if (check.kind === "max") {
-          result.maxLength = check.value;
-        } else if (check.kind === "email") {
-          result.format = "email";
-        } else if (check.kind === "datetime") {
-          result.format = "date-time";
-          result.description = "ISO-8601 timestamp with a UTC offset";
-        } else if (check.kind === "regex") {
-          result.pattern = check.regex.source;
-        }
-      }
-      return result;
-    }
-    case "ZodNumber": {
-      const result: JsonSchema = { type: "number" };
-      for (const check of def.checks ?? []) {
-        if (check.kind === "int") {
-          result.type = "integer";
-        } else if (check.kind === "min") {
-          result.minimum = check.value;
-        } else if (check.kind === "max") {
-          result.maximum = check.value;
-        }
-      }
-      return result;
-    }
-    case "ZodBoolean":
-      return { type: "boolean" };
-    case "ZodLiteral":
-      return { const: def.value };
-    case "ZodEnum":
-      return { type: "string", enum: [...def.values] };
-    case "ZodArray": {
-      const result: JsonSchema = { type: "array", items: zodToJsonSchema(def.type) };
-      if (def.minLength) {
-        result.minItems = def.minLength.value;
-      }
-      return result;
-    }
-    case "ZodDiscriminatedUnion": {
-      return { oneOf: [...def.options.values()].map((opt) => zodToJsonSchema(opt as ZodTypeAny)) };
-    }
-    case "ZodUnion":
-      return { oneOf: def.options.map((opt: ZodTypeAny) => zodToJsonSchema(opt)) };
-    default:
-      return {};
-  }
+  const raw = convert(schema, { target: "jsonSchema7", $refStrategy: "none" }) as JsonSchema;
+  const { $schema, ...rest } = raw;
+  return normalize(rest) as JsonSchema;
 }

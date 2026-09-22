@@ -54,7 +54,8 @@ const bridgeClientRef = z
  * accepts it). */
 export const isoDatetimeWithOffset = z
   .string()
-  .datetime({ offset: true, message: "must be an ISO-8601 timestamp with a UTC offset" });
+  .datetime({ offset: true, message: "must be an ISO-8601 timestamp with a UTC offset" })
+  .describe("ISO-8601 timestamp with a UTC offset");
 
 export const eventKindSchema = z.enum(["rehearsal", "concert", "session"]);
 

@@ -994,77 +994,113 @@ a.bp-btn {
   background: var(--bp-color-surface);
 }
 
-/* ONE gutter for every row type — songs, events and takes. The hover fill
-   below is the whole hover treatment now, so it has to have something to
-   inset from: at the old 4px a song title started almost against the fill's
-   edge, while a take title started 44px in behind its plate, and the two read
-   as different amounts of padding because they were.
+/* ONE box for every row type — songs, events and takes — with two shapes.
 
-   The negative margin is what keeps the CONTENT column where it was: the row
-   bleeds its fill into the shell's 20px gutter and pads its own contents back
-   to the same left edge every heading on the page uses. */
+   On a phone a row runs the full width of the screen: it bleeds out through
+   the page's gutter and pads its contents back in by exactly that gutter, so
+   the first and last thing in a row sit on the same line as every heading,
+   pill and header button on the page. The fill is the header's translucent
+   brown, and a hairline separates one row from the next. (It used to bleed
+   14px and pad back 20px, which put a row's contents 6px inside everything
+   else's edge.)
+
+   Past `lg` a row is a card: its OUTER edge sits on the page's gutter line,
+   in the same brown, rounded, a few pixels from the next.
+
+   The gutter values are `.bp-shell-main`'s own, so the two cannot disagree. */
 .bp-card-flat,
 .bp-song-row,
 .bp-take-row,
 .bp-ledger-row {
-  /* 14px, the same for every row type. At 10px the rows were equal in the
-     box model and unequal to the eye: a take row starts with a round plate
-     and an event row with a centred date, both carrying air of their own,
-     while a song row starts with its title flush against the fill's edge.
-     The inset is what the eye reads, so it is set for the tightest case. */
-  --bp-row-gutter: 0.875rem;
-  /* The fill bleeds by the gutter; the content sits a little further in on
-     the left, so a row's first glyph has room to breathe — and the fill
-     never reaches past the phone's own 20px page edge. */
-  padding-inline: 1.25rem var(--bp-row-gutter);
-  margin-inline: calc(var(--bp-row-gutter) * -1);
-}
-
-/* A row that ends in the favourite star: the star's 44px tap box already
-   carries ~15px of air around a 16px glyph, so the row's own padding on that
-   side would double it. Trimmed so the star sits as far from the right edge
-   as the title does from the left. */
-.bp-song-row:has(> .bp-favorite-toggle-form:last-child),
-.bp-ledger-row:has(> .bp-favorite-toggle-form:last-child),
-.bp-take-row:has(.bp-take-favorite-mark) {
-  padding-inline-end: 0.375rem;
-}
-
-/* No rules between rows. A list is rounded rows on the bare ground, a few
-   pixels apart; the row lights up under the pointer and while its take plays,
-   and that is the whole separation. The hairlines made every list a stack of
-   boxes; the Hraje sheet's running order showed the calmer version, and
-   every list now follows it. */
-.bp-card-flat,
-.bp-song-row,
-.bp-take-row,
-.bp-ledger-row {
-  border: none;
-  border-radius: 12px;
+  --bp-row-pad-start: max(1.25rem, env(safe-area-inset-left, 0px));
+  --bp-row-pad-end: max(1.25rem, env(safe-area-inset-right, 0px));
+  position: relative;
+  margin-inline: calc(var(--bp-row-pad-start) * -1) calc(var(--bp-row-pad-end) * -1);
+  padding-inline: var(--bp-row-pad-start) var(--bp-row-pad-end);
   /* Tight on the Y axis on purpose: these lists are read by scrolling, and a
      row that breathes in isolation costs a screenful over twenty of them. The
      row's own `min-height` (44px) is the floor, so the thumb target survives
      the smaller padding. */
   padding-block: 0.5rem;
-  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--bp-color-border);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
 }
 
-.bp-card-flat + .bp-card-flat,
-.bp-song-row + .bp-song-row,
-.bp-take-row + .bp-take-row,
-.bp-ledger-row + .bp-ledger-row {
-  margin-top: 0.25rem;
+/* The first row of a run also takes the rule above it, so the list is closed
+   at both ends rather than hanging off its last hairline. */
+.bp-card-flat:not(.bp-card-flat + .bp-card-flat),
+.bp-song-row:not(.bp-song-row + .bp-song-row),
+.bp-take-row:not(.bp-take-row + .bp-take-row),
+.bp-ledger-row:not(.bp-ledger-row + .bp-ledger-row) {
+  border-top: 1px solid var(--bp-color-border);
 }
 
-/* One hover for every row type, and the same one the Hraje sheet's order
-   list uses: the subtle foreground wash. It used to be the surface colour,
-   because a wash would swallow the hairline between rows; there is no hairline
-   now, and the wash reads the same on lacquer and on sand. */
+@media (min-width: 1024px) {
+  .bp-card-flat,
+  .bp-song-row,
+  .bp-take-row,
+  .bp-ledger-row {
+    --bp-row-pad-start: 1.25rem;
+    --bp-row-pad-end: 1.25rem;
+    margin-inline: 0;
+    border: none;
+    border-radius: 1rem;
+  }
+
+  .bp-card-flat:not(.bp-card-flat + .bp-card-flat),
+  .bp-song-row:not(.bp-song-row + .bp-song-row),
+  .bp-take-row:not(.bp-take-row + .bp-take-row),
+  .bp-ledger-row:not(.bp-ledger-row + .bp-ledger-row) {
+    border-top: none;
+  }
+
+  .bp-card-flat + .bp-card-flat,
+  .bp-song-row + .bp-song-row,
+  .bp-take-row + .bp-take-row,
+  .bp-ledger-row + .bp-ledger-row {
+    margin-top: 0.5rem;
+  }
+}
+
+/* The drawn marks at a row's two ends touch the gutter lines, not their tap
+   boxes. The favourite star is a 16px glyph centred in a 44px box, so it
+   carries 14px of air plus the glyph's own pixel of margin on each side; the
+   row's end padding gives that 15px back. The take row's play disc (or its
+   plate) is 28px centred in 44px, so its start padding gives back 8px. */
+.bp-song-row:has(> .bp-favorite-toggle-form:last-child),
+.bp-ledger-row:has(> .bp-favorite-toggle-form:last-child),
+.bp-take-row:has(.bp-take-favorite-mark) {
+  padding-inline-end: calc(var(--bp-row-pad-end) - 15px);
+}
+
+.bp-take-row {
+  padding-inline-start: calc(var(--bp-row-pad-start) - 8px);
+}
+
+/* The whole row is its link: the name's link stretches an overlay across the
+   row, as `.bp-take-label::after` already does, and the star sits above it. */
+.bp-song-row-link::after,
+.bp-ledger-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.bp-song-row > .bp-favorite-toggle-form,
+.bp-ledger-row > .bp-favorite-toggle-form {
+  position: relative;
+  z-index: 1;
+}
+
+/* Under the pointer the fill goes solid: the same brown, no longer let
+   through. One hover for every row type. */
 .bp-card-flat:hover,
 .bp-song-row:hover,
 .bp-take-row:hover,
 .bp-ledger-row:hover {
-  background: var(--bp-fill-subtle);
+  background: var(--bp-color-surface);
 }
 
 /* …and the plate brightens rather than being swallowed, so the anchor stays
@@ -1254,7 +1290,13 @@ a.bp-btn {
   z-index: 40;
   display: flex;
   border-top: 1px solid var(--bp-color-border);
-  background: var(--bp-color-bg);
+  /* The header's brown, let partly through, so the top and bottom bars of
+     the phone are one material with the rows between them. The bar sits over
+     the scrolling page, so a blur keeps its labels legible over whatever
+     passes underneath. */
+  background: color-mix(in srgb, var(--bp-color-surface) 80%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   padding-bottom: env(safe-area-inset-bottom, 0);
   padding-inline: env(safe-area-inset-left, 0) env(safe-area-inset-right, 0);
 }
@@ -7571,9 +7613,11 @@ html:has(dialog.bp-filter-sheet[open]) body {
 
 /* See the no-underline note beside `.bp-card-flat:hover`. */
 
+/* Left-aligned, so the day and the month start on the row's gutter line
+   with every other row's first mark. Centred, a single-digit day floated
+   inside its column. */
 .bp-ledger-date {
   display: block;
-  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
@@ -9729,11 +9773,13 @@ html:has(dialog.bp-filter-sheet[open]) body {
 }
 
 /* A stash row has no star, so the take row's 36px star column is empty and
-   the right edge read three times the left. The column closes, and the
-   column gap before it is what is left of the inset, trimmed to match. */
+   the right edge read three times the left. The column closes; the column
+   gap before it (0.75rem) is still spent, so the end padding is the gutter
+   less that gap, and the duration ends on the gutter line like every other
+   row's last mark. */
 .bp-take-row.bp-stash-row {
   grid-template-columns: auto minmax(0, 1fr) auto 0;
-  padding-inline-end: 0.5rem;
+  padding-inline-end: calc(var(--bp-row-pad-end) - 0.75rem);
 }
 
 /* The chip sits at the head of line two, so the title keeps the whole of

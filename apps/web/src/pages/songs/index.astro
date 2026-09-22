@@ -318,7 +318,7 @@ function archivedHref(): string {
                   <span class="bp-song-row-meta">
                     {[song.musicalKey, song.tempoBpm ? t.songs.bpm(song.tempoBpm) : undefined]
                       .filter(Boolean)
-                      .join(" · ") || t.songs.noKeyOrTempo}
+                      .join(", ") || t.songs.noKeyOrTempo}
                   </span>
                 </span>
                 {/* Two numbers, in the note size the rest of the app uses for an

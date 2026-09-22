@@ -479,10 +479,12 @@ export type DeleteSongResult =
  * the test song. Those genuinely need removing, and leaving them archived
  * forever is its own kind of mess.
  *
- * Takes go one at a time through `takesRepo.remove` rather than a single bulk
- * delete, because each one also owns objects in the bucket and votes and pins
- * of its own — the same path `deleteTake` uses, so the two cannot diverge in
- * what they forget.
+ * The DB half — every take gone, one at a time through `takesRepo.remove`
+ * rather than a single bulk delete, because each one also owns objects in
+ * the bucket and votes and pins of its own, then the song's own rows —
+ * lives in `songsRepo.removeWithTakes`, so this and `deleteTake` cannot
+ * diverge in what they forget, and so `orphans.test.ts` in `@bandplate/db`
+ * can pin the cascade against the same function this calls.
  *
  * DB first, bucket best-effort, like every other delete here: a storage
  * failure leaves stray objects rather than rows pointing at nothing.
@@ -493,17 +495,7 @@ export async function deleteSong(db: Db, storage: Storage, id: string): Promise<
     return { kind: "not_found" };
   }
 
-  // Every take, not a page: a cascade has to touch each row.
-  const takes = await takesRepo.listAllBySong(db, id);
-  const storageKeys: string[] = [];
-  for (const take of takes) {
-    const assets = await assetsRepo.listByTake(db, take.id);
-    for (const asset of assets) {
-      storageKeys.push(asset.storageKey);
-    }
-    await takesRepo.remove(db, take.id);
-  }
-  await songsRepo.remove(db, id);
+  const { takes, storageKeys } = await songsRepo.removeWithTakes(db, id);
 
   if (storageKeys.length > 0) {
     try {

@@ -16,11 +16,11 @@ import * as votesRepo from "./votes.js";
  * Foreign keys are never enforced here (`PRAGMA foreign_keys` stays off, to
  * match Cloudflare D1), so `onDelete: cascade` in the schema is documentation
  * only — nothing stops a repo `remove` from forgetting one of the tables that
- * points at the row it just deleted. `songsRepo.remove`, `takesRepo.remove`
- * and `instrumentsRepo.mergeInto` all carry doc comments saying exactly this,
- * and all three already delete their dependents explicitly; this file is what
- * keeps that true after the next column, the next table, or the next repo
- * forgets to.
+ * points at the row it just deleted. `songsRepo.removeWithTakes`,
+ * `takesRepo.remove` and `instrumentsRepo.mergeInto` all carry doc comments
+ * saying exactly this, and all three already delete their dependents
+ * explicitly; this file is what keeps that true after the next column, the
+ * next table, or the next repo forgets to.
  *
  * Two halves, the same shape as `stash-privacy.test.ts`'s own guard:
  *
@@ -72,7 +72,7 @@ const ENTRY_POINTS: Record<string, string> = {
   takes:
     "takesRepo.remove — deletes take_instruments, assets and votes (and favorites, not an FK) before the take itself",
   songs:
-    "the DB half of apps/web's deleteSong: takesRepo.remove for every take on the song (which also takes each take's own dependents), then songsRepo.remove for song_instrument_notes/song_aliases/song_chart_changes and the song row. deleteSong itself lives in apps/web (it also purges object storage), so this test calls the same two repo functions in the same order rather than importing across the package boundary.",
+    "songsRepo.removeWithTakes — deletes every take on the song (each through takesRepo.remove, which also takes that take's own dependents), then song_instrument_notes/song_aliases/song_chart_changes and the song row. apps/web's deleteSong calls this same function for its DB cascade and then best-effort purges the storage keys it returns.",
   instruments:
     "instrumentsRepo.mergeInto — the entry point that actually removes an instrument row with other rows still pointing at it (moving or dropping every one across member_instruments, instrument_aliases, song_instrument_notes, take_instruments and assets). instrumentsRepo.remove is a second, narrower entry point for an UNUSED instrument (its own doc comment: nothing may point at it), which callers only reach after usageByInstrument confirms zero references — so it is not the function a seeded-with-dependents graph should be driven through.",
 };
@@ -233,16 +233,10 @@ describe("orphans: songs", () => {
     ]);
     await votesRepo.castVote(db, { takeId: take.id, memberId: member.id, keeper: false, now });
 
-    // The real entry point: apps/web's `deleteSong` walks every take on the
-    // song through `takesRepo.remove` first (each of which cleans its own
-    // dependents), then calls `songsRepo.remove` — see that function's own
-    // doc comment. Mirrored here rather than imported: `deleteSong` lives in
-    // apps/web and also purges object storage, out of scope for a
-    // packages/db repo test.
-    for (const row of await takesRepo.listAllBySong(db, song.id)) {
-      await takesRepo.remove(db, row.id);
-    }
-    await songsRepo.remove(db, song.id);
+    // The real entry point: `songsRepo.removeWithTakes` — the DB half of
+    // apps/web's `deleteSong`, which calls this same function for its own
+    // cascade and then best-effort purges the storage keys it returns.
+    await songsRepo.removeWithTakes(db, song.id);
 
     expect(
       await db

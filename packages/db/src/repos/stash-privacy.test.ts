@@ -399,6 +399,7 @@ const songsAllowed: AllowFor<typeof songsRepo> = {
   setInstrumentNote: WRITE,
   addAlias: WRITE,
   remove: WRITE,
+  removeWithTakes: WRITE,
   removeAlias: WRITE,
 };
 

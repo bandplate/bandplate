@@ -10,6 +10,7 @@ import {
   songs,
   takes,
 } from "../schema/sqlite/index.js";
+import * as assetsRepo from "./assets.js";
 import { escapeLikePattern } from "./like-pattern.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
 import { bandTakeCondition } from "./take-visibility.js";
@@ -475,6 +476,50 @@ export async function remove(db: Db, id: string): Promise<void> {
     db.delete(favorites).where(and(eq(favorites.targetType, "song"), eq(favorites.targetId, id))),
     db.delete(songs).where(eq(songs.id, id)),
   ]);
+}
+
+export interface RemoveWithTakesResult {
+  /** Every take that was on the song, now gone along with it. */
+  takes: takesRepo.Take[];
+  /** Every asset's storage key across those takes — the caller's own object-storage cleanup list. */
+  storageKeys: string[];
+}
+
+/**
+ * The DB half of deleting a song ENTIRELY: every one of its takes first,
+ * each through `takesRepo.remove` (which takes that take's own `assets`,
+ * `take_instruments`, `votes` and `favorites` pin with it — see its own doc
+ * comment), then `remove` above for the song's OWN rows
+ * (`song_aliases`/`song_instrument_notes`/`song_chart_changes`) and the song
+ * itself.
+ *
+ * One take at a time rather than a single bulk statement: each take owns its
+ * own object-storage assets and `takesRepo.remove` is already the one place
+ * that cascade is written, so this reuses it instead of re-deriving it. No
+ * `db.batch` around the loop either — D1 has no transactions (the repo-wide
+ * rule every multi-step delete here follows), so batching across takes would
+ * not buy atomicity, only a false appearance of it.
+ *
+ * The real caller is `deleteSong` in `apps/web/src/server/pages/songs.ts`,
+ * which cannot live in this package: it also purges the objects named by
+ * `storageKeys` from the bucket, and a repo has no business reaching for
+ * storage (the same rule `remove` above and `instrumentsRepo.mergeInto`
+ * state). This function is the DB-only prefix of that — everything
+ * `deleteSong` needs from the database, in the order it needs it, so the two
+ * cannot drift the way a hand-copied loop in `apps/web` once could.
+ */
+export async function removeWithTakes(db: Db, id: string): Promise<RemoveWithTakesResult> {
+  const removedTakes = await takesRepo.listAllBySong(db, id);
+  const storageKeys: string[] = [];
+  for (const take of removedTakes) {
+    const takeAssets = await assetsRepo.listByTake(db, take.id);
+    for (const asset of takeAssets) {
+      storageKeys.push(asset.storageKey);
+    }
+    await takesRepo.remove(db, take.id);
+  }
+  await remove(db, id);
+  return { takes: removedTakes, storageKeys };
 }
 
 /**

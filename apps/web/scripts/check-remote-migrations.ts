@@ -12,6 +12,7 @@
 // sanctioned way to apply is `pnpm migrate:remote`
 // (`apps/web/scripts/migrate-remote.ts`), run by hand.
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { parsePendingMigrations } from "@bandplate/db/migration-guard";
 import { pendingMigrationsGuardMessage } from "./deploy-guard.js";
 
@@ -51,7 +52,10 @@ export function checkRemoteMigrations(): void {
 
 // Run directly (both by `pnpm exec tsx scripts/check-remote-migrations.ts`
 // in CI, and indirectly via the import below in deploy.ts) rather than
-// only ever being imported.
-if (import.meta.url === `file://${process.argv[1]}`) {
+// only ever being imported. `pathToFileURL(...).href`, not a hand-rolled
+// `file://${process.argv[1]}` — the latter breaks on a path with a space
+// or any other character `file://` requires percent-encoded, which a
+// worktree path or CI checkout directory can easily contain.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   checkRemoteMigrations();
 }

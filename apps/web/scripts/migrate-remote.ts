@@ -62,7 +62,7 @@ function runWrangler(args: string[]): { status: number | null; stdout: string } 
   // `--remote` never appears here except in the two calls this script
   // itself makes deliberately (list, export, apply). Nothing else in
   // this file, or anything it calls, is allowed to reach out to it.
-  const result = spawnSync("wrangler", args, { encoding: "utf8" });
+  const result = spawnSync("pnpm", ["exec", "wrangler", ...args], { encoding: "utf8" });
   if (result.stdout) {
     process.stdout.write(result.stdout);
   }
@@ -73,7 +73,7 @@ function runWrangler(args: string[]): { status: number | null; stdout: string } 
 }
 
 function runWranglerInherit(args: string[]): number {
-  const result = spawnSync("wrangler", args, { stdio: "inherit" });
+  const result = spawnSync("pnpm", ["exec", "wrangler", ...args], { stdio: "inherit" });
   return result.status ?? 1;
 }
 

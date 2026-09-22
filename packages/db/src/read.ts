@@ -19,10 +19,30 @@
 // `created_at`) silently loses one, and only on D1. Keep batched statements
 // to one table's columns (a join is fine when it selects one side), or alias.
 // `createTestDb`'s client refuses such a batch so a test catches it here.
+//
+// Nor may a batch hold a RELATIONAL query (`db.query.x.findFirst()`): in a
+// D1 batch, a first-mode one that matches no row hands `[undefined]` to
+// Drizzle's row mapper and throws, on D1 only. `readOne`/`readAll` refuse
+// them, at the type level and again at run time.
+import { is } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { SQLiteRelationalQuery } from "drizzle-orm/sqlite-core/query-builders/query";
 import type { Db } from "./client.js";
 
 export type BatchStatement = BatchItem<"sqlite">;
+
+/** `never` for a relational query, so passing one does not type-check. */
+type NotRelational<S> = S extends SQLiteRelationalQuery<"async", unknown> ? never : unknown;
+
+function refuseRelational(statements: readonly BatchStatement[]): void {
+  for (const statement of statements) {
+    if (is(statement, SQLiteRelationalQuery)) {
+      throw new Error(
+        "a relational query (db.query...) cannot go in a planned read: D1 batches mishandle it; use db.select()",
+      );
+    }
+  }
+}
 
 /** What one statement resolves to, the same as awaiting it directly. */
 export type StatementResult<S extends BatchStatement> = S["_"]["result"];
@@ -35,9 +55,10 @@ export interface Read<T> {
 
 /** A read of one statement. */
 export function readOne<S extends BatchStatement, T>(
-  statement: S,
+  statement: S & NotRelational<S>,
   decode: (rows: StatementResult<S>) => T,
 ): Read<T> {
+  refuseRelational([statement]);
   return {
     statements: [statement],
     decode: (results) => decode(results[0] as StatementResult<S>),
@@ -50,9 +71,10 @@ export function readOne<S extends BatchStatement, T>(
  * and gets an empty list when there were no chunks at all.
  */
 export function readAll<S extends BatchStatement, T>(
-  statements: readonly S[],
+  statements: readonly (S & NotRelational<S>)[],
   decode: (results: StatementResult<S>[]) => T,
 ): Read<T> {
+  refuseRelational(statements);
   return { statements, decode: (results) => decode(results as StatementResult<S>[]) };
 }
 

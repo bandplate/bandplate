@@ -108,10 +108,10 @@ describe("/me", () => {
     expect(result.result?.notificationPrefs).toBeDefined();
   });
 
-  it("stays within four when the list has to be asked for again", async () => {
+  it("stays within three when the list has to be asked for again", async () => {
     const band = await seedBusyBand();
     const { roundTrips } = await countRoundTrips(band.db, () => load(band, "/me?page=2"));
-    expectWithin(roundTrips, { total: 4, depth: 4 });
+    expectWithin(roundTrips, { total: 3, depth: 3 });
   });
 });
 
@@ -127,7 +127,7 @@ describe("/takes", () => {
     expect(result.stashCount).toBe(2);
   });
 
-  it("stays within four when the list has to be asked for again", async () => {
+  it("stays within three when the list has to be asked for again", async () => {
     const band = await seedBusyBand();
     const { result, roundTrips } = await countRoundTrips(band.db, () =>
       getTakesPageData(band.db, {
@@ -136,7 +136,7 @@ describe("/takes", () => {
         now: band.now,
       }),
     );
-    expectWithin(roundTrips, { total: 4, depth: 4 });
+    expectWithin(roundTrips, { total: 3, depth: 3 });
     expect(result.search.results).toHaveLength(17);
   });
 

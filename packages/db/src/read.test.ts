@@ -114,4 +114,27 @@ describe("the test client holds batches to D1's column rule", () => {
       ),
     ).rejects.toThrow(/two columns named "created_at"/);
   });
+
+  it("refuses a batch statement with an all-digit column name", async () => {
+    // D1's row object would put the integer-like key `1` first.
+    const { db } = await seed();
+    const numbered = db.select({ one: sql<number>`1`, id: members.id }).from(members);
+    await expect(
+      runRead(
+        db,
+        readAll([numbered, numbered], (parts) => parts),
+      ),
+    ).rejects.toThrow(/column named "1"/);
+  });
+});
+
+describe("planned reads refuse relational queries", () => {
+  it("throws on db.query, which a D1 batch mishandles", async () => {
+    const { db } = await seed();
+    const relational = db.query.members.findFirst();
+    // @ts-expect-error a relational query is refused at the type level too
+    expect(() => readOne(relational, (row) => row)).toThrow(/relational query/);
+    // @ts-expect-error likewise in a chunked read
+    expect(() => readAll([relational], (rows) => rows)).toThrow(/relational query/);
+  });
 });

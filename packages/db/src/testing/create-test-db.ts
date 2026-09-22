@@ -28,6 +28,14 @@ function refuseDuplicateColumnsInBatches(client: Client): void {
     for (const [index, result] of results.entries()) {
       const seen = new Set<string>();
       for (const column of result.columns) {
+        // An all-digit name (an unaliased sql`1`) is an integer-like key,
+        // which Object.keys puts FIRST wherever it sits, so D1 would shift
+        // every column before it.
+        if (/^\d+$/.test(column)) {
+          throw new Error(
+            `batch statement ${index} returns a column named "${column}"; D1 would reorder it (see packages/db/src/read.ts)`,
+          );
+        }
         if (seen.has(column)) {
           throw new Error(
             `batch statement ${index} returns two columns named "${column}"; D1 would silently drop one (see packages/db/src/read.ts)`,

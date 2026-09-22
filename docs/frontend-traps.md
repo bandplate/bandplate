@@ -242,8 +242,14 @@ it selects only one side, like `select({ take: takes })`), or aliases. To
 fetch votes with their takes, `/me` asks for the takes by a subquery of the
 vote page's ids instead of joining.
 
+The same object reorders a column named only by digits (an unaliased
+`sql\`1\``): integer-like keys come first in `Object.keys`. And a relational
+query (`db.query.x.findFirst()`) that matches no row crashes Drizzle's D1
+batch mapper, so planned reads refuse relational queries outright.
+
 **How to catch it.** `createTestDb`'s client refuses a batch whose result
-repeats a column name, so any test that runs the read fails here first.
+repeats a column name or has an all-digit one, and `readOne`/`readAll` reject
+a relational query at the type level and at run time.
 
 ### A drizzle-kit table rebuild silently drops a hand-added index
 

@@ -30,6 +30,7 @@ import { mkdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findUnsafeStatements, parsePendingMigrations } from "@bandplate/db/migration-guard";
+import { listRemoteMigrations } from "./list-remote-migrations.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 const MIGRATIONS_DIR = join(REPO_ROOT, "packages/db/migrations/sqlite");
@@ -58,20 +59,6 @@ never the raw command. In order:
   --help, -h  Print this message and exit 0.
 `;
 
-function runWrangler(args: string[]): { status: number | null; stdout: string } {
-  // `--remote` never appears here except in the two calls this script
-  // itself makes deliberately (list, export, apply). Nothing else in
-  // this file, or anything it calls, is allowed to reach out to it.
-  const result = spawnSync("pnpm", ["exec", "wrangler", ...args], { encoding: "utf8" });
-  if (result.stdout) {
-    process.stdout.write(result.stdout);
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr);
-  }
-  return { status: result.status, stdout: result.stdout ?? "" };
-}
-
 function runWranglerInherit(args: string[]): number {
   const result = spawnSync("pnpm", ["exec", "wrangler", ...args], { stdio: "inherit" });
   return result.status ?? 1;
@@ -89,7 +76,7 @@ function main(): void {
   }
 
   // (a) What's pending.
-  const listResult = runWrangler(["d1", "migrations", "list", "DB", "--remote"]);
+  const listResult = listRemoteMigrations();
   if (listResult.status !== 0) {
     fail("`wrangler d1 migrations list DB --remote` failed — see output above.");
   }

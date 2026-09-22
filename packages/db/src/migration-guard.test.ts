@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   findUnsafeStatements,
   parsePendingMigrations,
+  retryMigrationsList,
   UNSAFE_BASELINE,
 } from "./migration-guard.js";
 
@@ -168,5 +169,32 @@ describe("parsePendingMigrations", () => {
       "",
     ].join("\n");
     expect(parsePendingMigrations(output)).toEqual(["0012_add_venue.sql"]);
+  });
+});
+
+describe("retryMigrationsList", () => {
+  const flake = [
+    "✘ [ERROR] A request to the Cloudflare API (/accounts/abc/d1/database/def/query) failed.",
+    "",
+    "  The given account is not valid or is not authorized to access this service [code: 7403]",
+  ].join("\n");
+
+  it("retries Cloudflare's passing 7403, with a growing wait", () => {
+    expect(retryMigrationsList(flake, 1)).toEqual({ retry: true, delayMs: 1000 });
+    expect(retryMigrationsList(flake, 2)).toEqual({ retry: true, delayMs: 2000 });
+  });
+
+  it("gives up after two retries", () => {
+    expect(retryMigrationsList(flake, 3)).toEqual({ retry: false, delayMs: 0 });
+  });
+
+  it("never retries any other failure", () => {
+    const authFailure = "✘ [ERROR] Authentication error [code: 10000]";
+    expect(retryMigrationsList(authFailure, 1)).toEqual({ retry: false, delayMs: 0 });
+    expect(retryMigrationsList("", 1)).toEqual({ retry: false, delayMs: 0 });
+  });
+
+  it("does not mistake a different code that merely contains 7403", () => {
+    expect(retryMigrationsList("[code: 17403]", 1).retry).toBe(false);
   });
 });

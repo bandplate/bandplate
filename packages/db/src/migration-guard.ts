@@ -123,3 +123,27 @@ export function parsePendingMigrations(listOutput: string): string[] {
   }
   return names;
 }
+
+/** How many times a failed `migrations list` is tried again. */
+export const MIGRATIONS_LIST_RETRIES = 2;
+
+/**
+ * Whether a failed `wrangler d1 migrations list DB --remote` should be run
+ * again, given its combined output and which attempt just failed (1-based).
+ *
+ * Only Cloudflare's "[code: 7403]" ("the given account is not valid or is
+ * not authorized to access this service") is retried. It came back twice on
+ * 2026-09-22 with a valid login that holds d1:write, and the very next run
+ * succeeded both times: a passing API hiccup, not a permission problem. Any
+ * other failure is real and fails at once. Only the read-only list is ever
+ * retried; `export` and `apply` are never run twice by this.
+ */
+export function retryMigrationsList(
+  output: string,
+  failedAttempt: number,
+): { retry: boolean; delayMs: number } {
+  if (failedAttempt > MIGRATIONS_LIST_RETRIES || !/\[code: 7403\]/.test(output)) {
+    return { retry: false, delayMs: 0 };
+  }
+  return { retry: true, delayMs: failedAttempt * 1000 };
+}

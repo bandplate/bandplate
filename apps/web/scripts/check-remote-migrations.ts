@@ -11,29 +11,15 @@
 // script only refuses to proceed when something is pending. The only
 // sanctioned way to apply is `pnpm migrate:remote`
 // (`apps/web/scripts/migrate-remote.ts`), run by hand.
-import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { parsePendingMigrations } from "@bandplate/db/migration-guard";
 import { pendingMigrationsGuardMessage } from "./deploy-guard.js";
+import { listRemoteMigrations } from "./list-remote-migrations.js";
 
 export function checkRemoteMigrations(): void {
-  // `pnpm exec wrangler`, not bare `wrangler` on PATH — same as every
-  // other wrangler call site in this repo (deploy.ts, docs/deploy-cloudflare.md).
-  // wrangler is a devDependency of apps/web, not a global install; nothing
-  // guarantees a bare `wrangler` on PATH resolves to it.
-  const result = spawnSync(
-    "pnpm",
-    ["exec", "wrangler", "d1", "migrations", "list", "DB", "--remote"],
-    {
-      encoding: "utf8",
-    },
-  );
-  if (result.stdout) {
-    process.stdout.write(result.stdout);
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr);
-  }
+  // Retries Cloudflare's passing 7403 and nothing else; see
+  // list-remote-migrations.ts.
+  const result = listRemoteMigrations();
   if (result.status !== 0) {
     console.error(
       "check-remote-migrations: `wrangler d1 migrations list DB --remote` failed — see output above.",
@@ -41,7 +27,7 @@ export function checkRemoteMigrations(): void {
     process.exit(1);
   }
 
-  const pending = parsePendingMigrations(result.stdout ?? "");
+  const pending = parsePendingMigrations(result.stdout);
   const message = pendingMigrationsGuardMessage(pending);
   if (message) {
     console.error(`check-remote-migrations: ${message}`);

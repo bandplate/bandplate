@@ -1252,10 +1252,31 @@ a.bp-btn {
   padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
   padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
   padding-bottom: calc(
-    2.5rem + var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
+    1.25rem + var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px))) +
       var(--bp-player-height)
   );
   box-sizing: border-box;
+}
+
+/* With nothing loaded the player bar is `[hidden]`, and reserving its height
+   anyway left 7rem of empty page above the tab bar on every screen. Only the
+   tab bar and the same 1.25rem the page starts with, then. A rule of its own
+   rather than zeroing `--bp-player-height`: once a track has played,
+   `Player.tsx` writes that value inline on `.bp-shell`, and an inline custom
+   property outranks any stylesheet rule. `[hidden]` is in the server's
+   markup, so this holds from first paint, before any script runs. */
+.bp-shell:has(.bp-player[hidden]) .bp-shell-main:not(.bp-shell-main-bare) {
+  padding-bottom: calc(
+    1.25rem + var(--bp-tabbar-height, calc(57px + env(safe-area-inset-bottom, 0px)))
+  );
+}
+
+/* No tab bar past `lg`, so nothing but the page's own bottom edge: the same
+   2.25rem the page opens with. */
+@media (min-width: 1024px) {
+  .bp-shell:has(.bp-player[hidden]) .bp-shell-main:not(.bp-shell-main-bare) {
+    padding-bottom: 2.25rem;
+  }
 }
 
 /* The mixer's page, which renders NO sidebar, header or tab bar — see

@@ -565,7 +565,7 @@
   gap: 0.625rem;
   margin-top: 1.25rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--bp-color-rule);
+  border-top: 1px solid var(--bp-color-border);
 }
 
 .bp-pagination-range {

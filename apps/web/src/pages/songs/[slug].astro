@@ -620,6 +620,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
               {takes.slice(0, TAKES_BEFORE_FOLD).map((take) => (
                 <TakeRow
                   take={take}
+                  roster={allInstruments}
                   instruments={take.instruments}
                   context={{ kind: "song", event: take.event }}
                   playableAssetId={take.playableAssetId}
@@ -645,6 +646,7 @@ function eventOptionLabel(event: eventsRepo.Event): string {
                     {foldedTakes.map((take) => (
                       <TakeRow
                         take={take}
+                        roster={allInstruments}
                         instruments={take.instruments}
                         context={{ kind: "song", event: take.event }}
                         playableAssetId={take.playableAssetId}

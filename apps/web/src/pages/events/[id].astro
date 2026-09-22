@@ -442,6 +442,7 @@ const [allSongs, allInstruments] = await Promise.all([
             {takes.map((take) => (
               <TakeRow
                 take={take}
+                roster={allInstruments}
                 instruments={take.instruments}
                 context={{ kind: "event", song: take.song, eventKind: event.kind }}
                 playableAssetId={take.playableAssetId}

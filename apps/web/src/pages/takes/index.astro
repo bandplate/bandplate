@@ -498,6 +498,7 @@ if (!viewingStash && pages.redirectTo) {
               {results.map((take) => (
                 <TakeRow
                   take={take}
+                  roster={instruments}
                   instruments={take.instruments}
                   context={{ kind: "full", song: take.song, event: take.event }}
                   playableAssetId={take.playableAssetId}

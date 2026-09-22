@@ -29,9 +29,11 @@ export interface Props {
    * from, and "Bass, Live Bass" would initial as "BL".
    */
   title?: string;
+  /** Drawn ghosted: a roster slot for an instrument this take does not have. */
+  off?: boolean;
 }
 
-const { label, icon, size = 20, title } = Astro.props;
+const { label, icon, size = 20, title, off = false } = Astro.props;
 
 // An unknown key is treated exactly like no key. The column is free text at
 // the database level, and a glyph removed from the library in a later release
@@ -41,7 +43,7 @@ const glyph = icon ? INSTRUMENT_GLYPHS[icon] : undefined;
 const initials = instrumentInitials(label);
 ---
 
-<span class="bp-instrument" style={`--bp-instrument-size:${size}px`} title={title ?? label}>
+<span class={off ? "bp-instrument bp-instrument--off" : "bp-instrument"} style={`--bp-instrument-size:${size}px`} title={title ?? label}>
   {
     glyph ? (
       <svg viewBox={glyph.viewBox} fill="currentColor" aria-hidden="true" set:html={glyph.body} />

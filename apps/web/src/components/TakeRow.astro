@@ -127,6 +127,12 @@ export interface Props {
    * instead — "osobní nahrávky" in the badge, "Filip" in the line.
    */
   ownerName?: string | null;
+  /**
+   * The band's active instruments. Given, the row draws the whole line-up in
+   * fixed positions with the absent ones ghosted, so takes can be compared
+   * down a list. See `InstrumentSet`'s `roster`.
+   */
+  roster?: instrumentsRepo.Instrument[];
 }
 
 const {
@@ -136,6 +142,7 @@ const {
   favorited = false,
   playableAssetId,
   ownerName = null,
+  roster,
 } = Astro.props;
 
 const locale = Astro.locals.locale;
@@ -304,6 +311,6 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
     </span>
     {/* No rule between the words and the set: the set carries its own tinted
         pad, which is what holds it together as one object. */}
-    <InstrumentSet instruments={instruments} />
+    <InstrumentSet instruments={instruments} roster={roster} />
   </div>
 </div>

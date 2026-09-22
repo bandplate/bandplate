@@ -52,6 +52,7 @@
 import type { instrumentsRepo } from "@bandplate/db";
 import { commonMessages, type Locale } from "@bandplate/i18n";
 import { instrumentMark } from "@bandplate/ui/icons/instruments.js";
+import { rosterSlots } from "../server/instrument-roster.js";
 import InstrumentIcon from "./InstrumentIcon.astro";
 
 /** Above this count the set draws at `DENSE_SIZE`. See the header comment. */
@@ -91,9 +92,24 @@ export interface Props {
    * filled ones reads as a loading failure rather than as "none".
    */
   emptyLabel?: string | null;
+  /**
+   * The band's active instruments, in admin order. Given, the set draws the
+   * whole roster in fixed positions, the take's instruments solid and the
+   * rest ghosted, so rows down a list line up into comparable columns. See
+   * `server/instrument-roster.ts` for the rules.
+   */
+  roster?: instrumentsRepo.Instrument[];
 }
 
-const { instruments, verb = "instruments", tone = "chip", size, emptyLabel = null } = Astro.props;
+const {
+  instruments,
+  verb = "instruments",
+  tone = "chip",
+  size,
+  emptyLabel = null,
+  roster,
+} = Astro.props;
+const slots = roster ? rosterSlots(roster, instruments, instrumentMark) : null;
 
 /** One entry per glyph actually drawn, in the order the set was given. */
 interface DrawnMark {
@@ -129,7 +145,28 @@ const classes = [
 ---
 
 {
-  instruments.length === 0 ? (
+  slots && slots.length > 0 ? (
+    <span
+      class="bp-instrument-set bp-instrument-set--roster"
+      role={instruments.length > 0 ? "img" : undefined}
+      aria-hidden={instruments.length > 0 ? undefined : "true"}
+      aria-label={
+        instruments.length > 0
+          ? `${verbLabel(verb, Astro.locals.locale)}: ${instruments.map((i) => i.label).join(", ")}`
+          : undefined
+      }
+    >
+      {slots.map((slot) => (
+        <InstrumentIcon
+          icon={slot.instrument.icon}
+          label={slot.instrument.label}
+          title={slot.labels.join(", ")}
+          size={size ?? BASE_SIZE}
+          off={!slot.present}
+        />
+      ))}
+    </span>
+  ) : instruments.length === 0 ? (
     emptyLabel ? (
       <span class="bp-kind">{emptyLabel}</span>
     ) : null

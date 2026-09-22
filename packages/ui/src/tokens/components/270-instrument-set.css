@@ -65,3 +65,42 @@
   font-size: 0.5rem;
   letter-spacing: 0.02em;
 }
+
+/* The roster: the band's whole line-up in fixed positions on a take row (see
+   `server/instrument-roster.ts`). No pad: every row carries the same run, so
+   a box would repeat down the list and say nothing. The glyphs that play are
+   the information, so they take the full text colour; the absent ones are
+   ghosts that hold their place, which is what makes a missing instrument
+   read as a gap. */
+.bp-instrument-set--roster {
+  gap: 0.5rem;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--bp-color-fg);
+}
+
+.bp-instrument--off {
+  opacity: 0.2;
+}
+
+/* A narrow take row (a phone, or the list column beside the filters) gives
+   the roster its own line under the words instead of squeezing the date: the
+   roster is a fixed width, so sharing a line it would cut the date short.
+   A container query, because the same row is narrow in a wide window when the
+   filter column sits beside it. */
+.bp-take-row:has(.bp-instrument-set--roster) {
+  container-type: inline-size;
+}
+
+@container (max-width: 34rem) {
+  .bp-take-line2:has(.bp-instrument-set--roster) {
+    flex-wrap: wrap;
+    row-gap: 0.375rem;
+  }
+
+  .bp-take-line2 .bp-instrument-set--roster {
+    flex-basis: 100%;
+    margin-inline-start: 0;
+  }
+}

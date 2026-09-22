@@ -1,3 +1,10 @@
+// This package's `typescript` is pinned to 6.x (`^6.0.3`) while the other
+// packages are on 7. `pnpm typecheck` here is `astro check`, and
+// @astrojs/check (0.9.10) peers on `typescript ^5 || ^6` and drives the
+// TypeScript compiler API through Volar. TypeScript 7 is the native (Go)
+// compiler and its npm package exports no compiler API (`require("typescript")`
+// gives only `version`), so astro check cannot load it. Move to 7 when
+// @astrojs/check or @astrojs/language-server ships TS 7 support.
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {

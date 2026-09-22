@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
+    // TypeScript 6+ no longer loads every @types package by default.
+    "types": ["node"],
     "rootDir": "src"
   },
   "include": ["src"]

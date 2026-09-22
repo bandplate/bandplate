@@ -1,7 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    // TypeScript 6+ no longer loads every @types package by default.
+    "types": ["node"]
   },
   "include": ["src", "seed", "scripts", "drizzle.config.ts"]
 }

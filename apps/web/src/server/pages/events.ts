@@ -210,35 +210,11 @@ function eventDetailRead(
   });
 }
 
-/**
- * Everything `/events/[id]` renders: the event plus every take recorded
- * that day IN RECORDED ORDER (not newest-first — this is the one place
- * that ordering differs, since it's reconstructing what happened during a
- * single session), each with its song and instruments batch-fetched, in two
- * round trips. `getEventPageData` is the page's own loader; this is the
- * detail alone.
- */
-export async function getEventDetail(
-  db: Db,
-  id: string,
-  memberId: string,
-  takesPage: PageArgs = { limit: EVENT_TAKES_PER_PAGE, offset: 0 },
-): Promise<EventDetail | undefined> {
-  const { found, paged } = await runReads(db, {
-    found: eventFoundRead(db, id, memberId),
-    paged: eventTakesRead(db, id, takesPage),
-  });
-  if (!eventExists(found.event, paged)) {
-    return undefined;
-  }
-  return runRead(db, eventDetailRead(db, memberId, found.event, found, paged));
-}
-
 export interface EventPageData {
   /** Undefined is a 404. */
   detail: EventDetail | undefined;
   list: ListView;
-  /** Any OTHER event of the same kind on the same day: see `findSameDayEvents`. */
+  /** Any OTHER event of the same kind on the same day: see `sameDayEventsRead`. */
   sameDay: eventsRepo.Event[];
   /** The take sheet's song picker. */
   allSongs: songsRepo.Song[];
@@ -247,7 +223,12 @@ export interface EventPageData {
 }
 
 /**
- * Everything `/events/[id]` reads, in two round trips: one batch for all
+ * Everything `/events/[id]` renders: the event plus every take recorded that
+ * day IN RECORDED ORDER (not newest-first — this is the one place that
+ * ordering differs, since it's reconstructing what happened during a single
+ * session), each with its song and instruments batch-fetched.
+ *
+ * It reads in two round trips: one batch for all
  * that needs only the request (the event, the page of its takes, the take
  * sheet's pickers), one for what those returned (the takes' context, the
  * owner of a personal day, the same-day duplicates).
@@ -546,14 +527,6 @@ export async function mergeEvents(
  * Any OTHER event of the same kind on the same day. What the duplicate warning
  * is built from, and what the merge offer needs.
  */
-export async function findSameDayEvents(
-  db: Db,
-  event: eventsRepo.Event,
-): Promise<eventsRepo.Event[]> {
-  return runRead(db, sameDayEventsRead(db, event));
-}
-
-/** `findSameDayEvents`, planned for the caller's batch. */
 function sameDayEventsRead(db: Db, event: eventsRepo.Event): Read<eventsRepo.Event[]> {
   // A personal event is one member's day: another member's on the same date
   // is not a duplicate of it, and neither is merged (see `mergeEvents`).

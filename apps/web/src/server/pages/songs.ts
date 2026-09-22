@@ -239,32 +239,6 @@ function songDetailRead(
   });
 }
 
-/**
- * The song, its aliases and per-instrument notes, and one page of takes
- * (newest first) with the instruments and event each one needs to render,
- * in two round trips: one batch keyed by the slug, one keyed by what it
- * returned. `getSongPageData` is the page's own loader; this is the detail
- * alone.
- */
-export async function getSongDetail(
-  db: Db,
-  slug: string,
-  memberId: string,
-  takesPage: PageArgs = { limit: SONG_TAKES_PER_PAGE, offset: 0 },
-): Promise<SongDetail | undefined> {
-  const { found, paged } = await runReads(db, {
-    found: songFoundRead(db, slug, memberId),
-    paged: songTakesRead(db, slug, takesPage),
-  });
-  if (!found.song) {
-    return undefined;
-  }
-  return runRead(
-    db,
-    songDetailRead(db, memberId, found.song, found, paged, stashRowsRead(db, found.stashTakes)),
-  );
-}
-
 /** How many events the take sheet's picker offers, newest first. */
 const TAKE_SHEET_EVENTS = 100;
 

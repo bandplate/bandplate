@@ -7,7 +7,6 @@ import {
   applyStashWrite,
   deleteStashTake,
   getStashItem,
-  getStashRows,
   getStashView,
   listRecordableSongs,
   publishStashTake,
@@ -189,11 +188,11 @@ describe("the stash pages", () => {
 
   it("lists my stash with each row's song and play control, and nobody else's", async () => {
     const asset = await readyMaster(takeId);
-    const mine = await getStashRows(db, ownerId);
+    const mine = (await getStashView(db, ownerId)).rows;
     expect(mine.map((r) => [r.id, r.song?.title, r.playableAssetId])).toEqual([
       [takeId, "Čoudy", asset.id],
     ]);
-    expect(await getStashRows(db, otherId)).toEqual([]);
+    expect((await getStashView(db, otherId)).rows).toEqual([]);
   });
 
   it("the item page is the owner's, and only while it is in the stash", async () => {
@@ -233,7 +232,7 @@ describe("the stash pages", () => {
     await readyMaster(songless.id);
 
     // It shows up in the stash, named by its own label, with no song.
-    const row = (await getStashRows(db, ownerId)).find((r) => r.id === songless.id);
+    const row = (await getStashView(db, ownerId)).rows.find((r) => r.id === songless.id);
     expect(row?.songId).toBeNull();
     expect(row?.song).toBeUndefined();
     expect((await getStashItem(db, songless.id, ownerId))?.song).toBeUndefined();

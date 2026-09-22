@@ -209,6 +209,7 @@ describe("/songs/[slug]", () => {
 
     // The seed reaches every section, so a cheap page is not an empty one.
     const detail = result.detail;
+    expect(detail?.songFavorited).toBe(true);
     expect(detail?.takes).toHaveLength(4);
     expect(detail?.takeTotal).toBe(4);
     expect(detail?.aliases).toHaveLength(1);
@@ -282,6 +283,7 @@ describe("/events/[id]", () => {
     const { result, roundTrips } = await countRoundTrips(band.db, () => load(band, bandEventId));
     expectWithin(roundTrips, { total: 2, depth: 2 });
     expect(roundTrips.trips.filter((t) => t.kind === "batch")).toHaveLength(2);
+    expect(result.detail?.eventFavorited).toBe(true);
     expect(result.detail?.takes).toHaveLength(4);
     expect(result.detail?.takes.filter((take) => take.myVote !== undefined)).toHaveLength(2);
     expect(result.detail?.takes.every((take) => take.song !== undefined)).toBe(true);

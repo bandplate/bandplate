@@ -5,8 +5,8 @@
 // TakeRow.astro's header comment), unlike `/songs/[slug]` (song implied) or
 // `/events/[id]` (event implied), which each only need the other half.
 //
-// Same batching shape as `server/pages/songs.ts#getSongDetail` and
-// `server/pages/events.ts#getEventDetail`: one query per kind of data
+// Same batching shape as `server/pages/songs.ts#getSongPageData` and
+// `server/pages/events.ts#getEventPageData`: one query per kind of data
 // (songs, events, instruments), never one round trip per take. And since
 // every one of those is keyed only by the takes, they are planned as ONE read
 // (`buildFullContextRead`) that a loader can put in the same batch as

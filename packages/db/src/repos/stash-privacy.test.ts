@@ -504,7 +504,7 @@ const eventsChecks: ChecksFor<typeof eventsRepo> = {
   },
   listOnDay: async () => {
     // Callers only ever name a band kind: the event form's enum has no
-    // `personal`, and `findSameDayEvents` returns before asking for one.
+    // `personal`, and `getEventPageData` never asks for one.
     const dayStart = Date.UTC(2026, 8, 20);
     for (const kind of ["rehearsal", "concert", "session"] as const) {
       const rows = await eventsRepo.listOnDay(f.db, kind, dayStart, { includeArchived: true });
@@ -628,8 +628,6 @@ const assetsAllowed: AllowFor<typeof assetsRepo> = {
   buildListPlayableMastersChunkQuery: "lookup by take ids the caller already holds",
   buildListPlayableMastersByTakeIdsRead: "lookup by take ids the caller already holds",
   takeHasLossless: LOOKUP,
-  tallyBySong:
-    "admin's delete confirm: must count every file a song delete destroys, private ones included",
   buildTallyBySongRead:
     "admin's delete confirm: must count every file a song delete destroys, private ones included",
   tallyByTake: LOOKUP,

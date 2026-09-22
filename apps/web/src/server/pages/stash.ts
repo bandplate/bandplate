@@ -84,23 +84,10 @@ export interface StashRowData extends takesRepo.Take {
 }
 
 /**
- * The stash view's server rows. Local, not-yet-uploaded recordings are the
- * island's.
- *
- * `options.songId` narrows it to one song's — the song page's own stash
- * section uses this rather than a second query shape, so the two callers
- * can never drift on what "this member's stash" means.
+ * The song, event and player of each stash take, planned as one read. The
+ * stash view and the song page's own stash section both build their rows
+ * here, so the two can never drift on what a stash row carries.
  */
-export async function getStashRows(
-  db: Db,
-  memberId: string,
-  options: takesRepo.StashOptions = {},
-): Promise<StashRowData[]> {
-  const rows = await takesRepo.listStash(db, memberId, options);
-  return runRead(db, stashRowsRead(db, rows));
-}
-
-/** The song, event and player of each stash take, planned as one read. */
 export function stashRowsRead(db: Db, rows: takesRepo.Take[]): Read<StashRowData[]> {
   if (rows.length === 0) {
     return readValue([]);

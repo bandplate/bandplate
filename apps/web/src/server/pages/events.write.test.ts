@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   countArchivedEvents,
   createEvent,
-  findSameDayEvents,
+  getEventPageData,
   listEventsForArchive,
   mergeEvents,
   parseEventsListArchivedFilter,
@@ -298,7 +298,13 @@ describe("mergeEvents", () => {
   });
 });
 
-describe("findSameDayEvents", () => {
+/** What the event page's same-day warning lists, through its own loader. */
+async function sameDayOf(db: Db, event: eventsRepo.Event) {
+  const url = new URL(`/events/${event.id}`, "http://band.test");
+  return (await getEventPageData(db, { url, id: event.id, memberId: "m-viewer" })).sameDay;
+}
+
+describe("the event page's same-day events", () => {
   let db: Db;
 
   beforeEach(async () => {
@@ -310,7 +316,7 @@ describe("findSameDayEvents", () => {
     const evening = await createEvent(db, 2000, formData(REHEARSAL));
     if (morning.kind !== "ok" || evening.kind !== "ok") throw new Error("seed failed");
 
-    const found = await findSameDayEvents(db, morning.event);
+    const found = await sameDayOf(db, morning.event);
     expect(found.map((e) => e.id)).toEqual([evening.event.id]);
   });
 
@@ -323,7 +329,7 @@ describe("findSameDayEvents", () => {
     if (archived.kind !== "ok") throw new Error("seed failed");
     await setEventArchived(db, 3000, archived.event.id, true);
 
-    expect(await findSameDayEvents(db, base.event)).toEqual([]);
+    expect(await sameDayOf(db, base.event)).toEqual([]);
   });
 
   it("never offers a personal event a same-day duplicate", async () => {
@@ -341,6 +347,6 @@ describe("findSameDayEvents", () => {
       now: 2000,
     });
 
-    expect(await findSameDayEvents(db, filip)).toEqual([]);
+    expect(await sameDayOf(db, filip)).toEqual([]);
   });
 });

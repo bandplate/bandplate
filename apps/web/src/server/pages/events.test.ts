@@ -9,7 +9,13 @@ import {
 } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
-import { getEventDetail, listEventsForArchive, parseEventsListKindFilter } from "./events.js";
+import { getEventPageData, listEventsForArchive, parseEventsListKindFilter } from "./events.js";
+
+/** The event page's own loader, as `/events/[id]` calls it: its `detail`. */
+async function eventPageDetail(db: Db, id: string, memberId: string) {
+  const url = new URL(`/events/${id}`, "http://band.test");
+  return (await getEventPageData(db, { url, id, memberId })).detail;
+}
 
 describe("parseEventsListKindFilter", () => {
   it("parses repeated kind params", () => {
@@ -43,7 +49,7 @@ describe("parseEventsListKindFilter", () => {
   });
 });
 
-describe("listEventsForArchive / getEventDetail", () => {
+describe("listEventsForArchive / eventPageDetail", () => {
   let db: Db;
 
   beforeEach(async () => {
@@ -131,12 +137,12 @@ describe("listEventsForArchive / getEventDetail", () => {
     expect(events.map((e) => e.id)).toEqual([concert.id]);
   });
 
-  it("getEventDetail returns undefined for an unknown id (a 404, not a throw)", async () => {
-    const result = await getEventDetail(db, "00000000-0000-0000-0000-000000000000", "member-1");
+  it("eventPageDetail returns undefined for an unknown id (a 404, not a throw)", async () => {
+    const result = await eventPageDetail(db, "00000000-0000-0000-0000-000000000000", "member-1");
     expect(result).toBeUndefined();
   });
 
-  it("getEventDetail renders a real empty state's data: an event with zero takes", async () => {
+  it("eventPageDetail renders a real empty state's data: an event with zero takes", async () => {
     const event = await eventsRepo.create(db, {
       kind: "rehearsal",
       heldAt: 1000,
@@ -144,11 +150,11 @@ describe("listEventsForArchive / getEventDetail", () => {
       updatedAt: 1000,
     });
 
-    const detail = await getEventDetail(db, event.id, "member-1");
+    const detail = await eventPageDetail(db, event.id, "member-1");
     expect(detail?.takes).toEqual([]);
   });
 
-  it("getEventDetail returns takes in RECORDED order (asc), not newest-first, each with its song", async () => {
+  it("eventPageDetail returns takes in RECORDED order (asc), not newest-first, each with its song", async () => {
     const event = await eventsRepo.create(db, {
       kind: "rehearsal",
       heldAt: 1000,
@@ -179,7 +185,7 @@ describe("listEventsForArchive / getEventDetail", () => {
       updatedAt: 2000,
     });
 
-    const detail = await getEventDetail(db, event.id, "member-1");
+    const detail = await eventPageDetail(db, event.id, "member-1");
     expect(detail?.takes.map((t) => t.id)).toEqual([first.id, second.id]);
     expect(detail?.takes[0]?.song?.slug).toBe("session-song");
     expect(detail?.takes[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
@@ -187,7 +193,7 @@ describe("listEventsForArchive / getEventDetail", () => {
     expect(detail?.takes[0]?.playableAssetId).toBeUndefined();
   });
 
-  it("getEventDetail attaches playableAssetId for a take with a ready master", async () => {
+  it("eventPageDetail attaches playableAssetId for a take with a ready master", async () => {
     const event = await eventsRepo.create(db, {
       kind: "concert",
       heldAt: 1000,
@@ -222,7 +228,7 @@ describe("listEventsForArchive / getEventDetail", () => {
       },
     ]);
 
-    const detail = await getEventDetail(db, event.id, "member-1");
+    const detail = await eventPageDetail(db, event.id, "member-1");
     expect(detail?.takes[0]?.playableAssetId).toBe(masterAsset?.id);
   });
 });

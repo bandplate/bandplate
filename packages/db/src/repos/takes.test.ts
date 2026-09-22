@@ -192,7 +192,7 @@ describe("takes.listByEvent ordering", () => {
   });
 });
 
-// `getSongDetail` (server/pages/songs.ts) advertises "every take newest
+// `getSongPageData` (server/pages/songs.ts) advertises "every take newest
 // first" for the song page — pinned here at the repo level, not just
 // exercised incidentally by a page test, so removing this function's
 // `ORDER BY` fails a test by itself. Rows are inserted out of

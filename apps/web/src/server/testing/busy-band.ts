@@ -292,9 +292,9 @@ export interface DressedDetailPages {
 /**
  * Fills in what only the song and event pages read, on top of `seedBusyBand`
  * and without changing anything the other pages count: "Song 2" gets an
- * alias, a playing note and a fourth take (another member's recording, filed
+ * alias, a playing note, a pin and a fourth take (another member's recording, filed
  * on their personal day, so its row names its owner), and the newest band
- * event gets a second rehearsal on the same day.
+ * event gets a pin and a second rehearsal on the same day.
  *
  * "Song 2" already has three band takes (one pinned, some voted) and the
  * member's own stash recording of it.
@@ -333,6 +333,19 @@ export async function dressDetailPages(band: BusyBand): Promise<DressedDetailPag
       readyAt: band.now,
     },
   ]);
+  // The member pins both, so the pages' own favourite flags have a yes to find.
+  await favoritesRepo.add(db, {
+    memberId: band.memberId,
+    targetType: "song",
+    targetId: song.id,
+    createdAt: band.now,
+  });
+  await favoritesRepo.add(db, {
+    memberId: band.memberId,
+    targetType: "event",
+    targetId: newest.id,
+    createdAt: band.now,
+  });
   await eventsRepo.create(db, {
     kind: newest.kind,
     heldAt: newest.heldAt,

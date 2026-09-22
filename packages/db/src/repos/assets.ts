@@ -312,14 +312,8 @@ export interface AssetTally {
  * would destroy, which is the one number on a destructive confirm that must
  * never be too small.
  */
-export async function tallyBySong(db: Db, songId: string): Promise<AssetTally> {
-  return runRead(db, buildTallyBySongRead(db, songId));
-}
-
-/**
- * `tallyBySong`, planned for the caller's batch. The id may be a query that
- * yields it (`songsRepo.buildIdBySlugQuery`).
- */
+// Planned for the song page's first batch: the id may be a query that yields
+// it (`songsRepo.buildIdBySlugQuery`).
 export function buildTallyBySongRead(db: Db, songId: string | SQLWrapper): Read<AssetTally> {
   return readOne(
     db
@@ -334,7 +328,7 @@ export function buildTallyBySongRead(db: Db, songId: string | SQLWrapper): Read<
   );
 }
 
-/** `tallyBySong`, for one take. */
+/** `buildTallyBySongRead`, for one take. */
 export async function tallyByTake(db: Db, takeId: string): Promise<AssetTally> {
   const rows = await db
     .select({

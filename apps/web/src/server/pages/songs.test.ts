@@ -9,7 +9,13 @@ import {
 } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
-import { getSongDetail, listSongsForLibrary, parseSongsListQuery } from "./songs.js";
+import { getSongPageData, listSongsForLibrary, parseSongsListQuery } from "./songs.js";
+
+/** The song page's own loader, as `/songs/[slug]` calls it: its `detail`. */
+async function songPageDetail(db: Db, slug: string, memberId: string) {
+  const url = new URL(`/songs/${slug}`, "http://band.test");
+  return (await getSongPageData(db, { url, slug, memberId, withTally: false })).detail;
+}
 
 describe("parseSongsListQuery", () => {
   it("parses q and sort", () => {
@@ -42,7 +48,7 @@ describe("parseSongsListQuery", () => {
   });
 });
 
-describe("listSongsForLibrary / getSongDetail", () => {
+describe("listSongsForLibrary / songPageDetail", () => {
   let db: Db;
 
   beforeEach(async () => {
@@ -54,12 +60,12 @@ describe("listSongsForLibrary / getSongDetail", () => {
     expect(result).toEqual([]);
   });
 
-  it("getSongDetail returns undefined for an unknown slug (a 404, not a throw)", async () => {
-    const result = await getSongDetail(db, "does-not-exist", "member-1");
+  it("songPageDetail returns undefined for an unknown slug (a 404, not a throw)", async () => {
+    const result = await songPageDetail(db, "does-not-exist", "member-1");
     expect(result).toBeUndefined();
   });
 
-  it("getSongDetail renders a real empty state's data: a song with zero takes", async () => {
+  it("songPageDetail renders a real empty state's data: a song with zero takes", async () => {
     const now = Date.now();
     await songsRepo.create(db, {
       title: "Stub Song",
@@ -69,12 +75,12 @@ describe("listSongsForLibrary / getSongDetail", () => {
       updatedAt: now,
     });
 
-    const detail = await getSongDetail(db, "stub-song", "member-1");
+    const detail = await songPageDetail(db, "stub-song", "member-1");
     expect(detail?.takes).toEqual([]);
     expect(detail?.song.isStub).toBe(true);
   });
 
-  it("getSongDetail returns takes newest first, each with its instruments and event", async () => {
+  it("songPageDetail returns takes newest first, each with its instruments and event", async () => {
     const now = Date.now();
     const song = await songsRepo.create(db, {
       title: "Detail Song",
@@ -107,13 +113,13 @@ describe("listSongsForLibrary / getSongDetail", () => {
       instrumentIds: [bass.id],
     });
 
-    const detail = await getSongDetail(db, "detail-song", "member-1");
+    const detail = await songPageDetail(db, "detail-song", "member-1");
     expect(detail?.takes.map((t) => t.id)).toEqual([newer.id, older.id]);
     expect(detail?.takes[0]?.instruments.map((i) => i.slug)).toEqual(["bass"]);
     expect(detail?.takes[0]?.event?.id).toBe(event.id);
   });
 
-  it("getSongDetail attaches playableAssetId for a take with a ready master, and leaves it undefined otherwise", async () => {
+  it("songPageDetail attaches playableAssetId for a take with a ready master, and leaves it undefined otherwise", async () => {
     const now = Date.now();
     const song = await songsRepo.create(db, {
       title: "Playable Song",
@@ -158,7 +164,7 @@ describe("listSongsForLibrary / getSongDetail", () => {
       updatedAt: now,
     });
 
-    const detail = await getSongDetail(db, "playable-song", "member-1");
+    const detail = await songPageDetail(db, "playable-song", "member-1");
     const playableTake = detail?.takes.find((t) => t.id === playable.id);
     const silentTake = detail?.takes.find((t) => t.id === silent.id);
     expect(playableTake?.playableAssetId).toBe(masterAsset?.id);
@@ -166,7 +172,7 @@ describe("listSongsForLibrary / getSongDetail", () => {
   });
 });
 
-describe("getSongDetail and the stash", () => {
+describe("songPageDetail and the stash", () => {
   it("counts this member's private takes of the song, and nobody else's", async () => {
     const db = await createTestDb();
     const me = await membersRepo.create(db, {
@@ -204,10 +210,10 @@ describe("getSongDetail and the stash", () => {
         updatedAt: 1,
       });
     }
-    const mine = await getSongDetail(db, "coudy", me.id);
+    const mine = await songPageDetail(db, "coudy", me.id);
     expect(mine?.stashRows).toHaveLength(2);
     expect(mine?.takeTotal).toBe(0);
-    expect((await getSongDetail(db, "coudy", them.id))?.stashRows).toEqual([]);
+    expect((await songPageDetail(db, "coudy", them.id))?.stashRows).toEqual([]);
   });
 
   it("the song page's own stash section carries only the viewer's rows — another member sees none of it", async () => {
@@ -249,7 +255,7 @@ describe("getSongDetail and the stash", () => {
 
     // The owner sees their own row, by id, with their own name attached for
     // the item sheet's "Kdo nahrál".
-    const mine = await getSongDetail(db, "coudy", me.id);
+    const mine = await songPageDetail(db, "coudy", me.id);
     expect(mine?.stashRows.map((row) => row.id)).toEqual([myTake.id]);
     expect(mine?.stashOwnerName).toBe("Filip");
 
@@ -257,7 +263,7 @@ describe("getSongDetail and the stash", () => {
     // `takesRepo.listStash` scopes by owner AND `visibility='private'`, and
     // this is the loader test proving the song page's own query never leaks
     // around that.
-    const theirs = await getSongDetail(db, "coudy", them.id);
+    const theirs = await songPageDetail(db, "coudy", them.id);
     expect(theirs?.stashRows).toEqual([]);
   });
 });

@@ -4,7 +4,7 @@ import type { Db } from "@bandplate/db";
 import { eventsRepo, favoritesRepo, membersRepo, songsRepo, takesRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
-import { getEventDetail, updateEvent } from "./events.js";
+import { getEventPageData, updateEvent } from "./events.js";
 import { toggleFavoriteFromForm } from "./favorites.js";
 import { getFavorites } from "./home.js";
 import { attachFullContext } from "./take-context.js";
@@ -99,9 +99,23 @@ describe("stash takes in the web app", () => {
   });
 
   it("the personal event page exists only once it holds a band take, and names its owner", async () => {
-    expect(await getEventDetail(db, eventId, otherId)).toBeUndefined();
+    expect(
+      (
+        await getEventPageData(db, {
+          url: new URL(`/events/${eventId}`, "http://band.test"),
+          id: eventId,
+          memberId: otherId,
+        })
+      ).detail,
+    ).toBeUndefined();
     await takesRepo.publishFromStash(db, takeId, ownerId, 5);
-    const detail = await getEventDetail(db, eventId, otherId);
+    const detail = (
+      await getEventPageData(db, {
+        url: new URL(`/events/${eventId}`, "http://band.test"),
+        id: eventId,
+        memberId: otherId,
+      })
+    ).detail;
     expect(detail?.takes.map((t) => t.id)).toEqual([takeId]);
     expect(detail?.owner?.displayName).toBe("Filip");
   });

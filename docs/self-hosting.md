@@ -10,13 +10,16 @@ by `BANDPLATE_ADAPTER`:
 
 - **Node** (default) — `astro build && node dist/start.mjs`, anywhere Node 22
   runs. SQLite via libSQL, any S3-compatible bucket.
-- **Cloudflare Workers** — `BANDPLATE_ADAPTER=cloudflare astro build`, then
-  `wrangler deploy`. D1 for the database, R2 for audio. See
+- **Cloudflare Workers** — `pnpm migrate:remote` from `apps/web` (a guard
+  and a backup, then the D1 migrations), then `pnpm ship` from the root (a
+  gated `BANDPLATE_ADAPTER=cloudflare astro build` and `wrangler deploy`).
+  D1 for the database, R2 for audio. See
   [`deploy-cloudflare.md`](deploy-cloudflare.md).
 
 ## Toolchain
 
-- Node 22.23.2 (see `.nvmrc`)
+- Node 22.23.2 or newer (`.nvmrc` pins it, `engines` in `package.json`
+  states the floor)
 - pnpm 10.33.0, managed via corepack (`"packageManager"` in `package.json`)
 
 ```sh
@@ -45,6 +48,9 @@ creates the bucket for you:
 ```sh
 cd deploy/node && docker compose up -d minio minio-init
 ```
+
+If something else already holds port 9000, start it with `S3_HOST_PORT` set
+to a free port and use that port in `S3_ENDPOINT` and `S3_PUBLIC_ENDPOINT`.
 
 The `S3_*` defaults in `.env.example` (`S3_ENDPOINT=http://localhost:9000`,
 `S3_PUBLIC_ENDPOINT=http://localhost:9000`, `S3_BUCKET=bandplate`,
@@ -80,6 +86,18 @@ password, never commit it. `BANDPLATE_VAPID_SUBJECT` is a `mailto:` or
 `https:` contact address, per RFC 8292, that a push service can reach if
 this deployment starts misbehaving.
 
+With keys set, each member turns notifications on per device from `/me`
+and picks which kinds they want: new takes from rehearsals, the Sunday
+vote reminder, and new songs or chord and lyric changes. A recording shared
+from someone's stash never sends one.
+
+### HTTPS
+
+Browsers hand out the microphone and push subscriptions only to a secure
+origin. Served over plain HTTP from anywhere but `localhost`, the stash
+recorder cannot record and notifications cannot be turned on. Put TLS in
+front of any deployment members will use from their phones.
+
 ### One variable that is a decision, not a value
 
 **`BANDPLATE_TRUSTED_PROXY_DEPTH`** controls how many reverse-proxy hops in
@@ -103,9 +121,16 @@ bucket becomes the proxy's own address, shared across everyone behind it.
 ## 2. Run migrations
 
 ```sh
-BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+BANDPLATE_DATABASE_URL=file:$PWD/apps/web/.data/bandplate.db \
   pnpm --filter @bandplate/db run migrate
 ```
+
+Give a `file:` URL in full, as above, from the repo root. `pnpm --filter`
+runs the script inside `packages/db`, so a relative
+`file:./apps/web/.data/bandplate.db` creates a second, empty database under
+`packages/db/` that the app never opens. The app's own relative default in
+`.env.example` (`file:./.data/bandplate.db`) is fine, because the app runs
+from `apps/web`.
 
 ## 3. (Optional) Seed example data
 
@@ -118,9 +143,13 @@ variable, if neither is set. It will not silently write to some default local
 file if you forget it.
 
 ```sh
-BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+BANDPLATE_DATABASE_URL=file:$PWD/apps/web/.data/bandplate.db \
   pnpm --filter @bandplate/db run seed
 ```
+
+The seed creates five members, with `admin@example.com` as the admin. Once
+any member exists `/setup` is gone, so sign in at `/login` as that address
+instead of doing step 5.
 
 The seed creates asset **rows**, so the UI has something to show, but not
 real audio bytes behind them. Run the dev upload script to put real, playable
@@ -128,7 +157,7 @@ encoded audio behind every seeded take, so the player actually has something
 to play. It needs `ffmpeg` on PATH and the same `S3_*` config as the app:
 
 ```sh
-BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+BANDPLATE_DATABASE_URL=file:$PWD/apps/web/.data/bandplate.db \
   S3_ENDPOINT=http://localhost:9000 S3_PUBLIC_ENDPOINT=http://localhost:9000 \
   S3_BUCKET=bandplate S3_REGION=auto \
   S3_ACCESS_KEY_ID=bandplate-dev S3_SECRET_ACCESS_KEY=bandplate-dev-secret \
@@ -232,9 +261,15 @@ push a rendered rehearsal straight from REAPER. The wire format is
 [`ingest-contract-v1.md`](ingest-contract-v1.md), and anything that can
 speak it will do — reapertoire is one client, not a requirement.
 
+Members also record straight into the app: Record an idea puts a phone
+recording in that member's private stash, and it only becomes a band take
+when they share it. That needs no token and no setup beyond HTTPS (see
+above).
+
 ## Everyday scripts
 
-Each fans out across the workspace with `pnpm -r`:
+`typecheck`, `test` and `build` fan out across the workspace with `pnpm -r`;
+`lint` and `format` run Biome over the whole tree:
 
 ```sh
 pnpm typecheck

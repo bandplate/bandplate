@@ -6,7 +6,7 @@ keeper, and practise against it with your own part muted.
 
 [![CI](https://github.com/bandplate/bandplate/actions/workflows/ci.yml/badge.svg)](https://github.com/bandplate/bandplate/actions/workflows/ci.yml)
 
-![The take list, filtered by song, instrument and date](docs/screenshots/takes.png)
+![The take list: filters for song, instruments, date and your own votes on the left, eighteen takes on the right, each with its song, event, length, instrument icons and a star](docs/screenshots/takes.png)
 
 ## Why this exists
 
@@ -41,9 +41,17 @@ product, and there is no hosted version.
 **A take is the unit.** Not a file, not a session: one performance of one
 song. It carries the song, the date, the event it came from, its length, the
 instruments audible in it, a note ("with new bridge", "second encore"), and
-the band's votes.
+the band's votes. Voting is two buttons, Keeper and Not a keeper, and the
+take page says how the band split.
 
-![A take: play it, open it in the mixer, vote on it, download the files](docs/screenshots/take.png)
+![A take page: a facts card with event, date, length, verdict and instruments, links to its song and rehearsal, Play this take and Open in mixer, the Keeper and Not a keeper vote, and the file list](docs/screenshots/take.png)
+
+**Home says what is new.** The first card is the newest event with takes
+published since your last visit, with Play all and a Vote button counting
+the ones you have not voted on yet. Under it sit the things you starred and
+your stash, then the last few events.
+
+![Home: a "New since your last visit" card for a live show with Play all and Vote (1), the starred song and event as record labels beside the stash card, and the recent events list](docs/screenshots/home.png)
 
 **A stem mixer**, when the recording came in with separate instrument tracks.
 Every stem plays together on one timeline, each with mute, solo and a fader,
@@ -51,7 +59,7 @@ plus a loop region for the eight bars you keep getting wrong. One button
 mutes the instruments *you* play, which is the whole point: rehearsal at home
 against the band you actually play with.
 
-![The stem mixer: four instrument lanes, each with mute, solo and a fader](docs/screenshots/mixer.png)
+![The stem mixer: transport and loop controls above four instrument lanes (drums, bass, guitar, vocals), each with mute, solo, a fader and its waveform](docs/screenshots/mixer.png)
 
 It streams rather than decoding. Seven stems of a seven-minute take would be
 about a gigabyte of decoded audio, so the engine runs one `<audio>` element
@@ -61,27 +69,56 @@ jumps rather than being seamless.
 
 **Songs carry the working knowledge** — chords, lyrics, key and tempo,
 per-instrument notes, alternate titles — and list every take of that song in
-one place.
+one place, with your own stash recordings of it underneath.
 
-![A song page: chords and lyrics beside every take of it](docs/screenshots/song.png)
+![A song page: the chord chart and lyrics on the left; on the right its takes, an "In your stash" section with one private recording, and notes by instrument](docs/screenshots/song.png)
 
 **Events group takes** as they were actually played: a rehearsal, or a gig in
-running order.
+running order. Play all queues the whole event in that order.
 
-![An event: three takes from a live show, in the order they were played](docs/screenshots/event.png)
+![An event: a live show with its notes, Play all, and three takes in the order they were played](docs/screenshots/event.png)
+
+**The stash is for ideas that are not takes yet.** A riff on the bus, a
+harmony you want to try, the bridge at half speed. Record an idea opens a
+full-screen recorder on the phone; the song is optional, and a recording
+made with no signal waits on the device and uploads when it can. It lands
+in your stash (*Šuplík* in Czech), a drawer in Takes that nobody else can
+see. When one is worth hearing, Share with the band makes it a take of its
+song (it asks which, if you never said), filed under a "Personal
+recordings" day that says whose it is. Shared ideas are not voted on and
+send nobody a notification. Sharing is one-way.
+
+<p>
+  <img src="docs/screenshots/mobile-record.png" width="30%" alt="The recorder on a phone, eight seconds into an idea for Wildfire: Recording into your stash, the timer, and a stop button inside a ring that shows the input level">
+  <img src="docs/screenshots/mobile-stash.png" width="30%" alt="The stash on a phone: four private recordings, each with a play button, its label or song, date and length, under Record an idea">
+  <img src="docs/screenshots/mobile-stash-item.png" width="30%" alt="One stash recording on a phone: its song, its Personal recordings day, who recorded it, Rename, Download, and Share with the band">
+</p>
 
 **It works on a phone**, because that is where you use it — in the rehearsal
 room, or on the way there. The mixer degrades to a track list and one shared
-position strip rather than a miniature DAW, and the loop still works.
+position strip rather than a miniature DAW, and the loop still works. A
+queue started with Play all keeps going from page to page, and the player
+opens into a sheet with the running order.
 
 <p>
-  <img src="docs/screenshots/mobile-take.png" width="45%" alt="A take on a phone">
-  <img src="docs/screenshots/mobile-mixer.png" width="45%" alt="The mixer on a phone">
+  <img src="docs/screenshots/mobile-home.png" width="45%" alt="Home on a phone: the New since your last visit card with Play all and Vote (1), the starred song and event, the stash card with Open stash and Record an idea, and the bottom tab bar">
+  <img src="docs/screenshots/mobile-playing.png" width="45%" alt="The now-playing sheet on a phone: Neon Skyline playing, 1 of 3, from Live at The Attic, with the three takes in queue order and previous, pause and next buttons">
 </p>
+
+<p>
+  <img src="docs/screenshots/mobile-take.png" width="45%" alt="A take on a phone: title and Edit in the header, a facts card with event, date, length, verdict and instruments, Play this take, Open in mixer and the vote">
+  <img src="docs/screenshots/mobile-mixer.png" width="45%" alt="The mixer on a phone: play and loop controls over one shared position strip, then drums, bass, guitar and vocals as rows with mute, solo and a fader">
+</p>
+
+It installs to the home screen as an app, and if the server has push keys
+configured, each member can turn on notifications per device: new takes
+from rehearsals, a Sunday reminder about takes still waiting for your vote,
+and new songs or chord and lyric changes.
 
 **Everything else is deliberately small.** Sign-in is a link in an email, no
 passwords. Members are added by an admin. Two languages ship (English and
-Czech) and adding a third is a file. There is no chat, no calendar, no
+Czech) and adding a third is a file. The theme is light, dark or the
+device's own, remembered per browser. There is no chat, no calendar, no
 invoicing.
 
 ## Feeding it from your DAW
@@ -140,40 +177,56 @@ plus the four lines above.
 
 ## Try it locally
 
+You need Node 22.23.2 or newer, Docker for the bucket, and `ffmpeg` if you
+want the demo takes to have audio.
+
 ```sh
 corepack enable
 pnpm install
 
 # audio has to live in a bucket; this starts MinIO and creates one
+# (port 9000 already taken? set S3_HOST_PORT and use that port below)
 cd deploy/node && docker compose up -d minio minio-init && cd ../..
 
-cp apps/web/.env.example apps/web/.env      # the defaults match the above
-BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
-  pnpm --filter @bandplate/db run migrate
+cp apps/web/.env.example apps/web/.env
+# in apps/web/.env: uncomment BANDPLATE_ALLOW_DEV_MAILER=true and set
+# BANDPLATE_COOKIE_SECURE=false; the S3_* defaults already match MinIO
 
-# a demo band: songs, events, takes, votes — and, with ffmpeg on PATH,
-# real playable audio behind them
-BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
-  pnpm --filter @bandplate/db run seed
-BANDPLATE_DATABASE_URL=file:./apps/web/.data/bandplate.db \
+# the file the app opens (.env says ./.data/bandplate.db, from apps/web).
+# pnpm --filter runs each script in its own package, so give it in full.
+export BANDPLATE_DATABASE_URL=file:$PWD/apps/web/.data/bandplate.db
+pnpm --filter @bandplate/db run migrate
+
+# a demo band: songs, events, takes, votes
+pnpm --filter @bandplate/db run seed
+
+# real playable audio behind the seeded takes; needs ffmpeg on PATH
+S3_ENDPOINT=http://localhost:9000 S3_PUBLIC_ENDPOINT=http://localhost:9000 \
+  S3_BUCKET=bandplate S3_REGION=auto \
+  S3_ACCESS_KEY_ID=bandplate-dev S3_SECRET_ACCESS_KEY=bandplate-dev-secret \
   pnpm --filter @bandplate/db run dev:upload-audio
 
 pnpm --filter web dev
 ```
 
-Then open `/setup` and create yourself as the first admin, using the
-bootstrap token from your `.env`. Login links are printed to the server
-console in dev, so no mail server is needed.
+Then open <http://localhost:4321/login> and sign in as the seeded admin,
+`admin@example.com`. In dev the sign-in link is printed to the server
+console instead of emailed, so no mail server is needed. Without the seed,
+open `/setup` instead and create yourself as the first admin with the
+bootstrap token from your `.env`.
 
 **For a real deployment**, follow [`docs/self-hosting.md`](docs/self-hosting.md)
-instead — it covers the configuration that matters, including the one
+instead. It covers the configuration that matters, including the one
 variable (`BANDPLATE_TRUSTED_PROXY_DEPTH`) that is a security decision rather
-than a value.
+than a value. To run on Cloudflare Workers with D1 and R2, follow
+[`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md).
 
 ## How it is built
 
-Astro 5 in server mode with Preact islands, Hono for the JSON API, Drizzle
-over SQLite, Tailwind v4, TypeScript throughout, Biome, Vitest.
+Astro 7 in server mode with Preact islands, Hono for the JSON API, Drizzle
+over SQLite, Tailwind v4, TypeScript throughout, Biome, Vitest. The same tree
+builds for Node 22 (libSQL, any S3-compatible bucket) or for Cloudflare
+Workers (D1 and R2).
 
 ```
 apps/
@@ -191,17 +244,18 @@ packages/
                   MinIO and R2) is runtime-agnostic; InMemoryStorage, a
                   conformance-tested fake on the ./testing entry point, is
                   the one place here that touches node:*.
+  push/           Web Push: VAPID keys and the sender, runtime-agnostic.
   i18n/           Message catalogs, English and Czech, with a parity test.
   ui/             Design tokens and shared primitives (Tailwind v4 theme).
 deploy/
-  node/           compose.yml — local-dev MinIO and bucket creation. Not a
+  node/           compose.yml: local-dev MinIO and bucket creation. Not a
                   production deploy recipe.
   worker/         The R2 CORS rule the mixer needs.
 tools/
   ingest_client/  A minimal reference ingest client, in Python.
 ```
 
-`core`, `db`, `api` and `storage` must run unmodified on Cloudflare Workers:
+`core`, `db`, `api`, `storage` and `push` must run unmodified on Cloudflare Workers:
 no `node:*` imports, no Node-only globals, enforced by a test. Node-specific
 code (env reads, the SMTP mailer, the libSQL client) is confined to
 `apps/web`, which is what lets the same tree build for either target.
@@ -249,4 +303,5 @@ here it is worth saying out loud.
 MIT — see [LICENSE](LICENSE).
 
 Instrument icons are from [Game Icons](https://game-icons.net/), licensed
-[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Interface icons
+are from [Lucide](https://lucide.dev/), licensed ISC.

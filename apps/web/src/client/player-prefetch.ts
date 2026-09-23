@@ -9,6 +9,11 @@
 // starts. A Blob already in memory starts within milliseconds, before any of
 // that happens.
 //
+// The bytes are not played by the element that is playing now: a `src` change
+// on it drops the lock-screen notification on Android Chrome. They go onto the
+// second, idle element ahead of time, which takes over on `ended`. See
+// `player-handoff.ts`.
+//
 // Everything decidable lives here, pure, with a node test beside it: when to
 // start a prefetch, whether one in hand is still worth keeping, which source
 // the next take should start from, what `ended` means, and what to do when
@@ -31,10 +36,11 @@ export interface PrefetchKey {
   assetId: string;
 }
 
-/** The one prefetch the player holds at a time. `url` is the object URL once the bytes are in, `null` while the fetch is in flight. */
+/** The one prefetch the player holds at a time. `url` is the object URL once the bytes are in, `null` while the fetch is in flight (or after it failed, which `failed` says). */
 export interface HeldPrefetch {
   key: PrefetchKey;
   url: string | null;
+  failed?: boolean;
 }
 
 function keyOf(item: QueueItem): PrefetchKey {
@@ -68,6 +74,26 @@ export interface PrefetchInput {
   position: number;
   /** `audio.duration`, seconds. `NaN`, `Infinity` or 0 while unknown. */
   duration: number;
+  /**
+   * A take the idle `<audio>` element already holds from memory (see
+   * `player-handoff.ts`, `inMemory`). Fetching it again would only download
+   * the same bytes twice.
+   */
+  inMemory?: PrefetchKey | null;
+}
+
+/**
+ * Whether the current take is close enough to its end for the next one to be
+ * got ready: playing, and within `PREFETCH_LEAD_SECONDS` of the end, or (with
+ * no known duration) under way at all. Shared by the prefetch and by the idle
+ * `<audio>` element in `player-handoff.ts`, so both open the same window.
+ */
+export function prefetchDue(
+  input: Pick<PrefetchInput, "playing" | "position" | "duration">,
+): boolean {
+  if (!input.playing) return false;
+  const known = Number.isFinite(input.duration) && input.duration > 0;
+  return known ? input.duration - input.position <= PREFETCH_LEAD_SECONDS : input.position > 0;
 }
 
 /**
@@ -78,9 +104,10 @@ export interface PrefetchInput {
  * A held prefetch is kept as long as it is still the next take, whatever the
  * playhead does: seeking back to the start of a long take must not throw away
  * bytes that will be needed at its end. A NEW one only starts while playing
- * and within `PREFETCH_LEAD_SECONDS` of the end. With the duration unknown (a
- * file with no duration header), "near the end" cannot be judged, so it
- * starts as soon as the take is actually under way.
+ * and within `PREFETCH_LEAD_SECONDS` of the end, and never for a take the idle
+ * element already has in memory. With the duration unknown (a file with no
+ * duration header), "near the end" cannot be judged, so it starts as soon as
+ * the take is actually under way.
  */
 export function decidePrefetch(input: PrefetchInput): {
   discard: boolean;
@@ -89,12 +116,10 @@ export function decidePrefetch(input: PrefetchInput): {
   const candidate = prefetchCandidate(input.queue);
   const keep = input.held !== null && candidate !== null && sameKey(input.held, candidate);
   const discard = input.held !== null && !keep;
-  if (keep || !candidate || !input.playing) {
+  if (keep || !candidate || (input.inMemory && sameKey(input.inMemory, candidate))) {
     return { discard, start: null };
   }
-  const known = Number.isFinite(input.duration) && input.duration > 0;
-  const due = known ? input.duration - input.position <= PREFETCH_LEAD_SECONDS : input.position > 0;
-  return { discard, start: due ? candidate : null };
+  return { discard, start: prefetchDue(input) ? candidate : null };
 }
 
 /**

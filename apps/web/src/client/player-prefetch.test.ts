@@ -85,6 +85,10 @@ describe("decidePrefetch", () => {
       start: null,
     });
   });
+  it("does not fetch a take the idle element already has in memory", () => {
+    expect(decidePrefetch({ ...base, position: 195, inMemory: key(2) }).start).toBeNull();
+    expect(decidePrefetch({ ...base, position: 195, inMemory: key(3) }).start).toEqual(key(2));
+  });
   it("drops a prefetch for a next take that turned into a local recording", () => {
     const queue = queueAt(0, [item(1), item(2, "blob:stash")]);
     expect(decidePrefetch({ ...base, queue, held: key(2), position: 195 }).discard).toBe(true);

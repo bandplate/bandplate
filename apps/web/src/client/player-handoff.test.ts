@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   acceptsEvent,
+  decideEarlyAdvance,
   decideHandoff,
   decideIdle,
   heldSources,
   holdsItem,
   inMemory,
   type Loaded,
+  OVERLAP_LEAD_SECONDS,
   otherSlot,
   sourceFor,
   usableLoad,
@@ -248,5 +250,30 @@ describe("usableLoad", () => {
         prefetch: null,
       }).load,
     ).toBe(audioUrl("asset-2"));
+  });
+});
+
+describe("decideEarlyAdvance", () => {
+  const queue = (index: number): PlayQueue => ({ items: [item(1), item(2)], index });
+  const at = (position: number, over: Partial<Parameters<typeof decideEarlyAdvance>[0]> = {}) =>
+    decideEarlyAdvance({ queue: queue(0), position, duration: 120, paused: false, ...over });
+
+  it("moves on inside the lead, while the take still plays", () => {
+    expect(at(120 - OVERLAP_LEAD_SECONDS + 0.1)).toBe(1);
+  });
+
+  it("keeps playing before the lead", () => {
+    expect(at(100)).toBeNull();
+  });
+
+  it("does nothing when paused, at the queue's end, or with no length yet", () => {
+    expect(at(119.5, { paused: true })).toBeNull();
+    expect(at(119.5, { queue: queue(1) })).toBeNull();
+    expect(at(119.5, { queue: null })).toBeNull();
+    expect(at(0, { duration: Number.NaN })).toBeNull();
+  });
+
+  it("leaves a take too short for a lead to end on its own", () => {
+    expect(at(1.5, { duration: 2 })).toBeNull();
   });
 });

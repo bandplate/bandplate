@@ -22,14 +22,14 @@
 <h1>Test: přechod na další skladbu</h1>
 <p>Každá varianta přehraje 4 tóny po 12 s. Spusť jednu, zamkni telefon a sleduj, jestli widget přežije přechody. Pak odemkni, poznamenej si výsledek a zkus další.</p>
 
-<button data-variant="A"><b>A · jeden přehrávač, přepnutí po konci</b><span>Tak to fungovalo původně.</span></button>
-<button data-variant="B"><b>B · dva přehrávače, předání po konci</b><span>Tak to funguje teď.</span></button>
-<button data-variant="C"><b>C · dva přehrávače, překryv</b><span>Další začne 1 s před koncem předchozí.</span></button>
-<button data-variant="D"><b>D · jeden přehrávač, přepnutí před koncem</b><span>Přepne 0,5 s před koncem, takže skladba nikdy „neskončí“.</span></button>
+<button type="button" data-variant="A"><b>A · jeden přehrávač, přepnutí po konci</b><span>Tak to fungovalo původně.</span></button>
+<button type="button" data-variant="B"><b>B · dva přehrávače, předání po konci</b><span>Tak to funguje teď.</span></button>
+<button type="button" data-variant="C"><b>C · dva přehrávače, překryv</b><span>Další začne 1 s před koncem předchozí.</span></button>
+<button type="button" data-variant="D"><b>D · jeden přehrávač, přepnutí před koncem</b><span>Přepne 0,5 s před koncem, takže skladba nikdy „neskončí“.</span></button>
 
 <div class="row">
-  <button id="stop">Stop</button>
-  <button id="clear">Smazat log</button>
+  <button type="button" id="stop">Stop</button>
+  <button type="button" id="clear">Smazat log</button>
 </div>
 
 <div id="now">—</div>

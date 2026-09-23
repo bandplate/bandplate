@@ -16,6 +16,16 @@
 // was playing is paused or has ended and keeps its source. It is reused, as
 // the new idle element, only once the new one is actually playing.
 //
+// The queue does not wait for `ended`, either. Tested on the phones that lost
+// the notification: a handoff at `ended`, or a `src` change on one element
+// before it ends, both leave a moment with nothing playing, and Chrome takes
+// the notification away in that moment. Only starting the next element while
+// the current one still plays kept it (the /lab/next-track.html test, variant
+// C). So the advance is made `OVERLAP_LEAD_SECONDS` before the end
+// (`decideEarlyAdvance`), and the element handed off from is paused once the
+// new one is playing. `ended` stays as the fallback for a take too short to
+// have a lead, or a `timeupdate` that never came in time.
+//
 // Manual moves go through the same handoff rather than a `src` change on the
 // active element. A gesture in the page would survive the `src` change, but
 // the lock screen's own Next/Previous are manual moves with the page in the
@@ -190,4 +200,33 @@ export function decideHandoff(input: {
 /** Every `src` the two elements hold, for `revocable`: an object URL on either is still in use. */
 export function heldSources(loaded: readonly (Loaded | null)[]): string[] {
   return loaded.flatMap((it) => (it ? [it.src] : []));
+}
+
+/**
+ * How long before the end the queue moves on. Long enough that a
+ * `timeupdate` (about four a second, less in the background) lands inside it,
+ * short enough that the tail cut from the take is its ring-out.
+ */
+export const OVERLAP_LEAD_SECONDS = 1;
+
+/**
+ * The index to move on to now, before the active element ends, or `null` to
+ * keep playing. Only while it really plays, with a known length longer than
+ * the lead (a take that short just ends), and only where the queue has
+ * somewhere to go.
+ */
+export function decideEarlyAdvance(input: {
+  queue: PlayQueue | null;
+  position: number;
+  duration: number;
+  paused: boolean;
+}): number | null {
+  const { position, duration } = input;
+  if (input.paused || !Number.isFinite(duration) || duration <= OVERLAP_LEAD_SECONDS * 2) {
+    return null;
+  }
+  if (duration - position > OVERLAP_LEAD_SECONDS) {
+    return null;
+  }
+  return nextIndex(input.queue);
 }

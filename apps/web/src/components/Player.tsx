@@ -51,6 +51,7 @@ import {
 } from "../client/player-actions.js";
 import {
   acceptsEvent,
+  decideEarlyAdvance,
   decideHandoff,
   decideIdle,
   heldSources,
@@ -432,10 +433,13 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       } else if (plan.rewind) {
         next.currentTime = 0;
       }
-      // Never two at once. On `ended` it has already stopped by itself; a
-      // manual move stops it only after the new one has been told to play
-      // (below), in the same task, so Chrome's media session never sees a
-      // moment with no player going and the lock screen keeps its card.
+      // Never two at once for longer than it takes to hand over, and never
+      // none: Chrome's media session takes the lock screen's card away in any
+      // moment with no player going. A manual move stops the current one
+      // right after the new one has been told to play, in the same task. The
+      // queue advancing on its own (`decideEarlyAdvance`, a second before the
+      // end) stops it once the new one is actually playing; if that start
+      // does not take, the old one plays out its last second and ends.
       const stopCurrent = () => {
         if (!current.paused) current.pause();
       };
@@ -483,8 +487,10 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
         });
       }
       setSessionState("playing");
-      void playUnattended(next).then(settle);
-      stopCurrent();
+      void playUnattended(next).then((failure) => {
+        if (failure === null && activeRef.current === to) stopCurrent();
+        settle(failure);
+      });
     },
     [elementAt, setSource],
   );
@@ -636,6 +642,19 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       // which has usually been holding the next take for a while
       // (`startItem`), and is remembered until it is heard, so a page frozen
       // before it could start can pick it up again.
+      const advance = (index: number) => {
+        playIndexRef.current(index, true);
+        const item = playQueue.get()?.items[index];
+        if (item) {
+          pendingAdvanceRef.current = {
+            index,
+            takeId: item.takeId,
+            hidden: document.visibilityState === "hidden",
+          };
+        }
+      };
+      // The fallback: normally the queue has already moved on a second
+      // before this (`onTime`), and this element is no longer the active one.
       const onEnded = () => {
         if (!active()) return;
         const action = decideOnEnded(playQueue.get());
@@ -643,19 +662,24 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           isPlaying.set(false);
           return;
         }
-        playIndexRef.current(action.index, true);
-        const item = playQueue.get()?.items[action.index];
-        if (item) {
-          pendingAdvanceRef.current = {
-            index: action.index,
-            takeId: item.takeId,
-            hidden: document.visibilityState === "hidden",
-          };
-        }
+        advance(action.index);
       };
       const onTime = () => {
         if (!active()) return;
         setPlayhead(audio.currentTime);
+        // Moves on while this one still plays; see `player-handoff.ts` for
+        // why waiting for `ended` loses the lock screen. The handoff makes
+        // the other element active, so this fires once per take.
+        const early = decideEarlyAdvance({
+          queue: playQueue.get(),
+          position: audio.currentTime,
+          duration: audio.duration,
+          paused: audio.paused,
+        });
+        if (early !== null) {
+          advance(early);
+          return;
+        }
         syncAhead();
       };
       const onDuration = () => {
@@ -897,7 +921,16 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     const offered = remoteTransport(track, queue);
     session.setActionHandler("previoustrack", offered.previous ? goPrevious : null);
     session.setActionHandler("nexttrack", offered.next ? goNext : null);
-  }, [track, queue, goNext, goPrevious]);
+    // Play and pause are ours too, not Chrome's default: with two elements
+    // in its session, the default acts on whichever it picks, which can be
+    // the one just handed off from. These act on the active one only.
+    const onActive = (act: (audio: HTMLAudioElement) => void) => () => {
+      const audio = activeAudio();
+      if (audio) act(audio);
+    };
+    session.setActionHandler("play", track ? onActive(playQuietly) : null);
+    session.setActionHandler("pause", track ? onActive((audio) => audio.pause()) : null);
+  }, [track, queue, goNext, goPrevious, activeAudio]);
 
   // The waveform for whatever source is loaded. Re-fetched on every source
   // switch, which is the entire reason peaks are stored per asset rather

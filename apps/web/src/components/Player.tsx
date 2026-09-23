@@ -58,6 +58,7 @@ import {
   type Loaded,
   otherSlot,
   type Slot,
+  usableLoad,
 } from "../client/player-handoff.js";
 import {
   classifyPlayError,
@@ -373,7 +374,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     if (!idle) return;
     const action = decideIdle({
       ...now,
-      idle: loadedRef.current[idleSlot],
+      idle: usableLoad(loadedRef.current[idleSlot], idle.error !== null),
       settled: settledRef.current,
       prefetch: prefetchRef.current,
     });
@@ -420,7 +421,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       // owns, a prefetched take from memory, everything else from the asset
       // route.
       const plan = decideHandoff({
-        idle: loadedRef.current[to],
+        idle: usableLoad(loadedRef.current[to], next.error !== null),
         idlePosition: next.currentTime,
         item,
         prefetch: prefetchRef.current,
@@ -431,8 +432,13 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       } else if (plan.rewind) {
         next.currentTime = 0;
       }
-      // Never two at once. On `ended` it has already stopped by itself.
-      if (!current.paused) current.pause();
+      // Never two at once. On `ended` it has already stopped by itself; a
+      // manual move stops it only after the new one has been told to play
+      // (below), in the same task, so Chrome's media session never sees a
+      // moment with no player going and the lock screen keeps its card.
+      const stopCurrent = () => {
+        if (!current.paused) current.pause();
+      };
       activeRef.current = to;
       settledRef.current = false;
       // The identity is the take's, never the blob's: `src` on the track
@@ -464,6 +470,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           settle(failure);
           if (failure !== "superseded") throw error;
         });
+        stopCurrent();
         return;
       }
       // Straight away, not on the next render: a phone with the screen off
@@ -477,6 +484,7 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
       }
       setSessionState("playing");
       void playUnattended(next).then(settle);
+      stopCurrent();
     },
     [elementAt, setSource],
   );

@@ -66,6 +66,16 @@ export function holdsItem(loaded: Loaded | null, item: QueueItem): boolean {
   return item.src === undefined || loaded.src === item.src;
 }
 
+/**
+ * What an element really holds: nothing once its load has failed. `Loaded`
+ * records the `src` it was given, not whether that worked, and an idle
+ * element whose load died on a network blip would otherwise count as holding
+ * the next take forever: never reloaded, and played dead at the handoff.
+ */
+export function usableLoad(loaded: Loaded | null, errored: boolean): Loaded | null {
+  return errored ? null : loaded;
+}
+
 /** Whether an element is loading its take over the network (the asset route) rather than from bytes in memory. */
 function overNetwork(loaded: Loaded): boolean {
   return loaded.src === audioUrl(loaded.assetId);

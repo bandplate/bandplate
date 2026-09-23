@@ -9,6 +9,7 @@ import {
   type Loaded,
   otherSlot,
   sourceFor,
+  usableLoad,
 } from "./player-handoff.js";
 import { PREFETCH_LEAD_SECONDS } from "./player-prefetch.js";
 import type { PlayQueue, QueueItem } from "./player-queue.js";
@@ -227,5 +228,25 @@ describe("heldSources", () => {
   it("is every src on either element", () => {
     expect(heldSources([loaded(1, "blob:a"), null])).toEqual(["blob:a"]);
     expect(heldSources([loaded(1, "blob:a"), loaded(2, "blob:b")])).toEqual(["blob:a", "blob:b"]);
+  });
+});
+
+describe("usableLoad", () => {
+  const loaded: Loaded = { takeId: "take-2", assetId: "asset-2", src: audioUrl("asset-2") };
+
+  it("keeps what a healthy element holds", () => {
+    expect(usableLoad(loaded, false)).toBe(loaded);
+  });
+
+  it("counts an element whose load failed as holding nothing, so the handoff loads it again", () => {
+    expect(usableLoad(loaded, true)).toBeNull();
+    expect(
+      decideHandoff({
+        idle: usableLoad(loaded, true),
+        idlePosition: 0,
+        item: item(2),
+        prefetch: null,
+      }).load,
+    ).toBe(audioUrl("asset-2"));
   });
 });

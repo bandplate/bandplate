@@ -42,6 +42,18 @@ import {
   decidePlayerClickAction,
 } from "../client/player-actions.js";
 import {
+  classifyPlayError,
+  decideOnEnded,
+  decideOnVisible,
+  decidePrefetch,
+  type PendingAdvance,
+  type PlayFailure,
+  type PrefetchKey,
+  prefetchedSource,
+  revocable,
+  sessionStateOnPause,
+} from "../client/player-prefetch.js";
+import {
   canGoPrevious,
   decidePrevious,
   hasNext,
@@ -179,6 +191,33 @@ function playQuietly(audio: HTMLAudioElement): void {
   });
 }
 
+/**
+ * `play()` for the paths no gesture is behind (the queue advancing on its own,
+ * the page coming back after one that did not take). Nothing is rethrown:
+ * a `NotAllowedError` there is the browser's rule, not a bug, and the caller
+ * reads the outcome instead. `null` means it is playing.
+ */
+function playUnattended(audio: HTMLAudioElement): Promise<PlayFailure | null> {
+  return audio.play().then(
+    () => null,
+    (error: unknown) => classifyPlayError(error),
+  );
+}
+
+/** The lock screen's own play state. Explicit rather than derived, so the switch between two takes never reads as a stop. */
+function setSessionState(state: MediaSessionPlaybackState): void {
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.playbackState = state;
+  }
+}
+
+/** The prefetch slot: what it is for, the fetch to abort, and the object URL once the bytes are in (still `null` if the fetch failed, which is kept so it is not retried four times a second). */
+interface PrefetchEntry {
+  key: PrefetchKey;
+  url: string | null;
+  controller: AbortController;
+}
+
 export default function Player({ locale }: { locale?: Locale } = {}) {
   const track = useStore(currentTrack);
   const playing = useStore(isPlaying);
@@ -196,32 +235,148 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
   /** Read by `playIndex`, which is a stable callback and so cannot close over the state itself. */
   const sheetOpenRef = useRef(false);
 
+  // The next take's audio, fetched while this one plays (see
+  // `player-prefetch.ts` for why and when). At most one at a time. Every
+  // object URL made here is in `createdUrlsRef` until it is revoked; the one
+  // on the element is `playingUrlRef`. A stash row's own URL is never in
+  // either, so it is never revoked here.
+  const prefetchRef = useRef<PrefetchEntry | null>(null);
+  const createdUrlsRef = useRef(new Set<string>());
+  const playingUrlRef = useRef<string | null>(null);
+  /** An automatic advance not yet heard: what `visibilitychange` recovers. */
+  const pendingAdvanceRef = useRef<PendingAdvance | null>(null);
+
+  /** Revokes every object URL made here that is neither on the element nor the held prefetch. */
+  const releaseUrls = useCallback(() => {
+    const created = createdUrlsRef.current;
+    for (const url of revocable([...created], [playingUrlRef.current, prefetchRef.current?.url])) {
+      URL.revokeObjectURL(url);
+      created.delete(url);
+    }
+  }, []);
+
+  /** Every `audio.src` change goes through here, so the object URL it replaces is let go. */
+  const setSource = useCallback(
+    (audio: HTMLAudioElement, src: string | null, fromPrefetch: boolean) => {
+      if (src === null) {
+        audio.removeAttribute("src");
+      } else {
+        audio.src = src;
+      }
+      playingUrlRef.current = fromPrefetch ? src : null;
+      releaseUrls();
+    },
+    [releaseUrls],
+  );
+
+  const dropPrefetch = useCallback(() => {
+    const held = prefetchRef.current;
+    if (!held) return;
+    prefetchRef.current = null;
+    held.controller.abort();
+    releaseUrls();
+  }, [releaseUrls]);
+
+  // Same route the element would ask, so the same auth, the same 302 to a
+  // presigned URL and the same bucket CORS the waveform fetch already relies
+  // on. `same-origin` credentials: the session cookie goes to our route and
+  // nothing goes to the bucket, which a credentialed CORS request would need
+  // the bucket to allow explicitly.
+  const startPrefetch = useCallback((key: PrefetchKey) => {
+    const entry: PrefetchEntry = { key, url: null, controller: new AbortController() };
+    prefetchRef.current = entry;
+    fetch(audioUrl(key.assetId), { signal: entry.controller.signal, credentials: "same-origin" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`prefetch ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        // Replaced or dropped while the body was still arriving.
+        if (prefetchRef.current !== entry) return;
+        const url = URL.createObjectURL(blob);
+        createdUrlsRef.current.add(url);
+        entry.url = url;
+      })
+      .catch(() => {
+        // Aborted, or the network said no: `ended` takes the network path,
+        // exactly as before this existed.
+      });
+  }, []);
+
+  /** Brings the prefetch slot in line with the queue and the playhead. Cheap; runs on every `timeupdate`. */
+  const syncPrefetch = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const decision = decidePrefetch({
+      queue: playQueue.get(),
+      held: prefetchRef.current?.key ?? null,
+      playing: !audio.paused,
+      position: audio.currentTime,
+      duration: audio.duration,
+    });
+    if (decision.discard) dropPrefetch();
+    if (decision.start) startPrefetch(decision.start);
+  }, [dropPrefetch, startPrefetch]);
+
   // The one way a queued take gets onto the `<audio>` element — used by the
   // click handler's "start-track"/Play-all paths and by the Next/Previous
   // buttons alike, so there is exactly one place that touches `audio.src`
   // for a track change.
-  const startItem = useCallback((item: QueueItem) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    pendingSeekRef.current = null;
-    pendingAutoplayRef.current = false;
-    currentTrack.set({
-      takeId: item.takeId,
-      title: item.title,
-      subtitle: item.subtitle,
-      sourceAssetId: item.assetId,
-      sourceKind: "master",
-      sourceName: "",
-      src: item.src,
-    });
-    // A recording still on this device plays from the object URL its row
-    // owns; everything the server has plays from the asset route.
-    audio.src = item.src ?? audioUrl(item.assetId);
-    playQuietly(audio);
-  }, []);
+  //
+  // `unattended` is the queue advancing by itself: no gesture behind it, so
+  // a refused `play()` is expected rather than thrown, and the lock screen is
+  // told it is still playing across the switch.
+  const startItem = useCallback(
+    (item: QueueItem, unattended = false) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      pendingSeekRef.current = null;
+      pendingAutoplayRef.current = false;
+      pendingAdvanceRef.current = null;
+      const src = prefetchedSource(item, prefetchRef.current);
+      const fromPrefetch = !item.src && src !== undefined;
+      // The bytes move from the prefetch slot onto the element: not aborted,
+      // not revoked, just no longer the prefetch.
+      if (fromPrefetch) prefetchRef.current = null;
+      // The identity is the take's, never the blob's: `src` on the track
+      // means "a recording only this device has", which would hide the
+      // waveform and the source list of a take the server does have.
+      currentTrack.set({
+        takeId: item.takeId,
+        title: item.title,
+        subtitle: item.subtitle,
+        sourceAssetId: item.assetId,
+        sourceKind: "master",
+        sourceName: "",
+        src: item.src,
+      });
+      // A recording still on this device plays from the object URL its row
+      // owns, a prefetched take from memory, everything else from the asset
+      // route.
+      setSource(audio, src ?? audioUrl(item.assetId), fromPrefetch);
+      if (!unattended) {
+        playQuietly(audio);
+        return;
+      }
+      // Straight away, not on the next render: a phone with the screen off
+      // may not give this page another render before it decides nothing is
+      // playing.
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: item.title,
+          artist: item.subtitle,
+        });
+      }
+      setSessionState("playing");
+      void playUnattended(audio).then((failure) => {
+        if (failure === "refused" || failure === "failed") setSessionState("paused");
+      });
+    },
+    [setSource],
+  );
 
   const playIndex = useCallback(
-    (index: number) => {
+    (index: number, unattended = false) => {
       const queue = playQueue.get();
       const item = queue?.items[index];
       if (!queue || !item) return;
@@ -249,8 +404,11 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           ?.querySelector<HTMLElement>(".bp-player-play")
           ?.focus();
       }
+      // The track first, then the queue: moving the queue re-checks the
+      // prefetch slot at once, and a prefetch of THIS take is no longer "the
+      // next one" by then. `startItem` has to take it off the slot first.
+      startItem(item, unattended);
       playQueue.set(next);
-      startItem(item);
       // Only the queue moving the track (Next, Previous, auto-advance, the
       // Hraje sheet's own order list) scrolls the row into view — a user's
       // own tap on `start-track` skips this because they are already
@@ -336,21 +494,76 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     if (!audio) {
       return;
     }
-    const onPlay = () => isPlaying.set(true);
-    const onPause = () => isPlaying.set(false);
+    const onPlay = () => {
+      isPlaying.set(true);
+      setSessionState("playing");
+      syncPrefetch();
+    };
+    const onPause = () => {
+      isPlaying.set(false);
+      // The pause the element fires right before `ended` is not one.
+      setSessionState(sessionStateOnPause(audio.ended, playQueue.get()));
+    };
+    // Heard: whatever advance was pending has taken.
+    const onPlaying = () => {
+      pendingAdvanceRef.current = null;
+    };
     // Advances the queue rather than just stopping — see `player-queue.ts`
-    // for what "next" means. `null` (no queue, or already at the end) is
-    // the ordinary stop.
+    // for what "next" means. `stop` (no queue, or already at the end) is
+    // the ordinary stop. The advance plays from the prefetched bytes when
+    // they are in (`startItem`), and is remembered until it is heard, so a
+    // page frozen before it could start can pick it up again.
     const onEnded = () => {
-      const index = nextIndex(playQueue.get());
-      if (index === null) {
+      const action = decideOnEnded(playQueue.get());
+      if (action.kind === "stop") {
         isPlaying.set(false);
-      } else {
-        playIndexRef.current(index);
+        return;
+      }
+      playIndexRef.current(action.index, true);
+      const item = playQueue.get()?.items[action.index];
+      if (item) {
+        pendingAdvanceRef.current = {
+          index: action.index,
+          takeId: item.takeId,
+          hidden: document.visibilityState === "hidden",
+        };
       }
     };
-    const onTime = () => setPlayhead(audio.currentTime);
-    const onDuration = () => setDuration(finiteDuration(audio.duration));
+    const onTime = () => {
+      setPlayhead(audio.currentTime);
+      syncPrefetch();
+    };
+    const onDuration = () => {
+      setDuration(finiteDuration(audio.duration));
+      syncPrefetch();
+    };
+    // Back from the background after an advance that never got going: the
+    // take that should be playing, from 0:00. Played if the browser allows
+    // it; if not, it sits paused with the play button ready.
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const action = decideOnVisible({
+        pending: pendingAdvanceRef.current,
+        queue: playQueue.get(),
+        silent: audio.paused || audio.error !== null,
+      });
+      if (action.kind !== "resume") return;
+      pendingAdvanceRef.current = null;
+      // Same source, loaded afresh: `load()` rewinds to 0:00 and clears an
+      // errored element. An object URL there is still the playing source,
+      // so it has not been revoked.
+      audio.load();
+      setPlayhead(0);
+      void playUnattended(audio).then((failure) => {
+        if (failure) {
+          isPlaying.set(false);
+          setSessionState("paused");
+        }
+      });
+    };
+    // The queue changing under a held prefetch (a new list, Previous, the
+    // sheet's order list) decides at once whether it is still the next take.
+    const unlistenQueue = playQueue.listen(() => syncPrefetch());
     const onLoadedMetadata = () => {
       setDuration(finiteDuration(audio.duration));
       if (pendingSeekRef.current !== null) {
@@ -364,19 +577,28 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
     };
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
+    audio.addEventListener("playing", onPlaying);
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("durationchange", onDuration);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      unlistenQueue();
+      document.removeEventListener("visibilitychange", onVisibility);
+      audio.removeEventListener("playing", onPlaying);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("durationchange", onDuration);
+      dropPrefetch();
+      for (const url of createdUrlsRef.current) URL.revokeObjectURL(url);
+      createdUrlsRef.current.clear();
+      playingUrlRef.current = null;
     };
-  }, []);
+  }, [syncPrefetch, dropPrefetch]);
 
   // The delegated click handler — the one piece of JS every play/solo
   // control on the site actually depends on. Registered once; this
@@ -448,7 +670,8 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
         case "switch-source":
           pendingSeekRef.current = audio.currentTime;
           pendingAutoplayRef.current = !audio.paused;
-          audio.src = action.track.src ?? audioUrl(action.track.sourceAssetId);
+          pendingAdvanceRef.current = null;
+          setSource(audio, action.track.src ?? audioUrl(action.track.sourceAssetId), false);
           // `preload="none"` means changing `.src` alone does NOT start
           // fetching — `loadedmetadata` (which applies the pending seek
           // below) would never fire while paused, silently stranding the
@@ -474,10 +697,10 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
 
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-    // `startItem` is stable (`useCallback` with `[]`), so the once-registered
+    // `startItem` and `setSource` are stable (`useCallback` over refs), so the once-registered
     // listener closes over the same function this effect ran with — listed
     // to satisfy the linter, not because it ever changes and re-binds this.
-  }, [startItem]);
+  }, [startItem, setSource]);
 
   // Keep every on-page control in sync with the store — on every state
   // change, AND after every view-transition navigation (fresh, unsynced
@@ -816,14 +1039,16 @@ export default function Player({ locale }: { locale?: Locale } = {}) {
           aria-label={t.close}
           onClick={() => {
             const audio = audioRef.current;
+            pendingAdvanceRef.current = null;
             if (audio) {
               audio.pause();
-              audio.removeAttribute("src");
+              setSource(audio, null, false);
               audio.load();
             }
             isPlaying.set(false);
             currentTrack.set(null);
             playQueue.set(null);
+            setSessionState("none");
           }}
         >
           <X size={16} aria-hidden="true" strokeWidth={2.2} />

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Test: další skladba</title>
+<style>
+  body { font: 16px/1.4 system-ui, sans-serif; margin: 0; padding: 16px; background: #14110f; color: #efe6d8; }
+  h1 { font-size: 1.2rem; margin: 0 0 8px; }
+  p { margin: 0 0 12px; color: #b9ad9c; }
+  button { display: block; width: 100%; min-height: 48px; margin: 0 0 10px; padding: 8px 12px; border: 1px solid #5a4f43; border-radius: 10px; background: #231e1a; color: inherit; font: inherit; text-align: left; }
+  button b { display: block; }
+  button span { color: #b9ad9c; font-size: 0.875rem; }
+  .row { display: flex; gap: 8px; }
+  .row button { text-align: center; }
+  #now { margin: 12px 0; font-weight: 600; }
+  pre { white-space: pre-wrap; font-size: 12px; background: #0c0a09; padding: 8px; border-radius: 8px; max-height: 50vh; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>Test: přechod na další skladbu</h1>
+<p>Každá varianta přehraje 4 tóny po 12 s. Spusť jednu, zamkni telefon a sleduj, jestli widget přežije přechody. Pak odemkni, poznamenej si výsledek a zkus další.</p>
+
+<button data-variant="A"><b>A · jeden přehrávač, přepnutí po konci</b><span>Tak to fungovalo původně.</span></button>
+<button data-variant="B"><b>B · dva přehrávače, předání po konci</b><span>Tak to funguje teď.</span></button>
+<button data-variant="C"><b>C · dva přehrávače, překryv</b><span>Další začne 1 s před koncem předchozí.</span></button>
+<button data-variant="D"><b>D · jeden přehrávač, přepnutí před koncem</b><span>Přepne 0,5 s před koncem, takže skladba nikdy „neskončí“.</span></button>
+
+<div class="row">
+  <button id="stop">Stop</button>
+  <button id="clear">Smazat log</button>
+</div>
+
+<div id="now">—</div>
+<pre id="log"></pre>
+
+<script>
+(() => {
+  const TRACKS = 4;
+  const SECONDS = 12;
+  const RATE = 8000;
+  const PITCHES = [330, 392, 440, 523];
+
+  // A quiet tone as a WAV blob URL: no server, no files.
+  function toneUrl(freq) {
+    const n = RATE * SECONDS;
+    const buf = new ArrayBuffer(44 + n * 2);
+    const v = new DataView(buf);
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); str(8, "WAVE");
+    str(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, RATE, true); v.setUint32(28, RATE * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    str(36, "data"); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) {
+      const t = i / RATE;
+      const env = Math.min(1, t / 0.3, (SECONDS - t) / 0.3);
+      // A pulse every second, so a stall is audible.
+      const pulse = (t % 1) < 0.6 ? 1 : 0.35;
+      v.setInt16(44 + i * 2, Math.sin(2 * Math.PI * freq * t) * 3000 * env * pulse, true);
+    }
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+  const urls = PITCHES.map(toneUrl);
+
+  const logEl = document.getElementById("log");
+  const nowEl = document.getElementById("now");
+  let lines = [];
+  try { lines = JSON.parse(localStorage.getItem("bp-lab-log") || "[]"); } catch {}
+  const render = () => { logEl.textContent = lines.join("\n"); };
+  render();
+  const t0 = Date.now();
+  function log(msg) {
+    const s = ((Date.now() - t0) / 1000).toFixed(1).padStart(6);
+    lines.push(`${s}s ${document.visibilityState === "visible" ? "V" : "H"} ${msg}`);
+    if (lines.length > 400) lines = lines.slice(-400);
+    try { localStorage.setItem("bp-lab-log", JSON.stringify(lines)); } catch {}
+    render();
+  }
+  document.addEventListener("visibilitychange", () => log(`page ${document.visibilityState}`));
+
+  const a = new Audio();
+  const b = new Audio();
+  a.preload = b.preload = "auto";
+  document.body.append(a, b);
+
+  let variant = null;
+  let index = 0;
+  let active = a;
+  let switching = false;
+
+  const other = (el) => (el === a ? b : a);
+  const name = (el) => (el === a ? "a" : "b");
+
+  function meta(i) {
+    nowEl.textContent = `${variant}: tón ${i + 1}/${TRACKS}`;
+    if (!("mediaSession" in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({ title: `Tón ${i + 1}`, artist: `Varianta ${variant}` });
+    navigator.mediaSession.playbackState = "playing";
+  }
+
+  function play(el, why) {
+    el.play().then(
+      () => log(`${name(el)} play() ok (${why})`),
+      (e) => log(`${name(el)} play() FAILED ${e.name} (${why})`),
+    );
+  }
+
+  for (const el of [a, b]) {
+    for (const ev of ["playing", "pause", "ended", "error", "emptied"]) {
+      el.addEventListener(ev, () => log(`${name(el)} ${ev}${el === active ? "" : " (idle)"}`));
+    }
+    el.addEventListener("ended", () => onEnded(el));
+    el.addEventListener("timeupdate", () => onTime(el));
+  }
+
+  function start(v) {
+    stop();
+    variant = v;
+    index = 0;
+    active = a;
+    switching = false;
+    log(`=== variant ${v} ===`);
+    a.src = urls[0];
+    meta(0);
+    play(a, "start");
+    if (v === "B" || v === "C") b.src = urls[1];
+  }
+
+  function stop() {
+    for (const el of [a, b]) { el.pause(); el.removeAttribute("src"); el.load(); }
+    variant = null;
+    nowEl.textContent = "—";
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "none";
+  }
+
+  function advance(reason) {
+    if (index + 1 >= TRACKS) { log(`done (${reason})`); return; }
+    index += 1;
+    log(`-> track ${index + 1} (${reason})`);
+    if (variant === "A" || variant === "D") {
+      active.src = urls[index];
+      meta(index);
+      play(active, reason);
+      return;
+    }
+    const prev = active;
+    const next = other(prev);
+    active = next;
+    meta(index);
+    play(next, reason);
+    if (variant === "C") {
+      next.addEventListener("playing", () => {
+        prev.pause();
+        if (index + 1 < TRACKS) setTimeout(() => { prev.src = urls[index + 1]; }, 500);
+      }, { once: true });
+    } else {
+      next.addEventListener("playing", () => {
+        if (index + 1 < TRACKS) prev.src = urls[index + 1];
+      }, { once: true });
+    }
+  }
+
+  function onEnded(el) {
+    if (el !== active || !variant) return;
+    if (variant === "A" || variant === "B") advance("ended");
+  }
+
+  function onTime(el) {
+    if (el !== active || !variant || switching) return;
+    const left = el.duration - el.currentTime;
+    const lead = variant === "C" ? 1 : variant === "D" ? 0.5 : -1;
+    if (lead > 0 && left < lead && index + 1 < TRACKS) {
+      switching = true;
+      advance(`${left.toFixed(2)}s left`);
+      setTimeout(() => { switching = false; }, 1500);
+    }
+  }
+
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.setActionHandler("play", () => { log("session play"); play(active, "session"); navigator.mediaSession.playbackState = "playing"; });
+    navigator.mediaSession.setActionHandler("pause", () => { log("session pause"); active.pause(); navigator.mediaSession.playbackState = "paused"; });
+    navigator.mediaSession.setActionHandler("nexttrack", () => { log("session next"); advance("session next"); });
+  }
+
+  for (const btn of document.querySelectorAll("[data-variant]")) {
+    btn.addEventListener("click", () => start(btn.dataset.variant));
+  }
+  document.getElementById("stop").addEventListener("click", () => { log("stop"); stop(); });
+  document.getElementById("clear").addEventListener("click", () => { lines = []; render(); try { localStorage.removeItem("bp-lab-log"); } catch {} });
+})();
+</script>
+</body>
+</html>

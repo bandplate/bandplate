@@ -1,15 +1,29 @@
-import { type Db, songs, songsRepo } from "@bandplate/db";
+import { type Db, songsRepo } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
-import { beforeEach, describe, expect, it } from "vitest";
-import { uuidv7 } from "../ids.js";
-import { normalizeTitle } from "../text.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { allocateSongSlug } from "./songs.js";
+
+// `getBySlug` is the one lookup the walk makes. It stays the real query for
+// every test here but the bound one, which replaces it (see there). Mocked
+// by the repo module's own path, not as `@bandplate/db`: that specifier
+// resolved to a different module id for `songs.ts` than for this file, so a
+// mock of it never reached the code under test. (A spy cannot do it either:
+// `songsRepo` is an ESM namespace, its members read-only.)
+vi.mock("../../../db/src/repos/songs.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@bandplate/db")["songsRepo"]>();
+  return { ...actual, getBySlug: vi.fn(actual.getBySlug) };
+});
 
 describe("allocateSongSlug", () => {
   let db: Db;
 
   beforeEach(async () => {
     db = await createTestDb();
+  });
+
+  afterEach(() => {
+    // Back to the real query (the `vi.fn` wrapper's own implementation).
+    vi.mocked(songsRepo.getBySlug).mockReset();
   });
 
   async function seed(title: string, slug: string) {
@@ -37,33 +51,25 @@ describe("allocateSongSlug", () => {
   });
 
   it("gives up at the 999 bound, returning a slug that may itself be taken", async () => {
-    // Occupy `neon-skyline` and `neon-skyline-2` … `neon-skyline-998` — one
-    // short of the bound — so the walk runs to its limit. Bulk-inserted
-    // because 998 sequential `create` calls would dominate this suite's
-    // budget. Each row needs a distinct title too: `songs.title_norm` is
-    // UNIQUE, not just the slug.
-    const rows = [
-      { slug: "neon-skyline", title: "Neon Skyline" },
-      ...Array.from({ length: 997 }, (_, i) => ({
-        slug: `neon-skyline-${i + 2}`,
-        title: `Neon Skyline ${i + 2}`,
-      })),
-    ].map((r) => ({
-      id: uuidv7(),
-      title: r.title,
-      titleNorm: normalizeTitle(r.title),
-      slug: r.slug,
-      isStub: false,
-      createdAt: 1000,
-      updatedAt: 1000,
-    }));
-    await db.insert(songs).values(rows);
+    // Every slug reads as taken, so the walk runs to its limit. Stubbed
+    // rather than seeded: the walk is ~1000 sequential lookups, and against
+    // the real test database that took up to 5.6 s under a parallel
+    // `pnpm test`, past vitest's timeout. What this test is about is the
+    // bound, not the query, which the tests above already cover.
+    const lookup = vi
+      .mocked(songsRepo.getBySlug)
+      .mockImplementation(
+        async (_db, slug) => ({ slug }) as Awaited<ReturnType<typeof songsRepo.getBySlug>>,
+      );
 
     // It stops and returns rather than looping — and note WHAT it returns:
-    // `neon-skyline-999` is handed back without ever being checked for
-    // freedom. The bound is a termination guarantee, not a uniqueness one,
-    // which is exactly why every caller has to survive a UNIQUE violation on
+    // `neon-skyline-999` is looked up, found taken (here every slug is), and
+    // handed back anyway, because the bound is tested after the lookup. The
+    // bound is a termination guarantee, not a uniqueness one, which is
+    // exactly why every caller has to survive a UNIQUE violation on
     // `songs.slug` rather than trusting this.
     expect(await allocateSongSlug(db, "Neon Skyline")).toBe("neon-skyline-999");
+    expect(lookup).toHaveBeenCalledTimes(999);
+    expect(lookup).toHaveBeenLastCalledWith(db, "neon-skyline-999");
   });
 });

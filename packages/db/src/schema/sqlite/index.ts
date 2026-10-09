@@ -651,3 +651,36 @@ export const notificationClaims = sqliteTable("notification_claims", {
   key: text("key").primaryKey(),
   createdAt: ts("created_at").notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// share links
+// ---------------------------------------------------------------------------
+
+/**
+ * The short `/s/<code>` link a detail page's Share button hands out.
+ *
+ * `targetId` is the song's, event's or take's ID, never a path: `/s/<code>`
+ * works out the canonical page at the moment someone opens it, so a link sent
+ * today does not depend on a song's slug staying what it is (a rename keeps
+ * it now, but nothing here should rely on that).
+ *
+ * UNIQUE on `(kind, target_id)`: one target has one code, reused for ever, so
+ * sharing the same song twice hands out the same link, and the table grows by
+ * one row per thing ever shared rather than per press. `shareLinksRepo.getOrCreate`
+ * leans on it with `ON CONFLICT DO NOTHING` and a read-back.
+ *
+ * No `.references()`: the target is one of three tables, the same polymorphic
+ * shape `favorites` has, and FKs are never enforced here anyway. The delete
+ * paths (`songsRepo.remove`, `takesRepo.remove`) drop a target's link
+ * explicitly, and `/s/<code>` checks that the target still exists regardless.
+ */
+export const shareLinks = sqliteTable(
+  "share_links",
+  {
+    code: text("code").primaryKey(),
+    kind: text("kind", { enum: ["song", "event", "take"] }).notNull(),
+    targetId: text("target_id").notNull(),
+    createdAt: ts("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("share_links_kind_target_id_idx").on(t.kind, t.targetId)],
+);

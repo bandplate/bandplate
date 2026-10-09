@@ -15,6 +15,7 @@ import * as assetsRepo from "./assets.js";
 import { chunk } from "./chunk.js";
 import { escapeLikePattern } from "./like-pattern.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
+import * as shareLinksRepo from "./share-links.js";
 import { bandTakeCondition } from "./take-visibility.js";
 import * as takesRepo from "./takes.js";
 
@@ -543,6 +544,7 @@ export async function remove(db: Db, id: string): Promise<void> {
     db.delete(songInstrumentNotes).where(eq(songInstrumentNotes.songId, id)),
     db.delete(songChartChanges).where(eq(songChartChanges.songId, id)),
     db.delete(favorites).where(and(eq(favorites.targetType, "song"), eq(favorites.targetId, id))),
+    shareLinksRepo.buildRemoveForTargetStatement(db, "song", id),
     db.delete(songs).where(eq(songs.id, id)),
   ]);
 }

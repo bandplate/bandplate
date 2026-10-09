@@ -35,6 +35,7 @@ import { chunk } from "./chunk.js";
 import type { Instrument } from "./instruments.js";
 import { escapeLikePattern } from "./like-pattern.js";
 import { DEFAULT_PAGE_SIZE, type PageArgs, type Paged } from "./pagination.js";
+import * as shareLinksRepo from "./share-links.js";
 import { bandTakeCondition, stashTakeCondition } from "./take-visibility.js";
 
 export type Take = typeof takes.$inferSelect;
@@ -341,6 +342,8 @@ export async function remove(db: Db, id: string): Promise<void> {
     // moment a member could delete a published one.
     db.delete(votes).where(eq(votes.takeId, id)),
     db.delete(favorites).where(and(eq(favorites.targetType, "take"), eq(favorites.targetId, id))),
+    // Its `/s/<code>` link, so the code does not outlive the take.
+    shareLinksRepo.buildRemoveForTargetStatement(db, "take", id),
     db.delete(takes).where(eq(takes.id, id)),
   ]);
 }

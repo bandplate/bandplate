@@ -15,5 +15,6 @@ export * from "./services/auth.js";
 export * from "./services/members.js";
 export * from "./services/songs.js";
 export * from "./services/stash.js";
+export * from "./share-code.js";
 export * from "./storage-keys.js";
 export * from "./text.js";

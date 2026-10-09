@@ -15,6 +15,7 @@ export * as notificationsRepo from "./repos/notifications.js";
 export * from "./repos/pagination.js";
 export * as pushSubscriptionsRepo from "./repos/push-subscriptions.js";
 export * as serviceTokensRepo from "./repos/service-tokens.js";
+export * as shareLinksRepo from "./repos/share-links.js";
 export * as songsRepo from "./repos/songs.js";
 export * as takesRepo from "./repos/takes.js";
 export * as votesRepo from "./repos/votes.js";

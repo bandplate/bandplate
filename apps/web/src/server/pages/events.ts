@@ -13,6 +13,7 @@ import {
   readValue,
   runRead,
   runReads,
+  shareLinksRepo,
   songsRepo,
   takesRepo,
   votesRepo,
@@ -519,6 +520,10 @@ export async function mergeEvents(
     await eventsRepo.setClientRef(db, keepId, merge.clientRef, now);
   }
   await eventsRepo.update(db, mergeId, { archivedAt: now, updatedAt: now });
+  // A `/s/<code>` link already sent for the merged-away event follows its
+  // takes to the survivor, unless the survivor has a link of its own (one
+  // code per target), in which case the old one goes.
+  await shareLinksRepo.moveToTarget(db, "event", mergeId, keepId);
 
   return { kind: "ok", keptId: keepId, movedTakes: movingCount };
 }

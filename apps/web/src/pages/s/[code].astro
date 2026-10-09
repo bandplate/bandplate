@@ -17,8 +17,9 @@
 //   request. Nothing about the code is revealed.
 //
 // The trade, accepted by the owner: whoever holds a code learns the title
-// and that one line without signing in. Codes are 7 random base62 characters
-// (~41 bits), so they are found by being sent, not by guessing.
+// and that one line without signing in. Codes are 10 random base62
+// characters (~59.5 bits), so they are found by being sent, not by guessing.
+// Nothing rate-limits this route; the length is the whole defence.
 import { messages } from "@bandplate/i18n";
 import { getAppDeps } from "../../server/app.js";
 import { resolveShareCode } from "../../server/pages/share.js";

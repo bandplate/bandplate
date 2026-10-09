@@ -75,7 +75,7 @@ describe("share links, end to end against the repos", () => {
     expect(first.kind).toBe("ok");
     expect(first).toEqual(second);
     if (first.kind === "ok") {
-      expect(first.url).toMatch(/^\/s\/[0-9A-Za-z]{7}$/);
+      expect(first.url).toMatch(/^\/s\/[0-9A-Za-z]{10}$/);
     }
   });
 
@@ -121,7 +121,7 @@ describe("share links, end to end against the repos", () => {
   });
 
   it("an unknown or malformed code resolves to nothing", async () => {
-    expect(await resolveShareCode(db, "zzzzzzz", "cs")).toBeUndefined();
+    expect(await resolveShareCode(db, "zzzzzzzzzz", "cs")).toBeUndefined();
     expect(await resolveShareCode(db, "../etc", "cs")).toBeUndefined();
     expect(await resolveShareCode(db, undefined, "cs")).toBeUndefined();
   });

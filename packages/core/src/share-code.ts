@@ -1,13 +1,19 @@
 // The code in a short share link, `/s/<code>`. Runtime-agnostic (Web Crypto
 // only), like `ids.ts` next door.
 //
-// Seven base62 characters: 62^7 is about 3.5 * 10^12 (~41.7 bits). The link
+// Ten base62 characters: 62^10 is about 8.4 * 10^17 (~59.5 bits). The link
 // is the only thing standing between a signed-out visitor and a target's
-// title in a link preview, so it has to be unguessable rather than merely
-// short; at band scale (hundreds of shared things) a random guess lands on
-// a real code about once in ten billion tries.
+// title in a link preview, and a valid code answers a signed-out request
+// differently from an invalid one (a preview card versus the login
+// redirect), so codes can be probed online. They have to be unguessable,
+// not merely short: with a thousand codes issued, a random guess lands on
+// one about once in 8 * 10^14 tries. Seven characters (~41.7 bits) was the
+// first cut; ten removes the question for three more characters.
+//
+// The length is also spelled out in `apps/web/src/client/share-action.ts`'s
+// `SHORT_PATH`, which runs in the browser and does not import this package.
 
-export const SHARE_CODE_LENGTH = 7;
+export const SHARE_CODE_LENGTH = 10;
 
 export const SHARE_CODE_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 

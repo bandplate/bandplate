@@ -105,8 +105,8 @@ describe("handleLoginPost", () => {
   }
 
   it("carries a share link to come back to into the emailed link", async () => {
-    const url = await sentUrlFor("/s/aB3dE7z");
-    expect(url).toMatch(/^https:\/\/band\.example\/login\/[^?]+\?next=%2Fs%2FaB3dE7z$/);
+    const url = await sentUrlFor("/s/aB3dE7zQ9x");
+    expect(url).toMatch(/^https:\/\/band\.example\/login\/[^?]+\?next=%2Fs%2FaB3dE7zQ9x$/);
   });
 
   it("drops a `next` that is not exactly a share link", async () => {

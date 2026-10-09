@@ -18,24 +18,24 @@ function replay(bytes: number[]) {
 }
 
 describe("generateShareCode", () => {
-  it("is seven base62 characters", () => {
+  it("is ten base62 characters", () => {
     for (let i = 0; i < 200; i++) {
       const code = generateShareCode();
       expect(code).toHaveLength(SHARE_CODE_LENGTH);
-      expect(code).toMatch(/^[0-9A-Za-z]{7}$/);
+      expect(code).toMatch(/^[0-9A-Za-z]{10}$/);
     }
   });
 
   it("maps each byte below 248 to the alphabet by its remainder", () => {
-    expect(generateShareCode(replay([0, 1, 61, 62, 63, 247, 10]))).toBe(
-      ["0", "1", "z", "0", "1", "z", "A"].join(""),
+    expect(generateShareCode(replay([0, 1, 61, 62, 63, 247, 10, 35, 36, 9]))).toBe(
+      ["0", "1", "z", "0", "1", "z", "A", "Z", "a", "9"].join(""),
     );
   });
 
   it("throws away bytes at or above 248 instead of folding them in", () => {
     // 248..255 would be 0..7 under a plain `% 62`, which is the bias.
     const code = generateShareCode(replay([248, 255, 250, 5]));
-    expect(code).toBe("5555555");
+    expect(code).toBe("5555555555");
   });
 
   it("keeps drawing when a whole buffer is rejected", () => {
@@ -44,7 +44,7 @@ describe("generateShareCode", () => {
       calls++;
       buffer.fill(calls === 1 ? 255 : 36);
     });
-    expect(code).toBe("aaaaaaa");
+    expect(code).toBe("aaaaaaaaaa");
     expect(calls).toBe(2);
   });
 
@@ -65,11 +65,12 @@ describe("isShareCode", () => {
   });
 
   it.each([
-    ["too short", "abc123"],
-    ["too long", "abc12345"],
-    ["a dash", "abc-123"],
-    ["a dot", "abc.123"],
-    ["a slash", "abc/123"],
+    ["too short", "abc123456"],
+    ["too long", "abc12345678"],
+    ["the old seven-character length", "abc1234"],
+    ["a dash", "abc-123456"],
+    ["a dot", "abc.123456"],
+    ["a slash", "abc/123456"],
     ["empty", ""],
   ])("refuses %s", (_label, value) => {
     expect(isShareCode(value)).toBe(false);

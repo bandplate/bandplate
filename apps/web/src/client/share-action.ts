@@ -37,7 +37,8 @@ export function shareUrl(
   return new URL(shortPath ?? location.pathname, location.origin).href;
 }
 
-const SHORT_PATH = /^\/s\/[0-9A-Za-z]{7}$/;
+/** `SHARE_CODE_LENGTH` (10) spelled out: `@bandplate/core` is not shipped to the browser. */
+const SHORT_PATH = /^\/s\/[0-9A-Za-z]{10}$/;
 
 /**
  * The short path out of `/share`'s JSON answer, or undefined for anything

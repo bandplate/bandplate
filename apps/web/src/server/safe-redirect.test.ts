@@ -87,19 +87,19 @@ describe("withQuery", () => {
 
 describe("shareReturnPath", () => {
   it("keeps a share link", () => {
-    expect(shareReturnPath("/s/aB3dE7z")).toBe("/s/aB3dE7z");
-    expect(shareReturnPath(" /s/aB3dE7z ")).toBe("/s/aB3dE7z");
+    expect(shareReturnPath("/s/aB3dE7zQ9x")).toBe("/s/aB3dE7zQ9x");
+    expect(shareReturnPath(" /s/aB3dE7zQ9x ")).toBe("/s/aB3dE7zQ9x");
   });
 
   it.each([
     ["any other page", "/songs/coudy"],
     ["home", "/"],
-    ["an off-site URL", "https://evil.example/s/aB3dE7z"],
-    ["protocol-relative", "//evil.example/s/aB3dE7z"],
+    ["an off-site URL", "https://evil.example/s/aB3dE7zQ9x"],
+    ["protocol-relative", "//evil.example/s/aB3dE7zQ9x"],
     ["a code of the wrong length", "/s/abc"],
-    ["a trailing path", "/s/aB3dE7z/x"],
-    ["a query", "/s/aB3dE7z?x=1"],
-    ["an encoded slash", "/s/aB3dE7z%2F"],
+    ["a trailing path", "/s/aB3dE7zQ9x/x"],
+    ["a query", "/s/aB3dE7zQ9x?x=1"],
+    ["an encoded slash", "/s/aB3dE7zQ9x%2F"],
     ["nothing", ""],
   ])("refuses %s", (_label, value) => {
     expect(shareReturnPath(value)).toBeNull();
@@ -117,6 +117,6 @@ describe("loginPathReturningTo", () => {
   });
 
   it("carries the share link, encoded", () => {
-    expect(loginPathReturningTo("/s/aB3dE7z")).toBe("/login?next=%2Fs%2FaB3dE7z");
+    expect(loginPathReturningTo("/s/aB3dE7zQ9x")).toBe("/login?next=%2Fs%2FaB3dE7zQ9x");
   });
 });

@@ -1,3 +1,4 @@
+import { generateShareCode } from "@bandplate/core";
 import { describe, expect, it } from "vitest";
 import { afterShareError, shareMechanism, shareUrl, shortPathFrom } from "./share-action.js";
 
@@ -17,7 +18,7 @@ describe("shareMechanism", () => {
 
 describe("shareUrl", () => {
   it("shares the short link, made absolute on this origin", () => {
-    expect(shareUrl("/s/aB3dE7z", here)).toBe("https://band.example/s/aB3dE7z");
+    expect(shareUrl("/s/aB3dE7zQ9x", here)).toBe("https://band.example/s/aB3dE7zQ9x");
   });
 
   it("falls back to the page's own address when the short link is not there", () => {
@@ -34,16 +35,21 @@ describe("shareUrl", () => {
 
 describe("shortPathFrom", () => {
   it("takes a well-formed answer", () => {
-    expect(shortPathFrom({ url: "/s/aB3dE7z" })).toBe("/s/aB3dE7z");
+    expect(shortPathFrom({ url: "/s/aB3dE7zQ9x" })).toBe("/s/aB3dE7zQ9x");
+  });
+
+  it("takes whatever the server's generator makes (the length is spelled out twice)", () => {
+    const path = `/s/${generateShareCode()}`;
+    expect(shortPathFrom({ url: path })).toBe(path);
   });
 
   it.each([
-    ["an absolute URL", { url: "https://evil.example/s/aB3dE7z" }],
+    ["an absolute URL", { url: "https://evil.example/s/aB3dE7zQ9x" }],
     ["a different path", { url: "/songs/coudy" }],
     ["a short code", { url: "/s/abc" }],
     ["no url", { error: "not_found" }],
     ["null", null],
-    ["a string", "/s/aB3dE7z"],
+    ["a string", "/s/aB3dE7zQ9x"],
   ])("refuses %s", (_label, body) => {
     expect(shortPathFrom(body)).toBeUndefined();
   });

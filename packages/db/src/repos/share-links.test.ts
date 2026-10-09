@@ -17,9 +17,9 @@ describe("shareLinksRepo", () => {
     db = await createTestDb();
   });
 
-  it("makes a seven-character code and resolves it back to the target", async () => {
+  it("makes a ten-character code and resolves it back to the target", async () => {
     const code = await shareLinksRepo.getOrCreate(db, "song", "song-1", NOW);
-    expect(code).toMatch(/^[0-9A-Za-z]{7}$/);
+    expect(code).toMatch(/^[0-9A-Za-z]{10}$/);
     expect(await shareLinksRepo.resolve(db, code)).toEqual({ kind: "song", targetId: "song-1" });
   });
 
@@ -47,30 +47,30 @@ describe("shareLinksRepo", () => {
   });
 
   it("retries with a fresh code when the random one is already taken", async () => {
-    await shareLinksRepo.getOrCreate(db, "song", "song-1", NOW, () => "AAAAAAA");
-    const codes = ["AAAAAAA", "AAAAAAA", "BBBBBBB"];
+    await shareLinksRepo.getOrCreate(db, "song", "song-1", NOW, () => "AAAAAAAAAA");
+    const codes = ["AAAAAAAAAA", "AAAAAAAAAA", "BBBBBBBBBB"];
     let calls = 0;
     const code = await shareLinksRepo.getOrCreate(db, "song", "song-2", NOW, () => {
       calls++;
-      return codes.shift() ?? "CCCCCCC";
+      return codes.shift() ?? "CCCCCCCCCC";
     });
-    expect(code).toBe("BBBBBBB");
+    expect(code).toBe("BBBBBBBBBB");
     expect(calls).toBe(3);
-    expect(await shareLinksRepo.resolve(db, "AAAAAAA")).toEqual({
+    expect(await shareLinksRepo.resolve(db, "AAAAAAAAAA")).toEqual({
       kind: "song",
       targetId: "song-1",
     });
   });
 
   it("gives up after a bounded number of collisions instead of looping", async () => {
-    await shareLinksRepo.getOrCreate(db, "song", "song-1", NOW, () => "AAAAAAA");
+    await shareLinksRepo.getOrCreate(db, "song", "song-1", NOW, () => "AAAAAAAAAA");
     await expect(
-      shareLinksRepo.getOrCreate(db, "song", "song-2", NOW, () => "AAAAAAA"),
+      shareLinksRepo.getOrCreate(db, "song", "song-2", NOW, () => "AAAAAAAAAA"),
     ).rejects.toThrow(/no free share code/);
   });
 
   it("resolves an unknown code to undefined", async () => {
-    expect(await shareLinksRepo.resolve(db, "zzzzzzz")).toBeUndefined();
+    expect(await shareLinksRepo.resolve(db, "zzzzzzzzzz")).toBeUndefined();
   });
 
   it("removeForTarget drops only that target's link", async () => {

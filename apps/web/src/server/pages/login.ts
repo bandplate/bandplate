@@ -16,6 +16,7 @@ import {
 import type { AuthDeps, RateLimiter } from "@bandplate/core";
 import { requestLogin } from "@bandplate/core";
 import { z } from "zod";
+import { shareReturnPath } from "../safe-redirect.js";
 
 const emailSchema = z.string().trim().min(1).max(320);
 
@@ -63,9 +64,17 @@ export async function handleLoginPost(
     return { kind: "rate_limited", retryAfterSeconds: Math.ceil(retryAfterMs / 1000) };
   }
 
+  // A share link the member was on their way to (`/login?next=/s/<code>`,
+  // carried here as a hidden field) rides along in the emailed link, so the
+  // sign-in lands them on it rather than on home. Anything that is not
+  // exactly a share link is dropped; see `shareReturnPath`.
+  const nextRaw = formData.get("next");
+  const returnPath = shareReturnPath(typeof nextRaw === "string" ? nextRaw : null);
+  const query = returnPath ? `?next=${encodeURIComponent(returnPath)}` : "";
+
   await requestLogin({ ...deps.auth, deferMailSend: deps.deferMailSend }, parsed.data, {
     requestedIp: ip === "unknown" ? null : ip,
-    buildLoginUrl: (rawToken) => `${deps.appOrigin}/login/${rawToken}`,
+    buildLoginUrl: (rawToken) => `${deps.appOrigin}/login/${rawToken}${query}`,
   });
 
   return { kind: "sent" };

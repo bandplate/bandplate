@@ -1,0 +1,126 @@
+import { describe, expect, it } from "vitest";
+import { type ShareTargetFacts, sharePath, sharePreview } from "./share-target.js";
+
+// 8 July 2026, midday, so the date reads the same in any test machine's zone.
+const JULY_8 = new Date(2026, 6, 8, 12, 0, 0).getTime();
+
+const song: ShareTargetFacts = {
+  kind: "song",
+  song: { id: "s1", slug: "coudy", title: "Čoudy" },
+  takeCount: 3,
+};
+
+const rehearsal = {
+  id: "e1",
+  kind: "rehearsal",
+  title: null,
+  venue: null,
+  heldAt: JULY_8,
+};
+
+const namedConcert = {
+  id: "e2",
+  kind: "concert",
+  title: "Dezerter",
+  venue: "Klub 007",
+  heldAt: JULY_8,
+};
+
+function take(overrides: Partial<Extract<ShareTargetFacts, { kind: "take" }>["take"]> = {}) {
+  return {
+    kind: "take" as const,
+    take: {
+      id: "t1",
+      visibility: "band" as const,
+      label: "take 2",
+      recordedAt: JULY_8,
+      ...overrides,
+    },
+    song: { title: "Čoudy" },
+    event: rehearsal,
+  };
+}
+
+describe("sharePath", () => {
+  it("opens a song at its CURRENT slug", () => {
+    expect(sharePath(song)).toBe("/songs/coudy");
+  });
+
+  it("opens an event and a band take by id", () => {
+    expect(sharePath({ kind: "event", event: rehearsal, takeCount: 0 })).toBe("/events/e1");
+    expect(sharePath(take())).toBe("/takes/t1");
+  });
+
+  it("never opens a private (stash) take", () => {
+    expect(sharePath(take({ visibility: "private" }))).toBeUndefined();
+  });
+
+  it("never opens a personal day with no band take on it", () => {
+    const personal = { ...rehearsal, kind: "personal" };
+    expect(sharePath({ kind: "event", event: personal, takeCount: 0 })).toBeUndefined();
+    expect(sharePath({ kind: "event", event: personal, takeCount: 1 })).toBe("/events/e1");
+  });
+
+  it("opens nothing for an unknown code (no facts)", () => {
+    expect(sharePath(undefined)).toBeUndefined();
+  });
+});
+
+describe("sharePreview", () => {
+  it("says nothing at all for an unknown code or a private take", () => {
+    expect(sharePreview(undefined, "cs")).toBeUndefined();
+    expect(sharePreview(take({ visibility: "private" }), "cs")).toBeUndefined();
+    expect(
+      sharePreview(
+        { kind: "event", event: { ...rehearsal, kind: "personal" }, takeCount: 0 },
+        "en",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("a song: its title and how many takes, with Czech plurals", () => {
+    expect(sharePreview(song, "cs")).toEqual({ title: "Čoudy", description: "3 nahrávky" });
+    expect(sharePreview({ ...song, takeCount: 5 }, "cs")?.description).toBe("5 nahrávek");
+    expect(sharePreview({ ...song, takeCount: 1 }, "en")?.description).toBe("1 take");
+  });
+
+  it("an unnamed event: kind and date as the title, and as the line", () => {
+    const preview = sharePreview({ kind: "event", event: rehearsal, takeCount: 2 }, "cs");
+    expect(preview?.title).toMatch(/^Zkouška, 8\. července 2026$/);
+    expect(preview?.description).toBe(preview?.title);
+  });
+
+  it("a named event: its name, then kind and date", () => {
+    const preview = sharePreview({ kind: "event", event: namedConcert, takeCount: 2 }, "en");
+    expect(preview?.title).toBe("Dezerter — Klub 007");
+    expect(preview?.description).toMatch(/^Live, July 8, 2026$/);
+  });
+
+  it("a take: its song's title, then its label, the event and the date", () => {
+    expect(sharePreview(take(), "cs")).toEqual({
+      title: "Čoudy",
+      description: "Take 2, zkouška, 8. července 2026",
+    });
+  });
+
+  it("a take whose label only repeats the event's kind does not say it twice", () => {
+    const preview = sharePreview(take({ label: "zkouška" }), "cs");
+    expect(preview?.description).toBe("Zkouška, 8. července 2026");
+  });
+
+  it("a songless take is named by its date", () => {
+    const preview = sharePreview({ ...take(), song: undefined }, "en");
+    expect(preview?.title).toBe("Take from July 8, 2026");
+  });
+
+  it("carries no em-dash splice and no member names", () => {
+    const all = [
+      sharePreview(song, "cs"),
+      sharePreview({ kind: "event", event: rehearsal, takeCount: 2 }, "cs"),
+      sharePreview(take(), "cs"),
+    ];
+    for (const preview of all) {
+      expect(preview?.description).not.toContain("—");
+    }
+  });
+});

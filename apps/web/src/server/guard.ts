@@ -82,6 +82,10 @@ const PUBLIC_PATH_PREFIXES = [
   "/login", // the sign-in form and /login/[token]
   "/setup", // first-admin bootstrap — self-guards via isBootstrapAvailable
   "/logout",
+  "/s", // short share links. The page is its own guard: a signed-out visitor
+  // gets a link-preview card for a code that opens something and the same
+  // redirect to `/login` as every protected page for one that does not. It
+  // reads nothing beyond a title and one line (`server/share-target.ts`).
   "/api", // its own bearer/service-token auth, not the cookie session
   "/dev", // the component gallery at /dev/ui. Listed here so it renders
   // without a session while iterating on components; the page itself is

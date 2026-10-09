@@ -13,6 +13,7 @@ import AuthLayout from "../../layouts/AuthLayout.astro";
 import { getAppDeps, getAuthDeps } from "../../server/app.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { handleLoginPost, type LoginPostResult } from "../../server/pages/login.js";
+import { loginPathReturningTo, shareReturnPath, withQuery } from "../../server/safe-redirect.js";
 
 let result: LoginPostResult | undefined;
 let originError = false;
@@ -51,14 +52,19 @@ if (Astro.request.method === "POST") {
     // address, because `handleLoginPost` already returns "sent" for both: the
     // uniform response that keeps the members table from being an enumeration
     // oracle survives this change intact.
+    // A share link to come back to survives a retry: the slow and invalid
+    // screens lead back to this form, which has to carry it again.
+    const postedNext = formData.get("next");
+    const keepNext = shareReturnPath(typeof postedNext === "string" ? postedNext : null);
+    const back = (query: string) => withQuery(loginPathReturningTo(keepNext), query);
     if (result.kind === "sent") {
       return Astro.redirect("/login?sent=1", 303);
     }
     if (result.kind === "rate_limited") {
-      return Astro.redirect(`/login?slow=${result.retryAfterSeconds}`, 303);
+      return Astro.redirect(back(`slow=${result.retryAfterSeconds}`), 303);
     }
     if (result.kind === "invalid") {
-      return Astro.redirect("/login?invalid=1", 303);
+      return Astro.redirect(back("invalid=1"), 303);
     }
   }
 }
@@ -71,6 +77,9 @@ if (Astro.request.method === "POST") {
 const params = Astro.url.searchParams;
 const showSent = params.has("sent");
 const showInvalid = params.has("invalid");
+// `?next=/s/<code>`: the share link that sent a signed-out member here. Only
+// that exact shape is echoed (into a hidden field), see `shareReturnPath`.
+const returnPath = shareReturnPath(params.get("next"));
 const rawSlow = Number.parseInt(params.get("slow") ?? "", 10);
 const slowSeconds = Number.isFinite(rawSlow) ? Math.min(Math.max(rawSlow, 1), 3600) : undefined;
 
@@ -150,6 +159,7 @@ const slowLedeHtml =
       <h1 class="bp-auth-title">{t.auth.heading}</h1>
       <p class="bp-auth-lede bp-m0">{invitedEmail ? t.auth.invitedLede : t.auth.lede}</p>
       <form method="post" class="bp-auth-form" novalidate>
+        {returnPath && <input type="hidden" name="next" value={returnPath} />}
         {/* `readonly`, not `disabled`: a disabled control is not submitted,
             and this one carries the only value the form has. */}
         <Field

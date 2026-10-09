@@ -18,6 +18,7 @@ import { getAppDeps, getAuthDeps } from "../../server/app.js";
 import { setSessionCookie } from "../../server/cookies.js";
 import { isSameOrigin } from "../../server/csrf.js";
 import { consume, type LoginTokenView, peekView } from "../../server/pages/login-token.js";
+import { shareReturnPath } from "../../server/safe-redirect.js";
 
 Astro.response.headers.set("Cache-Control", "no-store");
 
@@ -43,7 +44,10 @@ if (Astro.request.method === "POST") {
       setSessionCookie(Astro.cookies, result.sessionToken, {
         cookieSecure: appDeps.config.cookieSecure,
       });
-      return Astro.redirect("/");
+      // The share link that sent them to sign in, when there was one: the
+      // emailed link carries it as `?next=`, and the form below posts back
+      // to this same URL, query included. Only a `/s/<code>` survives.
+      return Astro.redirect(shareReturnPath(Astro.url.searchParams.get("next")) ?? "/");
     }
     view = { kind: "invalid" };
   }

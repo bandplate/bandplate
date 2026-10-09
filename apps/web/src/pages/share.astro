@@ -1,0 +1,58 @@
+---
+// POST-only, JSON-only: the short link for one song, event or take, made on
+// first use. Called by the `ShareButton` island in the background once its
+// page is idle, so the tap itself never waits on it.
+//
+// In: form fields `kind` (`song` | `event` | `take`) and `id`.
+// Out: `200 {"url": "/s/<code>"}`, a PATH (the island makes it absolute with
+// its own origin); `404 {"error": "not_found"}` for a target that does not
+// exist or may not be shared (a private take, even its owner's); `400` for a
+// malformed request.
+//
+// Signed in only (the middleware's member guard), and the same origin check
+// every mutating page makes, here as well as in the middleware backstop.
+// There is no no-JS form for this: the button is an island and nothing else
+// posts here, so a GET just goes home.
+import { getAppDeps } from "../server/app.js";
+import { isSameOrigin } from "../server/csrf.js";
+import { createShareLink } from "../server/pages/share.js";
+
+const principal = Astro.locals.principal;
+if (!principal) {
+  return Astro.redirect("/login");
+}
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect("/");
+}
+
+const appDeps = await getAppDeps();
+
+if (!isSameOrigin(Astro.request, appDeps.config.appOrigin)) {
+  return new Response("Origin check failed.", { status: 403 });
+}
+
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+  });
+
+let formData: FormData;
+try {
+  formData = await Astro.request.formData();
+} catch {
+  return json({ error: "invalid" }, 400);
+}
+
+const result = await createShareLink(
+  appDeps.db,
+  { kind: formData.get("kind"), id: formData.get("id") },
+  appDeps.clock.now(),
+);
+
+if (result.kind === "ok") {
+  return json({ url: result.url }, 200);
+}
+return json({ error: result.kind }, result.kind === "not_found" ? 404 : 400);
+---

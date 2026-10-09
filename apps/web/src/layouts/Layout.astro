@@ -35,6 +35,10 @@ const { title, noindex = false, description } = Astro.props;
  * browser tab, the history entry, the bookmark, and an unfurl inside a tool
  * that carries the session. If any page of this archive is ever made public,
  * THAT is the change that needs this decision revisited, not this one.
+ *
+ * One route deliberately is: `/s/<code>`, the short share link, answers a
+ * signed-out crawler with its own card (a title and one line, built by
+ * `server/share-target.ts`), and it does not use this layout.
  */
 const t = messages(Astro.locals.locale);
 

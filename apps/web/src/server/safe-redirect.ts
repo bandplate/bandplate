@@ -1,3 +1,5 @@
+import { isShareCode } from "@bandplate/core";
+
 // Where a no-JS vote/favorite form POST redirects back to — "wherever the
 // member was" (a take row on `/`, `/search`, a song page, an event page,
 // `/me`), not a hardcoded destination, since the same control renders on
@@ -90,4 +92,25 @@ export function safeAppPath(candidate: string | null | undefined): string | null
  */
 export function withQuery(path: string, query: string): string {
   return `${path}${path.includes("?") ? "&" : "?"}${query}`;
+}
+
+/**
+ * Where sign-in may send a member afterwards, carried as `?next=` through
+ * `/login`, the emailed link and `/login/[token]`.
+ *
+ * Only a short share link, `/s/<code>`, and nothing else. A share link is the
+ * one route a member reaches from OUTSIDE the app while signed out (a chat
+ * message, a mail), and losing it at the sign-in screen meant landing on home
+ * with no idea what had been sent. Every other protected page keeps the plain
+ * `/login` it always had. Narrow on purpose: an exact shape cannot be an open
+ * redirect, whatever a planted `?next=` says.
+ */
+export function shareReturnPath(candidate: string | null | undefined): string | null {
+  const match = /^\/s\/([0-9A-Za-z]+)$/.exec(candidate?.trim() ?? "");
+  return match && isShareCode(match[1]) ? match[0] : null;
+}
+
+/** `/login`, carrying a share link to come back to when there is one. */
+export function loginPathReturningTo(returnPath: string | null): string {
+  return returnPath ? `/login?next=${encodeURIComponent(returnPath)}` : "/login";
 }

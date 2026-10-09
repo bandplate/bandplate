@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { safeAppPath, safeRedirectPath, withQuery } from "./safe-redirect.js";
+import {
+  loginPathReturningTo,
+  safeAppPath,
+  safeRedirectPath,
+  shareReturnPath,
+  withQuery,
+} from "./safe-redirect.js";
 
 const APP_ORIGIN = "https://band.example";
 
@@ -76,5 +82,41 @@ describe("withQuery", () => {
   it("opens the query, then extends it", () => {
     expect(withQuery("/songs/coudy", "published=1")).toBe("/songs/coudy?published=1");
     expect(withQuery("/takes?stash=1", "deleted=t-1")).toBe("/takes?stash=1&deleted=t-1");
+  });
+});
+
+describe("shareReturnPath", () => {
+  it("keeps a share link", () => {
+    expect(shareReturnPath("/s/aB3dE7z")).toBe("/s/aB3dE7z");
+    expect(shareReturnPath(" /s/aB3dE7z ")).toBe("/s/aB3dE7z");
+  });
+
+  it.each([
+    ["any other page", "/songs/coudy"],
+    ["home", "/"],
+    ["an off-site URL", "https://evil.example/s/aB3dE7z"],
+    ["protocol-relative", "//evil.example/s/aB3dE7z"],
+    ["a code of the wrong length", "/s/abc"],
+    ["a trailing path", "/s/aB3dE7z/x"],
+    ["a query", "/s/aB3dE7z?x=1"],
+    ["an encoded slash", "/s/aB3dE7z%2F"],
+    ["nothing", ""],
+  ])("refuses %s", (_label, value) => {
+    expect(shareReturnPath(value)).toBeNull();
+  });
+
+  it("refuses an absent value", () => {
+    expect(shareReturnPath(null)).toBeNull();
+    expect(shareReturnPath(undefined)).toBeNull();
+  });
+});
+
+describe("loginPathReturningTo", () => {
+  it("is plain /login with nothing to return to", () => {
+    expect(loginPathReturningTo(null)).toBe("/login");
+  });
+
+  it("carries the share link, encoded", () => {
+    expect(loginPathReturningTo("/s/aB3dE7z")).toBe("/login?next=%2Fs%2FaB3dE7z");
   });
 });

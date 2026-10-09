@@ -88,4 +88,6 @@ export const auth = {
   // en: Most often it's the wrong API key, or a From address the provider hasn't verified yet.
   setupMailFailCommon:
     "Většinou je to špatný API klíč nebo adresa odesílatele, kterou poskytovatel ještě neověřil.",
+
+  shareSignIn: "Přihlas se a otevři to", // en: Sign in to open it
 } satisfies typeof enAuth;

@@ -56,6 +56,8 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api")).toBe(true);
     expect(isPublicPath("/api/songs")).toBe(true);
     expect(isPublicPath("/_astro/chunk-abc123.js")).toBe(true);
+    // A share link guards itself (preview card or the login redirect).
+    expect(isPublicPath("/s/aB3dE7z")).toBe(true);
   });
 
   it("does not match member/admin paths, or a prefix collision like /loginish", () => {
@@ -63,6 +65,10 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/events/abc-123")).toBe(false);
     expect(isPublicPath("/admin")).toBe(false);
     expect(isPublicPath("/loginish")).toBe(false);
+    // `/s` must not open everything starting with an s.
+    expect(isPublicPath("/songs/coudy")).toBe(false);
+    expect(isPublicPath("/stash")).toBe(false);
+    expect(isPublicPath("/search")).toBe(false);
   });
 
   // Task 6: `/` stopped being public once it became the real home page (it

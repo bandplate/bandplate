@@ -103,4 +103,11 @@ export const auth = {
   setupMailFailContainer: "On a container: read the app's stdout.",
   setupMailFailCommon:
     "Most often it's the wrong API key, or a From address the provider hasn't verified yet.",
+
+  /**
+   * A shared `/s/<code>` link opened while signed out: the page a link
+   * preview reads, which sends a person on to sign in at once. This is the
+   * visible way through if the automatic redirect does not happen.
+   */
+  shareSignIn: "Sign in to open it",
 };

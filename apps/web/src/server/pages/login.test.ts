@@ -83,6 +83,34 @@ describe("handleLoginPost", () => {
     expect(sent?.kind).toBe("login-link");
     if (sent?.kind === "login-link") {
       expect(sent.url.startsWith("https://band.example/login/")).toBe(true);
+      expect(sent.url).not.toContain("?");
     }
+  });
+
+  async function sentUrlFor(next: string): Promise<string | undefined> {
+    const mailer = deps.auth.mailer as CapturingMailer;
+    const { membersRepo } = await import("@bandplate/db");
+    await membersRepo.create(deps.auth.db, {
+      displayName: "Alex",
+      slug: "alex",
+      email: "alex@example.com",
+      status: "active",
+      createdAt: Date.now(),
+    });
+    const fd = formData("alex@example.com");
+    fd.set("next", next);
+    await handleLoginPost(deps, fd, headers());
+    const sent = mailer.sent[0];
+    return sent?.kind === "login-link" ? sent.url : undefined;
+  }
+
+  it("carries a share link to come back to into the emailed link", async () => {
+    const url = await sentUrlFor("/s/aB3dE7z");
+    expect(url).toMatch(/^https:\/\/band\.example\/login\/[^?]+\?next=%2Fs%2FaB3dE7z$/);
+  });
+
+  it("drops a `next` that is not exactly a share link", async () => {
+    const url = await sentUrlFor("https://evil.example/");
+    expect(url).not.toContain("next=");
   });
 });

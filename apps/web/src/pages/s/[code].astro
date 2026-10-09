@@ -1,0 +1,76 @@
+---
+// `/s/<code>`: a short share link (see `server/pages/share.ts`).
+//
+// Public in the member guard (`server/guard.ts`) because this page guards
+// itself, three ways:
+//
+// - SIGNED IN: a 302 to the target's current page (`/songs/<slug>`, which
+//   follows a rename, `/events/<id>`, `/takes/<id>`), or the app's ordinary
+//   404 for a code that opens nothing.
+// - SIGNED OUT, a code that opens something: a tiny page a link preview can
+//   read (WhatsApp, Messenger and Signal fetch it with no session) carrying
+//   the target's title and one factual line, and nothing else. A person is
+//   sent straight on to sign in with `?next=` set, so they land back here and
+//   then on the page.
+// - SIGNED OUT, anything else (an unknown code, a deleted target, a private
+//   take): the same 302 to `/login` every protected page gives a signed-out
+//   request. Nothing about the code is revealed.
+//
+// The trade, accepted by the owner: whoever holds a code learns the title
+// and that one line without signing in. Codes are 7 random base62 characters
+// (~41 bits), so they are found by being sent, not by guessing.
+import { messages } from "@bandplate/i18n";
+import { getAppDeps } from "../../server/app.js";
+import { resolveShareCode } from "../../server/pages/share.js";
+import { loginPathReturningTo } from "../../server/safe-redirect.js";
+
+const { code } = Astro.params;
+const locale = Astro.locals.locale;
+const appDeps = await getAppDeps();
+const resolved = await resolveShareCode(appDeps.db, code, locale);
+
+if (Astro.locals.principal) {
+  if (!resolved) {
+    return new Response("Not found.", { status: 404 });
+  }
+  return Astro.redirect(resolved.path);
+}
+
+if (!resolved) {
+  return Astro.redirect("/login");
+}
+
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const t = messages(locale);
+const selfPath = `/s/${code}`;
+const loginPath = loginPathReturningTo(selfPath);
+const pageUrl = new URL(selfPath, Astro.url);
+const imageUrl = new URL("/og-image.png", Astro.url);
+const { title, description } = resolved.preview;
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{`${title} | bandplate`}</title>
+    <meta name="robots" content="noindex" />
+    <meta name="description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="bandplate" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={pageUrl.href} />
+    <meta property="og:image" content={imageUrl.href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={t.shell.shareImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta http-equiv="refresh" content={`0;url=${loginPath}`} />
+  </head>
+  <body>
+    <p><a href={loginPath}>{t.auth.shareSignIn}</a></p>
+  </body>
+</html>

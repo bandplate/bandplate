@@ -60,6 +60,10 @@ describe("afterShareError", () => {
     expect(afterShareError(new DOMException("cancelled", "AbortError"))).toBe("ignore");
   });
 
+  it("ignores a second tap while the share sheet is already open", () => {
+    expect(afterShareError(new DOMException("already open", "InvalidStateError"))).toBe("ignore");
+  });
+
   it("falls back to copying on any other failure", () => {
     expect(afterShareError(new DOMException("nope", "NotAllowedError"))).toBe("copy");
     expect(afterShareError(new Error("boom"))).toBe("copy");

@@ -139,11 +139,14 @@ const shareDescription = [
 ]
   .filter(Boolean)
   .join(" · ");
-// What the share sheet names the link: the event's name, or its kind and date
-// when it has none, the same title its link preview shows
-// (`server/share-target.ts`).
+// What the share sheet names the link: the event's own title (never the
+// venue), or its kind and date when it has none, the same title its link
+// preview shows (`server/share-target.ts`).
 const shareSheetTitle =
-  eventLabel(event) || factsLine([kindLabel, formatLongDate(locale, event.heldAt)], locale);
+  event.title?.trim() || factsLine([kindLabel, formatLongDate(locale, event.heldAt)], locale);
+// An archived event (a merge archives the one it empties) is not shareable:
+// `/share` would refuse it, so no button. No fake affordance.
+const canShare = !isArchived;
 const justTakeDeleted = Astro.url.searchParams.get("take_deleted") === "1";
 const justMerged = Astro.url.searchParams.get("merged") === "1";
 // The duplicate this app cannot prevent, offered a repair. Shown to anyone —
@@ -168,7 +171,9 @@ const lineUp = pageRoster(
   principal={principal}
   current="events"
 >
-  <ShareButton slot="header-end" kind="event" targetId={event.id} title={shareSheetTitle} size="xs" />
+  {canShare && (
+    <ShareButton slot="header-end" kind="event" targetId={event.id} title={shareSheetTitle} size="xs" />
+  )}
   {!isPersonal && (
     <button
       slot="header-end"
@@ -297,13 +302,15 @@ const lineUp = pageRoster(
             {t.events.playAll}
           </button>
         )}
-        <ShareButton
-          kind="event"
-          targetId={event.id}
-          title={shareSheetTitle}
-          size="sm"
-          class="bp-titled-action"
-        />
+        {canShare && (
+          <ShareButton
+            kind="event"
+            targetId={event.id}
+            title={shareSheetTitle}
+            size="sm"
+            class="bp-titled-action"
+          />
+        )}
         {!isPersonal && (
           <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm bp-titled-action" data-sheet-open="edit-event">
             {t.events.edit}

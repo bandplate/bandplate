@@ -16,6 +16,7 @@ const rehearsal = {
   title: null,
   venue: null,
   heldAt: JULY_8,
+  archivedAt: null,
 };
 
 const namedConcert = {
@@ -24,6 +25,7 @@ const namedConcert = {
   title: "Dezerter",
   venue: "Klub 007",
   heldAt: JULY_8,
+  archivedAt: null,
 };
 
 function take(overrides: Partial<Extract<ShareTargetFacts, { kind: "take" }>["take"]> = {}) {
@@ -61,6 +63,16 @@ describe("sharePath", () => {
     expect(sharePath({ kind: "event", event: personal, takeCount: 1 })).toBe("/events/e1");
   });
 
+  it("never opens an archived event (a merge archives the one it empties)", () => {
+    const archived = { ...rehearsal, archivedAt: JULY_8 + 1 };
+    expect(sharePath({ kind: "event", event: archived, takeCount: 3 })).toBeUndefined();
+    expect(sharePreview({ kind: "event", event: archived, takeCount: 3 }, "cs")).toBeUndefined();
+  });
+
+  it("still opens a take whose event was archived: the take itself is live", () => {
+    expect(sharePath({ ...take(), event: { ...rehearsal, archivedAt: JULY_8 } })).toBe("/takes/t1");
+  });
+
   it("opens nothing for an unknown code (no facts)", () => {
     expect(sharePath(undefined)).toBeUndefined();
   });
@@ -90,10 +102,39 @@ describe("sharePreview", () => {
     expect(preview?.description).toBe(preview?.title);
   });
 
-  it("a named event: its name, then kind and date", () => {
+  it("a named event: its own title (not the venue), then kind and date", () => {
     const preview = sharePreview({ kind: "event", event: namedConcert, takeCount: 2 }, "en");
-    expect(preview?.title).toBe("Dezerter — Klub 007");
+    expect(preview?.title).toBe("Dezerter");
     expect(preview?.description).toMatch(/^Live, July 8, 2026$/);
+  });
+
+  it("a venue-only event falls back to kind and date, never the venue", () => {
+    const venueOnly = { ...rehearsal, venue: "Zkušebna Žižkov" };
+    const preview = sharePreview({ kind: "event", event: venueOnly, takeCount: 1 }, "cs");
+    expect(preview?.title).toBe("Zkouška, 8. července 2026");
+  });
+
+  it("never puts the venue in any field, for any kind", () => {
+    const venue = "Klub 007";
+    // A full row, venue included, the way the loader hands it over.
+    const unnamedAtVenue = { ...rehearsal, venue };
+    const previews = [
+      sharePreview({ kind: "event", event: namedConcert, takeCount: 2 }, "cs"),
+      sharePreview({ kind: "event", event: unnamedAtVenue, takeCount: 2 }, "en"),
+      sharePreview({ ...take(), event: namedConcert }, "cs"),
+      sharePreview({ ...take(), event: unnamedAtVenue }, "en"),
+    ];
+    for (const preview of previews) {
+      expect(preview).toBeDefined();
+      expect(preview?.title).not.toContain(venue);
+      expect(preview?.description).not.toContain(venue);
+    }
+  });
+
+  it("a take at a named event: the event's own title in the line", () => {
+    expect(sharePreview({ ...take(), event: namedConcert }, "en")?.description).toBe(
+      "Take 2, Dezerter, July 8, 2026",
+    );
   });
 
   it("a take: its song's title, then its label, the event and the date", () => {

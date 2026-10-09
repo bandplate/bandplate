@@ -57,11 +57,15 @@ export function shortPathFrom(body: unknown): string | undefined {
  * What to do after `navigator.share` rejects.
  *
  * `AbortError` is the person closing the share sheet: their choice, so
- * nothing happens and nothing is announced. Anything else (a browser that
+ * nothing happens and nothing is announced. `InvalidStateError` is a sheet
+ * that is already open (a double tap): the first press is still doing its
+ * job, so the second must not copy over it. Anything else (a browser that
  * has the method but refuses this call, a permissions policy) falls back to
  * the clipboard, so the press still does something.
  */
+const IGNORED_SHARE_ERRORS = new Set(["AbortError", "InvalidStateError"]);
+
 export function afterShareError(error: unknown): "ignore" | "copy" {
   const name = (error as { name?: unknown } | null)?.name;
-  return name === "AbortError" ? "ignore" : "copy";
+  return typeof name === "string" && IGNORED_SHARE_ERRORS.has(name) ? "ignore" : "copy";
 }

@@ -114,6 +114,15 @@ describe("share links, end to end against the repos", () => {
     expect(await resolveShareCode(db, code, "cs")).toBeUndefined();
   });
 
+  it("an archived event is not shareable, and an old code for it resolves to nothing", async () => {
+    const code = await codeOf("event", eventId);
+    await eventsRepo.update(db, eventId, { archivedAt: NOW + 1, updatedAt: NOW + 1 });
+    expect(await createShareLink(db, { kind: "event", id: eventId }, NOW)).toEqual({
+      kind: "not_found",
+    });
+    expect(await resolveShareCode(db, code, "cs")).toBeUndefined();
+  });
+
   it("a deleted target's code resolves to nothing", async () => {
     const code = await codeOf("take", takeId);
     await takesRepo.remove(db, takeId);

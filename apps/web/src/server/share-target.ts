@@ -8,14 +8,20 @@
 // not even its title) cannot drift between the endpoint that makes a code,
 // the redirect that follows one, and the preview a crawler sees.
 import { formatLongDate, type Locale, messages } from "@bandplate/i18n";
-import { eventLabel, factsLine, takeNote } from "./format.js";
+import { factsLine, takeNote } from "./format.js";
 
+/**
+ * No `venue`, on purpose: where the band plays or rehearses is not something
+ * a link preview tells a signed-out stranger. `eventLabel` (title and venue,
+ * which the pages use) is therefore not used here either.
+ */
 interface EventFacts {
   id: string;
   kind: string;
   title: string | null;
-  venue: string | null;
   heldAt: number;
+  /** Set on an archived event, including one merged into another. */
+  archivedAt: number | null;
 }
 
 /**
@@ -54,7 +60,10 @@ export type ShareTargetFacts =
  * Undefined for a private (stash) take, always: its own owner reaches it at
  * `/stash/<id>`, and nobody else can open it at all, so a link to it would be
  * a link that works for one person. Undefined for a personal event with no
- * band take, which `/events/[id]` answers with a 404 for everyone.
+ * band take, which `/events/[id]` answers with a 404 for everyone. Undefined
+ * for an archived event: a merge archives the event it empties (and
+ * `shareLinksRepo.moveToTarget` hands its link to the survivor), so a new
+ * link to an archived shell would point at the wrong place.
  */
 export function sharePath(facts: ShareTargetFacts | undefined): string | undefined {
   if (!facts) {
@@ -64,6 +73,9 @@ export function sharePath(facts: ShareTargetFacts | undefined): string | undefin
     case "song":
       return `/songs/${facts.song.slug}`;
     case "event":
+      if (facts.event.archivedAt !== null) {
+        return undefined;
+      }
       if (facts.event.kind === "personal" && facts.takeCount === 0) {
         return undefined;
       }
@@ -81,10 +93,10 @@ export interface SharePreview {
   description: string;
 }
 
-/** An event's name, or, when it has none, its kind and date: "Zkouška, 8. července 2026". */
+/** An event's own title (never its venue), or, without one, its kind and date: "Zkouška, 8. července 2026". */
 function eventTitle(event: EventFacts, locale: Locale): string {
   return (
-    eventLabel(event) ||
+    event.title?.trim() ||
     factsLine(
       [messages(locale).events.kindLabel(event.kind), formatLongDate(locale, event.heldAt)],
       locale,
@@ -129,7 +141,7 @@ export function sharePreview(
       return {
         title: song ? song.title : t.takes.heroTitleByDate(date),
         description: factsLine(
-          [takeNote(take.label, kindLabel), event ? eventLabel(event) || kindLabel : null, date],
+          [takeNote(take.label, kindLabel), event ? event.title?.trim() || kindLabel : null, date],
           locale,
         ),
       };

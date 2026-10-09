@@ -15,6 +15,7 @@ import Play from "@lucide/astro/icons/play";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import ListFooter from "../../components/ListFooter.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
+import ShareButton from "../../components/ShareButton.astro";
 import TakeRow from "../../components/TakeRow.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { getAppDeps } from "../../server/app.js";
@@ -137,6 +138,11 @@ const shareDescription = [
 ]
   .filter(Boolean)
   .join(" · ");
+// What the share sheet names the link: the event's name, or its kind and date
+// when it has none, the same title its link preview shows
+// (`server/share-target.ts`).
+const shareSheetTitle =
+  eventLabel(event) || factsLine([kindLabel, formatLongDate(locale, event.heldAt)], locale);
 const justTakeDeleted = Astro.url.searchParams.get("take_deleted") === "1";
 const justMerged = Astro.url.searchParams.get("merged") === "1";
 // The duplicate this app cannot prevent, offered a repair. Shown to anyone —
@@ -161,6 +167,7 @@ const lineUp = pageRoster(
   principal={principal}
   current="events"
 >
+  <ShareButton slot="header-end" kind="event" targetId={event.id} title={shareSheetTitle} size="xs" />
   {!isPersonal && (
     <button slot="header-end" type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="edit-event">
       {t.events.edit}
@@ -282,6 +289,13 @@ const lineUp = pageRoster(
             {t.events.playAll}
           </button>
         )}
+        <ShareButton
+          kind="event"
+          targetId={event.id}
+          title={shareSheetTitle}
+          size="sm"
+          class="bp-titled-action"
+        />
         {!isPersonal && (
           <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm bp-titled-action" data-sheet-open="edit-event">
             {t.events.edit}

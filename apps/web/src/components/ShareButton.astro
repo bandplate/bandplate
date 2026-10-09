@@ -1,0 +1,41 @@
+---
+// The Share button for a song, event or take page: an icon-only `.bp-btn` in
+// one of the two sizes (`sm` in the hero, `xs` in the phone header's tier).
+//
+// A wrapper rather than the island alone, for two reasons. The icon comes
+// from `@lucide/astro` one file per icon, passed in as children, because
+// `lucide-preact` only exports its barrel. And a hero row decides what is
+// shown on a phone by its DIRECT children's classes (`.bp-titled-action`,
+// see `150-play-solo-controls.css`): an `<astro-island>` cannot carry a
+// class, so this span does.
+//
+// Never rendered for a private (stash) take: `/takes/[id]` sends one of those
+// to `/stash/<id>` before anything renders, and `/share` refuses it anyway.
+import Share2 from "@lucide/astro/icons/share-2";
+import ShareButtonIsland from "./ShareButton.tsx";
+
+export interface Props {
+  kind: "song" | "event" | "take";
+  targetId: string;
+  /** What the share sheet names the link. */
+  title: string;
+  size: "sm" | "xs";
+  /** Extra classes for the wrapper, e.g. `bp-titled-action` for the hero's copy. */
+  class?: string;
+}
+
+const { kind, targetId, title, size, class: className } = Astro.props;
+---
+
+<span class:list={["bp-share", className]}>
+  <ShareButtonIsland
+    client:load
+    kind={kind}
+    targetId={targetId}
+    title={title}
+    size={size}
+    locale={Astro.locals.locale}
+  >
+    <Share2 size={16} stroke-width={1.75} aria-hidden="true" />
+  </ShareButtonIsland>
+</span>

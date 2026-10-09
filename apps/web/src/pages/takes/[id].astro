@@ -49,6 +49,7 @@ import AssetUploader from "../../components/AssetUploader.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import PlayToggleButton from "../../components/PlayToggleButton.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
+import ShareButton from "../../components/ShareButton.astro";
 import TakeFactsCard from "../../components/TakeFactsCard.astro";
 import VoteToggle from "../../components/VoteToggle.astro";
 import AppLayout from "../../layouts/AppLayout.astro";
@@ -285,6 +286,9 @@ function assetLabel(asset: assetsRepo.Asset): string {
       hero's own copy, which is what assistive tech reads, so the shell marks
       this one aria-hidden. */}
   <TakeFactsCard slot="header-panel" {...factsCard} />
+  {/* Share. Never for a private take, which never gets this far: see the
+      redirect to the stash above. */}
+  <ShareButton slot="header-end" kind="take" targetId={take.id} title={heroTitle} size="xs" />
   <button
     slot="header-end"
     type="button"
@@ -369,6 +373,7 @@ function assetLabel(asset: assetsRepo.Asset): string {
             band's ruling used to share it; it has its own strip below the
             ways out now. */}
         <div class="bp-take-hero-actions">
+          <ShareButton kind="take" targetId={take.id} title={heroTitle} size="sm" class="bp-titled-action" />
           <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm bp-titled-action" data-sheet-open="edit-take">
             {t.takes.edit}
           </button>

@@ -25,6 +25,7 @@
 //     member navigates away believing they have it.
 import { islandsMessages, type Locale } from "@bandplate/i18n";
 import { useState } from "preact/hooks";
+import { copyViaExecCommand } from "../client/clipboard.js";
 import { currentLocale } from "../client/locale.js";
 
 /** Read at call time — see `client/locale.ts`. */
@@ -44,30 +45,6 @@ interface Props {
   locale?: Locale;
   value: string;
   label?: string;
-}
-
-/**
- * The pre-`navigator.clipboard` path: a throwaway textarea, selected and
- * copied synchronously inside the click's own task. Returns whether it
- * worked. Deliberately not `position: fixed; opacity: 0` — a zero-size
- * off-screen textarea is what browsers reliably still allow `select()` on.
- */
-function copyViaExecCommand(value: string): boolean {
-  const textarea = document.createElement("textarea");
-  textarea.value = value;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "absolute";
-  textarea.style.left = "-9999px";
-  document.body.appendChild(textarea);
-  try {
-    textarea.select();
-    textarea.setSelectionRange(0, value.length);
-    return document.execCommand("copy");
-  } catch {
-    return false;
-  } finally {
-    textarea.remove();
-  }
 }
 
 export default function CopyButton({ value, label, locale }: Props) {

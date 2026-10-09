@@ -92,4 +92,8 @@ export const islands = {
   copy: "Kopírovat", // en: Copy
   copied: "Zkopírováno", // en: Copied
   copyFailed: "Nepodařilo se zkopírovat", // en: Couldn't copy
+
+  share: "Sdílet", // en: Share
+  shareCopied: "Odkaz zkopírován", // en: Link copied
+  shareCopyFailed: "Odkaz se nepodařilo zkopírovat", // en: Couldn't copy the link
 } satisfies typeof enIslands;

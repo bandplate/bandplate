@@ -149,6 +149,30 @@
   border-radius: inherit;
 }
 
+/* Icon-only, in either of the two sizes: a circle the height of its size
+   rather than a pill sized around a word. Not a third size; the height, the
+   fill and the hit area are the size's own. The Share button on a song, event
+   or take page is the first one; its accessible name is an `aria-label`. */
+.bp-btn-sm.bp-btn-icon,
+.bp-btn-xs.bp-btn-icon {
+  padding: 0;
+  flex: none;
+}
+
+.bp-btn-sm.bp-btn-icon {
+  width: 44px;
+}
+
+.bp-btn-xs.bp-btn-icon {
+  width: 32px;
+}
+
+/* `ShareButton.astro`'s wrapper: a box a hero row can class and hide. */
+.bp-share {
+  display: inline-flex;
+  flex: none;
+}
+
 /* A destructive trigger rendered as a plain link (the no-JS path to a
    confirm page) but styled to match the button set. */
 a.bp-btn {

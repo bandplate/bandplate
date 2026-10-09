@@ -16,6 +16,7 @@ import ChartEditor from "../../components/ChartEditor.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import ListFooter from "../../components/ListFooter.astro";
 import RecordSheet from "../../components/RecordSheet.astro";
+import ShareButton from "../../components/ShareButton.astro";
 import StashItemSheet from "../../components/StashItemSheet.astro";
 import StashRow from "../../components/StashRow.astro";
 import TakeRow from "../../components/TakeRow.astro";
@@ -267,6 +268,7 @@ const lineUp = pageRoster(
   principal={principal}
   current="songs"
 >
+  <ShareButton slot="header-end" kind="song" targetId={song.id} title={song.title} size="xs" />
   <button slot="header-end" type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="edit-song">
     {t.songs.edit}
   </button>
@@ -323,6 +325,9 @@ const lineUp = pageRoster(
           />
         </span>
       </h1>
+        {/* Share, then Edit, beside the name past `lg`; on a phone both are up
+            in the header line and these copies are hidden. */}
+        <ShareButton kind="song" targetId={song.id} title={song.title} size="sm" class="bp-titled-action" />
         <button type="button" class="bp-btn bp-btn-secondary bp-btn-sm bp-titled-action" data-sheet-open="edit-song">
           {t.songs.edit}
         </button>

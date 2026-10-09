@@ -1,6 +1,7 @@
 // The three islands that mount only on a detail page: the chart editor and
 // the uploader on `/songs/[slug]` and `/takes/[id]`, and the confirm dialog
-// that any page with a destructive control uses.
+// that any page with a destructive control uses. The Share button, on the
+// song, event and take pages, joined them for the same reason.
 //
 // Grouped rather than split three ways because they always ship together —
 // `ConfirmDialog` is on every page that has an `AssetUploader` or a
@@ -94,4 +95,11 @@ export const islands = {
   copy: "Copy",
   copied: "Copied",
   copyFailed: "Couldn't copy",
+
+  // --- ShareButton ---------------------------------------------------------
+  /** The icon-only button's accessible name and tooltip. */
+  share: "Share",
+  /** Announced when there is no share sheet and the link went to the clipboard. */
+  shareCopied: "Link copied",
+  shareCopyFailed: "Couldn't copy the link",
 };

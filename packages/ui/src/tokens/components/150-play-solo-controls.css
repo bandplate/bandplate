@@ -388,8 +388,13 @@
    takes the edge where a thumb finds it. */
 .bp-shell-header-end {
   display: inline-flex;
+  align-items: center;
   flex: none;
   margin-left: auto;
+  /* A detail page puts Share beside Edit here, two `.bp-btn-xs` side by
+     side. Each one's 44px target reaches 6px past its 32px fill, so 1rem
+     keeps the two targets 4px apart instead of touching. */
+  gap: 1rem;
 }
 
 @media (max-width: 1023.98px) {

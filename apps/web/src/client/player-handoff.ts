@@ -20,7 +20,7 @@
 // the notification: a handoff at `ended`, or a `src` change on one element
 // before it ends, both leave a moment with nothing playing, and Chrome takes
 // the notification away in that moment. Only starting the next element while
-// the current one still plays kept it (the /lab/next-track.html test, variant
+// the current one still plays kept it (a since-removed phone test page, variant
 // C). So the advance is made `OVERLAP_LEAD_SECONDS` before the end
 // (`decideEarlyAdvance`), and the element handed off from is paused once the
 // new one is playing. `ended` stays as the fallback for a take too short to

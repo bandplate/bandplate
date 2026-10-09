@@ -12,6 +12,7 @@ import type { eventsRepo } from "@bandplate/db";
 import { messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import Pencil from "@lucide/astro/icons/pencil";
 import ChartEditor from "../../components/ChartEditor.tsx";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import ListFooter from "../../components/ListFooter.astro";
@@ -269,8 +270,18 @@ const lineUp = pageRoster(
   current="songs"
 >
   <ShareButton slot="header-end" kind="song" targetId={song.id} title={song.title} size="xs" />
-  <button slot="header-end" type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="edit-song">
-    {t.songs.edit}
+  {/* The header tier exists only below `lg`, so this copy of Edit is the
+      phone's alone: an icon the size of Share beside it, which leaves the
+      name the room it had. The hero's own Edit keeps its label. */}
+  <button
+    slot="header-end"
+    type="button"
+    class="bp-btn bp-btn-secondary bp-btn-xs bp-btn-icon"
+    data-sheet-open="edit-song"
+    aria-label={t.songs.edit}
+    title={t.songs.edit}
+  >
+    <Pencil size={16} stroke-width={1.75} aria-hidden="true" />
   </button>
   <FavoriteToggle
     slot="header-actions"

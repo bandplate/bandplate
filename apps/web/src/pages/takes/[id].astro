@@ -43,6 +43,7 @@ import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
 import ArrowRight from "@lucide/astro/icons/arrow-right";
 import Download from "@lucide/astro/icons/download";
+import Pencil from "@lucide/astro/icons/pencil";
 import SlidersVertical from "@lucide/astro/icons/sliders-vertical";
 import Trash from "@lucide/astro/icons/trash";
 import AssetUploader from "../../components/AssetUploader.tsx";
@@ -292,10 +293,12 @@ function assetLabel(asset: assetsRepo.Asset): string {
   <button
     slot="header-end"
     type="button"
-    class="bp-btn bp-btn-secondary bp-btn-xs"
+    class="bp-btn bp-btn-secondary bp-btn-xs bp-btn-icon"
     data-sheet-open="edit-take"
+    aria-label={t.takes.edit}
+    title={t.takes.edit}
   >
-    {t.takes.edit}
+    <Pencil size={16} stroke-width={1.75} aria-hidden="true" />
   </button>
   <FavoriteToggle
     slot="header-actions"

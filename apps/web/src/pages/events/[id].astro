@@ -11,6 +11,7 @@ import { hasAllScopes } from "@bandplate/core";
 import { formatLongDate, messages, validationMessage } from "@bandplate/i18n";
 import Banner from "@bandplate/ui/components/Banner.astro";
 import Field from "@bandplate/ui/components/Field.astro";
+import Pencil from "@lucide/astro/icons/pencil";
 import Play from "@lucide/astro/icons/play";
 import FavoriteToggle from "../../components/FavoriteToggle.astro";
 import ListFooter from "../../components/ListFooter.astro";
@@ -169,8 +170,15 @@ const lineUp = pageRoster(
 >
   <ShareButton slot="header-end" kind="event" targetId={event.id} title={shareSheetTitle} size="xs" />
   {!isPersonal && (
-    <button slot="header-end" type="button" class="bp-btn bp-btn-secondary bp-btn-xs" data-sheet-open="edit-event">
-      {t.events.edit}
+    <button
+      slot="header-end"
+      type="button"
+      class="bp-btn bp-btn-secondary bp-btn-xs bp-btn-icon"
+      data-sheet-open="edit-event"
+      aria-label={t.events.edit}
+      title={t.events.edit}
+    >
+      <Pencil size={16} stroke-width={1.75} aria-hidden="true" />
     </button>
   )}
   <FavoriteToggle

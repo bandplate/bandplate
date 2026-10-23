@@ -114,7 +114,21 @@ async function createBucket(endpoint: string): Promise<void> {
   }
 }
 
-const MINIO_IMAGE = process.env.BANDPLATE_TEST_MINIO_IMAGE ?? "quay.io/minio/minio";
+/**
+ * Chainguard's MinIO build, pinned by digest. MinIO's own registries both
+ * refuse an anonymous pull now: `docker.io/minio/minio` and, since October
+ * 2026, `quay.io/minio/minio` too (401), which failed this suite on every CI
+ * runner and so every push to `main` before the deploy job.
+ *
+ * A drop-in: its entrypoint is `/usr/bin/minio`, so `server /data` below is
+ * unchanged, and `/data` is world-writable for its non-root user. Chainguard
+ * serves only `latest` without an account, hence the digest rather than a
+ * version tag (`latest` of 2026-10-22). `BANDPLATE_TEST_MINIO_IMAGE`
+ * overrides it, for a machine that already has another MinIO image.
+ */
+const MINIO_IMAGE =
+  process.env.BANDPLATE_TEST_MINIO_IMAGE ??
+  "cgr.dev/chainguard/minio@sha256:d88920d6a50bd0b088223b688be3b76c63e6205dbe494437f67ba1240ea12880";
 
 const hasDocker = dockerAvailable();
 
@@ -136,11 +150,10 @@ describe.skipIf(!hasDocker)("Storage conformance: S3Storage (MinIO)", () => {
       `MINIO_ROOT_USER=${ACCESS_KEY_ID}`,
       "-e",
       `MINIO_ROOT_PASSWORD=${SECRET_ACCESS_KEY}`,
-      // quay.io, not Docker Hub: `docker.io/minio/minio` now refuses
-      // anonymous pulls (401 even with a token), so on any machine without
-      // the image already cached — every CI runner, every new contributor —
-      // this suite failed at `docker run` rather than skipping. quay.io is
-      // MinIO's own registry and serves it unauthenticated.
+      // Not MinIO's own registries, which refuse anonymous pulls: on any
+      // machine without the image already cached (every CI runner, every new
+      // contributor) this suite failed at `docker run` rather than skipping.
+      // See `MINIO_IMAGE` above.
       MINIO_IMAGE,
       "server",
       "/data",

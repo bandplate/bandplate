@@ -110,4 +110,14 @@ export const auth = {
    * visible way through if the automatic redirect does not happen.
    */
   shareSignIn: "Sign in to open it",
+
+  /**
+   * A PUBLIC `/s/<code>` page, open to someone who is not signed in: the
+   * header's way in for a member, and the footer line saying what the page
+   * is. The footer says "the band" rather than a name: the app does not know
+   * the band's name, and the page says nothing it was not given.
+   */
+  publicSignIn: "Sign in",
+  publicTakeFooter: "A take from the band's archive",
+  publicEventFooter: "A session from the band's archive",
 };

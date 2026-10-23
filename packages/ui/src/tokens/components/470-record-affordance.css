@@ -62,8 +62,10 @@
    the right edge read three times the left. The column closes; the column
    gap before it (0.75rem) is still spent, so the end padding is the gutter
    less that gap, and the duration ends on the gutter line like every other
-   row's last mark. */
-.bp-take-row.bp-stash-row {
+   row's last mark. A row on a public share page has no star either
+   (`TakeRow`'s `readOnly`), for the same answer. */
+.bp-take-row.bp-stash-row,
+.bp-take-row.bp-take-row--read-only {
   grid-template-columns: auto minmax(0, 1fr) auto 0;
   padding-inline-end: calc(var(--bp-row-pad-end) - 0.75rem);
 }

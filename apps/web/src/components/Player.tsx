@@ -93,6 +93,7 @@ import {
   parsePeaksBody,
   peaksUrl,
   playQueue,
+  shareScope,
   sourcesUrl,
 } from "../client/player-store.js";
 import {
@@ -238,7 +239,21 @@ interface PrefetchEntry {
   controller: AbortController;
 }
 
-export default function Player({ locale }: { locale?: Locale } = {}) {
+export default function Player({
+  locale,
+  shareCode,
+}: {
+  locale?: Locale;
+  /**
+   * The public share link this player is on, on `/s/<code>` for a signed-out
+   * visitor: its audio, waveform and sources then come from that link's own
+   * routes (see `shareScope`). Absent everywhere in the app.
+   */
+  shareCode?: string;
+} = {}) {
+  // During render rather than in an effect, so it holds before the first
+  // fetch any effect below makes. Setting the same value again is a no-op.
+  shareScope.set(shareCode ?? null);
   const track = useStore(currentTrack);
   const playing = useStore(isPlaying);
   const queue = useStore(playQueue);

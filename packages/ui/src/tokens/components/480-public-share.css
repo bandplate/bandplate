@@ -1,0 +1,101 @@
+/* ---------------------------------------------------------------------- */
+/* A public share page — `/s/<code>` for someone who is not signed in.     */
+/* ---------------------------------------------------------------------- */
+
+/* `PublicShareLayout`: the app's header line, the page and the app's own
+   player, with nothing of the member's navigation. Everything inside is the
+   member pages' own markup (the take hero, the facts card, the take list),
+   so a public take looks like the take it is; this file only places the
+   shell around it.
+
+   A column as tall as the screen, so the footer sits at the bottom of a
+   short page rather than halfway up it. */
+.bp-public {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The header line is phone-only in the app, where the sidebar takes over
+   past `lg`. Here there is no sidebar, so it stays at every width, set in by
+   the desktop gutter once there is room. */
+@media (min-width: 1024px) {
+  .bp-public .bp-shell-header {
+    display: flex;
+    padding-inline: 2.5rem;
+  }
+}
+
+.bp-public-main {
+  flex: 1;
+  width: 100%;
+  max-width: 60rem;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 1.625rem max(1.25rem, env(safe-area-inset-right, 0px)) 2rem
+    max(1.25rem, env(safe-area-inset-left, 0px));
+}
+
+@media (min-width: 1024px) {
+  .bp-public-main {
+    padding: 3.5rem 2.5rem 2.5rem;
+  }
+}
+
+/* The take's kind over its name, the way the event hero puts it: the hero
+   is a column here, where on the member page it is a title row with Edit. */
+.bp-public .bp-take-detail-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+/* An event's date and how many takes it has, under its name. Muted on the
+   plain ground, which is the only place muted text goes. */
+.bp-public-summary {
+  font-size: var(--text-ui, 0.9375rem);
+  color: var(--bp-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-public-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem max(1.25rem, env(safe-area-inset-right, 0px)) 0.25rem
+    max(1.25rem, env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--bp-color-border);
+  font-size: 0.8125rem;
+  color: var(--bp-color-muted);
+}
+
+.bp-public-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--bp-color-accent);
+}
+
+@media (min-width: 1024px) {
+  .bp-public-footer {
+    padding-inline: 2.5rem;
+  }
+}
+
+/* No tab bar to stand on: the bar sits on the screen's own bottom edge at
+   every width, clearing the home indicator the way it does past `lg` in the
+   app. */
+.bp-public .bp-player {
+  bottom: 0;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Room under the footer for the bar, once there is a bar. `Player.tsx`
+   writes the bar's measured height onto `.bp-shell` as `--bp-player-height`;
+   with nothing loaded the bar is `[hidden]` and nothing is reserved. */
+.bp-public:not(:has(.bp-player[hidden])) {
+  padding-bottom: var(--bp-player-height);
+}

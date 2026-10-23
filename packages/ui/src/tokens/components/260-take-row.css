@@ -221,6 +221,13 @@
   inset: 0;
 }
 
+/* A row on a public share page has no page to open (`TakeRow`'s
+   `readOnly`): its title is plain text, and stretching nothing over the row
+   would only make the row look pressable. */
+.bp-take-label-static::after {
+  content: none;
+}
+
 /* Everything that does something ELSE has to sit above the overlay — and only
    those things. The duration and the instrument set deliberately stay under
    it: they are text, so under the overlay they navigate with the rest of the

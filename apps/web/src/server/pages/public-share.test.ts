@@ -135,6 +135,13 @@ describe("loadPublicShare", () => {
     expect(view.summary).toContain("8. července 2026");
   });
 
+  it("does not repeat the date under an untitled event, whose heading already says it", async () => {
+    await eventsRepo.update(db, eventId, { title: null, updatedAt: NOW });
+    const view = await loadPublicShare(db, await publicCode("event", eventId), "cs");
+    expect(view?.kind === "event" && view.title).toBe("8. července 2026");
+    expect(view?.kind === "event" && view.summary).not.toContain("července");
+  });
+
   it("carries no venue, notes or member name, for a take or an event", async () => {
     for (const code of [await publicCode("take", takeId), await publicCode("event", eventId)]) {
       const serialized = JSON.stringify(await loadPublicShare(db, code, "cs"));

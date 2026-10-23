@@ -53,18 +53,33 @@ export const isPlaying = atom<boolean>(false);
 /** What plays after the current take — see `player-queue.ts`. `null` until something plays. */
 export const playQueue = atom<PlayQueue | null>(null);
 
+/**
+ * Whose routes the three URLs below go through: `null` for the member API,
+ * or the code of the PUBLIC share link a signed-out visitor is on (`/s/<code>`),
+ * whose `/api/public/<code>/...` routes answer the same three questions
+ * without a session. Set once by `Player` from its own prop, before anything
+ * can play; the player and its handoff only ever ask for a URL, so neither
+ * needs to know which kind of page it is on.
+ */
+export const shareScope = atom<string | null>(null);
+
+function apiRoot(): string {
+  const code = shareScope.get();
+  return code ? `/api/public/${code}` : "/api";
+}
+
 export function audioUrl(assetId: string): string {
-  return `/api/assets/${assetId}/audio`;
+  return `${apiRoot()}/assets/${assetId}/audio`;
 }
 
 /** The waveform describing ONE source — keyed by the audio asset, not by the peaks row, so a caller needs nothing it does not already hold. 404s until something computes peaks; see `peaksStorageKey`. */
 export function peaksUrl(assetId: string): string {
-  return `/api/assets/${assetId}/peaks`;
+  return `${apiRoot()}/assets/${assetId}/peaks`;
 }
 
 /** What a take can be heard as. Fetched when the player's source switch is opened, not rendered into every row — see the route's comment. */
 export function sourcesUrl(takeId: string): string {
-  return `/api/takes/${takeId}/sources`;
+  return `${apiRoot()}/takes/${takeId}/sources`;
 }
 
 export interface PlayerSource {

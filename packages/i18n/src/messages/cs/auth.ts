@@ -90,4 +90,8 @@ export const auth = {
     "Většinou je to špatný API klíč nebo adresa odesílatele, kterou poskytovatel ještě neověřil.",
 
   shareSignIn: "Přihlas se a otevři to", // en: Sign in to open it
+
+  publicSignIn: "Přihlásit se", // en: Sign in
+  publicTakeFooter: "Nahrávka z archivu kapely", // en: A take from the band's archive
+  publicEventFooter: "Akce z archivu kapely", // en: A session from the band's archive
 } satisfies typeof enAuth;

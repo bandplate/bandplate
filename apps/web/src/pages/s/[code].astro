@@ -7,11 +7,15 @@
 // - SIGNED IN: a 302 to the target's current page (`/songs/<slug>`, which
 //   follows a rename, `/events/<id>`, `/takes/<id>`), or the app's ordinary
 //   404 for a code that opens nothing.
-// - SIGNED OUT, a code that opens something: a tiny page a link preview can
-//   read (WhatsApp, Messenger and Signal fetch it with no session) carrying
-//   the target's title and one factual line, and nothing else. A person is
-//   sent straight on to sign in with `?next=` set, so they land back here and
-//   then on the page.
+// - SIGNED OUT, a PUBLIC link (a member turned it on): the take or the
+//   event itself, to listen to, built from `server/pages/public-share.ts`'s
+//   allow-list, under the same title-and-one-line preview card.
+// - SIGNED OUT, a members' link that opens something: a tiny page a link
+//   preview can read (WhatsApp, Messenger and Signal fetch it with no
+//   session) carrying the target's title and one factual line, and nothing
+//   else. A person is sent straight on to sign in with `?next=` set, so they
+//   land back here and then on the page. A link turned back from public
+//   lands here too.
 // - SIGNED OUT, anything else (an unknown code, a deleted target, a private
 //   take): the same 302 to `/login` every protected page gives a signed-out
 //   request. Nothing about the code is revealed.
@@ -21,7 +25,14 @@
 // characters (~59.5 bits), so they are found by being sent, not by guessing.
 // Nothing rate-limits this route; the length is the whole defence.
 import { messages } from "@bandplate/i18n";
+import Play from "@lucide/astro/icons/play";
+import PlayToggleButton from "../../components/PlayToggleButton.astro";
+import ShareSignInCard from "../../components/ShareSignInCard.astro";
+import TakeFactsCard from "../../components/TakeFactsCard.astro";
+import TakeRow from "../../components/TakeRow.astro";
+import PublicShareLayout from "../../layouts/PublicShareLayout.astro";
 import { getAppDeps } from "../../server/app.js";
+import { loadPublicView } from "../../server/pages/public-share.js";
 import { resolveShareCode } from "../../server/pages/share.js";
 import { loginPathReturningTo } from "../../server/safe-redirect.js";
 
@@ -43,6 +54,9 @@ if (!resolved) {
 
 Astro.response.headers.set("Cache-Control", "no-store");
 
+const view = code ? await loadPublicView(appDeps.db, code, resolved, locale) : undefined;
+const hasPlayable = view?.kind === "event" && view.takes.some((row) => row.playableAssetId);
+
 const t = messages(locale);
 const selfPath = `/s/${code}`;
 const loginPath = loginPathReturningTo(selfPath);
@@ -51,27 +65,87 @@ const imageUrl = new URL("/og-image.png", Astro.url);
 const { title, description } = resolved.preview;
 ---
 
-<!doctype html>
-<html lang={locale}>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{`${title} | bandplate`}</title>
-    <meta name="robots" content="noindex" />
-    <meta name="description" content={description} />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="bandplate" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={pageUrl.href} />
-    <meta property="og:image" content={imageUrl.href} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={t.shell.shareImageAlt} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta http-equiv="refresh" content={`0;url=${loginPath}`} />
-  </head>
-  <body>
-    <p><a href={loginPath}>{t.auth.shareSignIn}</a></p>
-  </body>
-</html>
+{
+  view?.kind === "take" && (
+    <PublicShareLayout
+      title={view.title}
+      description={view.preview.description}
+      code={view.code}
+      footer={t.auth.publicTakeFooter}
+    >
+      <div class="bp-take-detail-hero">
+        {view.kindLabel && <span class="bp-kind">{view.kindLabel}</span>}
+        <h1 class="bp-hero-title bp-m0">{view.title}</h1>
+        {view.note && <p class="bp-hero-label bp-m0">{view.note}</p>}
+      </div>
+      {view.play && (
+        <section class="bp-take-strip">
+          <h2 class="bp-strip-label">{t.takes.listenHeading}</h2>
+          <div class="bp-take-play-section">
+            <PlayToggleButton {...view.play} label={t.takes.playThisTake} />
+          </div>
+        </section>
+      )}
+      <div class="bp-take-facts-card">
+        <TakeFactsCard {...view.facts} />
+      </div>
+    </PublicShareLayout>
+  )
+}
+{
+  view?.kind === "event" && (
+    <PublicShareLayout
+      title={view.title}
+      description={view.preview.description}
+      code={view.code}
+      footer={t.auth.publicEventFooter}
+    >
+      <header class="bp-event-hero">
+        <div class="bp-event-hero-line">
+          <span class="bp-kind">{view.kindLabel}</span>
+        </div>
+        <h1 class="bp-hero-title bp-m0">{view.title}</h1>
+        <p class="bp-public-summary bp-m0">{view.summary}</p>
+        {hasPlayable && (
+          <div class="bp-event-hero-actions">
+            <button
+              type="button"
+              class="bp-btn bp-btn-secondary bp-btn-sm bp-btn-play-all"
+              data-play-queue-start="event-takes"
+            >
+              <span class="bp-btn-play-disc" aria-hidden="true">
+                <Play size={13} fill="currentColor" />
+              </span>
+              {t.events.playAll}
+            </button>
+          </div>
+        )}
+      </header>
+      <section class="bp-take-strip">
+        <h2 class="bp-strip-label">{t.events.takesHeading}</h2>
+        <div class="bp-take-list bp-take-list--wide" id="event-takes" data-play-queue>
+          {view.takes.map((row) => (
+            <TakeRow
+              take={row.take}
+              instruments={row.instruments}
+              context={{ kind: "event", song: row.song, eventKind: view.eventKind }}
+              playableAssetId={row.playableAssetId}
+              readOnly
+            />
+          ))}
+        </div>
+      </section>
+    </PublicShareLayout>
+  )
+}
+{
+  !view && (
+    <ShareSignInCard
+      title={title}
+      description={description}
+      pageUrl={pageUrl.href}
+      imageUrl={imageUrl.href}
+      loginPath={loginPath}
+    />
+  )
+}

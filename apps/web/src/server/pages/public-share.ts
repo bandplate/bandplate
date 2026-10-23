@@ -22,7 +22,7 @@ import {
 import { formatLongDate, type Locale, messages } from "@bandplate/i18n";
 import { eventLabel, factsLine, formatDuration, takeNote } from "../format.js";
 import type { SharePreview } from "../share-target.js";
-import { resolveShareCode } from "./share.js";
+import { type ResolvedShare, resolveShareCode } from "./share.js";
 
 /**
  * The most takes a public event page lists. A rehearsal is a few dozen at
@@ -74,9 +74,9 @@ export interface PublicEventView {
   code: string;
   preview: SharePreview;
   kindLabel: string;
-  /** The event's own title, never its venue; its kind and date without one. */
+  /** The event's own title, never its venue; its date without one. */
   title: string;
-  /** "8. července 2026, 5 nahrávek". */
+  /** "8. července 2026, 5 nahrávek", or just the count when the title already carries the date. */
   summary: string;
   /** Raw kind, for `TakeRow`'s context. */
   eventKind: string;
@@ -97,7 +97,17 @@ export async function loadPublicShare(
   locale: Locale,
 ): Promise<PublicShareView | undefined> {
   const resolved = await resolveShareCode(db, code, locale);
-  if (!resolved?.public || code === undefined) {
+  return resolved && code !== undefined ? loadPublicView(db, code, resolved, locale) : undefined;
+}
+
+/** `loadPublicShare` for a code the caller has already resolved. */
+export async function loadPublicView(
+  db: Db,
+  code: string,
+  resolved: ResolvedShare,
+  locale: Locale,
+): Promise<PublicShareView | undefined> {
+  if (!resolved.public) {
     return undefined;
   }
   if (resolved.kind === "take") {
@@ -190,8 +200,19 @@ async function loadEvent(
     code,
     preview,
     kindLabel: t.events.kindLabel(event.kind),
-    title: preview.title,
-    summary: factsLine([formatLongDate(locale, event.heldAt), t.takes.count(paged.total)], locale),
+    // Its own title, or its date, the way the member's event page heads it.
+    // The kind is the small caps above either way, so it is not repeated
+    // here as the preview's fallback title does.
+    title: event.title?.trim() || formatLongDate(locale, event.heldAt),
+    // The date only when the title is the event's own: an untitled event's
+    // heading is already its kind and date, and saying it twice is noise.
+    summary: factsLine(
+      [
+        event.title?.trim() ? formatLongDate(locale, event.heldAt) : null,
+        t.takes.count(paged.total),
+      ],
+      locale,
+    ),
     eventKind: event.kind,
     takes: takes.map((take) => {
       const song = take.songId ? songById.get(take.songId) : undefined;

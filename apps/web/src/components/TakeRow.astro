@@ -138,6 +138,13 @@ export interface Props {
    * See `moreAnchorId` in `server/pagination.ts`.
    */
   anchorId?: string | undefined;
+  /**
+   * A row on a PUBLIC share page, for someone who is not signed in: the
+   * title is plain text rather than the whole-row link to `/takes/<id>`,
+   * which would only send them to sign in, and there is no favourite star,
+   * which they have nobody to save it for. The play control is unchanged.
+   */
+  readOnly?: boolean;
 }
 
 const {
@@ -149,6 +156,7 @@ const {
   ownerName = null,
   roster,
   anchorId,
+  readOnly = false,
 } = Astro.props;
 
 const locale = Astro.locals.locale;
@@ -203,7 +211,7 @@ const noteText = takeNote(take.label, eventKind);
 const kindBadge = context.kind === "event" ? "" : eventKind;
 ---
 
-<div class="bp-take-row">
+<div class={readOnly ? "bp-take-row bp-take-row--read-only" : "bp-take-row"}>
   {anchorId && <span class="bp-list-anchor" id={anchorId} aria-hidden="true" />}
   <div class="bp-take-row-lead">
     <slot name="leading">
@@ -244,13 +252,17 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
         box centred against a 22px title box put the badge's baseline 3px above
         the title's — see `.bp-take-row-name`. */}
     <span class="bp-take-row-name">
-      <a
-        href={`/takes/${take.id}`}
-        class="bp-take-label"
-        data-take-id={take.id}
-      >
-        {primaryLabel}
-      </a>
+      {readOnly ? (
+        <span class="bp-take-label bp-take-label-static">{primaryLabel}</span>
+      ) : (
+        <a
+          href={`/takes/${take.id}`}
+          class="bp-take-label"
+          data-take-id={take.id}
+        >
+          {primaryLabel}
+        </a>
+      )}
       {/* The kind as small caps, not a pill. A pill is a thing you can press; a
           kind is a label on a fact, so it takes the same voice the event ledger
           on home uses. */}
@@ -278,14 +290,16 @@ const kindBadge = context.kind === "event" ? "" : eventKind;
       the event ledger have always put theirs. It sat beside the title until
       now, which made the same control land in two different places depending
       on what kind of thing the row was. */}
-  <span class="bp-take-favorite-mark">
-    <FavoriteToggle
-      targetType="take"
-      targetId={take.id}
-      favorited={favorited}
-      label={primaryLabel}
-    />
-  </span>
+  {!readOnly && (
+    <span class="bp-take-favorite-mark">
+      <FavoriteToggle
+        targetType="take"
+        targetId={take.id}
+        favorited={favorited}
+        label={primaryLabel}
+      />
+    </span>
+  )}
 
   <div class="bp-take-line2">
     <span class="bp-take-textrun">

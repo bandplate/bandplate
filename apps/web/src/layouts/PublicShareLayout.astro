@@ -1,0 +1,57 @@
+---
+// The shell of a PUBLIC share page (`/s/<code>` for a signed-out visitor):
+// the mark, a way in for a member, the page, and the app's own player.
+//
+// Not `AppLayout`, which is the member's app: navigation to pages this
+// visitor cannot open, a star, a vote, the stash sync. What is kept is the
+// one thing the visitor came for, the persistent player, as itself. It reads
+// the same `data-audio-source` markup and draws the same bar; `shareCode`
+// sends its three requests to the link's own public routes instead of the
+// member API, which is all that differs.
+//
+// `.bp-shell` on the wrapper is load-bearing, not borrowed for looks:
+// `Player.tsx` writes its measured height onto `.bp-shell`, and the page's
+// bottom padding reads it back so the last row never sits under the bar.
+// There is no tab bar, so the bar sits at the very bottom (see
+// `480-public-share.css`).
+//
+// No `ClientRouter`: nothing here navigates within the app, so the player
+// needs no `transition:persist` either.
+import { messages } from "@bandplate/i18n";
+import Logo from "@bandplate/ui/components/Logo.astro";
+import Player from "../components/Player.tsx";
+import { loginPathReturningTo } from "../server/safe-redirect.js";
+import Layout from "./Layout.astro";
+
+export interface Props {
+  title: string;
+  description: string;
+  code: string;
+  /** What the footer says the page is. */
+  footer: string;
+}
+
+const { title, description, code, footer } = Astro.props;
+const t = messages(Astro.locals.locale);
+const signInPath = loginPathReturningTo(`/s/${code}`);
+---
+
+<Layout title={title} description={description} unlisted>
+  <div class="bp-shell bp-public">
+    <header class="bp-shell-header bp-public-header">
+      <span class="bp-shell-wordmark">
+        <Logo size={24} id="header" class="bp-shell-mark" />
+        bandplate
+      </span>
+      <a href={signInPath} class="bp-btn bp-btn-secondary bp-btn-xs">{t.auth.publicSignIn}</a>
+    </header>
+    <main id="main" class="bp-public-main">
+      <slot />
+    </main>
+    <footer class="bp-public-footer">
+      <span>{footer}</span>
+      <a href={signInPath}>{t.auth.publicSignIn}</a>
+    </footer>
+    <Player client:load locale={Astro.locals.locale} shareCode={code} />
+  </div>
+</Layout>

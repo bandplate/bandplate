@@ -14,9 +14,16 @@ export interface Props {
    * pitch the auth screen carries — see `shell.shareDescription`.
    */
   description?: string;
+  /**
+   * Kept out of search engines, but still PREVIEWED: a public share page
+   * (`/s/<code>`) is meant to unfurl in the chat it is sent to, and is not
+   * meant to be found by anyone who was not sent it. `noindex` above is the
+   * other thing, a page that must not even be previewed.
+   */
+  unlisted?: boolean;
 }
 
-const { title, noindex = false, description } = Astro.props;
+const { title, noindex = false, description, unlisted = false } = Astro.props;
 
 /**
  * What a shared bandplate link says about itself.
@@ -38,7 +45,14 @@ const { title, noindex = false, description } = Astro.props;
  *
  * One route deliberately is: `/s/<code>`, the short share link, answers a
  * signed-out crawler with its own card (a title and one line, built by
- * `server/share-target.ts`), and it does not use this layout.
+ * `server/share-target.ts`). A members' link does that without this layout.
+ *
+ * And that route is where the decision above was revisited, when a member
+ * makes a link PUBLIC: the page itself is then served to anyone holding the
+ * code, through this layout (`unlisted`), with a description of the same
+ * title-and-one-line kind. Nothing else changed: every other page is still
+ * behind the session, and a public page's words come from an allow-list
+ * (`server/pages/public-share.ts`), not from the member page.
  */
 const t = messages(Astro.locals.locale);
 
@@ -68,7 +82,7 @@ const shareImage = new URL("/og-image.png", Astro.url);
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{shareTitle}</title>
     <meta name="description" content={shareDescription} />
-    {noindex && <meta name="robots" content="noindex" />}
+    {(noindex || unlisted) && <meta name="robots" content="noindex" />}
     {
       /* A page that must not be indexed must not be PREVIEWED either. The
          login-token page is the whole reason: its URL is a bearer credential,

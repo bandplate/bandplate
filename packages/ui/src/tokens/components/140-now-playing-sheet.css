@@ -1,5 +1,7 @@
 /* ---------------------------------------------------------------------- */
 /* The Hraje sheet — `NowPlayingSheet.tsx`. A native `<dialog>` opened with */
+/* (The frame, from the backdrop to the desktop placement, is also the     */
+/* Share button's sheet, `.bp-share-sheet`: one shape for a bottom sheet.) */
 /* `showModal()`: source, mixer link, running order, and its own foot     */
 /* transport (the bar behind it goes inert the moment it opens).           */
 /* ---------------------------------------------------------------------- */
@@ -9,7 +11,8 @@
    comment on why that matters: a class with nothing in the markup wearing it
    is dead CSS). Reads the page background rather than a flat black so it
    sits right in both themes without a separate dark-mode override. */
-.bp-now-playing::backdrop {
+.bp-now-playing::backdrop,
+.bp-share-sheet::backdrop {
   background: color-mix(in srgb, var(--bp-color-bg) 72%, transparent);
 }
 
@@ -23,7 +26,8 @@
    itself is how the sheet recognises its backdrop (NowPlayingSheet.tsx), and
    padding or a flex gap on it would be dialog-element surface too. Both live
    on `.bp-now-playing-body`, which fills the dialog. */
-.bp-now-playing {
+.bp-now-playing,
+.bp-share-sheet {
   position: fixed;
   /* Pinned to the bottom on a phone: `margin: auto 0 0` centers nothing
      horizontally and pushes the dialog to the bottom edge instead of the
@@ -42,12 +46,14 @@
   overflow: hidden;
 }
 
-.bp-now-playing[open] {
+.bp-now-playing[open],
+.bp-share-sheet[open] {
   display: flex;
   flex-direction: column;
 }
 
-.bp-now-playing-body {
+.bp-now-playing-body,
+.bp-share-sheet-body {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -63,7 +69,8 @@
    drag-to-dismiss gesture; Escape, the backdrop and the close button all
    do the job), so it is drawn, not a button, and carries no label. On the
    body, not the dialog, for the backdrop-click reason above. */
-.bp-now-playing-body::before {
+.bp-now-playing-body::before,
+.bp-share-sheet-body::before {
   content: "";
   align-self: center;
   width: 40px;
@@ -73,7 +80,8 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .bp-now-playing[open] {
+  .bp-now-playing[open],
+  .bp-share-sheet[open] {
     animation: bp-now-playing-in var(--duration-enter, 220ms) var(--ease-bp, ease-out);
   }
 }
@@ -340,7 +348,8 @@
 }
 
 @media (min-width: 640px) {
-  .bp-now-playing {
+  .bp-now-playing,
+  .bp-share-sheet {
     position: fixed;
     inset: 0;
     margin: auto;
@@ -351,7 +360,8 @@
     border-radius: 18px;
   }
 
-  .bp-now-playing-body::before {
+  .bp-now-playing-body::before,
+  .bp-share-sheet-body::before {
     /* No drag-to-dismiss gesture on a pointer-driven surface: the phone-only
        affordance would just be a decorative bar nobody asked for. */
     display: none;
@@ -359,7 +369,8 @@
 }
 
 @media (min-width: 640px) and (prefers-reduced-motion: no-preference) {
-  .bp-now-playing[open] {
+  .bp-now-playing[open],
+  .bp-share-sheet[open] {
     animation: bp-now-playing-in-desktop var(--duration-enter, 220ms) var(--ease-bp, ease-out);
   }
 }

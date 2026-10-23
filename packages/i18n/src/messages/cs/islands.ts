@@ -96,4 +96,26 @@ export const islands = {
   share: "Sdílet", // en: Share
   shareCopied: "Odkaz zkopírován", // en: Link copied
   shareCopyFailed: "Odkaz se nepodařilo zkopírovat", // en: Couldn't copy the link
+
+  shareSheetTake: "Sdílet nahrávku", // en: Share this take
+  shareSheetEvent: "Sdílet akci", // en: Share this session
+  sharePublicLabel: "Veřejný odkaz", // en: Public link
+  // en: Anyone with the link can listen, without signing in.
+  sharePublicOff: "Kdokoli s odkazem si to poslechne, i bez přihlášení.",
+  sharePublicOn: "Zapnutý. Vypneš ho kdykoli.", // en: On. You can turn it off any time.
+  shareNowLabel: "Teď", // en: Now
+  // en: Only signed-in band members can open the link.
+  shareMembersOnly: "Odkaz otevřou jen přihlášení členové kapely.",
+  shareOthersSeeLabel: "Cizí uvidí", // en: Others see
+  // en: The song, the session, the date, the length and the instruments.
+  shareOthersSeeTake: "Skladbu, akci, datum, délku a nástroje.",
+  // en: The session, its takes, their lengths and the instruments.
+  shareOthersSeeEvent: "Akci, její nahrávky, jejich délky a nástroje.",
+  shareOthersMissLabel: "Cizí neuvidí", // en: Others don't see
+  // en: Notes, votes or members' names. Nothing can be downloaded.
+  shareOthersMiss: "Poznámky, hlasy ani jména členů. Stáhnout nic nepůjde.",
+  // en: Turned off, the link opens for signed-in members only, even for anyone who already has it.
+  shareTurnOffNote: "Po vypnutí odkaz otevřou jen přihlášení členové, i když ho někdo už má.",
+  shareClose: "Zavřít", // en: Close
+  shareSwitchFailed: "Nepovedlo se. Zkus to znovu.", // en: That didn't work. Try again.
 } satisfies typeof enIslands;

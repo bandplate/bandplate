@@ -99,3 +99,166 @@
 .bp-public:not(:has(.bp-player[hidden])) {
   padding-bottom: var(--bp-player-height);
 }
+
+/* ---------------------------------------------------------------------- */
+/* The Share button's sheet — the "public link" switch on a take or an     */
+/* event (`ShareButton.tsx`). Its frame is the Hraje sheet's; see          */
+/* `140-now-playing-sheet.css`.                                            */
+/* ---------------------------------------------------------------------- */
+
+.bp-share-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.bp-share-sheet-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.bp-share-sheet-title {
+  margin: 0;
+  font-family: var(--bp-font-display);
+  font-size: var(--text-section, 1.25rem);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* Muted on the sheet's surface, which is a ground (not a tint). */
+.bp-share-sheet-sub {
+  color: var(--bp-color-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: break-word;
+}
+
+.bp-share-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.75rem;
+  border-block: 1px solid var(--bp-color-border);
+}
+
+.bp-share-switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.bp-share-switch-label {
+  font-size: var(--text-ui, 0.9375rem);
+  font-weight: 600;
+}
+
+.bp-share-switch-hint {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--bp-color-muted);
+}
+
+/* An on/off switch: a 52 by 32 track, its 44px reach drawn past it the way a
+   32px button's is. Off is the raised fill with an ink thumb; on is the
+   accent with the ground's colour for the thumb, as text on an accent is. */
+.bp-switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--bp-fill-raised);
+  cursor: pointer;
+}
+
+.bp-switch::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.bp-switch-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bp-color-fg);
+  transition: transform 120ms var(--ease-bp, ease-out);
+}
+
+.bp-switch[aria-checked="true"] {
+  background: var(--bp-color-accent);
+}
+
+.bp-switch[aria-checked="true"] .bp-switch-thumb {
+  transform: translateX(20px);
+  background: var(--bp-color-on-accent);
+}
+
+.bp-switch:focus-visible {
+  outline: 2px solid var(--bp-color-accent);
+  outline-offset: 3px;
+}
+
+.bp-switch[disabled] {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.bp-share-sheet-error {
+  font-size: 0.8125rem;
+  color: var(--bp-color-danger);
+}
+
+/* What a stranger sees, on the facts card's fill and with its labels. Ink,
+   never muted, on the fill. */
+.bp-share-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.875rem 1.25rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bp-color-fg) 6%, transparent);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--bp-color-fg);
+}
+
+/* The link itself: a machine string, so mono, on a field's fill. */
+.bp-share-link {
+  display: block;
+  line-height: 44px;
+  padding-inline: 0.875rem;
+  border-radius: 3px;
+  background: var(--bp-fill-subtle);
+  font-family: var(--bp-font-mono);
+  font-size: 0.78125rem;
+  color: var(--bp-color-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-share-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.bp-share-actions > .bp-btn {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.bp-share-sheet-note {
+  font-size: 0.78125rem;
+  line-height: 1.45;
+  color: var(--bp-color-muted);
+}

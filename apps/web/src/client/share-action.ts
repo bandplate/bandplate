@@ -53,6 +53,44 @@ export function shortPathFrom(body: unknown): string | undefined {
   return typeof url === "string" && SHORT_PATH.test(url) ? url : undefined;
 }
 
+/** What `/share` says about a target's link. */
+export interface ShareState {
+  shortPath: string;
+  /** Whether a signed-out visitor gets the page itself. */
+  isPublic: boolean;
+  /** Whether this link may be made public at all: a take or an event, never a song. */
+  canBePublic: boolean;
+}
+
+/**
+ * The link's state out of `/share`'s JSON answer, or undefined for anything
+ * without a valid short path. A missing flag reads as false: an answer that
+ * does not say a link is public must not show it as public.
+ */
+export function shareStateFrom(body: unknown): ShareState | undefined {
+  const shortPath = shortPathFrom(body);
+  if (shortPath === undefined) {
+    return undefined;
+  }
+  const flags = body as { public?: unknown; canBePublic?: unknown };
+  return {
+    shortPath,
+    isPublic: flags.public === true,
+    canBePublic: flags.canBePublic === true,
+  };
+}
+
+/**
+ * What a tap on the Share button does: straight to the share sheet (or the
+ * clipboard), or first a small sheet of our own with the "public link"
+ * switch. Only a link that may be public gets the extra step, and only once
+ * its state is known; until then, and for a song, the tap shares at once,
+ * as it always did.
+ */
+export function tapOpensSheet(state: ShareState | undefined): boolean {
+  return state?.canBePublic === true;
+}
+
 /**
  * What to do after `navigator.share` rejects.
  *

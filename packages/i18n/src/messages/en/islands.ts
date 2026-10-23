@@ -102,4 +102,23 @@ export const islands = {
   /** Announced when there is no share sheet and the link went to the clipboard. */
   shareCopied: "Link copied",
   shareCopyFailed: "Couldn't copy the link",
+
+  // --- ShareButton's sheet: the public link switch (takes and events) -----
+  shareSheetTake: "Share this take",
+  shareSheetEvent: "Share this session",
+  sharePublicLabel: "Public link",
+  sharePublicOff: "Anyone with the link can listen, without signing in.",
+  sharePublicOn: "On. You can turn it off any time.",
+  /** Over the line saying who can open the link while it is a members' link. */
+  shareNowLabel: "Now",
+  shareMembersOnly: "Only signed-in band members can open the link.",
+  shareOthersSeeLabel: "Others see",
+  shareOthersSeeTake: "The song, the session, the date, the length and the instruments.",
+  shareOthersSeeEvent: "The session, its takes, their lengths and the instruments.",
+  shareOthersMissLabel: "Others don't see",
+  shareOthersMiss: "Notes, votes or members' names. Nothing can be downloaded.",
+  shareTurnOffNote:
+    "Turned off, the link opens for signed-in members only, even for anyone who already has it.",
+  shareClose: "Close",
+  shareSwitchFailed: "That didn't work. Try again.",
 };

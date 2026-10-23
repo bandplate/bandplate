@@ -1,6 +1,13 @@
 import { generateShareCode } from "@bandplate/core";
 import { describe, expect, it } from "vitest";
-import { afterShareError, shareMechanism, shareUrl, shortPathFrom } from "./share-action.js";
+import {
+  afterShareError,
+  shareMechanism,
+  shareStateFrom,
+  shareUrl,
+  shortPathFrom,
+  tapOpensSheet,
+} from "./share-action.js";
 
 const here = { origin: "https://band.example", pathname: "/songs/coudy" };
 
@@ -68,5 +75,42 @@ describe("afterShareError", () => {
     expect(afterShareError(new DOMException("nope", "NotAllowedError"))).toBe("copy");
     expect(afterShareError(new Error("boom"))).toBe("copy");
     expect(afterShareError(undefined)).toBe("copy");
+  });
+});
+
+describe("shareStateFrom", () => {
+  it("reads the short path and both flags", () => {
+    expect(shareStateFrom({ url: "/s/aB3dE7zQ9x", public: true, canBePublic: true })).toEqual({
+      shortPath: "/s/aB3dE7zQ9x",
+      isPublic: true,
+      canBePublic: true,
+    });
+  });
+
+  it("treats a missing or odd flag as false, never as public", () => {
+    expect(shareStateFrom({ url: "/s/aB3dE7zQ9x" })).toEqual({
+      shortPath: "/s/aB3dE7zQ9x",
+      isPublic: false,
+      canBePublic: false,
+    });
+    expect(shareStateFrom({ url: "/s/aB3dE7zQ9x", public: "true" })?.isPublic).toBe(false);
+  });
+
+  it("is nothing without a valid short path", () => {
+    expect(
+      shareStateFrom({ url: "https://evil.example/s/aB3dE7zQ9x", public: true }),
+    ).toBeUndefined();
+    expect(shareStateFrom(null)).toBeUndefined();
+  });
+});
+
+describe("tapOpensSheet", () => {
+  it("opens the switch only for a link that may be public", () => {
+    expect(tapOpensSheet({ shortPath: "/s/x", isPublic: false, canBePublic: true })).toBe(true);
+    expect(tapOpensSheet({ shortPath: "/s/x", isPublic: false, canBePublic: false })).toBe(false);
+  });
+
+  it("shares at once while the state is not known yet", () => {
+    expect(tapOpensSheet(undefined)).toBe(false);
   });
 });

@@ -146,7 +146,14 @@ export async function removeForTarget(db: Db, kind: ShareKind, targetId: string)
  * moved, so a link someone already sent should land where they went.
  *
  * Only when `toId` has no link of its own (one target, one code); otherwise
- * `fromId`'s link is simply dropped. Two statements in one batch: the
+ * `fromId`'s link is simply dropped.
+ *
+ * A moved link always arrives as a members' link (`publicAt` cleared), even
+ * when it was public. The survivor has takes of its own that nobody chose to
+ * show the world, and carrying the flag across would publish them by merging.
+ * A member who wants the merged event public turns it on again.
+ *
+ * Two statements in one batch: the
  * re-point, guarded by NOT EXISTS so it cannot trip the UNIQUE index, then
  * the delete, which finds nothing left when the re-point happened.
  */
@@ -162,7 +169,7 @@ export async function moveToTarget(
   await db.batch([
     db
       .update(shareLinks)
-      .set({ targetId: toId })
+      .set({ targetId: toId, publicAt: null })
       .where(
         and(
           eq(shareLinks.kind, kind),

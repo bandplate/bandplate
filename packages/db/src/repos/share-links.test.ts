@@ -121,14 +121,16 @@ describe("shareLinksRepo", () => {
   });
 
   describe("moveToTarget", () => {
-    it("a public link stays public when it moves to the survivor", async () => {
+    it("a public link arrives at the survivor as a members' link", async () => {
+      // The survivor's own takes were never made public; a merge must not
+      // publish them.
       const code = await shareLinksRepo.getOrCreate(db, "event", "old", NOW);
       await shareLinksRepo.setPublic(db, "event", "old", NOW);
       await shareLinksRepo.moveToTarget(db, "event", "old", "new");
       expect(await shareLinksRepo.resolve(db, code)).toEqual({
         kind: "event",
         targetId: "new",
-        publicAt: NOW,
+        publicAt: null,
       });
     });
 

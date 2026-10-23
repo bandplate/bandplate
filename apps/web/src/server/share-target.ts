@@ -88,6 +88,17 @@ export function sharePath(facts: ShareTargetFacts | undefined): string | undefin
   }
 }
 
+/**
+ * Whether the target's link may be made PUBLIC: a take or an event that may
+ * be shared at all. Never a song: a song page is the band's whole history of
+ * it, and public sharing was asked for one recording or one session at a
+ * time. Everything `sharePath` refuses stays refused (a private take, an
+ * archived event, a personal day with no band take).
+ */
+export function mayBePublic(facts: ShareTargetFacts | undefined): boolean {
+  return facts !== undefined && facts.kind !== "song" && sharePath(facts) !== undefined;
+}
+
 export interface SharePreview {
   title: string;
   description: string;

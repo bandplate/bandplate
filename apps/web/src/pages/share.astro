@@ -3,11 +3,14 @@
 // first use. Called by the `ShareButton` island in the background once its
 // page is idle, so the tap itself never waits on it.
 //
-// In: form fields `kind` (`song` | `event` | `take`) and `id`.
-// Out: `200 {"url": "/s/<code>"}`, a PATH (the island makes it absolute with
-// its own origin); `404 {"error": "not_found"}` for a target that does not
-// exist or may not be shared (a private take, even its owner's); `400` for a
-// malformed request.
+// In: form fields `kind` (`song` | `event` | `take`) and `id`, and
+// optionally `public`: "1" makes the link public (a signed-out visitor gets
+// the page and can listen), "0" a members' link again; absent leaves it.
+// Out: `200 {"url": "/s/<code>", "public": bool, "canBePublic": bool}`, the
+// url a PATH (the island makes it absolute with its own origin); `404
+// {"error": "not_found"}` for a target that does not exist or may not be
+// shared (a private take, even its owner's); `400` for a malformed request,
+// including asking to make a song public.
 //
 // Signed in only (the middleware's member guard), and the same origin check
 // every mutating page makes, here as well as in the middleware backstop.
@@ -47,12 +50,12 @@ try {
 
 const result = await createShareLink(
   appDeps.db,
-  { kind: formData.get("kind"), id: formData.get("id") },
+  { kind: formData.get("kind"), id: formData.get("id"), public: formData.get("public") },
   appDeps.clock.now(),
 );
 
 if (result.kind === "ok") {
-  return json({ url: result.url }, 200);
+  return json({ url: result.url, public: result.public, canBePublic: result.canBePublic }, 200);
 }
 return json({ error: result.kind }, result.kind === "not_found" ? 404 : 400);
 ---

@@ -142,4 +142,58 @@ describe("share links, end to end against the repos", () => {
       description: "Take 2, zkouška, 8. července 2026",
     });
   });
+
+  describe("public links", () => {
+    it("a new link is a members' link, and says whether it could be public", async () => {
+      expect(await createShareLink(db, { kind: "take", id: takeId }, NOW)).toMatchObject({
+        kind: "ok",
+        public: false,
+        canBePublic: true,
+      });
+      expect(await createShareLink(db, { kind: "song", id: songId }, NOW)).toMatchObject({
+        kind: "ok",
+        public: false,
+        canBePublic: false,
+      });
+    });
+
+    it("turns a take's link public and back, keeping the same code", async () => {
+      const on = await createShareLink(db, { kind: "take", id: takeId, public: "1" }, NOW);
+      expect(on).toMatchObject({ kind: "ok", public: true });
+      const code = on.kind === "ok" ? on.url.slice(3) : "";
+      expect((await resolveShareCode(db, code, "cs"))?.public).toBe(true);
+      // Asking again without `public` reports the state rather than changing it.
+      expect(await createShareLink(db, { kind: "take", id: takeId }, NOW)).toMatchObject({
+        public: true,
+      });
+
+      const off = await createShareLink(db, { kind: "take", id: takeId, public: "0" }, NOW);
+      expect(off).toMatchObject({ kind: "ok", url: on.kind === "ok" ? on.url : "", public: false });
+      expect((await resolveShareCode(db, code, "cs"))?.public).toBe(false);
+    });
+
+    it("an event's link can be public", async () => {
+      expect(
+        await createShareLink(db, { kind: "event", id: eventId, public: "1" }, NOW),
+      ).toMatchObject({ kind: "ok", public: true });
+    });
+
+    it("refuses to make a song public, and a private take stays not found", async () => {
+      expect(await createShareLink(db, { kind: "song", id: songId, public: "1" }, NOW)).toEqual({
+        kind: "invalid",
+      });
+      expect(
+        await createShareLink(db, { kind: "take", id: privateTakeId, public: "1" }, NOW),
+      ).toEqual({ kind: "not_found" });
+      expect(await createShareLink(db, { kind: "take", id: takeId, public: "yes" }, NOW)).toEqual({
+        kind: "invalid",
+      });
+    });
+
+    it("a song link made public by hand still is not public", async () => {
+      const code = await codeOf("song", songId);
+      await shareLinksRepo.setPublic(db, "song", songId, NOW);
+      expect((await resolveShareCode(db, code, "cs"))?.public).toBe(false);
+    });
+  });
 });

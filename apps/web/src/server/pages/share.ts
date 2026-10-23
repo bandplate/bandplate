@@ -7,6 +7,7 @@ import { type Db, eventsRepo, shareLinksRepo, songsRepo, takesRepo } from "@band
 import type { Locale } from "@bandplate/i18n";
 import { z } from "zod";
 import {
+  mayBePublic,
   type SharePreview,
   type ShareTargetFacts,
   sharePath,
@@ -58,41 +59,71 @@ export async function loadShareTarget(
 const createShareSchema = z.object({
   kind: z.enum(["song", "event", "take"]),
   id: z.string().min(1).max(200),
+  /** Absent: leave the link as it is. "1" makes it public, "0" a members' link again. */
+  public: z.enum(["1", "0"]).optional(),
 });
 
 export type CreateShareLinkResult =
-  | { kind: "ok"; url: string }
+  | {
+      kind: "ok";
+      url: string;
+      /** Whether a signed-out visitor gets the page itself. */
+      public: boolean;
+      /** Whether this target's link may be made public at all (`mayBePublic`). */
+      canBePublic: boolean;
+    }
   | { kind: "invalid" }
   | { kind: "not_found" };
 
 /**
- * The target's short link, made on first use. `not_found` both for a target
- * that does not exist and for one that may not be shared (a private take, a
- * personal day nobody can open), so the two cannot be told apart.
+ * The target's short link, made on first use, and made public or not when
+ * asked. `not_found` both for a target that does not exist and for one that
+ * may not be shared (a private take, a personal day nobody can open), so the
+ * two cannot be told apart. Asking to make public what may not be (a song)
+ * is `invalid`: the button never offers it, so only a hand-made request gets
+ * there.
  */
 export async function createShareLink(
   db: Db,
-  input: { kind: unknown; id: unknown },
+  input: { kind: unknown; id: unknown; public?: unknown },
   now: number,
 ): Promise<CreateShareLinkResult> {
-  const parsed = createShareSchema.safeParse(input);
+  const parsed = createShareSchema.safeParse({ ...input, public: input.public ?? undefined });
   if (!parsed.success) {
     return { kind: "invalid" };
   }
   const { kind, id } = parsed.data;
+  const wanted = parsed.data.public === undefined ? undefined : parsed.data.public === "1";
   const facts = await loadShareTarget(db, kind, id);
   if (sharePath(facts) === undefined) {
     return { kind: "not_found" };
   }
-  const code = await shareLinksRepo.getOrCreate(db, kind, id, now);
-  return { kind: "ok", url: `/s/${code}` };
+  const canBePublic = mayBePublic(facts);
+  if (wanted !== undefined && !canBePublic) {
+    return { kind: "invalid" };
+  }
+  const existing = await shareLinksRepo.getByTarget(db, kind, id);
+  const code = existing?.code ?? (await shareLinksRepo.getOrCreate(db, kind, id, now));
+  if (wanted !== undefined) {
+    await shareLinksRepo.setPublic(db, kind, id, wanted ? now : null);
+  }
+  const isPublic = wanted ?? (existing !== undefined && existing.publicAt !== null);
+  return { kind: "ok", url: `/s/${code}`, public: isPublic, canBePublic };
 }
 
 export interface ResolvedShare {
+  kind: shareLinksRepo.ShareKind;
+  targetId: string;
   /** Where a signed-in member is sent: the target's current page. */
   path: string;
   /** What a signed-out visitor's link preview may say. */
   preview: SharePreview;
+  /**
+   * Whether a signed-out visitor gets the page itself rather than a sign-in
+   * card: the link was made public AND its target still may be. A link made
+   * public before its event was archived is a members' link from then on.
+   */
+  public: boolean;
 }
 
 /**
@@ -118,5 +149,11 @@ export async function resolveShareCode(
   if (path === undefined || preview === undefined) {
     return undefined;
   }
-  return { path, preview };
+  return {
+    kind: link.kind,
+    targetId: link.targetId,
+    path,
+    preview,
+    public: link.publicAt !== null && mayBePublic(facts),
+  };
 }

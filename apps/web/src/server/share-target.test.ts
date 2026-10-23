@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type ShareTargetFacts, sharePath, sharePreview } from "./share-target.js";
+import { mayBePublic, type ShareTargetFacts, sharePath, sharePreview } from "./share-target.js";
 
 // 8 July 2026, midday, so the date reads the same in any test machine's zone.
 const JULY_8 = new Date(2026, 6, 8, 12, 0, 0).getTime();
@@ -163,5 +163,28 @@ describe("sharePreview", () => {
     for (const preview of all) {
       expect(preview?.description).not.toContain("—");
     }
+  });
+});
+
+describe("mayBePublic", () => {
+  it("allows a band take and an open event", () => {
+    expect(mayBePublic(take())).toBe(true);
+    expect(mayBePublic({ kind: "event", event: rehearsal, takeCount: 2 })).toBe(true);
+  });
+
+  it("never a song, though a song may be shared with the band", () => {
+    expect(sharePath(song)).toBeDefined();
+    expect(mayBePublic(song)).toBe(false);
+  });
+
+  it("never anything sharePath refuses", () => {
+    expect(mayBePublic(take({ visibility: "private" }))).toBe(false);
+    expect(
+      mayBePublic({ kind: "event", event: { ...rehearsal, archivedAt: JULY_8 }, takeCount: 2 }),
+    ).toBe(false);
+    expect(
+      mayBePublic({ kind: "event", event: { ...rehearsal, kind: "personal" }, takeCount: 0 }),
+    ).toBe(false);
+    expect(mayBePublic(undefined)).toBe(false);
   });
 });

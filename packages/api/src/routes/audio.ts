@@ -35,7 +35,7 @@ export interface AudioRouteDeps {
  * in the window the request lands — so the actual signed TTL is 6h, and
  * every request within a given hour gets a byte-identical Location.
  */
-const DOWNLOAD_URL_MIN_VALIDITY_SECONDS = 5 * 60 * 60;
+export const DOWNLOAD_URL_MIN_VALIDITY_SECONDS = 5 * 60 * 60;
 
 /**
  * The ceiling on how long a browser may reuse one of these 302s.
@@ -52,7 +52,7 @@ const DOWNLOAD_URL_MIN_VALIDITY_SECONDS = 5 * 60 * 60;
  * never drift apart again. Half of it, so a redirect served at the very end
  * of its cache lifetime still has hours of signature left to play with.
  */
-const REDIRECT_CACHE_MAX_SECONDS = Math.floor(DOWNLOAD_URL_MIN_VALIDITY_SECONDS / 2);
+export const REDIRECT_CACHE_MAX_SECONDS = Math.floor(DOWNLOAD_URL_MIN_VALIDITY_SECONDS / 2);
 
 /**
  * The filename a member sees in their Downloads folder. Built from what the
@@ -100,6 +100,23 @@ function contentDisposition(filename: string): string {
       .replace(/[^\x20-\x7E]/g, "")
       .trim() || "take";
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(safe)}`;
+}
+
+/**
+ * The ready peaks row describing ONE audio asset, among its take's assets:
+ * the same instrument (none for a master). Peaks are per audio asset; see
+ * `peaksStorageKey`'s comment for why that is not per take.
+ */
+export function peaksFor(
+  audio: assetsRepo.Asset,
+  siblings: assetsRepo.Asset[],
+): assetsRepo.Asset | undefined {
+  return siblings.find(
+    (a) =>
+      a.kind === "peaks" &&
+      a.status === "ready" &&
+      (a.instrumentId ?? null) === (audio.kind === "stem" ? audio.instrumentId : null),
+  );
 }
 
 export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps): void {
@@ -227,16 +244,7 @@ export function registerAudioRoutes(router: GuardedRouter, deps: AudioRouteDeps)
       return errorResponse(c, 404, "not_found", "Asset not found.");
     }
 
-    // The peaks row describing THIS source: same take, and the same
-    // instrument (null for a master). Peaks are per audio asset — see
-    // `peaksStorageKey`'s comment for why that is not per take.
-    const siblings = await assetsRepo.listByTake(deps.db, audio.takeId);
-    const peaks = siblings.find(
-      (a) =>
-        a.kind === "peaks" &&
-        a.status === "ready" &&
-        (a.instrumentId ?? null) === (audio.kind === "stem" ? audio.instrumentId : null),
-    );
+    const peaks = peaksFor(audio, await assetsRepo.listByTake(deps.db, audio.takeId));
     if (!peaks) {
       return errorResponse(c, 404, "not_found", "No waveform for this asset.");
     }

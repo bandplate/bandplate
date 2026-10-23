@@ -681,6 +681,13 @@ export const shareLinks = sqliteTable(
     kind: text("kind", { enum: ["song", "event", "take"] }).notNull(),
     targetId: text("target_id").notNull(),
     createdAt: ts("created_at").notNull(),
+    // When a member made this link PUBLIC: a signed-out visitor gets the page
+    // and its audio instead of a sign-in card. NULL is a members' link, which
+    // every link was before this column existed and every new one is until
+    // someone turns it on. Turning it off sets NULL again, so a link already
+    // sent goes back to asking for a sign-in. Takes and events only;
+    // `server/pages/share.ts` refuses it for a song.
+    publicAt: ts("public_at"),
   },
   (t) => [uniqueIndex("share_links_kind_target_id_idx").on(t.kind, t.targetId)],
 );

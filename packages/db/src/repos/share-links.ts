@@ -74,17 +74,55 @@ export async function getOrCreate(
   throw new Error(`no free share code after ${MAX_CODE_ATTEMPTS} attempts`);
 }
 
-/** Which target a code names, or undefined for a code nobody issued. */
+/**
+ * Which target a code names, and whether it is public (`publicAt` set), or
+ * undefined for a code nobody issued.
+ */
 export async function resolve(
   db: Db,
   code: string,
-): Promise<{ kind: ShareKind; targetId: string } | undefined> {
+): Promise<{ kind: ShareKind; targetId: string; publicAt: number | null } | undefined> {
   const [row] = await db
-    .select({ kind: shareLinks.kind, targetId: shareLinks.targetId })
+    .select({ kind: shareLinks.kind, targetId: shareLinks.targetId, publicAt: shareLinks.publicAt })
     .from(shareLinks)
     .where(eq(shareLinks.code, code))
     .limit(1);
   return row;
+}
+
+/** The target's link and whether it is public, or undefined when it was never shared. */
+export async function getByTarget(
+  db: Db,
+  kind: ShareKind,
+  targetId: string,
+): Promise<{ code: string; publicAt: number | null } | undefined> {
+  const [row] = await db
+    .select({ code: shareLinks.code, publicAt: shareLinks.publicAt })
+    .from(shareLinks)
+    .where(and(eq(shareLinks.kind, kind), eq(shareLinks.targetId, targetId)))
+    .limit(1);
+  return row;
+}
+
+/**
+ * Makes the target's link public (`publicAt` a time) or a members' link
+ * again (`null`). The link itself, and so the code already sent, stays the
+ * same either way: what changes is what a signed-out visitor gets. Nothing
+ * happens when the target has no link; `getOrCreate` it first.
+ *
+ * Whether the target may be public at all (a band take, an open event, never
+ * a song) is the caller's rule, as with sharing itself.
+ */
+export async function setPublic(
+  db: Db,
+  kind: ShareKind,
+  targetId: string,
+  publicAt: number | null,
+): Promise<void> {
+  await db
+    .update(shareLinks)
+    .set({ publicAt })
+    .where(and(eq(shareLinks.kind, kind), eq(shareLinks.targetId, targetId)));
 }
 
 /**

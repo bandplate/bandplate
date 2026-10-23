@@ -20,7 +20,11 @@ describe("shareLinksRepo", () => {
   it("makes a ten-character code and resolves it back to the target", async () => {
     const code = await shareLinksRepo.getOrCreate(db, "song", "song-1", NOW);
     expect(code).toMatch(/^[0-9A-Za-z]{10}$/);
-    expect(await shareLinksRepo.resolve(db, code)).toEqual({ kind: "song", targetId: "song-1" });
+    expect(await shareLinksRepo.resolve(db, code)).toEqual({
+      kind: "song",
+      targetId: "song-1",
+      publicAt: null,
+    });
   });
 
   it("hands out the same code for the same target every time", async () => {
@@ -59,6 +63,7 @@ describe("shareLinksRepo", () => {
     expect(await shareLinksRepo.resolve(db, "AAAAAAAAAA")).toEqual({
       kind: "song",
       targetId: "song-1",
+      publicAt: null,
     });
   });
 
@@ -81,11 +86,69 @@ describe("shareLinksRepo", () => {
     expect(await shareLinksRepo.resolve(db, keep)).toBeDefined();
   });
 
+  describe("public links", () => {
+    it("a new link is a members' link", async () => {
+      await shareLinksRepo.getOrCreate(db, "take", "take-1", NOW);
+      expect((await shareLinksRepo.getByTarget(db, "take", "take-1"))?.publicAt).toBeNull();
+    });
+
+    it("setPublic turns a link public and back without changing its code", async () => {
+      const code = await shareLinksRepo.getOrCreate(db, "take", "take-1", NOW);
+      await shareLinksRepo.setPublic(db, "take", "take-1", NOW + 5);
+      expect(await shareLinksRepo.resolve(db, code)).toMatchObject({ publicAt: NOW + 5 });
+      await shareLinksRepo.setPublic(db, "take", "take-1", null);
+      expect(await shareLinksRepo.getByTarget(db, "take", "take-1")).toEqual({
+        code,
+        publicAt: null,
+      });
+    });
+
+    it("setPublic touches only that target's link", async () => {
+      await shareLinksRepo.getOrCreate(db, "take", "take-1", NOW);
+      const other = await shareLinksRepo.getOrCreate(db, "event", "take-1", NOW);
+      await shareLinksRepo.setPublic(db, "take", "take-1", NOW);
+      expect(await shareLinksRepo.resolve(db, other)).toMatchObject({ publicAt: null });
+    });
+
+    it("setPublic on a target with no link makes none", async () => {
+      await shareLinksRepo.setPublic(db, "take", "never-shared", NOW);
+      expect(await db.select().from(shareLinks)).toHaveLength(0);
+    });
+
+    it("getByTarget is undefined for a target never shared", async () => {
+      expect(await shareLinksRepo.getByTarget(db, "event", "nope")).toBeUndefined();
+    });
+  });
+
   describe("moveToTarget", () => {
+    it("a public link stays public when it moves to the survivor", async () => {
+      const code = await shareLinksRepo.getOrCreate(db, "event", "old", NOW);
+      await shareLinksRepo.setPublic(db, "event", "old", NOW);
+      await shareLinksRepo.moveToTarget(db, "event", "old", "new");
+      expect(await shareLinksRepo.resolve(db, code)).toEqual({
+        kind: "event",
+        targetId: "new",
+        publicAt: NOW,
+      });
+    });
+
+    it("the survivor's own link decides when both had one", async () => {
+      const oldCode = await shareLinksRepo.getOrCreate(db, "event", "old", NOW);
+      await shareLinksRepo.setPublic(db, "event", "old", NOW);
+      await shareLinksRepo.getOrCreate(db, "event", "new", NOW);
+      await shareLinksRepo.moveToTarget(db, "event", "old", "new");
+      expect(await shareLinksRepo.resolve(db, oldCode)).toBeUndefined();
+      expect((await shareLinksRepo.getByTarget(db, "event", "new"))?.publicAt).toBeNull();
+    });
+
     it("re-points the link when the new target has none", async () => {
       const code = await shareLinksRepo.getOrCreate(db, "event", "old", NOW);
       await shareLinksRepo.moveToTarget(db, "event", "old", "new");
-      expect(await shareLinksRepo.resolve(db, code)).toEqual({ kind: "event", targetId: "new" });
+      expect(await shareLinksRepo.resolve(db, code)).toEqual({
+        kind: "event",
+        targetId: "new",
+        publicAt: null,
+      });
     });
 
     it("drops the old link when the new target already has one", async () => {
@@ -96,6 +159,7 @@ describe("shareLinksRepo", () => {
       expect(await shareLinksRepo.resolve(db, newCode)).toEqual({
         kind: "event",
         targetId: "new",
+        publicAt: null,
       });
     });
 

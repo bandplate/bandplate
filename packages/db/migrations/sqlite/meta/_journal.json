@@ -92,6 +92,13 @@
       "when": 1791530130946,
       "tag": "0012_add_share_links",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1792740740928,
+      "tag": "0013_add_share_link_public",
+      "breakpoints": true
     }
   ]
 }

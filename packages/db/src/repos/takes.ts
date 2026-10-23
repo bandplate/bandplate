@@ -69,6 +69,15 @@ export function isVotable(take: VisibilityFacts): boolean {
 }
 
 /**
+ * Whether the take is still a draft: created (by hand, or by an ingest still
+ * uploading) and not yet published. It stays out of the band's sight until
+ * someone presses Publish, and out of a public link's for as long.
+ */
+export function isDraft(take: { state: TakeState }): boolean {
+  return take.state === "uploading" || take.state === "new";
+}
+
+/**
  * The distinct song ids of these takes, songless ones dropped.
  *
  * Every loader that renders a list of takes needs this to hydrate the titles,

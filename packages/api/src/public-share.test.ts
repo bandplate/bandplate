@@ -31,6 +31,7 @@ async function seedTake(testApp: TestApp, slug = "public-song", eventId?: string
   const take = await takesRepo.create(testApp.db, {
     songId: song.id,
     eventId: eventId ?? (event?.id as string),
+    state: "published",
     recordedAt: now,
     createdAt: now,
     updatedAt: now,
@@ -250,6 +251,18 @@ describe("public share routes", () => {
 
       expect((await get(`/public/${code}/assets/${master.id}/audio`)).status).toBe(404);
     });
+  });
+
+  it("refuses a draft take, by its own link or its event's", async () => {
+    testApp = await buildTestApp();
+    const { take, eventId, master } = await seedTake(testApp);
+    await takesRepo.setState(testApp.db, take.id, "new", testApp.clock.now());
+    const takeCode = await publicLink(testApp, "take", take.id);
+    const eventCode = await publicLink(testApp, "event", eventId);
+
+    expect((await get(`/public/${takeCode}/assets/${master.id}/audio`)).status).toBe(404);
+    expect((await get(`/public/${eventCode}/assets/${master.id}/audio`)).status).toBe(404);
+    expect((await get(`/public/${eventCode}/takes/${take.id}/sources`)).status).toBe(404);
   });
 
   it("a song link opens nothing here, public or not", async () => {

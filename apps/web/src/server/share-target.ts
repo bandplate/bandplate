@@ -7,6 +7,7 @@
 // them, and the one rule that matters most (a private take is never shared,
 // not even its title) cannot drift between the endpoint that makes a code,
 // the redirect that follows one, and the preview a crawler sees.
+import { takesRepo } from "@bandplate/db";
 import { formatLongDate, type Locale, messages } from "@bandplate/i18n";
 import { factsLine, takeNote } from "./format.js";
 
@@ -47,6 +48,7 @@ export type ShareTargetFacts =
       take: {
         id: string;
         visibility: "private" | "band";
+        state: takesRepo.TakeState;
         label: string | null;
         recordedAt: number;
       };
@@ -93,10 +95,15 @@ export function sharePath(facts: ShareTargetFacts | undefined): string | undefin
  * be shared at all. Never a song: a song page is the band's whole history of
  * it, and public sharing was asked for one recording or one session at a
  * time. Everything `sharePath` refuses stays refused (a private take, an
- * archived event, a personal day with no band take).
+ * archived event, a personal day with no band take), and so does a DRAFT
+ * take: the band itself has not been shown it yet, so a stranger is not
+ * either. (Sharing one with the band stays allowed, as it always was.)
  */
 export function mayBePublic(facts: ShareTargetFacts | undefined): boolean {
-  return facts !== undefined && facts.kind !== "song" && sharePath(facts) !== undefined;
+  if (facts === undefined || facts.kind === "song" || sharePath(facts) === undefined) {
+    return false;
+  }
+  return facts.kind !== "take" || !takesRepo.isDraft(facts.take);
 }
 
 export interface SharePreview {

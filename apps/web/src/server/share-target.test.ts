@@ -34,6 +34,7 @@ function take(overrides: Partial<Extract<ShareTargetFacts, { kind: "take" }>["ta
     take: {
       id: "t1",
       visibility: "band" as const,
+      state: "published" as const,
       label: "take 2",
       recordedAt: JULY_8,
       ...overrides,
@@ -175,6 +176,14 @@ describe("mayBePublic", () => {
   it("never a song, though a song may be shared with the band", () => {
     expect(sharePath(song)).toBeDefined();
     expect(mayBePublic(song)).toBe(false);
+  });
+
+  it("never a draft take, though the band may still share one among itself", () => {
+    for (const state of ["new", "uploading"] as const) {
+      expect(sharePath(take({ state }))).toBe("/takes/t1");
+      expect(mayBePublic(take({ state }))).toBe(false);
+    }
+    expect(mayBePublic(take({ state: "keeper" }))).toBe(true);
   });
 
   it("never anything sharePath refuses", () => {

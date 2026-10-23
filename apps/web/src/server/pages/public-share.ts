@@ -186,7 +186,9 @@ async function loadEvent(
   if (!event) {
     return undefined;
   }
-  const takes = paged.rows;
+  // Drafts stay out: the band has not been shown them yet, so a stranger is
+  // not either, and the public audio routes refuse them too.
+  const takes = paged.rows.filter((take) => !takesRepo.isDraft(take));
   const takeIds = takes.map((take) => take.id);
   const [songs, instrumentsByTake, masters] = await Promise.all([
     songsRepo.getByIds(db, takesRepo.songIdsOf(takes)),
@@ -209,7 +211,7 @@ async function loadEvent(
     summary: factsLine(
       [
         event.title?.trim() ? formatLongDate(locale, event.heldAt) : null,
-        t.takes.count(paged.total),
+        t.takes.count(takes.length),
       ],
       locale,
     ),

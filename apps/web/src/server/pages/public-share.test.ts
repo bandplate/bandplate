@@ -55,6 +55,7 @@ describe("loadPublicShare", () => {
         eventId,
         label: "take 2",
         notes: "the bridge drags",
+        state: "published",
         durationMs: 224_000,
         recordedAt: NOW,
         instrumentIds: [bass.id],
@@ -66,6 +67,7 @@ describe("loadPublicShare", () => {
       await takesRepo.create(db, {
         songId,
         eventId,
+        state: "keeper",
         recordedAt: NOW + 1,
         createdAt: NOW,
         updatedAt: NOW,
@@ -140,6 +142,32 @@ describe("loadPublicShare", () => {
     const view = await loadPublicShare(db, await publicCode("event", eventId), "cs");
     expect(view?.kind === "event" && view.title).toBe("8. července 2026");
     expect(view?.kind === "event" && view.summary).not.toContain("července");
+  });
+
+  it("never shows or lists a draft take", async () => {
+    const draftId = (
+      await takesRepo.create(db, {
+        songId,
+        eventId,
+        state: "new",
+        recordedAt: NOW + 3,
+        createdAt: NOW,
+        updatedAt: NOW,
+      })
+    ).id;
+    // The band may share a draft among itself; it cannot be made public.
+    expect(await createShareLink(db, { kind: "take", id: draftId, public: "1" }, NOW)).toEqual({
+      kind: "invalid",
+    });
+    const members = await createShareLink(db, { kind: "take", id: draftId }, NOW);
+    expect(members).toMatchObject({ kind: "ok", canBePublic: false });
+    await shareLinksRepo.setPublic(db, "take", draftId, NOW);
+    const code = members.kind === "ok" ? members.url.slice(3) : "";
+    expect(await loadPublicShare(db, code, "cs")).toBeUndefined();
+
+    const view = await loadPublicShare(db, await publicCode("event", eventId), "cs");
+    expect(view?.kind === "event" && view.takes.map((row) => row.take.id)).not.toContain(draftId);
+    expect(view?.kind === "event" && view.summary).toContain("2 nahrávky");
   });
 
   it("carries no venue, notes or member name, for a take or an event", async () => {

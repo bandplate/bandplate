@@ -31,7 +31,7 @@ import { canPublish, hasAllScopes } from "@bandplate/core";
 // to morph into it, and the owner found titles sliding between pages
 // obtrusive. The page cross-fades like every other.
 import type { assetsRepo } from "@bandplate/db";
-import { instrumentsRepo, songsRepo } from "@bandplate/db";
+import { instrumentsRepo, songsRepo, takesRepo } from "@bandplate/db";
 import {
   formatBytes,
   formatLongDate,
@@ -240,7 +240,7 @@ const publishBlocked = Astro.url.searchParams.get("nothing_to_play") === "1";
 // takes. So it stays out of sight until someone says it is ready —
 // see `setTakePublished` for why that is a press rather than a side effect
 // of the first file landing.
-const isDraft = take.state === "uploading" || take.state === "new";
+const isDraft = takesRepo.isDraft(take);
 const readyToPublish = canPublish(assets);
 const recordedAtDate = new Date(take.recordedAt);
 const recordedAtValue = `${recordedAtDate.getFullYear()}-${String(recordedAtDate.getMonth() + 1).padStart(2, "0")}-${String(recordedAtDate.getDate()).padStart(2, "0")}`;

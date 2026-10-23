@@ -36,13 +36,15 @@ export interface PublicShareRouteDeps {
 
 /**
  * Whether a PUBLIC link opens this take: the take itself, or a take of the
- * event it names. Always a band take, and never through an archived event
+ * event it names. Always a band take that is not a draft (the band has not
+ * been shown a draft yet, so a stranger is not either), and never through an
+ * archived event
  * (a merge archives the event it empties and moves its link to the
  * survivor, so the shell must not keep playing).
  *
  * The rules are `apps/web`'s `sharePath` for the same targets, restated
- * because the API does not import the web app: band takes only, no archived
- * event. A personal day with no band take cannot reach here, since there is
+ * because the API does not import the web app: band takes only, no draft,
+ * no archived event. A personal day with no band take cannot reach here, since there is
  * no band take of it to ask for.
  */
 export async function takeOpenedByPublicLink(
@@ -57,7 +59,13 @@ export async function takeOpenedByPublicLink(
     shareLinksRepo.resolve(db, code),
     takesRepo.getById(db, takeId),
   ]);
-  if (!link || link.publicAt === null || !take || take.visibility !== "band") {
+  if (
+    !link ||
+    link.publicAt === null ||
+    !take ||
+    take.visibility !== "band" ||
+    takesRepo.isDraft(take)
+  ) {
     return undefined;
   }
   switch (link.kind) {

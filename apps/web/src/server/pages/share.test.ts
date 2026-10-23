@@ -37,6 +37,7 @@ describe("share links, end to end against the repos", () => {
         songId,
         eventId,
         label: "take 2",
+        state: "published",
         recordedAt: NOW,
         createdAt: NOW,
         updatedAt: NOW,

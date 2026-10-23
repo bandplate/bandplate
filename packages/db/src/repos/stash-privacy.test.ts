@@ -540,6 +540,7 @@ const WRITE = "write, not a read";
 const takesAllowed: AllowFor<typeof takesRepo> = {
   isVisibleTo: "pure predicate: the by-id half of this same rule",
   isVotable: "pure predicate over one take",
+  isDraft: "pure predicate over one take",
   songIdsOf: "pure projection over rows the caller already has",
   hasAllInstruments: "SQL condition builder, exercised through listByInstruments/search/songs",
   create: WRITE,

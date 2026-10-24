@@ -10,8 +10,12 @@ import {
 } from "@bandplate/db";
 import { createTestDb } from "@bandplate/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
-import { loadPublicShare } from "./public-share.js";
-import { createShareLink } from "./share.js";
+import {
+  loadPublicShare,
+  PREVIEW_SONGS_MAX_CHARS,
+  publicEventDescription,
+} from "./public-share.js";
+import { createShareLink, resolveShareCode } from "./share.js";
 
 const NOW = new Date(2026, 6, 8, 12).getTime();
 
@@ -170,6 +174,34 @@ describe("loadPublicShare", () => {
     expect(view?.kind === "event" && view.summary).toContain("2 nahrávky");
   });
 
+  it("names what was played in a public event's preview, and nothing a draft or a members' link would", async () => {
+    const secretSong = await songsRepo.create(db, {
+      title: "Tajná",
+      slug: "tajna",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await takesRepo.create(db, {
+      songId: secretSong.id,
+      eventId,
+      state: "new",
+      recordedAt: NOW + 3,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    const code = await publicCode("event", eventId);
+    const view = await loadPublicShare(db, code, "cs");
+    // Two takes of one song: named once, and nothing "more" to count.
+    expect(view?.preview.description).toMatch(/8\. července 2026: Čoudy$/);
+    expect(view?.preview.description).not.toContain("Tajná");
+
+    const members = await createShareLink(db, { kind: "event", id: eventId }, NOW);
+    await shareLinksRepo.setPublic(db, "event", eventId, null);
+    const resolved = await resolveShareCode(db, code, "cs");
+    expect(members.kind).toBe("ok");
+    expect(resolved?.preview.description).not.toContain("Čoudy");
+  });
+
   it("carries no venue, notes or member name, for a take or an event", async () => {
     for (const code of [await publicCode("take", takeId), await publicCode("event", eventId)]) {
       const serialized = JSON.stringify(await loadPublicShare(db, code, "cs"));
@@ -197,5 +229,43 @@ describe("loadPublicShare", () => {
     const code = await publicCode("event", eventId);
     await eventsRepo.update(db, eventId, { archivedAt: NOW + 1, updatedAt: NOW + 1 });
     expect(await loadPublicShare(db, code, "cs")).toBeUndefined();
+  });
+});
+
+describe("publicEventDescription", () => {
+  const base = "Zkouška, 22. října 2026";
+
+  it("is the base line alone when nothing has a name", () => {
+    expect(publicEventDescription(base, [], "cs")).toBe(base);
+    expect(publicEventDescription(base, [undefined, "  "], "cs")).toBe(base);
+  });
+
+  it("names every song when they fit", () => {
+    expect(publicEventDescription(base, ["Čoudy", "Sloka", "Čoudy"], "cs")).toBe(
+      `${base}: Čoudy, Sloka`,
+    );
+  });
+
+  it("counts the songs left out, with an unnamed take as one more", () => {
+    const names = ["A", "B", "C", "D", "E", "F", "G", "A", undefined];
+    expect(publicEventDescription(base, names, "cs")).toBe(`${base}: A, B, C, D, E a 3 další`);
+    expect(publicEventDescription(base, [...names, "H", "I"], "cs")).toBe(
+      `${base}: A, B, C, D, E a 5 dalších`,
+    );
+    expect(publicEventDescription(base, ["A", "B", "C", "D", "E", "F"], "en")).toBe(
+      `${base}: A, B, C, D, E and 1 more`,
+    );
+  });
+
+  it("stops before the list runs past what a messenger shows", () => {
+    const long = "x".repeat(70);
+    const result = publicEventDescription(base, [`${long}1`, `${long}2`, `${long}3`], "cs");
+    expect(result).toBe(`${base}: ${long}1, ${long}2 a 1 další`);
+    expect(result.length - base.length).toBeLessThan(PREVIEW_SONGS_MAX_CHARS + 20);
+  });
+
+  it("always names the first song, however long", () => {
+    const huge = "y".repeat(PREVIEW_SONGS_MAX_CHARS + 10);
+    expect(publicEventDescription(base, [huge, "B"], "cs")).toBe(`${base}: ${huge} a 1 další`);
   });
 });

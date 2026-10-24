@@ -133,6 +133,11 @@ export const events = {
   // en: `${n} takes, in the order they were played`
   takesInOrder: (count: number): string =>
     `${count} ${plural("cs", count, { one: "nahrávka", few: "nahrávky", many: "nahrávky", other: "nahrávek" })} v pořadí, jak se hrály`,
+  // en: `${names}, and ${more} more`
+  previewSongs: (names: readonly string[], more: number): string =>
+    more > 0
+      ? `${names.join(", ")} a ${more} ${plural("cs", more, { one: "další", few: "další", many: "další", other: "dalších" })}`
+      : names.join(", "),
 
   // en: `Put the ${kind} of ${date} back?`
   //

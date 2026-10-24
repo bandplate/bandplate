@@ -136,6 +136,13 @@ export const events = {
     `${count} ${plural("en", count, { one: "take", other: "takes" })}, in the order they were played`,
 
   /**
+   * The songs a PUBLIC event link's preview names after its date: "Čoudy,
+   * Sloka and 4 more". `more` counts the songs left out, not the takes.
+   */
+  previewSongs: (names: readonly string[], more: number): string =>
+    more > 0 ? `${names.join(", ")} and ${more} more` : names.join(", "),
+
+  /**
    * Naming an event inside a question.
    *
    * The kind and the date arrive as separate parts because English and Czech

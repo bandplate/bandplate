@@ -51,6 +51,9 @@ const IDENTICAL_IS_FINE = new Set<string>([
   // An event kind this map has never heard of passes straight through in
   // every language — that is the point. See `en/events.ts`.
   "events.kindLabel(unknown)",
+  // Every song named and none left over: song titles joined by commas, which
+  // are the band's own words in any language.
+  "events.previewSongs(all)",
   // A date and a running time joined by a comma: the date is already in the
   // reader's language, and a comma is a comma.
   "home.stashLatestWhen(parts)",
@@ -134,6 +137,12 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
   "events.takesInOrder": [
     { label: "one", args: [1] },
     { label: "other", args: [7] },
+  ],
+  "events.previewSongs": [
+    { label: "all", args: [["Čoudy", "Sloka"], 0] },
+    { label: "one-more", args: [["Čoudy"], 1] },
+    { label: "few-more", args: [["Čoudy"], 3] },
+    { label: "other-more", args: [["Čoudy"], 7] },
   ],
   "events.unarchiveConfirmTitle": [
     { label: "p", args: [{ kind: "rehearsal", date: "8 July 2026" }] },

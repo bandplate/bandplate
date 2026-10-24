@@ -31,6 +31,54 @@ import { type ResolvedShare, resolveShareCode } from "./share.js";
  */
 export const PUBLIC_EVENT_TAKES_LIMIT = 200;
 
+/** The most songs a public event's link preview names before "and N more". */
+export const PREVIEW_SONGS_MAX = 5;
+
+/**
+ * The longest the list of names may run. WhatsApp and Signal show a line or
+ * two of the description, and a list cut mid-name by the messenger reads worse
+ * than one that ends on "and N more" by itself.
+ */
+export const PREVIEW_SONGS_MAX_CHARS = 160;
+
+/**
+ * A public event's preview line: its kind and date, then what was played.
+ * "Zkouška, 22. října 2026: Čoudy, Sloka a 4 další".
+ *
+ * Only a PUBLIC link says this. A members' link's preview stays on the title
+ * and one line (`sharePreview`), because whoever holds that code has not been
+ * shown the event.
+ *
+ * `names` are the takes' names in playing order, `undefined` for a take with
+ * neither a song nor a label. A song played three times is named once, and
+ * "N more" counts the songs left out, not the takes; an unnamed take counts
+ * as one more of those but is never a name.
+ */
+export function publicEventDescription(
+  base: string,
+  names: readonly (string | undefined)[],
+  locale: Locale,
+): string {
+  const distinct = [...new Set(names.map((name) => name?.trim()).filter(Boolean))] as string[];
+  const unnamed = names.filter((name) => !name?.trim()).length;
+  const shown: string[] = [];
+  for (const name of distinct) {
+    const length = [...shown, name].join(", ").length;
+    if (
+      shown.length === PREVIEW_SONGS_MAX ||
+      (shown.length > 0 && length > PREVIEW_SONGS_MAX_CHARS)
+    ) {
+      break;
+    }
+    shown.push(name);
+  }
+  if (shown.length === 0) {
+    return base;
+  }
+  const more = distinct.length - shown.length + unnamed;
+  return `${base}: ${messages(locale).events.previewSongs(shown, more)}`;
+}
+
 /** What `PlayToggleButton` needs to hand a take to the player. */
 export interface PublicPlayable {
   takeId: string;
@@ -200,7 +248,17 @@ async function loadEvent(
   return {
     kind: "event",
     code,
-    preview,
+    preview: {
+      ...preview,
+      description: publicEventDescription(
+        preview.description,
+        takes.map((take) => {
+          const song = take.songId ? songById.get(take.songId) : undefined;
+          return song?.title ?? take.label ?? undefined;
+        }),
+        locale,
+      ),
+    },
     kindLabel: t.events.kindLabel(event.kind),
     // Its own title, or its date, the way the member's event page heads it.
     // The kind is the small caps above either way, so it is not repeated

@@ -64,6 +64,14 @@ export function needsDurationFix(mime: string): boolean {
   return baseType(mime) === "audio/webm";
 }
 
+/**
+ * The same fault in the MP4 that MediaRecorder writes where it records one:
+ * the header says the length is 0. See `mp4-duration.ts`.
+ */
+export function needsMp4DurationFix(mime: string): boolean {
+  return baseType(mime) === "audio/mp4";
+}
+
 export type RecorderPhase =
   /** Step 1: choose the song. */
   | "pick"

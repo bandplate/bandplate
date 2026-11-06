@@ -12,11 +12,13 @@ import fixWebmDuration from "fix-webm-duration";
 import { Pause, Play, Trash, X } from "lucide-preact";
 import { useCallback, useEffect, useReducer, useRef, useState } from "preact/hooks";
 import { currentLocale } from "../client/locale.js";
+import { fixMp4Duration } from "../client/mp4-duration.js";
 import {
   formatElapsed,
   initialRecorderState,
   levelFromTimeDomain,
   needsDurationFix,
+  needsMp4DurationFix,
   pickerGroups,
   pickRecorderMime,
   type RecorderError,
@@ -274,6 +276,9 @@ export default function Recorder({
         // An unseekable review beats a lost recording: keep the raw bytes.
         blob = raw;
       }
+    }
+    if (needsMp4DurationFix(mime)) {
+      blob = await fixMp4Duration(raw, durationRef.current).catch(() => raw);
     }
     blobRef.current = blob;
     setReviewUrl(URL.createObjectURL(blob));

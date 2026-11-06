@@ -22,6 +22,8 @@ export const stash = {
   chipWaiting: "Waiting for signal",
   chipSyncing: "Uploading",
   chipFailed: "Couldn't upload",
+  chipRetrying: "Will try again",
+  uploadNow: "Upload now",
   retry: "Try again",
   discardPendingBody: "It is only on this device, so throwing it away loses it for good.",
   /**

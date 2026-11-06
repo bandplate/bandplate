@@ -23,7 +23,9 @@
 // cannot share a component. Same classes, so the styling lives once; change
 // one, change both.
 //
-// A recording the server refused gets its way out here: "Zkusit znovu" only
+// A recording that is only waiting gets "Nahrát teď", which runs the sync at
+// once instead of at the next page load or `online` event; whatever it
+// answers shows on the row's chip. A recording the server refused gets its way out here: "Zkusit znovu" only
 // where another attempt can succeed (`canRetryByHand`), and always "Zahodit",
 // behind a confirm, because throwing it away is the one thing that loses it.
 import {
@@ -50,6 +52,7 @@ import {
   pendingBlob,
   refreshPendingStash,
   retryPending,
+  syncPendingStash,
 } from "../client/stash-sync.js";
 import {
   canRetryByHand,
@@ -178,6 +181,8 @@ export default function StashPendingList({
   const [mounted, setMounted] = useState(false);
   const [discarding, setDiscarding] = useState<PendingSummary | null>(null);
   const [busy, setBusy] = useState(false);
+  /** An "Upload now" press in flight, so a second one does not stack on it. */
+  const [uploading, setUploading] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   /** localId -> object URL. The ref is the truth; the state is what re-renders. */
   const urlsRef = useRef(new Map<string, string>());
@@ -231,6 +236,15 @@ export default function StashPendingList({
     } finally {
       setBusy(false);
       setDiscarding(null);
+    }
+  }
+
+  async function uploadNow() {
+    setUploading(true);
+    try {
+      await syncPendingStash();
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -340,12 +354,17 @@ export default function StashPendingList({
     return () => document.removeEventListener("astro:before-swap", retire);
   }, []);
 
+  // A `waiting` row that has already failed once is not waiting for signal, it
+  // is waiting for the next automatic attempt: saying "no signal" would hide
+  // that the server or the bucket answered with an error.
   const chip = (row: PendingSummary): string =>
     row.status === "failed"
       ? t.chipFailed
       : row.status === "syncing"
         ? t.chipSyncing
-        : t.chipWaiting;
+        : row.attempts > 0
+          ? t.chipRetrying
+          : t.chipWaiting;
 
   // The dialog is always rendered, so opening it never changes the tree the
   // rows sit in; with nothing to discard it is an empty, closed `<dialog>`.
@@ -475,6 +494,18 @@ export default function StashPendingList({
               </div>
               {/* A line of its own, under the facts: on a phone, line two cannot
                 hold the chip, the label, the date AND two buttons. */}
+              {entry.kind === "pending" && row.status === "waiting" && (
+                <div class="bp-stash-row-actions">
+                  <button
+                    type="button"
+                    class="bp-btn bp-btn-secondary bp-btn-sm"
+                    onClick={() => void uploadNow()}
+                    disabled={uploading}
+                  >
+                    {t.uploadNow}
+                  </button>
+                </div>
+              )}
               {entry.kind === "pending" && row.status === "failed" && (
                 <div class="bp-stash-row-actions">
                   {canRetryByHand(row) && (

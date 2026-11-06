@@ -28,6 +28,8 @@ export const stash = {
   chipWaiting: "Čeká na signál", // en: Waiting for signal
   chipSyncing: "Nahrává se", // en: Uploading
   chipFailed: "Nejde nahrát", // en: Couldn't upload
+  chipRetrying: "Zkusí se znovu", // en: Will try again
+  uploadNow: "Nahrát teď", // en: Upload now
   retry: "Zkusit znovu", // en: Try again
   discardPendingBody: "Je jen v tomhle zařízení, takže ji zahodíš natrvalo.", // en: It is only on this device, so throwing it away loses it for good.
   songSection: "Ve tvém šuplíku", // en: In your stash

@@ -60,7 +60,7 @@ async function listKeys(): Promise<string[]> {
     url.searchParams.set("prefix", "takes/");
     if (token) url.searchParams.set("continuation-token", token);
     const res = await client.fetch(url);
-    if (!res.ok) throw new Error(`list: HTTP ${res.status}`);
+    if (!res.ok) throw await refusal("list", res);
     const xml = await res.text();
     for (const m of xml.matchAll(/<Key>([^<]+)<\/Key>/g)) keys.push(m[1] as string);
     token = /<IsTruncated>true<\/IsTruncated>/.test(xml)
@@ -74,8 +74,14 @@ async function head(key: string): Promise<Uint8Array> {
   const res = await client.fetch(objectUrl(key), {
     headers: { range: `bytes=0-${HEAD_BYTES - 1}` },
   });
-  if (!res.ok) throw new Error(`head ${key}: HTTP ${res.status}`);
+  if (!res.ok) throw await refusal(`head ${key}`, res);
   return new Uint8Array(await res.arrayBuffer());
+}
+
+/** The status and the S3 error body: R2 says in it WHY it refused (wrong bucket, bad key, bad endpoint). */
+async function refusal(what: string, res: Response): Promise<Error> {
+  const body = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 300);
+  return new Error(`${what}: HTTP ${res.status} ${body}`);
 }
 
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -118,7 +124,7 @@ for (const key of await listKeys()) {
     }
 
     const res = await client.fetch(objectUrl(key));
-    if (!res.ok) throw new Error(`get: HTTP ${res.status}`);
+    if (!res.ok) throw await refusal("get", res);
     const whole = new Uint8Array(await res.arrayBuffer());
     const expected = Number(res.headers.get("content-length"));
     if (whole.length !== expected) throw new Error(`short read: ${whole.length} of ${expected}`);
@@ -145,7 +151,7 @@ for (const key of await listKeys()) {
       headers: { "content-type": res.headers.get("content-type") ?? "audio/mp4" },
       body: fixed,
     });
-    if (!put.ok) throw new Error(`put: HTTP ${put.status}`);
+    if (!put.ok) throw await refusal("put", put);
 
     const after = await head(key);
     if (withMp4Duration(after, 1000) !== after)

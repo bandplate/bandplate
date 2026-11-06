@@ -61,6 +61,15 @@ export interface PendingStashItem {
    * have none, and `canRetryByHand` treats those as it always did.
    */
   failedAt?: FailurePoint | null;
+  /**
+   * When the timer will try this recording again, after a failure time can
+   * fix. NULL once it has gone up, been given up on, or has not failed yet.
+   * Optional: records saved before it existed have none. It is a promise made
+   * to the member on the row's chip, so it is stored with the item and
+   * survives a closed tab; a page load or the `online` event still tries
+   * earlier, and an "Upload now" press tries at once.
+   */
+  nextAttemptAt?: number | null;
   blob: Blob;
 }
 
@@ -89,6 +98,7 @@ export function newPendingItem(input: NewPendingInput): PendingStashItem {
     attempts: 0,
     lastError: null,
     failedAt: null,
+    nextAttemptAt: null,
   };
 }
 
@@ -195,23 +205,64 @@ export function classifyFailure(failure: Failure): FailureKind {
   return "give-up";
 }
 
+/** Seconds to wait after the 1st, 2nd, 3rd... failed attempt; the last one repeats. */
+const BACKOFF_SECONDS = [15, 60, 300, 900];
+
+/** How long the timer waits after `attempts` failures in a row. */
+export function retryDelayMs(attempts: number): number {
+  const step = Math.min(Math.max(attempts, 1), BACKOFF_SECONDS.length) - 1;
+  return (BACKOFF_SECONDS[step] ?? 900) * 1000;
+}
+
 export function afterFailure<T extends PendingSummary>(
   item: T,
   kind: FailureKind,
   message: string,
   failedAt: FailurePoint | null = null,
+  now: number = Date.now(),
 ): T {
+  const attempts = item.attempts + 1;
   return {
     ...item,
     status: kind === "retry" ? "waiting" : "failed",
-    attempts: item.attempts + 1,
+    attempts,
     lastError: message,
     failedAt,
+    nextAttemptAt: kind === "retry" ? now + retryDelayMs(attempts) : null,
   };
 }
 
 export function retryItem<T extends PendingSummary>(item: T): T {
-  return { ...item, status: "waiting", lastError: null, failedAt: null };
+  return { ...item, status: "waiting", lastError: null, failedAt: null, nextAttemptAt: null };
+}
+
+/**
+ * When the timer should next wake the runner: the earliest promised attempt
+ * among recordings that are waiting, or NULL when nothing has a time.
+ */
+export function nextWakeAt(
+  items: Pick<PendingSummary, "status" | "nextAttemptAt">[],
+): number | null {
+  const times = items.flatMap((item) =>
+    item.status === "waiting" && typeof item.nextAttemptAt === "number" ? [item.nextAttemptAt] : [],
+  );
+  return times.length > 0 ? Math.min(...times) : null;
+}
+
+/**
+ * What the chip says about the next attempt: NULL when no time was promised,
+ * 0 for "in a moment" (a minute or less, which the chip cannot count down
+ * honestly), otherwise whole minutes rounded up.
+ */
+export function retryInMinutes(
+  nextAttemptAt: number | null | undefined,
+  now: number,
+): number | null {
+  if (typeof nextAttemptAt !== "number") {
+    return null;
+  }
+  const left = nextAttemptAt - now;
+  return left <= 60_000 ? 0 : Math.ceil(left / 60_000);
 }
 
 /**

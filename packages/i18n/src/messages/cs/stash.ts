@@ -17,6 +17,8 @@ const RECORDING_FORMS = {
   other: "nahrávek",
 };
 
+const MINUTE_FORMS = { one: "minutu", few: "minuty", many: "minuty", other: "minut" };
+
 export const stash = {
   pill: "Šuplík", // en: Stash
   pillClose: "Zavřít šuplík", // en: Close stash
@@ -28,7 +30,10 @@ export const stash = {
   chipWaiting: "Čeká na signál", // en: Waiting for signal
   chipSyncing: "Nahrává se", // en: Uploading
   chipFailed: "Nejde nahrát", // en: Couldn't upload
-  chipRetrying: "Zkusí se znovu", // en: Will try again
+  chipRetrying: "Zkusí se znovu za chvíli", // en: Will try again in a moment
+  // en: `Will try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}`
+  chipRetryingIn: (minutes: number): string =>
+    `Zkusí se znovu za ${minutes} ${plural("cs", minutes, MINUTE_FORMS)}`,
   uploadNow: "Nahrát teď", // en: Upload now
   retry: "Zkusit znovu", // en: Try again
   discardPendingBody: "Je jen v tomhle zařízení, takže ji zahodíš natrvalo.", // en: It is only on this device, so throwing it away loses it for good.

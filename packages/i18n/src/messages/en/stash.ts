@@ -22,7 +22,9 @@ export const stash = {
   chipWaiting: "Waiting for signal",
   chipSyncing: "Uploading",
   chipFailed: "Couldn't upload",
-  chipRetrying: "Will try again",
+  chipRetrying: "Will try again in a moment",
+  chipRetryingIn: (minutes: number): string =>
+    `Will try again in ${minutes} ${plural("en", minutes, { one: "minute", other: "minutes" })}`,
   uploadNow: "Upload now",
   retry: "Try again",
   discardPendingBody: "It is only on this device, so throwing it away loses it for good.",

@@ -19,6 +19,7 @@ import {
   canRetryByHand,
   classifyFailure,
   nextSyncStep,
+  nextWakeAt,
   ownedBy,
   ownPending,
   type PendingStashItem,
@@ -274,6 +275,37 @@ async function runOnce(): Promise<void> {
     await syncOne(item);
   }
   await refreshPendingStash();
+  await scheduleNextAttempt();
+}
+
+let wakeTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Arms the one timer behind the chip's "will try again in N minutes". Re-read
+ * from IndexedDB, not from the list `runOnce` started with: the attempts that
+ * just ran are what set the new times. At most one timer; every run replaces it.
+ */
+async function scheduleNextAttempt(): Promise<void> {
+  if (wakeTimer !== null) {
+    clearTimeout(wakeTimer);
+    wakeTimer = null;
+  }
+  let wake: number | null;
+  try {
+    wake = nextWakeAt(await listOwnPending());
+  } catch {
+    return;
+  }
+  if (wake === null) {
+    return;
+  }
+  wakeTimer = setTimeout(
+    () => {
+      wakeTimer = null;
+      void syncPendingStash();
+    },
+    Math.max(wake - Date.now(), 1000),
+  );
 }
 
 let running: Promise<void> | null = null;

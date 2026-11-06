@@ -61,6 +61,7 @@ import {
   localPlayId,
   localStashRows,
   type PendingSummary,
+  retryInMinutes,
 } from "../client/stash-sync-logic.js";
 
 interface Props {
@@ -183,6 +184,17 @@ export default function StashPendingList({
   const [busy, setBusy] = useState(false);
   /** An "Upload now" press in flight, so a second one does not stack on it. */
   const [uploading, setUploading] = useState(false);
+  /** The clock the chip's "in N minutes" counts down against; ticks only while a time is promised. */
+  const [now, setNow] = useState(() => Date.now());
+  const countingDown = pending.some((row) => row.status === "waiting" && row.nextAttemptAt);
+  useEffect(() => {
+    if (!countingDown) {
+      return;
+    }
+    setNow(Date.now());
+    const tick = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(tick);
+  }, [countingDown]);
   const dialogRef = useRef<HTMLDialogElement>(null);
   /** localId -> object URL. The ref is the truth; the state is what re-renders. */
   const urlsRef = useRef(new Map<string, string>());
@@ -357,14 +369,19 @@ export default function StashPendingList({
   // A `waiting` row that has already failed once is not waiting for signal, it
   // is waiting for the next automatic attempt: saying "no signal" would hide
   // that the server or the bucket answered with an error.
-  const chip = (row: PendingSummary): string =>
-    row.status === "failed"
-      ? t.chipFailed
-      : row.status === "syncing"
-        ? t.chipSyncing
-        : row.attempts > 0
-          ? t.chipRetrying
-          : t.chipWaiting;
+  const chip = (row: PendingSummary): string => {
+    if (row.status === "failed") {
+      return t.chipFailed;
+    }
+    if (row.status === "syncing") {
+      return t.chipSyncing;
+    }
+    if (row.attempts === 0) {
+      return t.chipWaiting;
+    }
+    const minutes = retryInMinutes(row.nextAttemptAt, now);
+    return minutes === null || minutes === 0 ? t.chipRetrying : t.chipRetryingIn(minutes);
+  };
 
   // The dialog is always rendered, so opening it never changes the tree the
   // rows sit in; with nothing to discard it is an empty, closed `<dialog>`.

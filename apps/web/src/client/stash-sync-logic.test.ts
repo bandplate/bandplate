@@ -7,10 +7,13 @@ import {
   localStashRows,
   newPendingItem,
   nextSyncStep,
+  nextWakeAt,
   ownedBy,
   ownPending,
   type PendingSummary,
   pendingForTake,
+  retryDelayMs,
+  retryInMinutes,
   retryItem,
   shouldSync,
   shouldUploadNow,
@@ -365,5 +368,38 @@ describe("syncedForRender", () => {
 
   it("has nothing to say about an empty store", () => {
     expect(syncedForRender([], 7)).toEqual([]);
+  });
+});
+
+describe("the retry timer", () => {
+  it("backs off 15 s, 1 min, 5 min, then every 15 min", () => {
+    expect([1, 2, 3, 4, 5, 40].map(retryDelayMs)).toEqual([
+      15_000, 60_000, 300_000, 900_000, 900_000, 900_000,
+    ]);
+  });
+  it("promises a time after a failure time can fix, and none after giving up", () => {
+    expect(afterFailure(item(), "retry", "offline", null, 10_000).nextAttemptAt).toBe(25_000);
+    expect(afterFailure(item(), "give-up", "gone", null, 10_000).nextAttemptAt).toBeNull();
+    expect(retryItem(item({ nextAttemptAt: 5 })).nextAttemptAt).toBeNull();
+  });
+  it("wakes at the earliest waiting promise and ignores everything else", () => {
+    expect(nextWakeAt([])).toBeNull();
+    expect(
+      nextWakeAt([
+        { status: "waiting", nextAttemptAt: 90 },
+        { status: "waiting", nextAttemptAt: 40 },
+        { status: "syncing", nextAttemptAt: 10 },
+        { status: "failed", nextAttemptAt: 5 },
+        { status: "waiting", nextAttemptAt: null },
+      ]),
+    ).toBe(40);
+  });
+  it("tells the chip minutes rounded up, and a moment when it is a minute or less", () => {
+    expect(retryInMinutes(undefined, 0)).toBeNull();
+    expect(retryInMinutes(null, 0)).toBeNull();
+    expect(retryInMinutes(60_000, 0)).toBe(0);
+    expect(retryInMinutes(-5, 0)).toBe(0);
+    expect(retryInMinutes(60_001, 0)).toBe(2);
+    expect(retryInMinutes(900_000, 0)).toBe(15);
   });
 });

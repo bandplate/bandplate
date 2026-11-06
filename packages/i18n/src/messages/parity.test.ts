@@ -92,6 +92,11 @@ const FIXTURES: Record<string, { label: string; args: unknown[] }[]> = {
     { label: "few", args: [3] },
     { label: "many", args: [5] },
   ],
+  "stash.chipRetryingIn": [
+    { label: "one", args: [1] },
+    { label: "few", args: [3] },
+    { label: "many", args: [5] },
+  ],
   "stash.recordFor": [{ label: "t", args: ["Čoudy"] }],
   "stash.pageTitle": [{ label: "t", args: ["Čoudy"] }],
   "stash.songAndLength": [{ label: "t", args: ["Čoudy", "2:47"] }],

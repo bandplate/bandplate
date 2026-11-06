@@ -239,7 +239,7 @@ async function syncOne(item: PendingStashItem): Promise<void> {
     // check) refuse it, means the original member never sees a `lastError`
     // for a mismatch that was never theirs to see — the item just waits.
     if (!shouldUploadNow(current, currentMemberId)) {
-      await save({ ...current, status: "waiting" });
+      await save({ ...current, status: "waiting", nextAttemptAt: null });
       return;
     }
     await uploadMaster(current);
@@ -250,7 +250,7 @@ async function syncOne(item: PendingStashItem): Promise<void> {
       // already answered by whoever the cookie now names, and refused. Leave
       // it exactly as it was: queued, no error shown, no attempt counted.
       // It goes up once its own member signs back in on this device.
-      await save({ ...current, status: "waiting" });
+      await save({ ...current, status: "waiting", nextAttemptAt: null });
       return;
     }
     const failure =
@@ -278,6 +278,8 @@ async function runOnce(): Promise<void> {
   await scheduleNextAttempt();
 }
 
+const MIN_WAKE_MS = 15_000;
+
 let wakeTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
@@ -304,7 +306,9 @@ async function scheduleNextAttempt(): Promise<void> {
       wakeTimer = null;
       void syncPendingStash();
     },
-    Math.max(wake - Date.now(), 1000),
+    // Never sooner than the first backoff step: a time already in the past
+    // (a tab that slept through it) must not turn into a one-second loop.
+    Math.max(wake - Date.now(), MIN_WAKE_MS),
   );
 }
 
